@@ -21,7 +21,7 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
   const [isInboundSelected, setIsInboundSelected] = useState(false);
 
   const inContents = pathname.startsWith('/logged/pages/articles') || pathname.startsWith('/logged/pages/publications') || pathname.startsWith('/logged/pages/events');
-  const inAdvertisement = pathname.startsWith('/logged/pages/banners') || pathname.startsWith('/logged/pages/quotations');
+  const inAdvertisement = pathname.startsWith('/logged/pages/banners') || pathname.startsWith('/logged/pages/quotations') || pathname.startsWith('/logged/pages/advertisement');
   const inPlyniumNetwork = pathname.startsWith('/logged/pages/users') || pathname.startsWith('/logged/pages/directory');
 
   useEffect(() => {
@@ -83,8 +83,8 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
             <LeftNavElement active={pathname.startsWith('/logged/pages/banners')} />
             <p className='pl-3'>Banners</p>
           </Link>
-          <Link href='/logged/pages/quotations' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/quotations') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-            <LeftNavElement active={pathname.startsWith('/logged/pages/quotations')} />
+          <Link href='/logged/pages/advertisement' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${(pathname.startsWith('/logged/pages/quotations') || pathname.startsWith('/logged/pages/advertisement')) ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+            <LeftNavElement active={pathname.startsWith('/logged/pages/quotations') || pathname.startsWith('/logged/pages/advertisement')} />
             <p className='pl-3'>Quotations</p>
           </Link>
         </div>
