@@ -1,0 +1,248 @@
+"use client";
+
+import React from "react";
+import { useRouter } from "next/navigation";
+import DatePicker from "@/app/logged/logged_components/DatePicker";
+
+const HIGHLITED_POSITION_OPTIONS = [
+  { value: "", label: "(Ninguna)" },
+  { value: "Main article", label: "Main article" },
+  { value: "Position1", label: "Position1" },
+  { value: "Position2", label: "Position2" },
+  { value: "Position3", label: "Position3" },
+  { value: "Position4", label: "Position4" },
+  { value: "Position5", label: "Position5" },
+];
+
+interface ArticlePhase1Props {
+  idArticle: string;
+  isGeneratingId: boolean;
+  articleTitle: string;
+  setArticleTitle: (v: string) => void;
+  articleSubtitle: string;
+  setArticleSubtitle: (v: string) => void;
+  articleMainImageUrl: string;
+  setArticleMainImageUrl: (v: string) => void;
+  company: string;
+  setCompany: (v: string) => void;
+  date: string;
+  setDate: (v: string) => void;
+  highlitedPosition: string;
+  setHighlitedPosition: (v: string) => void;
+  isArticleEvent: boolean;
+  setIsArticleEvent: (v: boolean) => void;
+  eventId: string;
+  setEventId: (v: string) => void;
+  tags: string;
+  setTags: (v: string) => void;
+  tagsArray: string[];
+  onAddTag: () => void;
+  onRemoveTag: (index: number) => void;
+  onNext: () => void;
+}
+
+const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
+  idArticle,
+  isGeneratingId,
+  articleTitle,
+  setArticleTitle,
+  articleSubtitle,
+  setArticleSubtitle,
+  articleMainImageUrl,
+  setArticleMainImageUrl,
+  company,
+  setCompany,
+  date,
+  setDate,
+  highlitedPosition,
+  setHighlitedPosition,
+  isArticleEvent,
+  setIsArticleEvent,
+  eventId,
+  setEventId,
+  tags,
+  setTags,
+  tagsArray,
+  onAddTag,
+  onRemoveTag,
+  onNext,
+}) => {
+  const router = useRouter();
+
+  return (
+    <div className="flex flex-col gap-6">
+      <h2 className="text-xl font-bold">Datos del Artículo</h2>
+
+      <div className="space-y-2">
+        <label className="font-bold text-lg">ID del Artículo *</label>
+        <input
+          type="text"
+          value={isGeneratingId ? "Generando..." : idArticle}
+          readOnly
+          disabled={isGeneratingId}
+          className="w-full px-4 py-2 border rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
+          placeholder="article_25_000000001"
+        />
+        {isGeneratingId && (
+          <p className="text-sm text-gray-500">Generando ID automáticamente...</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <label className="font-bold text-lg">Título del Artículo *</label>
+        <input
+          type="text"
+          value={articleTitle}
+          onChange={(e) => setArticleTitle(e.target.value)}
+          className="w-full px-4 py-2 border rounded-xl"
+          placeholder="Article Title"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="font-bold text-lg">Subtítulo del Artículo</label>
+        <input
+          type="text"
+          value={articleSubtitle}
+          onChange={(e) => setArticleSubtitle(e.target.value)}
+          className="w-full px-4 py-2 border rounded-xl"
+          placeholder="Article Subtitle"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="font-bold text-lg">URL de Imagen Principal</label>
+        <input
+          type="text"
+          value={articleMainImageUrl}
+          onChange={(e) => setArticleMainImageUrl(e.target.value)}
+          className="w-full px-4 py-2 border rounded-xl"
+          placeholder="image url"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="font-bold text-lg">Compañía</label>
+        <input
+          type="text"
+          value={company}
+          onChange={(e) => setCompany(e.target.value)}
+          className="w-full px-4 py-2 border rounded-xl"
+          placeholder="Company"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="font-bold text-lg">Fecha *</label>
+        <DatePicker
+          value={date}
+          onChange={setDate}
+          className="w-full"
+          placeholder="Seleccionar fecha"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <label className="font-bold text-lg">Posición destacada</label>
+        <select
+          value={highlitedPosition}
+          onChange={(e) => setHighlitedPosition(e.target.value)}
+          className="w-full px-4 py-2 border rounded-xl bg-white"
+        >
+          {HIGHLITED_POSITION_OPTIONS.map((opt) => (
+            <option key={opt.value || "_blank"} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="space-y-2">
+        <label className="font-bold text-lg">Is this article about an event-fair?</label>
+        <select
+          value={isArticleEvent ? "yes" : "no"}
+          onChange={(e) => {
+            const v = e.target.value === "yes";
+            setIsArticleEvent(v);
+            if (!v) setEventId("");
+          }}
+          className="w-full px-4 py-2 border rounded-xl bg-white"
+        >
+          <option value="no">No</option>
+          <option value="yes">Yes</option>
+        </select>
+      </div>
+
+      {isArticleEvent && (
+        <div className="space-y-2">
+          <label className="font-bold text-lg">Event id</label>
+          <input
+            type="text"
+            value={eventId}
+            onChange={(e) => setEventId(e.target.value)}
+            className="w-full px-4 py-2 border rounded-xl"
+            placeholder="e.g. fair-26-0001"
+          />
+        </div>
+      )}
+
+      <div className="space-y-2">
+        <label className="font-bold text-lg">Tags</label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={tags}
+            onChange={(e) => setTags(e.target.value)}
+            onKeyPress={(e) => e.key === "Enter" && onAddTag()}
+            className="flex-1 px-4 py-2 border rounded-xl"
+            placeholder="Escriba un tag y presione Enter"
+          />
+          <button
+            onClick={onAddTag}
+            className="bg-blue-950 text-white px-4 py-2 rounded-xl"
+          >
+            Agregar
+          </button>
+        </div>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {tagsArray.map((tag, index) => (
+            <span
+              key={index}
+              className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm flex items-center gap-2"
+            >
+              {tag}
+              <button
+                onClick={() => onRemoveTag(index)}
+                className="text-blue-800 hover:text-blue-950"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex gap-2 pt-4">
+        <button
+          onClick={() => router.push("/logged/pages/articles")}
+          className="flex-1 bg-gray-300 py-2 rounded-xl"
+        >
+          Cancelar
+        </button>
+        <button
+          onClick={onNext}
+          disabled={isGeneratingId || !articleTitle || !date}
+          className={`flex-1 py-2 rounded-xl ${
+            !isGeneratingId && articleTitle && date
+              ? "bg-blue-950 text-white"
+              : "bg-gray-300 text-gray-500"
+          }`}
+        >
+          Siguiente
+        </button>
+      </div>
+    </div>
+  );
+};
+
+export default ArticlePhase1;

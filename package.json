@@ -9,17 +9,26 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "next": "16.1.6",
-    "react": "19.2.3",
-    "react-dom": "19.2.3"
+    "@aws-amplify/core": "^6.15.0",
+    "@aws-sdk/client-cognito-identity-provider": "^3.962.0",
+    "aws-amplify": "^6.15.9",
+    "aws-jwt-verify": "^5.1.1",
+    "axios": "^1.13.2",
+    "joi": "^18.0.2",
+    "next": "^16.1.1",
+    "pg": "^8.16.3",
+    "react": "19.2.0",
+    "react-dom": "19.2.0",
+    "sequelize": "^6.37.7"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "baseline-browser-mapping": "^2.9.11",
     "eslint": "^9",
-    "eslint-config-next": "16.1.6",
+    "eslint-config-next": "16.0.5",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

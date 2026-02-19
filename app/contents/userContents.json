@@ -1,0 +1,65 @@
+[
+  {
+    "id_user": "user_001",
+    "user_full_name": "María García López",
+    "user_name": "maria.garcia",
+    "user_role": "only articles",
+    "user_description": "Acceso a la edición y creación de artículos"
+  },
+  {
+    "id_user": "user_002",
+    "user_full_name": "Juan Pérez Martínez",
+    "user_name": "juan.perez",
+    "user_role": "articles and publications",
+    "user_description": "Acceso a la edición y creación de artículos y publicaciones"
+  },
+  {
+    "id_user": "user_003",
+    "user_full_name": "Ana Rodríguez Sánchez",
+    "user_name": "ana.rodriguez",
+    "user_role": "admin",
+    "user_description": "lo anterior más edición de roles"
+  },
+  {
+    "id_user": "user_004",
+    "user_full_name": "Carlos Fernández Torres",
+    "user_name": "carlos.fernandez",
+    "user_role": "only articles",
+    "user_description": "Acceso a la edición y creación de artículos"
+  },
+  {
+    "id_user": "user_005",
+    "user_full_name": "Laura Martínez González",
+    "user_name": "laura.martinez",
+    "user_role": "articles and publications",
+    "user_description": "Acceso a la edición y creación de artículos y publicaciones"
+  },
+  {
+    "id_user": "user_006",
+    "user_full_name": "Pedro Sánchez Ruiz",
+    "user_name": "pedro.sanchez",
+    "user_role": "admin",
+    "user_description": "lo anterior más edición de roles"
+  },
+  {
+    "id_user": "user_007",
+    "user_full_name": "Sofía López Hernández",
+    "user_name": "sofia.lopez",
+    "user_role": "only articles",
+    "user_description": "Acceso a la edición y creación de artículos"
+  },
+  {
+    "id_user": "user_008",
+    "user_full_name": "Miguel Torres Díaz",
+    "user_name": "miguel.torres",
+    "user_role": "articles and publications",
+    "user_description": "Acceso a la edición y creación de artículos y publicaciones"
+  }
+]
+
+
+
+
+
+
+

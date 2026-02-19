@@ -1,0 +1,339 @@
+[
+  {
+    "idAdvReq": "adv-26-0001",
+    "senderEmail": "marketing@acmecorp.com",
+    "senderDate": "2024-01-15T10:30:00Z",
+    "senderCompany": "Acme Corporation",
+    "advReqState": "pending",
+    "requestDescription": "We would like to advertise our new line of energy-efficient glass products in your directory. Our company specializes in sustainable building materials and we believe your platform would be an excellent fit for reaching potential clients in the European market.",
+    "companyCountry": "United States",
+    "senderContactPhone": "+1-555-0101",
+    "commentsArray": []
+  },
+  {
+    "idAdvReq": "adv-26-0002",
+    "senderEmail": "sales@techspain.es",
+    "senderDate": "2024-01-20T14:15:00Z",
+    "senderCompany": "TechSpain Solutions",
+    "advReqState": "in process",
+    "requestDescription": "Advertisement request for our premium glass manufacturing services. We offer custom solutions for commercial and residential projects across Spain and Portugal.",
+    "companyCountry": "Spain",
+    "senderContactPhone": "+34-91-123-4567",
+    "commentsArray": [
+      {
+        "date": "2024-01-22T09:00:00Z",
+        "content": "Initial review completed. Checking advertisement guidelines and available slots."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0003",
+    "senderEmail": "info@franceglass.fr",
+    "senderDate": "2024-01-10T08:00:00Z",
+    "senderCompany": "France Glass Industries",
+    "advReqState": "accepted",
+    "requestDescription": "We are interested in promoting our luxury glass products for high-end residential and commercial projects. Our portfolio includes custom-designed glass installations for prestigious clients.",
+    "companyCountry": "France",
+    "senderContactPhone": "+33-1-23-45-67-89",
+    "commentsArray": [
+      {
+        "date": "2024-01-12T10:30:00Z",
+        "content": "Advertisement request approved. Preparing advertisement materials."
+      },
+      {
+        "date": "2024-01-15T11:00:00Z",
+        "content": "Advertisement is now live on the platform."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0004",
+    "senderEmail": "contact@deutschglas.de",
+    "senderDate": "2024-01-05T12:00:00Z",
+    "senderCompany": "Deutsch Glas GmbH",
+    "advReqState": "rejected",
+    "requestDescription": "Advertisement request for our industrial glass solutions. We provide large-scale glass installations for commercial buildings and factories.",
+    "companyCountry": "Germany",
+    "senderContactPhone": "+49-30-12345678",
+    "commentsArray": [
+      {
+        "date": "2024-01-08T14:00:00Z",
+        "content": "After review, we cannot accept this advertisement request as it does not meet our content guidelines."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0005",
+    "senderEmail": "hello@italiaglass.it",
+    "senderDate": "2023-12-20T09:30:00Z",
+    "senderCompany": "Italia Glass Works",
+    "advReqState": "expired",
+    "requestDescription": "We would like to advertise our restoration glass services for historic buildings. Our expertise includes period-accurate glass manufacturing and installation.",
+    "companyCountry": "Italy",
+    "senderContactPhone": "+39-06-1234-5678",
+    "commentsArray": [
+      {
+        "date": "2023-12-22T10:00:00Z",
+        "content": "Advertisement request received. Review deadline: January 20, 2024."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0006",
+    "senderEmail": "marketing@polglass.pl",
+    "senderDate": "2024-01-18T11:45:00Z",
+    "senderCompany": "PolGlass Manufacturing",
+    "advReqState": "pending",
+    "requestDescription": "Advertisement for our large-scale glass facade installation services. We specialize in modern architectural glass solutions for commercial buildings.",
+    "companyCountry": "Poland",
+    "senderContactPhone": "+48-22-123-4567",
+    "commentsArray": []
+  },
+  {
+    "idAdvReq": "adv-26-0007",
+    "senderEmail": "info@swedglass.se",
+    "senderDate": "2024-01-22T13:20:00Z",
+    "senderCompany": "SwedGlass AB",
+    "advReqState": "in process",
+    "requestDescription": "We want to promote our energy-efficient triple-glazed windows. Our products are designed for eco-friendly residential and commercial developments.",
+    "companyCountry": "Sweden",
+    "senderContactPhone": "+46-8-123-456-78",
+    "commentsArray": [
+      {
+        "date": "2024-01-24T08:30:00Z",
+        "content": "Reviewing advertisement content and verifying company credentials."
+      },
+      {
+        "date": "2024-01-26T10:15:00Z",
+        "content": "Waiting for additional documentation from the company."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0008",
+    "senderEmail": "sales@ukglass.co.uk",
+    "senderDate": "2024-01-25T15:00:00Z",
+    "senderCompany": "UK Glass Solutions",
+    "advReqState": "rejected",
+    "requestDescription": "Advertisement request for specialized glass installation services for museum and exhibition spaces. We provide custom solutions for unique architectural requirements.",
+    "companyCountry": "United Kingdom",
+    "senderContactPhone": "+44-20-1234-5678",
+    "commentsArray": [
+      {
+        "date": "2024-01-26T09:00:00Z",
+        "content": "Advertisement request does not align with our current advertising strategy."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0009",
+    "senderEmail": "contact@portuglass.pt",
+    "senderDate": "2024-01-12T10:00:00Z",
+    "senderCompany": "PortuGlass Lda",
+    "advReqState": "accepted",
+    "requestDescription": "We would like to advertise our glass roof installation services. Our expertise includes residential and commercial glass roofing solutions.",
+    "companyCountry": "Portugal",
+    "senderContactPhone": "+351-21-123-4567",
+    "commentsArray": [
+      {
+        "date": "2024-01-15T11:00:00Z",
+        "content": "Advertisement request approved."
+      },
+      {
+        "date": "2024-01-18T14:30:00Z",
+        "content": "Advertisement materials received and published."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0010",
+    "senderEmail": "marketing@belglass.be",
+    "senderDate": "2024-01-28T09:15:00Z",
+    "senderCompany": "BelGlass Industries",
+    "advReqState": "pending",
+    "requestDescription": "Advertisement for automated glass doors and smart glass partitions. We provide modern solutions for contemporary office buildings and commercial spaces.",
+    "companyCountry": "Belgium",
+    "senderContactPhone": "+32-2-123-4567",
+    "commentsArray": []
+  },
+  {
+    "idAdvReq": "adv-26-0011",
+    "senderEmail": "info@danglass.dk",
+    "senderDate": "2024-01-30T16:30:00Z",
+    "senderCompany": "DanGlass A/S",
+    "advReqState": "in process",
+    "requestDescription": "We want to promote our premium glass balustrades for luxury hotel and residential projects. Our products combine safety with elegant design.",
+    "companyCountry": "Denmark",
+    "senderContactPhone": "+45-33-12-34-56",
+    "commentsArray": [
+      {
+        "date": "2024-02-01T10:00:00Z",
+        "content": "Reviewing advertisement proposal and company portfolio."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0012",
+    "senderEmail": "sales@rusglass.ru",
+    "senderDate": "2024-01-08T07:00:00Z",
+    "senderCompany": "RusGlass Ltd",
+    "advReqState": "accepted",
+    "requestDescription": "Advertisement request for large format glass panels. We specialize in commercial building facades and provide custom solutions for architects and developers.",
+    "companyCountry": "Russia",
+    "senderContactPhone": "+7-495-123-4567",
+    "commentsArray": [
+      {
+        "date": "2024-01-10T08:30:00Z",
+        "content": "Advertisement request approved. Processing payment."
+      },
+      {
+        "date": "2024-01-15T12:00:00Z",
+        "content": "Advertisement is now active on the platform."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0013",
+    "senderEmail": "marketing@usglass.com",
+    "senderDate": "2024-01-14T11:00:00Z",
+    "senderCompany": "US Glass Corp",
+    "advReqState": "pending",
+    "requestDescription": "We would like to advertise our tempered glass safety barriers. Our products meet international safety standards and are ideal for high-rise buildings.",
+    "companyCountry": "United States",
+    "senderContactPhone": "+1-212-555-1234",
+    "commentsArray": []
+  },
+  {
+    "idAdvReq": "adv-26-0014",
+    "senderEmail": "contact@japglass.jp",
+    "senderDate": "2024-01-16T10:00:00Z",
+    "senderCompany": "JapGlass Industries",
+    "advReqState": "in process",
+    "requestDescription": "Advertisement for custom-designed glass partitions. We provide modern solutions for office spaces with focus on functionality and aesthetics.",
+    "companyCountry": "Japan",
+    "senderContactPhone": "+81-3-1234-5678",
+    "commentsArray": [
+      {
+        "date": "2024-01-18T09:00:00Z",
+        "content": "Verifying company information and reviewing advertisement content."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0015",
+    "senderEmail": "info@chinaglass.cn",
+    "senderDate": "2024-01-19T08:30:00Z",
+    "senderCompany": "China Glass Manufacturing",
+    "advReqState": "accepted",
+    "requestDescription": "We want to promote our massive glass installation capabilities. Our company has experience with large-scale projects including airports and commercial complexes.",
+    "companyCountry": "China",
+    "senderContactPhone": "+86-21-1234-5678",
+    "commentsArray": [
+      {
+        "date": "2024-01-21T10:00:00Z",
+        "content": "Advertisement request approved."
+      },
+      {
+        "date": "2024-01-25T14:00:00Z",
+        "content": "Advertisement published successfully."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0016",
+    "senderEmail": "sales@koreaglass.kr",
+    "senderDate": "2024-01-21T13:00:00Z",
+    "senderCompany": "Korea Glass Co",
+    "advReqState": "pending",
+    "requestDescription": "Advertisement request for smart glass technology integration. We provide innovative solutions for corporate headquarters and modern buildings.",
+    "companyCountry": "South Korea",
+    "senderContactPhone": "+82-2-1234-5678",
+    "commentsArray": []
+  },
+  {
+    "idAdvReq": "adv-26-0017",
+    "senderEmail": "marketing@ausglass.au",
+    "senderDate": "2024-01-23T15:45:00Z",
+    "senderCompany": "AusGlass Pty Ltd",
+    "advReqState": "in process",
+    "requestDescription": "We would like to advertise our laminated safety glass products. Our solutions are designed for residential and commercial high-rise buildings.",
+    "companyCountry": "Australia",
+    "senderContactPhone": "+61-2-1234-5678",
+    "commentsArray": [
+      {
+        "date": "2024-01-25T09:30:00Z",
+        "content": "Reviewing safety certifications and product specifications."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0018",
+    "senderEmail": "info@nzglass.nz",
+    "senderDate": "2024-01-26T10:20:00Z",
+    "senderCompany": "NZ Glass Solutions",
+    "advReqState": "accepted",
+    "requestDescription": "Advertisement for energy-efficient double-glazed windows. Our products are designed for eco-home developments with focus on sustainability.",
+    "companyCountry": "New Zealand",
+    "senderContactPhone": "+64-9-123-4567",
+    "commentsArray": [
+      {
+        "date": "2024-01-28T11:00:00Z",
+        "content": "Advertisement request approved. Highlighting energy efficiency benefits."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0019",
+    "senderEmail": "contact@brazglass.com.br",
+    "senderDate": "2024-01-27T14:00:00Z",
+    "senderCompany": "BrazGlass Industries",
+    "advReqState": "pending",
+    "requestDescription": "We want to promote our decorative glass panels. Our products are ideal for luxury hotel lobbies and high-end commercial spaces.",
+    "companyCountry": "Brazil",
+    "senderContactPhone": "+55-11-1234-5678",
+    "commentsArray": []
+  },
+  {
+    "idAdvReq": "adv-26-0020",
+    "senderEmail": "sales@argglass.com.ar",
+    "senderDate": "2024-01-29T12:30:00Z",
+    "senderCompany": "ArgGlass S.A.",
+    "advReqState": "expired",
+    "requestDescription": "Advertisement request for glass curtain wall systems. We provide solutions for modern office buildings with focus on energy efficiency.",
+    "companyCountry": "Argentina",
+    "senderContactPhone": "+54-11-1234-5678",
+    "commentsArray": [
+      {
+        "date": "2024-01-30T10:00:00Z",
+        "content": "Advertisement request received. Review deadline: February 29, 2024."
+      }
+    ]
+  },
+  {
+    "idAdvReq": "adv-26-0021",
+    "senderEmail": "marketing@ukrglass.ua",
+    "senderDate": "2024-01-31T09:00:00Z",
+    "senderCompany": "UkrGlass Ltd",
+    "advReqState": "pending",
+    "requestDescription": "We would like to advertise our specialized glass installation services. Our expertise includes security glass solutions for commercial applications.",
+    "companyCountry": "Ukraine",
+    "senderContactPhone": "+380-44-123-4567",
+    "commentsArray": []
+  },
+  {
+    "idAdvReq": "adv-26-0022",
+    "senderEmail": "info@czglass.cz",
+    "senderDate": "2024-02-01T08:15:00Z",
+    "senderCompany": "CzGlass s.r.o.",
+    "advReqState": "in process",
+    "requestDescription": "Advertisement for glass skylights and roof windows. We provide solutions for residential renovations with focus on natural light and energy efficiency.",
+    "companyCountry": "Czech Republic",
+    "senderContactPhone": "+420-2-1234-5678",
+    "commentsArray": [
+      {
+        "date": "2024-02-02T10:00:00Z",
+        "content": "Assessing advertisement requirements and available placement options."
+      }
+    ]
+  }
+]

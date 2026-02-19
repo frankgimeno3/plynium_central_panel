@@ -24,3 +24,60 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Rich text editor */
+.rich-text-editor-body:empty::before {
+  content: attr(data-placeholder);
+  color: #9ca3af;
+}
+.rich-text-editor-body ul,
+.rich-text-editor-body ol {
+  margin-left: 1.25rem;
+  padding-left: 0.25rem;
+}
+.rich-text-editor-body ul {
+  list-style-type: disc;
+}
+.rich-text-editor-body ol {
+  list-style-type: decimal;
+}
+.rich-text-editor-body ol[type="a"] {
+  list-style-type: lower-alpha;
+}
+
+/* Rendered article content (title, subtitle, contents) – HTML interpretado como lo vería el usuario */
+/* Default: texto justificado; el HTML puede sobreescribir con style="text-align: ..." */
+.article-content-display {
+  text-align: justify;
+}
+/* Restaurar listas (Tailwind preflight resetea ul/ol a list-style:none; margin:0; padding:0) */
+.article-content-display ul,
+.article-content-display ol {
+  margin: 0.5em 0 0.5em 1.25rem;
+  padding-left: 1.5rem;
+  list-style-position: outside;
+  display: block;
+}
+.article-content-display ul {
+  list-style-type: disc;
+}
+.article-content-display ol {
+  list-style-type: decimal;
+}
+.article-content-display ol[type="a"] {
+  list-style-type: lower-alpha;
+}
+.article-content-display ul li,
+.article-content-display ol li {
+  display: list-item;
+  margin-bottom: 0.25em;
+}
+.article-content-display p {
+  margin: 0.5em 0;
+}
+.article-content-display p:first-child {
+  margin-top: 0;
+}
+.article-content-display p:last-child {
+  margin-bottom: 0;
+}
