@@ -22,7 +22,7 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
 
   const inContents = pathname.startsWith('/logged/pages/articles') || pathname.startsWith('/logged/pages/publications') || pathname.startsWith('/logged/pages/events');
   const inAdvertisement = pathname.startsWith('/logged/pages/banners') || pathname.startsWith('/logged/pages/quotations') || pathname.startsWith('/logged/pages/advertisement');
-  const inPlyniumNetwork = pathname.startsWith('/logged/pages/users') || pathname.startsWith('/logged/pages/directory');
+  const inPlyniumNetwork = pathname.startsWith('/logged/pages/users') || pathname.startsWith('/logged/pages/directory') || pathname.startsWith('/logged/pages/portals');
 
   useEffect(() => {
     setIsContentsSelected(inContents);
@@ -105,6 +105,10 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
 
       {isDirectorySelected && (
         <div className='flex flex-col px-5 text-sm'>
+          <Link href='/logged/pages/portals' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/portals') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+            <LeftNavElement active={pathname.startsWith('/logged/pages/portals')} />
+            <p className='pl-3'>Portals</p>
+          </Link>
           <Link href='/logged/pages/users' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/users') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
             <LeftNavElement active={pathname.startsWith('/logged/pages/users')} />
             <p className='pl-3'>Users</p>

@@ -10,10 +10,7 @@ try {
     console.debug('Connecting to database');
     await database.connect();
     console.debug('Connected');
-
-    console.debug('Synchronizing models with database');
-    await database.sync();
-    console.debug('Synchronized');
+    // Tables are created only via SQL migrations (server/database/migrations/), not by Sequelize sync.
 } catch (error) {
     console.warn('Warning: Could not connect to database during startup');
     console.warn('The application will continue, but database operations may fail');
