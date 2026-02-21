@@ -50,7 +50,7 @@ const ContentModal: React.FC<ContentModalProps> = ({
       >
         <div className="flex items-center justify-between pb-4 border-b">
           <h2 className="text-xl font-bold">
-            {editingContent ? "Editar Contenido" : "Nuevo Contenido"}
+            {editingContent ? "Edit Content" : "New Content"}
           </h2>
           <button
             onClick={onClose}
@@ -62,7 +62,7 @@ const ContentModal: React.FC<ContentModalProps> = ({
 
         {!selectedContentType ? (
           <div className="flex flex-col gap-3">
-            <p className="font-bold">Seleccione el tipo de contenido:</p>
+            <p className="font-bold">Select the content type:</p>
             <div className="grid grid-cols-2 gap-3">
               {(["text_image", "image_text", "just_image", "just_text"] as const).map((type) => (
                 <button
@@ -72,10 +72,10 @@ const ContentModal: React.FC<ContentModalProps> = ({
                 >
                   <p className="font-semibold">{type.replace("_", " ").toUpperCase()}</p>
                   <p className="text-xs text-gray-600 mt-1">
-                    {type === "text_image" && "Texto a la izquierda, imagen a la derecha"}
-                    {type === "image_text" && "Imagen a la izquierda, texto a la derecha"}
-                    {type === "just_image" && "Solo imagen centrada"}
-                    {type === "just_text" && "Solo texto centrado"}
+                    {type === "text_image" && "Text on the left, image on the right"}
+                    {type === "image_text" && "Image on the left, text on the right"}
+                    {type === "just_image" && "Image only, centered"}
+                    {type === "just_text" && "Text only, centered"}
                   </p>
                 </button>
               ))}
@@ -89,7 +89,7 @@ const ContentModal: React.FC<ContentModalProps> = ({
                 onClick={onBackToTypeSelect}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Cambiar tipo
+                Change type
               </button>
             </div>
 
@@ -97,13 +97,13 @@ const ContentModal: React.FC<ContentModalProps> = ({
               <>
                 <div className="space-y-2">
                   <label className="font-bold">
-                    {selectedContentType === "text_image" ? "Texto (izquierda)" : "Imagen (izquierda)"} *
+                    {selectedContentType === "text_image" ? "Text (left)" : "Image (left)"} *
                   </label>
                   {selectedContentType === "text_image" ? (
                     <RichTextEditor
                       value={contentFormData.left}
                       onChange={(html) => setContentFormData((prev) => ({ ...prev, left: html }))}
-                      placeholder="Ingrese el texto..."
+                      placeholder="Enter text..."
                       minHeight="100px"
                     />
                   ) : (
@@ -112,13 +112,13 @@ const ContentModal: React.FC<ContentModalProps> = ({
                       value={contentFormData.left}
                       onChange={(e) => setContentFormData((prev) => ({ ...prev, left: e.target.value }))}
                       className="w-full px-4 py-2 border rounded-xl"
-                      placeholder="URL de la imagen..."
+                      placeholder="Image URL..."
                     />
                   )}
                 </div>
                 <div className="space-y-2">
                   <label className="font-bold">
-                    {selectedContentType === "text_image" ? "Imagen (derecha)" : "Texto (derecha)"} *
+                    {selectedContentType === "text_image" ? "Image (right)" : "Text (right)"} *
                   </label>
                   {selectedContentType === "text_image" ? (
                     <input
@@ -126,13 +126,13 @@ const ContentModal: React.FC<ContentModalProps> = ({
                       value={contentFormData.right}
                       onChange={(e) => setContentFormData((prev) => ({ ...prev, right: e.target.value }))}
                       className="w-full px-4 py-2 border rounded-xl"
-                      placeholder="URL de la imagen..."
+                      placeholder="Image URL..."
                     />
                   ) : (
                     <RichTextEditor
                       value={contentFormData.right}
                       onChange={(html) => setContentFormData((prev) => ({ ...prev, right: html }))}
-                      placeholder="Ingrese el texto..."
+                      placeholder="Enter text..."
                       minHeight="100px"
                     />
                   )}
@@ -143,7 +143,7 @@ const ContentModal: React.FC<ContentModalProps> = ({
             {(selectedContentType === "just_image" || selectedContentType === "just_text") && (
               <div className="space-y-2">
                 <label className="font-bold">
-                  {selectedContentType === "just_image" ? "Imagen (centrada)" : "Texto (centrado)"} *
+                  {selectedContentType === "just_image" ? "Image (centered)" : "Text (centered)"} *
                 </label>
                 {selectedContentType === "just_image" ? (
                   <input
@@ -151,13 +151,13 @@ const ContentModal: React.FC<ContentModalProps> = ({
                     value={contentFormData.center}
                     onChange={(e) => setContentFormData((prev) => ({ ...prev, center: e.target.value }))}
                     className="w-full px-4 py-2 border rounded-xl"
-                    placeholder="URL de la imagen..."
+                    placeholder="Image URL..."
                   />
                 ) : (
                     <RichTextEditor
                       value={contentFormData.center}
                       onChange={(html) => setContentFormData((prev) => ({ ...prev, center: html }))}
-                      placeholder="Ingrese el texto..."
+                      placeholder="Enter text..."
                       minHeight="150px"
                     />
                   )}
@@ -169,13 +169,13 @@ const ContentModal: React.FC<ContentModalProps> = ({
                 onClick={onClose}
                 className="flex-1 bg-gray-300 py-2 rounded-xl"
               >
-                Cancelar
+                Cancel
               </button>
               <button
                 onClick={onConfirm}
                 className="flex-1 bg-blue-950 text-white py-2 rounded-xl"
               >
-                Confirmar
+                Confirm
               </button>
             </div>
           </div>

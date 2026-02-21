@@ -67,7 +67,7 @@ const ArticleSearchResultsContent: FC = () => {
         if (filterType === 'date') {
           headingText = `Articles for date ${formatDateForDisplay(filterValue)}`;
         } else if (filterType === 'title') {
-          headingText = `Articles with coincidences with "${filterValue}"`;
+          headingText = `Articles matching "${filterValue}"`;
         } else if (filterType === 'company') {
           headingText = `Articles related to company ${filterValue}`;
         }
@@ -119,7 +119,7 @@ const ArticleSearchResultsContent: FC = () => {
     return (
       <div className='flex flex-col w-full bg-white'>
         <div className='flex flex-col text-center bg-blue-950/70 p-5 px-46 text-white'>
-          <h2 className='text-xl font-semibold'>Cargando...</h2>
+          <h2 className='text-xl font-semibold'>Loading...</h2>
         </div>
       </div>
     );
@@ -169,7 +169,7 @@ const ArticleSearchResults: FC<PageProps> = ({ }) => {
     <Suspense fallback={
       <div className='flex flex-col w-full bg-white'>
         <div className='flex flex-col text-center bg-blue-950/70 p-5 px-46 text-white'>
-          <h2 className='text-xl font-semibold'>Cargando...</h2>
+          <h2 className='text-xl font-semibold'>Loading...</h2>
         </div>
       </div>
     }>

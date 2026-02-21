@@ -55,19 +55,19 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
 }) => {
   return (
     <div className="flex flex-col gap-6">
-      <h2 className="text-xl font-bold">Revisión Final</h2>
+      <h2 className="text-xl font-bold">Final Review</h2>
 
       <div className="border border-gray-200 rounded-xl p-6 bg-gray-50">
-        <h3 className="font-bold text-lg mb-4">Datos del Artículo</h3>
+        <h3 className="font-bold text-lg mb-4">Article Data</h3>
         <div className="space-y-2 text-sm">
           <p><strong>ID:</strong> {idArticle}</p>
-          <p><strong>Título:</strong> {articleTitle}</p>
-          <p><strong>Subtítulo:</strong> {articleSubtitle || "N/A"}</p>
-          <p><strong>Compañía:</strong> {company || "N/A"}</p>
-          <p><strong>Fecha:</strong> {date}</p>
-          <p><strong>Tags:</strong> {tagsArray.length > 0 ? tagsArray.join(", ") : "Ninguno"}</p>
+          <p><strong>Title:</strong> {articleTitle}</p>
+          <p><strong>Subtitle:</strong> {articleSubtitle || "N/A"}</p>
+          <p><strong>Company:</strong> {company || "N/A"}</p>
+          <p><strong>Date:</strong> {date}</p>
+          <p><strong>Tags:</strong> {tagsArray.length > 0 ? tagsArray.join(", ") : "None"}</p>
           <div className="mt-4">
-            <p className="font-semibold mb-2">Imagen Principal:</p>
+            <p className="font-semibold mb-2">Main Image:</p>
             {articleMainImageUrl ? (
               <ArticleImageWithPlaceholder
                 src={articleMainImageUrl}
@@ -81,7 +81,7 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
       </div>
 
       <div className="border border-gray-200 rounded-xl p-6 bg-gray-50">
-        <h3 className="font-bold text-lg mb-4">Contenidos ({contents.length})</h3>
+        <h3 className="font-bold text-lg mb-4">Contents ({contents.length})</h3>
         <div className="space-y-6">
           {contents.map((content, index) => (
             <div key={content.content_id} className="border-l-4 border-blue-500 pl-4 py-2">
@@ -115,7 +115,7 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
               {content.content_type === "text_image" && (
                 <div className="bg-white p-3 rounded border grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Texto (izquierda):</p>
+                    <p className="text-xs text-gray-500 mb-1">Text (left):</p>
                     <RichTextContent
                       htmlOrPlain={content.content_content.left}
                       className="text-sm rich-text-editor-body"
@@ -123,7 +123,7 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Imagen (derecha):</p>
+                    <p className="text-xs text-gray-500 mb-1">Image (right):</p>
                     <img
                       src={content.content_content.right}
                       alt="Content image"
@@ -139,7 +139,7 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
               {content.content_type === "image_text" && (
                 <div className="bg-white p-3 rounded border grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Imagen (izquierda):</p>
+                    <p className="text-xs text-gray-500 mb-1">Image (left):</p>
                     <img
                       src={content.content_content.left}
                       alt="Content image"
@@ -150,7 +150,7 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
                     />
                   </div>
                   <div>
-                    <p className="text-xs text-gray-500 mb-1">Texto (derecha):</p>
+                    <p className="text-xs text-gray-500 mb-1">Text (right):</p>
                     <RichTextContent
                       htmlOrPlain={content.content_content.right}
                       className="text-sm rich-text-editor-body"
@@ -164,7 +164,7 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
             </div>
           ))}
           {contents.length === 0 && (
-            <p className="text-gray-500 text-sm">No hay contenidos agregados</p>
+            <p className="text-gray-500 text-sm">No contents added</p>
           )}
         </div>
       </div>
@@ -175,7 +175,7 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
           disabled={isSubmitting}
           className="flex-1 bg-gray-300 py-2 rounded-xl"
         >
-          Atrás
+          Back
         </button>
         <button
           onClick={onSubmit}
@@ -186,7 +186,7 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
               : "bg-blue-950 text-white"
           }`}
         >
-          {isSubmitting ? "Creando..." : "Finalizar y Crear Artículo"}
+          {isSubmitting ? "Creating..." : "Finish and Create Article"}
         </button>
       </div>
     </div>

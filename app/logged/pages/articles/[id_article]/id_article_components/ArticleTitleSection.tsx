@@ -19,7 +19,7 @@ export default function ArticleTitleSection({
   return (
     <div className="flex flex-col gap-2">
       <label className="text-sm font-medium text-gray-500">
-        Título del Artículo
+        Article Title
       </label>
 
       <div className="flex flex-col gap-3">

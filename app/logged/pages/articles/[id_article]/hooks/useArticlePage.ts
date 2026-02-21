@@ -71,7 +71,7 @@ export function useArticlePage(id_article: string) {
         const articleRaw = await ArticleService.getArticleById(id_article);
 
         if (!articleRaw) {
-          setError("El artículo que buscas no existe.");
+          setError("The article you are looking for does not exist.");
           setArticleData(null);
           setContentsData([]);
           return;
@@ -213,7 +213,7 @@ export function useArticlePage(id_article: string) {
             ? error.message
             : error?.data?.message
               ? error.data.message
-              : "Error desconocido";
+              : "Unknown error";
       alert(`Error al guardar cambios: ${errorMessage}`);
     } finally {
       setIsSaving(false);
@@ -249,8 +249,8 @@ export function useArticlePage(id_article: string) {
             ? error.message
             : error?.data?.message
               ? error.data.message
-              : "Error desconocido";
-      alert(`Error al agregar tag: ${errorMessage}`);
+              : "Unknown error";
+      alert(`Error adding tag: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -279,8 +279,8 @@ export function useArticlePage(id_article: string) {
             ? error.message
             : error?.data?.message
               ? error.data.message
-              : "Error desconocido";
-      alert(`Error al eliminar tag: ${errorMessage}`);
+              : "Unknown error";
+      alert(`Error removing tag: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -359,8 +359,8 @@ export function useArticlePage(id_article: string) {
             ? error.message
             : error?.data?.message
               ? error.data.message
-              : "Error desconocido";
-      alert(`Error al guardar posición destacada: ${errorMessage}`);
+              : "Unknown error";
+      alert(`Error saving highlighted position: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -389,8 +389,8 @@ export function useArticlePage(id_article: string) {
             ? error.message
             : error?.data?.message
               ? error.data.message
-              : "Error desconocido";
-      alert(`Error al guardar: ${errorMessage}`);
+              : "Unknown error";
+      alert(`Error saving: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -403,7 +403,7 @@ export function useArticlePage(id_article: string) {
     try {
       await EventsService.getEventById(value);
     } catch {
-      alert("El evento con ese ID no existe. Compruebe el Event id.");
+      alert("The event with that ID does not exist. Check the Event id.");
       return;
     }
     setIsSaving(true);
@@ -419,8 +419,8 @@ export function useArticlePage(id_article: string) {
             ? error.message
             : error?.data?.message
               ? error.data.message
-              : "Error desconocido";
-      alert(`Error al guardar Event id: ${errorMessage}`);
+              : "Unknown error";
+      alert(`Error saving Event id: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -443,8 +443,8 @@ export function useArticlePage(id_article: string) {
             ? error.message
             : error?.data?.message
               ? error.data.message
-              : "Error desconocido";
-      alert(`Error al eliminar el artículo: ${errorMessage}`);
+              : "Unknown error";
+      alert(`Error deleting article: ${errorMessage}`);
     } finally {
       setIsDeleting(false);
     }
@@ -478,7 +478,7 @@ export function useArticlePage(id_article: string) {
 
   const handleDeleteContent = async (contentId: string) => {
     if (!articleData) return;
-    if (!confirm("¿Eliminar este contenido del artículo?")) return;
+    if (!confirm("Remove this content from the article?")) return;
 
     setIsSaving(true);
     try {
@@ -510,8 +510,8 @@ export function useArticlePage(id_article: string) {
             ? error.message
             : error?.data?.message
               ? error.data.message
-              : "Error desconocido";
-      alert(`Error al eliminar contenido: ${errorMessage}`);
+              : "Unknown error";
+      alert(`Error removing content: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -549,7 +549,7 @@ export function useArticlePage(id_article: string) {
     }
 
     if (!isValid) {
-      alert("Por favor, complete todos los campos requeridos");
+      alert("Please fill in all required fields");
       return;
     }
 
@@ -607,8 +607,8 @@ export function useArticlePage(id_article: string) {
             ? error.message
             : error?.data?.message
               ? error.data.message
-              : "Error desconocido";
-      alert(`Error al guardar contenido: ${errorMessage}`);
+              : "Unknown error";
+      alert(`Error saving content: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }

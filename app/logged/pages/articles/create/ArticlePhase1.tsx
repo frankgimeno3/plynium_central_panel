@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import DatePicker from "@/app/logged/logged_components/DatePicker";
 
 const HIGHLITED_POSITION_OPTIONS = [
-  { value: "", label: "(Ninguna)" },
+  { value: "", label: "(None)" },
   { value: "Main article", label: "Main article" },
   { value: "Position1", label: "Position1" },
   { value: "Position2", label: "Position2" },
@@ -71,25 +71,25 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
 
   return (
     <div className="flex flex-col gap-6">
-      <h2 className="text-xl font-bold">Datos del Artículo</h2>
+      <h2 className="text-xl font-bold">Article Data</h2>
 
       <div className="space-y-2">
-        <label className="font-bold text-lg">ID del Artículo *</label>
+        <label className="font-bold text-lg">Article ID *</label>
         <input
           type="text"
-          value={isGeneratingId ? "Generando..." : idArticle}
+          value={isGeneratingId ? "Generating..." : idArticle}
           readOnly
           disabled={isGeneratingId}
           className="w-full px-4 py-2 border rounded-xl bg-gray-50 text-gray-600 cursor-not-allowed"
           placeholder="article_25_000000001"
         />
         {isGeneratingId && (
-          <p className="text-sm text-gray-500">Generando ID automáticamente...</p>
+          <p className="text-sm text-gray-500">Generating ID automatically...</p>
         )}
       </div>
 
       <div className="space-y-2">
-        <label className="font-bold text-lg">Título del Artículo *</label>
+        <label className="font-bold text-lg">Article Title *</label>
         <input
           type="text"
           value={articleTitle}
@@ -100,7 +100,7 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
       </div>
 
       <div className="space-y-2">
-        <label className="font-bold text-lg">Subtítulo del Artículo</label>
+        <label className="font-bold text-lg">Article Subtitle</label>
         <input
           type="text"
           value={articleSubtitle}
@@ -111,7 +111,7 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
       </div>
 
       <div className="space-y-2">
-        <label className="font-bold text-lg">URL de Imagen Principal</label>
+        <label className="font-bold text-lg">Main Image URL</label>
         <input
           type="text"
           value={articleMainImageUrl}
@@ -122,7 +122,7 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
       </div>
 
       <div className="space-y-2">
-        <label className="font-bold text-lg">Compañía</label>
+        <label className="font-bold text-lg">Company</label>
         <input
           type="text"
           value={company}
@@ -133,17 +133,17 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
       </div>
 
       <div className="space-y-2">
-        <label className="font-bold text-lg">Fecha *</label>
+        <label className="font-bold text-lg">Date *</label>
         <DatePicker
           value={date}
           onChange={setDate}
           className="w-full"
-          placeholder="Seleccionar fecha"
+          placeholder="Select date"
         />
       </div>
 
       <div className="space-y-2">
-        <label className="font-bold text-lg">Posición destacada</label>
+        <label className="font-bold text-lg">Highlighted position</label>
         <select
           value={highlitedPosition}
           onChange={(e) => setHighlitedPosition(e.target.value)}
@@ -195,13 +195,13 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
             onChange={(e) => setTags(e.target.value)}
             onKeyPress={(e) => e.key === "Enter" && onAddTag()}
             className="flex-1 px-4 py-2 border rounded-xl"
-            placeholder="Escriba un tag y presione Enter"
+            placeholder="Type a tag and press Enter"
           />
           <button
             onClick={onAddTag}
             className="bg-blue-950 text-white px-4 py-2 rounded-xl"
           >
-            Agregar
+            Add
           </button>
         </div>
         <div className="flex flex-wrap gap-2 mt-2">
@@ -227,7 +227,7 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
           onClick={() => router.push("/logged/pages/articles")}
           className="flex-1 bg-gray-300 py-2 rounded-xl"
         >
-          Cancelar
+          Cancel
         </button>
         <button
           onClick={onNext}
@@ -238,7 +238,7 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
               : "bg-gray-300 text-gray-500"
           }`}
         >
-          Siguiente
+          Next
         </button>
       </div>
     </div>

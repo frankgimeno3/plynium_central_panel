@@ -21,12 +21,15 @@ class Database {
 
 
     constructor() {
-        // Validate required environment variables
         const requiredEnvVars = ['DATABASE_NAME', 'DATABASE_USER', 'DATABASE_PASSWORD', 'DATABASE_HOST', 'DATABASE_PORT'];
         const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-        
+
         if (missingVars.length > 0) {
-            throw new Error(`Missing required database environment variables: ${missingVars.join(', ')}`);
+            this.#sequelize = null;
+            if (process.env.NODE_ENV !== 'production') {
+                console.warn(`[Database] Not configured: missing ${missingVars.join(', ')}. Set them in .env (see .env.example). DB features will be unavailable.`);
+            }
+            return;
         }
 
         const host = process.env.DATABASE_HOST;
@@ -34,15 +37,12 @@ class Database {
         const databaseName = process.env.DATABASE_NAME;
         const user = process.env.DATABASE_USER;
 
-        // Log connection details (without sensitive data)
         console.log(`[Database] Initializing connection to: ${host}:${port}/${databaseName} (user: ${user})`);
         console.log(`[Database] Runtime: ${typeof process !== 'undefined' ? 'Node.js' : 'Unknown'}`);
-        
+
         const dialectOptions = {};
-        
-        // Configure SSL - always enable for RDS connections
+
         if (sslCA) {
-            // Use certificate if available
             dialectOptions.ssl = {
                 require: true,
                 ca: sslCA.toString(),
@@ -50,7 +50,6 @@ class Database {
             };
             console.log(`[Database] SSL enabled with certificate from ${caPath}`);
         } else {
-            // Enable SSL without certificate (for RDS compatibility)
             dialectOptions.ssl = {
                 require: true,
                 rejectUnauthorized: false,
@@ -76,7 +75,11 @@ class Database {
                     idle: 10000
                 }
             }
-        )
+        );
+    }
+
+    isConfigured() {
+        return this.#sequelize !== null;
     }
 
     log(message){
@@ -92,10 +95,14 @@ class Database {
     }
 
     getSequelize() {
+        if (this.#sequelize === null) {
+            throw new Error('Database not configured. Set DATABASE_NAME, DATABASE_USER, DATABASE_PASSWORD, DATABASE_HOST, DATABASE_PORT in .env (see .env.example).');
+        }
         return this.#sequelize;
     }
 
     async connect() {
+        if (this.#sequelize === null) return;
         const startTime = Date.now();
         try {
             console.log(`[Database] Attempting connection to ${process.env.DATABASE_HOST}:${process.env.DATABASE_PORT}...`);
@@ -112,9 +119,8 @@ class Database {
     }
 
     async sync() {
-        // sync() without options will create tables if they don't exist
-        // but won't alter or drop existing tables
-        await this.#sequelize.sync()
+        if (this.#sequelize === null) return;
+        await this.#sequelize.sync();
     }
 }
 

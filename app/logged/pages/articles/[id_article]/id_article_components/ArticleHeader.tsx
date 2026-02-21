@@ -16,13 +16,13 @@ const ArticleHeader: FC<ArticleHeaderProps> = ({
   onEditTitle,
   onEditSubtitle,
 }) => {
-  // Asegurar que title y subtitle siempre sean strings
+  // Ensure title and subtitle are always strings
   const safeTitle = title ?? "";
   const safeSubtitle = subtitle ?? "";
   
   return (
     <div className="flex flex-col gap-3">
-    {/* Título con Pencil */}
+    {/* Title with Pencil */}
     <div className="relative flex flex-row">
       <h1 className="text-4xl font-bold">{safeTitle}</h1>
       <div className="absolute bottom-0 right-[-35px]">
@@ -30,7 +30,7 @@ const ArticleHeader: FC<ArticleHeaderProps> = ({
       </div>
     </div>
 
-    {/* Subtítulo con Pencil */}
+    {/* Subtitle with Pencil */}
     <div className="relative flex flex-row">
       <h2 className="text-xl text-gray-500">{safeSubtitle}</h2>
       <div className="absolute bottom-0 right-[-25px]">

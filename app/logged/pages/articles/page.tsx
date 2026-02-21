@@ -15,7 +15,7 @@ const Articles: FC<ArticlesProps> = ({}) => {
 
   const fetchArticles = async () => {
     try {
-      // Obtener todos los artículos del API (incluye los del JSON y los creados dinámicamente)
+      // Fetch all articles from the API (includes JSON and dynamically created ones)
       const apiArticles = await ArticleService.getAllArticles();
       
       // Filtrar y normalizar artículos válidos
@@ -63,7 +63,7 @@ const Articles: FC<ArticlesProps> = ({}) => {
       <div className="flex flex-wrap py-5 gap-12 justify-center ">
         {loading ? (
           <div className="text-center py-10">
-            <p className="text-gray-500">Cargando artículos...</p>
+            <p className="text-gray-500">Loading articles...</p>
           </div>
         ) : allArticles.filter((a: any) => a && a.id_article && a.articleTitle).length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 w-full">

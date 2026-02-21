@@ -14,8 +14,9 @@ import BannerModel from "../features/banner/BannerModel.js";
 import {defineAssociations} from "./associations.js";
 
 const database = Database.getInstance();
-const sequelize = database.getSequelize();
+const sequelize = database.isConfigured() ? database.getSequelize() : null;
 
+if (sequelize) {
 TimeLogModel.init({
     id: {type: DataTypes.BIGINT, primaryKey: true, unique: true, autoIncrement: true},
     createdBy: {type: DataTypes.STRING, allowNull: false},
@@ -389,5 +390,6 @@ EventModel.init({
 });
 
 defineAssociations();
+}
 
 export { TimeLogModel, ModificationModel, ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel };

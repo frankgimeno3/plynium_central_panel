@@ -70,7 +70,7 @@ export default function IdArticlePage() {
   if (loading) {
     return (
       <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600 w-full">
-        <p className="text-lg">Cargando artículo...</p>
+        <p className="text-lg">Loading article...</p>
       </main>
     );
   }
@@ -83,7 +83,7 @@ export default function IdArticlePage() {
           onClick={() => router.push("/logged/pages/articles")}
           className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl"
         >
-          Volver a artículos
+          Back to articles
         </button>
       </main>
     );
@@ -92,12 +92,12 @@ export default function IdArticlePage() {
   if (!articleData) {
     return (
       <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600 w-full">
-        <p className="text-red-500 text-lg">El artículo que buscas no existe.</p>
+        <p className="text-red-500 text-lg">The article you are looking for does not exist.</p>
         <button
           onClick={() => router.push("/logged/pages/articles")}
           className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl"
         >
-          Volver a artículos
+          Back to articles
         </button>
       </main>
     );
@@ -116,7 +116,7 @@ export default function IdArticlePage() {
                 : "bg-red-600 hover:bg-red-700 cursor-pointer"
             }`}
           >
-            {isDeleting ? "Eliminando..." : "Eliminar artículo"}
+            {isDeleting ? "Deleting..." : "Delete article"}
           </button>
         </div>
 
@@ -129,7 +129,7 @@ export default function IdArticlePage() {
 
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-gray-500">
-            URL de Imagen Principal
+            Main Image URL
           </label>
           <ArticleMainImage
             imageUrl={articleData.article_main_image_url ?? ""}
@@ -146,7 +146,7 @@ export default function IdArticlePage() {
 
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-gray-500">
-            Posición destacada
+            Highlighted position
           </label>
           <select
             value={articleData.highlited_position ?? ""}
@@ -154,7 +154,7 @@ export default function IdArticlePage() {
             disabled={isSaving}
             className="w-full max-w-xs px-4 py-2 border rounded-xl bg-white text-gray-700 disabled:opacity-50"
           >
-            <option value="">(Ninguna)</option>
+            <option value="">(None)</option>
             <option value="Main article">Main article</option>
             <option value="Position1">Position1</option>
             <option value="Position2">Position2</option>
@@ -207,7 +207,7 @@ export default function IdArticlePage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-500">Contenidos</label>
+          <label className="text-sm font-medium text-gray-500">Contents</label>
           <ArticleContentsList
             contentsIds={articleData.contents_array ?? []}
             contentsData={contentsData}
@@ -236,7 +236,7 @@ export default function IdArticlePage() {
 
       <DeleteArticleModal
         isOpen={isDeleteModalOpen}
-        articleTitle={articleData.articleTitle || "Sin título"}
+        articleTitle={articleData.articleTitle || "Untitled"}
         onConfirm={handleDeleteArticle}
         onCancel={closeDeleteModal}
       />

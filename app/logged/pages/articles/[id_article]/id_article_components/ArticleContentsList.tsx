@@ -54,14 +54,14 @@ const ArticleContentsList: FC<ArticleContentsListProps> = ({
   return (
     <section className="mt-8 flex flex-col gap-6">
       <p className="text-sm text-gray-600">
-        Pase el mouse entre los contenidos para agregar uno nuevo. Puede editar cada campo con el lápiz o editar el bloque completo.
+        Hover between contents to add a new one. You can edit each field with the pencil or edit the whole block.
       </p>
       {contentsIds.length === 0 ? (
         <div
           className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-950 hover:bg-blue-50"
           onClick={() => onAddContent(null)}
         >
-          <p className="text-gray-500">Haga clic para agregar el primer contenido</p>
+          <p className="text-gray-500">Click to add the first content</p>
         </div>
       ) : (
         contentsIds.map((contentId, index) => {
@@ -87,7 +87,7 @@ const ArticleContentsList: FC<ArticleContentsListProps> = ({
                     onClick={() => onAddContent(index)}
                     className="text-blue-950 font-semibold"
                   >
-                    + Agregar contenido aquí
+                    + Add content here
                   </button>
                 </div>
               </div>
@@ -107,7 +107,7 @@ const ArticleContentsList: FC<ArticleContentsListProps> = ({
                           onClick={() => onEditContentBlock(contentData)}
                           className="text-sm text-blue-600 hover:text-blue-800"
                         >
-                          Editar bloque
+                          Edit block
                         </button>
                       )}
                       {onDeleteContent && (
@@ -116,7 +116,7 @@ const ArticleContentsList: FC<ArticleContentsListProps> = ({
                           onClick={() => onDeleteContent(contentId)}
                           className="text-sm text-red-600 hover:text-red-800"
                         >
-                          Eliminar
+                          Delete
                         </button>
                       )}
                     </div>
@@ -140,7 +140,7 @@ const ArticleContentsList: FC<ArticleContentsListProps> = ({
           className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-blue-950 hover:bg-blue-50"
           onClick={() => onAddContent(null)}
         >
-          <p className="text-gray-500">+ Agregar contenido al final</p>
+          <p className="text-gray-500">+ Add content at the end</p>
         </div>
       )}
     </section>

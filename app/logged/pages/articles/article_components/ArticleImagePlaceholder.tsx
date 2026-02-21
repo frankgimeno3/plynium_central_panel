@@ -12,7 +12,7 @@ const ArticleImagePlaceholder: FC<ArticleImagePlaceholderProps> = ({
   return (
     <div
       className={`flex items-center justify-center bg-gray-300 text-gray-500 ${className}`}
-      aria-label="Sin imagen"
+      aria-label="No image"
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"

@@ -107,7 +107,7 @@ export default function CreateArticlePage() {
       try {
         await EventsService.getEventById(eventId.trim());
       } catch {
-        alert("El evento con ese ID no existe. Compruebe el Event id o desmarque \"Is this article about an event-fair?\".");
+        alert("The event with that ID does not exist. Check the Event id or uncheck \"Is this article about an event-fair?\".");
         return;
       }
     }
@@ -192,7 +192,7 @@ export default function CreateArticlePage() {
   };
 
   const handleDeleteContent = (contentId: string) => {
-    if (confirm("¿Está seguro de eliminar este contenido?")) {
+    if (confirm("Are you sure you want to delete this content?")) {
       setContents((prev) => prev.filter((c) => c.content_id !== contentId));
     }
   };
@@ -206,7 +206,7 @@ export default function CreateArticlePage() {
       try {
         await EventsService.getEventById(eventId.trim());
       } catch {
-        alert("El evento con ese ID no existe. Compruebe el Event id o desmarque \"Is this article about an event-fair?\".");
+        alert("The event with that ID does not exist. Check the Event id or uncheck \"Is this article about an event-fair?\".");
         return;
       }
     }
@@ -224,7 +224,7 @@ export default function CreateArticlePage() {
             else if (contentError?.message) errorMessage = contentError.message;
             else if (contentError?.data?.message) errorMessage = contentError.data.message;
             else if (contentError?.status)
-              errorMessage = `Error ${contentError.status}: ${contentError.message || "Error del servidor"}`;
+              errorMessage = `Error ${contentError.status}: ${contentError.message || "Server error"}`;
             else if (contentError?.data)
               errorMessage =
                 typeof contentError.data === "string"
@@ -249,7 +249,7 @@ export default function CreateArticlePage() {
         event_id: isArticleEvent ? eventId.trim() : "",
       };
       await ArticleService.createArticle(articleData);
-      alert("¡Artículo creado exitosamente!");
+      alert("Article created successfully!");
       router.push("/logged/pages/articles");
       router.refresh();
     } catch (error: any) {
@@ -259,12 +259,12 @@ export default function CreateArticlePage() {
       else if (error?.message) errorMessage = error.message;
       else if (error?.data?.message) errorMessage = error.data.message;
       else if (error?.status)
-        errorMessage = `Error ${error.status}: ${error.message || "Error del servidor"}`;
+        errorMessage = `Error ${error.status}: ${error.message || "Server error"}`;
       else if (error?.data)
         errorMessage =
           typeof error.data === "string" ? error.data : JSON.stringify(error.data);
       else errorMessage = JSON.stringify(error);
-      alert(`Error al crear el artículo: ${errorMessage}`);
+      alert(`Error creating article: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -273,8 +273,8 @@ export default function CreateArticlePage() {
   return (
     <div className="flex flex-col w-full bg-white min-h-screen">
       <div className="flex flex-col text-center bg-blue-950/70 p-5 px-46 text-white">
-        <p className="text-2xl">Crear Nuevo Artículo</p>
-        <p className="text-sm mt-2">Fase {currentPhase} de 3</p>
+        <p className="text-2xl">Create New Article</p>
+        <p className="text-sm mt-2">Phase {currentPhase} of 3</p>
       </div>
 
       <div className="flex flex-col p-8 max-w-4xl mx-auto w-full">

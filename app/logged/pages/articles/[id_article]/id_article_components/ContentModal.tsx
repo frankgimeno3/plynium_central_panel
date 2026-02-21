@@ -44,7 +44,7 @@ export default function ContentModal({
       >
         <div className="flex items-center justify-between pb-4 border-b">
           <h2 className="text-xl font-bold">
-            {editingContent ? "Editar Contenido" : "Nuevo Contenido"}
+            {editingContent ? "Edit Content" : "New Content"}
           </h2>
           <button
             onClick={onClose}
@@ -56,7 +56,7 @@ export default function ContentModal({
 
         {!selectedContentType ? (
           <div className="flex flex-col gap-3">
-            <p className="font-bold">Seleccione el tipo de contenido:</p>
+            <p className="font-bold">Select the content type:</p>
             <div className="grid grid-cols-2 gap-3">
               {(["text_image", "image_text", "just_image", "just_text"] as const).map((type) => (
                 <button
@@ -69,11 +69,11 @@ export default function ContentModal({
                   </p>
                   <p className="text-xs text-gray-600 mt-1">
                     {type === "text_image" &&
-                      "Texto a la izquierda, imagen a la derecha"}
+                      "Text on the left, image on the right"}
                     {type === "image_text" &&
-                      "Imagen a la izquierda, texto a la derecha"}
-                    {type === "just_image" && "Solo imagen centrada"}
-                    {type === "just_text" && "Solo texto centrado"}
+                      "Image on the left, text on the right"}
+                    {type === "just_image" && "Image only, centered"}
+                    {type === "just_text" && "Text only, centered"}
                   </p>
                 </button>
               ))}
@@ -87,7 +87,7 @@ export default function ContentModal({
                 onClick={onContentTypeChange}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Cambiar tipo
+                Change type
               </button>
             </div>
 
@@ -97,15 +97,15 @@ export default function ContentModal({
                 <div className="space-y-2">
                   <label className="font-bold">
                     {selectedContentType === "text_image"
-                      ? "Texto (izquierda)"
-                      : "Imagen (izquierda)"}{" "}
+                      ? "Text (left)"
+                      : "Image (left)"}{" "}
                     *
                   </label>
                   {selectedContentType === "text_image" ? (
                     <RichTextEditor
                       value={contentFormData.left}
                       onChange={(html) => onFormDataChange({ left: html })}
-                      placeholder="Ingrese el texto..."
+                      placeholder="Enter text..."
                       minHeight="100px"
                     />
                   ) : (
@@ -116,7 +116,7 @@ export default function ContentModal({
                         onFormDataChange({ left: e.target.value })
                       }
                       className="w-full px-4 py-2 border rounded-xl"
-                      placeholder="URL de la imagen..."
+                      placeholder="Image URL..."
                     />
                   )}
                 </div>
@@ -124,8 +124,8 @@ export default function ContentModal({
                 <div className="space-y-2">
                   <label className="font-bold">
                     {selectedContentType === "text_image"
-                      ? "Imagen (derecha)"
-                      : "Texto (derecha)"}{" "}
+                      ? "Image (right)"
+                      : "Text (right)"}{" "}
                     *
                   </label>
                   {selectedContentType === "text_image" ? (
@@ -136,13 +136,13 @@ export default function ContentModal({
                         onFormDataChange({ right: e.target.value })
                       }
                       className="w-full px-4 py-2 border rounded-xl"
-                      placeholder="URL de la imagen..."
+                      placeholder="Image URL..."
                     />
                   ) : (
                     <RichTextEditor
                       value={contentFormData.right}
                       onChange={(html) => onFormDataChange({ right: html })}
-                      placeholder="Ingrese el texto..."
+                      placeholder="Enter text..."
                       minHeight="100px"
                     />
                   )}
@@ -155,8 +155,8 @@ export default function ContentModal({
               <div className="space-y-2">
                 <label className="font-bold">
                   {selectedContentType === "just_image"
-                    ? "Imagen (centrada)"
-                    : "Texto (centrado)"}{" "}
+                    ? "Image (centered)"
+                    : "Text (centered)"}{" "}
                   *
                 </label>
                 {selectedContentType === "just_image" ? (
@@ -167,13 +167,13 @@ export default function ContentModal({
                       onFormDataChange({ center: e.target.value })
                     }
                     className="w-full px-4 py-2 border rounded-xl"
-                    placeholder="URL de la imagen..."
+                    placeholder="Image URL..."
                   />
                 ) : (
                   <RichTextEditor
                     value={contentFormData.center}
                     onChange={(html) => onFormDataChange({ center: html })}
-                    placeholder="Ingrese el texto..."
+                    placeholder="Enter text..."
                     minHeight="150px"
                   />
                 )}
@@ -186,7 +186,7 @@ export default function ContentModal({
                 disabled={isSaving}
                 className="flex-1 bg-gray-300 py-2 rounded-xl"
               >
-                Cancelar
+                Cancel
               </button>
               <button
                 onClick={onConfirm}
@@ -195,7 +195,7 @@ export default function ContentModal({
                   isSaving ? "bg-gray-400 text-gray-600" : "bg-blue-950 text-white"
                 }`}
               >
-                {isSaving ? "Guardando..." : "Confirmar"}
+                {isSaving ? "Saving..." : "Confirm"}
               </button>
             </div>
           </div>

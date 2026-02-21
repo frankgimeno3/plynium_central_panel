@@ -20,9 +20,9 @@ const ArticlePhase2: React.FC<ArticlePhase2Props> = ({
 }) => {
   return (
     <div className="flex flex-col gap-6">
-      <h2 className="text-xl font-bold">Contenidos del Artículo</h2>
+      <h2 className="text-xl font-bold">Article Contents</h2>
       <p className="text-sm text-gray-600">
-        Pase el mouse entre los contenidos para agregar uno nuevo. Haga clic en un contenido para editarlo.
+        Hover between contents to add a new one. Click on a content to edit it.
       </p>
 
       <div className="flex flex-col gap-4">
@@ -31,7 +31,7 @@ const ArticlePhase2: React.FC<ArticlePhase2Props> = ({
             className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-950 hover:bg-blue-50"
             onClick={() => onOpenModal(null)}
           >
-            <p className="text-gray-500">Haga clic para agregar el primer contenido</p>
+            <p className="text-gray-500">Click to add the first content</p>
           </div>
         ) : (
           contents.map((content, index) => (
@@ -53,7 +53,7 @@ const ArticlePhase2: React.FC<ArticlePhase2Props> = ({
                     onClick={() => onOpenModal(index)}
                     className="text-blue-950 font-semibold"
                   >
-                    + Agregar contenido aquí
+                    + Add content here
                   </button>
                 </div>
               </div>
@@ -69,16 +69,16 @@ const ArticlePhase2: React.FC<ArticlePhase2Props> = ({
                     </div>
                     <div className="text-sm text-gray-700">
                       {content.content_type === "text_image" && (
-                        <p>Texto: {content.content_content.left.substring(0, 50)}...</p>
+                        <p>Text: {content.content_content.left.substring(0, 50)}...</p>
                       )}
                       {content.content_type === "image_text" && (
-                        <p>Imagen: {content.content_content.left}</p>
+                        <p>Image: {content.content_content.left}</p>
                       )}
                       {content.content_type === "just_image" && (
-                        <p>Imagen: {content.content_content.center}</p>
+                        <p>Image: {content.content_content.center}</p>
                       )}
                       {content.content_type === "just_text" && (
-                        <p>Texto: {content.content_content.center.substring(0, 50)}...</p>
+                        <p>Text: {content.content_content.center.substring(0, 50)}...</p>
                       )}
                     </div>
                   </div>
@@ -87,13 +87,13 @@ const ArticlePhase2: React.FC<ArticlePhase2Props> = ({
                       onClick={() => onOpenModal(null, content)}
                       className="text-blue-600 hover:text-blue-800 text-sm"
                     >
-                      Editar
+                      Edit
                     </button>
                     <button
                       onClick={() => onDeleteContent(content.content_id)}
                       className="text-red-600 hover:text-red-800 text-sm"
                     >
-                      Eliminar
+                      Delete
                     </button>
                   </div>
                 </div>
@@ -107,7 +107,7 @@ const ArticlePhase2: React.FC<ArticlePhase2Props> = ({
             className="border-2 border-dashed border-gray-300 rounded-xl p-4 text-center cursor-pointer hover:border-blue-950 hover:bg-blue-50"
             onClick={() => onOpenModal(null)}
           >
-            <p className="text-gray-500">+ Agregar contenido al final</p>
+            <p className="text-gray-500">+ Add content at the end</p>
           </div>
         )}
       </div>
@@ -117,13 +117,13 @@ const ArticlePhase2: React.FC<ArticlePhase2Props> = ({
           onClick={onBack}
           className="flex-1 bg-gray-300 py-2 rounded-xl"
         >
-          Atrás
+          Back
         </button>
         <button
           onClick={onNext}
           className="flex-1 bg-blue-950 text-white py-2 rounded-xl"
         >
-          Siguiente
+          Next
         </button>
       </div>
     </div>
