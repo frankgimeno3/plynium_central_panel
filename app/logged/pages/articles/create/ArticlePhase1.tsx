@@ -36,6 +36,9 @@ interface ArticlePhase1Props {
   tags: string;
   setTags: (v: string) => void;
   tagsArray: string[];
+  portals: { id: number; name: string }[];
+  selectedPortalIds: number[];
+  onTogglePortal: (portalId: number) => void;
   onAddTag: () => void;
   onRemoveTag: (index: number) => void;
   onNext: () => void;
@@ -63,11 +66,15 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
   tags,
   setTags,
   tagsArray,
+  portals,
+  selectedPortalIds,
+  onTogglePortal,
   onAddTag,
   onRemoveTag,
   onNext,
 }) => {
   const router = useRouter();
+  const canGoNext = !isGeneratingId && !!articleTitle && !!date && selectedPortalIds.length >= 1;
 
   return (
     <div className="flex flex-col gap-6">
@@ -187,6 +194,34 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
       )}
 
       <div className="space-y-2">
+        <label className="font-bold text-lg">Portals * (select at least one)</label>
+        <p className="text-sm text-gray-600">Choose in which portal(s) this article will be published.</p>
+        <div className="flex flex-wrap gap-3">
+          {portals.length === 0 ? (
+            <p className="text-sm text-gray-500">Loading portals...</p>
+          ) : (
+            portals.map((p) => (
+              <label
+                key={p.id}
+                className="flex items-center gap-2 cursor-pointer text-sm border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50"
+              >
+                <input
+                  type="checkbox"
+                  checked={selectedPortalIds.includes(p.id)}
+                  onChange={() => onTogglePortal(p.id)}
+                  className="rounded border-gray-300"
+                />
+                <span>{p.name}</span>
+              </label>
+            ))
+          )}
+        </div>
+        {selectedPortalIds.length === 0 && portals.length > 0 && (
+          <p className="text-sm text-amber-600">Select at least one portal to continue.</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
         <label className="font-bold text-lg">Tags</label>
         <div className="flex gap-2">
           <input
@@ -231,11 +266,9 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
         </button>
         <button
           onClick={onNext}
-          disabled={isGeneratingId || !articleTitle || !date}
+          disabled={!canGoNext}
           className={`flex-1 py-2 rounded-xl ${
-            !isGeneratingId && articleTitle && date
-              ? "bg-blue-950 text-white"
-              : "bg-gray-300 text-gray-500"
+            canGoNext ? "bg-blue-950 text-white" : "bg-gray-300 text-gray-500"
           }`}
         >
           Next

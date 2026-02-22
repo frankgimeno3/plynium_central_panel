@@ -4,7 +4,16 @@ import { articleInterface } from "@/app/contents/interfaces";
 import { ArticleService } from "@/app/service/ArticleService";
 import { ContentService } from "@/app/service/ContentService";
 import { EventsService } from "@/app/service/EventsService";
+import { PortalService } from "@/app/service/PortalService";
 import { isRichTextEmpty } from "@/app/logged/logged_components/RichTextEditor";
+
+export type ArticlePublication = {
+  id: string;
+  portalId: number;
+  portalName: string;
+  slug: string;
+  status: string;
+};
 
 type EditTarget =
   | { kind: "articleTitle" }
@@ -19,8 +28,11 @@ export function useArticlePage(id_article: string) {
 
   const [articleData, setArticleData] = useState<articleInterface | null>(null);
   const [contentsData, setContentsData] = useState<any[]>([]);
+  const [publications, setPublications] = useState<ArticlePublication[]>([]);
+  const [allPortals, setAllPortals] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [isPortalActionLoading, setIsPortalActionLoading] = useState<boolean>(false);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
   const [modalInitialValue, setModalInitialValue] = useState<string>("");
@@ -74,11 +86,24 @@ export function useArticlePage(id_article: string) {
           setError("The article you are looking for does not exist.");
           setArticleData(null);
           setContentsData([]);
+          setPublications([]);
+          setAllPortals([]);
           return;
         }
 
         const article = normalizeArticle(articleRaw);
         setArticleData(article);
+
+        const [pubs, portalsList] = await Promise.all([
+          ArticleService.getArticlePublications(id_article),
+          PortalService.getAllPortals(),
+        ]);
+        setPublications(Array.isArray(pubs) ? pubs : []);
+        setAllPortals(
+          Array.isArray(portalsList)
+            ? portalsList.map((p: any) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
+            : []
+        );
 
         const allContents = await ContentService.getAllContents();
         const articleContents = allContents.filter((content: any) =>
@@ -99,6 +124,8 @@ export function useArticlePage(id_article: string) {
         setError(errorMessage);
         setArticleData(null);
         setContentsData([]);
+        setPublications([]);
+        setAllPortals([]);
       } finally {
         setLoading(false);
       }
@@ -111,6 +138,8 @@ export function useArticlePage(id_article: string) {
       setError("ID de artículo no válido.");
       setArticleData(null);
       setContentsData([]);
+      setPublications([]);
+      setAllPortals([]);
     }
   }, [id_article]);
 
@@ -668,6 +697,35 @@ export function useArticlePage(id_article: string) {
     openDeleteModal,
     handleFormDataChange,
     handleContentTypeChange,
+    publications,
+    allPortals,
+    isPortalActionLoading,
+    handleAddArticleToPortal: async (portalId: number) => {
+      if (!id_article || isPortalActionLoading) return;
+      setIsPortalActionLoading(true);
+      try {
+        const list = await ArticleService.addArticleToPortal(id_article, portalId);
+        setPublications(Array.isArray(list) ? list : []);
+      } catch (e: any) {
+        const msg = e?.message || e?.data?.message || "Error adding to portal";
+        alert(msg);
+      } finally {
+        setIsPortalActionLoading(false);
+      }
+    },
+    handleRemoveArticleFromPortal: async (portalId: number) => {
+      if (!id_article || isPortalActionLoading) return;
+      setIsPortalActionLoading(true);
+      try {
+        const list = await ArticleService.removeArticleFromPortal(id_article, portalId);
+        setPublications(Array.isArray(list) ? list : []);
+      } catch (e: any) {
+        const msg = e?.message || e?.data?.message || "Error removing from portal";
+        alert(msg);
+      } finally {
+        setIsPortalActionLoading(false);
+      }
+    },
   };
 }
 

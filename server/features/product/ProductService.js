@@ -10,7 +10,7 @@ function toApiProduct(row) {
         company: row.company ?? "",
         productDescription: row.product_description ?? "",
         mainImageSrc: row.main_image_src ?? "",
-        productCategoriesArray: Array.isArray(row.product_categories_array) ? row.product_categories_array : [],
+        productCategoriesArray: [],
     };
 }
 
@@ -78,7 +78,6 @@ export async function updateProduct(idProduct, data) {
     if (data.company !== undefined) updates.company = data.company;
     if (data.productDescription !== undefined) updates.product_description = data.productDescription;
     if (data.mainImageSrc !== undefined) updates.main_image_src = data.mainImageSrc;
-    if (data.productCategoriesArray !== undefined) updates.product_categories_array = data.productCategoriesArray;
     if (Object.keys(updates).length === 0) {
         return toApiProduct(row);
     }

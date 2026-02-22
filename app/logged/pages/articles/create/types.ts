@@ -20,4 +20,5 @@ export interface ArticleData {
   highlited_position?: string;
   is_article_event?: boolean;
   event_id?: string;
+  portalIds: number[];
 }

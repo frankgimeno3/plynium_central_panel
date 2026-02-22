@@ -10,8 +10,8 @@ function toApiCompany(row) {
         category: row.category ?? "",
         mainDescription: row.main_description ?? "",
         mainImage: row.main_image ?? "",
-        productsArray: Array.isArray(row.products_array) ? row.products_array : [],
-        categoriesArray: Array.isArray(row.categories_array) ? row.categories_array : [],
+        productsArray: [],
+        categoriesArray: [],
         mainEmail: row.main_email ?? "",
         mailTelephone: row.mail_telephone ?? "",
         fullAddress: row.full_address ?? "",
@@ -88,8 +88,6 @@ export async function updateCompany(idCompany, data) {
     if (data.category !== undefined) updates.category = data.category;
     if (data.mainDescription !== undefined) updates.main_description = data.mainDescription;
     if (data.mainImage !== undefined) updates.main_image = data.mainImage;
-    if (data.productsArray !== undefined) updates.products_array = data.productsArray;
-    if (data.categoriesArray !== undefined) updates.categories_array = data.categoriesArray;
     if (data.mainEmail !== undefined) updates.main_email = data.mainEmail;
     if (data.mailTelephone !== undefined) updates.mail_telephone = data.mailTelephone;
     if (data.fullAddress !== undefined) updates.full_address = data.fullAddress;

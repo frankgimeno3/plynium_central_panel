@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArticleService } from "@/app/service/ArticleService";
 import { ContentService } from "@/app/service/ContentService";
 import { EventsService } from "@/app/service/EventsService";
+import { PortalService } from "@/app/service/PortalService";
 import type { Content, ArticleData } from "./types";
 import ArticlePhase1 from "./ArticlePhase1";
 import ArticlePhase2 from "./ArticlePhase2";
@@ -49,6 +50,22 @@ export default function CreateArticlePage() {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingId, setIsGeneratingId] = useState(true);
+  const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
+  const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    PortalService.getAllPortals().then((list: any[]) => {
+      setPortals(
+        Array.isArray(list) ? list.map((p) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) })) : []
+      );
+    }).catch(() => setPortals([]));
+  }, []);
+
+  const handleTogglePortal = (portalId: number) => {
+    setSelectedPortalIds((prev) =>
+      prev.includes(portalId) ? prev.filter((id) => id !== portalId) : [...prev, portalId]
+    );
+  };
 
   const generateArticleId = useCallback(async (): Promise<string> => {
     try {
@@ -247,6 +264,7 @@ export default function CreateArticlePage() {
         highlited_position: highlitedPosition || undefined,
         is_article_event: isArticleEvent,
         event_id: isArticleEvent ? eventId.trim() : "",
+        portalIds: selectedPortalIds.length > 0 ? selectedPortalIds : [],
       };
       await ArticleService.createArticle(articleData);
       alert("Article created successfully!");
@@ -301,6 +319,9 @@ export default function CreateArticlePage() {
             tags={tags}
             setTags={setTags}
             tagsArray={tagsArray}
+            portals={portals}
+            selectedPortalIds={selectedPortalIds}
+            onTogglePortal={handleTogglePortal}
             onAddTag={handleAddTag}
             onRemoveTag={handleRemoveTag}
             onNext={handlePhase1Next}

@@ -61,6 +61,11 @@ export default function IdArticlePage() {
     openDeleteModal,
     handleFormDataChange,
     handleContentTypeChange,
+    publications,
+    allPortals,
+    isPortalActionLoading,
+    handleAddArticleToPortal,
+    handleRemoveArticleFromPortal,
   } = useArticlePage(id_article);
 
   useEffect(() => {
@@ -196,6 +201,68 @@ export default function IdArticlePage() {
             />
           </div>
         )}
+
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-gray-500">Published in portals</label>
+          <div className="flex flex-col gap-2">
+            {publications.length === 0 ? (
+              <p className="text-sm text-gray-400">Not published in any portal yet.</p>
+            ) : (
+              <ul className="list-none flex flex-wrap gap-2">
+                {publications.map((pub) => (
+                  <li
+                    key={pub.id}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm"
+                  >
+                    <span>{pub.portalName}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveArticleFromPortal(pub.portalId)}
+                      disabled={isPortalActionLoading}
+                      className="text-red-600 hover:text-red-800 disabled:opacity-50 text-xs font-medium"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {allPortals.filter((p) => !publications.some((pub) => pub.portalId === p.id)).length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  id="add-portal-select"
+                  disabled={isPortalActionLoading}
+                  className="px-3 py-2 border rounded-xl bg-white text-gray-700 text-sm disabled:opacity-50 max-w-xs"
+                  defaultValue=""
+                >
+                  <option value="">Select portal to add…</option>
+                  {allPortals
+                    .filter((p) => !publications.some((pub) => pub.portalId === p.id))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={isPortalActionLoading}
+                  onClick={() => {
+                    const sel = document.getElementById("add-portal-select") as HTMLSelectElement;
+                    const portalId = sel?.value ? Number(sel.value) : 0;
+                    if (portalId) {
+                      handleAddArticleToPortal(portalId);
+                      sel.value = "";
+                    }
+                  }}
+                  className="px-3 py-2 text-xs rounded-xl bg-blue-950 text-white hover:bg-blue-950/90 disabled:opacity-50"
+                >
+                  {isPortalActionLoading ? "…" : "Add to portal"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-gray-500">Tags</label>

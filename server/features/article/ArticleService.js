@@ -1,11 +1,12 @@
 import { Op } from "sequelize";
 import ArticleModel from "./ArticleModel.js";
+import { createArticlePublications } from "./ArticlePublicationService.js";
 // Ensure models are initialized by importing models.js
 import "../../database/models.js";
 
 const ARTICLE_ATTRIBUTES_WITHOUT_HIGHLITED = [
     'id_article', 'article_title', 'article_subtitle', 'article_main_image_url',
-    'company', 'date', 'article_tags_array', 'contents_array'
+    'company', 'date', 'is_article_event', 'event_id', 'created_at', 'updated_at'
 ];
 
 function isHighlitedPositionMissingError(error) {
@@ -47,19 +48,39 @@ function toApiArticle(article) {
         article_main_image_url: article.article_main_image_url,
         company: article.company,
         date: article.date ? new Date(article.date).toISOString().split('T')[0] : null,
-        article_tags_array: article.article_tags_array || [],
-        contents_array: article.contents_array || [],
+        article_tags_array: [],
+        contents_array: [],
         highlited_position: article.highlited_position ?? "",
         is_article_event: article.is_article_event === true,
         event_id: article.event_id ?? ""
     };
 }
 
-export async function getAllArticles() {
+/**
+ * @param {{ portalNames?: string[] }} opts - If portalNames is a non-empty array, only articles published in at least one of those portals (by name) are returned.
+ */
+export async function getAllArticles(opts = {}) {
+    const portalNames = Array.isArray(opts?.portalNames) ? opts.portalNames.filter(Boolean).map((n) => String(n).trim()) : [];
     try {
         if (!ArticleModel.sequelize) {
             console.warn('ArticleModel not initialized, returning empty array');
             return [];
+        }
+
+        if (portalNames.length > 0) {
+            const placeholders = portalNames.map((_, i) => `:p${i}`).join(", ");
+            const replacements = Object.fromEntries(portalNames.map((n, i) => [`p${i}`, n]));
+            const [rows] = await ArticleModel.sequelize.query(
+                `SELECT DISTINCT a.id_article, a.article_title, a.article_subtitle, a.article_main_image_url,
+                        a.company, a.date, a.highlited_position, a.is_article_event, a.event_id, a.created_at, a.updated_at
+                 FROM articles a
+                 INNER JOIN article_publications ap ON ap.article_id = a.id_article
+                 INNER JOIN portals p ON p.id = ap.portal_id
+                 WHERE p.name IN (${placeholders})
+                 ORDER BY a.date DESC`,
+                { replacements }
+            );
+            return (rows || []).map((row) => toApiArticle(row));
         }
 
         const articles = await ArticleModel.findAll({
@@ -71,8 +92,7 @@ export async function getAllArticles() {
             console.warn('[ArticleService] Columns is_article_event/event_id missing, adding them...');
             try {
                 await ensureArticleEventColumns();
-                const articles = await ArticleModel.findAll({ order: [['date', 'DESC']] });
-                return articles.map(toApiArticle);
+                return getAllArticles(opts);
             } catch (retryError) {
                 console.error('Error in getAllArticles after adding columns:', retryError);
                 throw retryError;
@@ -148,8 +168,6 @@ function buildCreatePayload(articleData, includeHighlitedPosition = true) {
         article_main_image_url: articleData.article_main_image_url,
         company: articleData.company,
         date: articleData.date,
-        article_tags_array: articleData.article_tags_array || [],
-        contents_array: articleData.contents_array || [],
         is_article_event: articleData.is_article_event === true,
         event_id: (articleData.is_article_event === true && articleData.event_id) ? String(articleData.event_id).trim() : ""
     };
@@ -188,6 +206,10 @@ export async function createArticle(articleData) {
         }
 
         const article = await ArticleModel.create(buildCreatePayload(articleData, true));
+        const portalIds = Array.isArray(articleData.portalIds) ? articleData.portalIds.filter((id) => Number.isInteger(Number(id))) : [];
+        if (portalIds.length > 0) {
+            await createArticlePublications(article.id_article, portalIds.map(Number), articleData.articleTitle);
+        }
         console.log(`[ArticleService] [${requestId}] Article created successfully:`, article.toJSON());
         return toApiArticle(article);
     } catch (error) {
@@ -196,6 +218,10 @@ export async function createArticle(articleData) {
             try {
                 await ensureArticleEventColumns();
                 const article = await ArticleModel.create(buildCreatePayload(articleData, true));
+                const portalIds = Array.isArray(articleData.portalIds) ? articleData.portalIds.filter((id) => Number.isInteger(Number(id))) : [];
+                if (portalIds.length > 0) {
+                    await createArticlePublications(article.id_article, portalIds.map(Number), articleData.articleTitle);
+                }
                 return toApiArticle(article);
             } catch (retryError) {
                 console.error(`[ArticleService] [${requestId}] Create failed after adding columns:`, retryError);
@@ -204,13 +230,11 @@ export async function createArticle(articleData) {
         }
         if (isHighlitedPositionMissingError(error)) {
             try {
-                    const payload = buildCreatePayload(articleData, false);
+                const payload = buildCreatePayload(articleData, false);
                 const tableName = ArticleModel.tableName || "articles";
-                const tagsLiteral = toPostgresArrayLiteral(payload.article_tags_array || []);
-                const contentsLiteral = toPostgresArrayLiteral(payload.contents_array || []);
                 await ArticleModel.sequelize.query(
-                    `INSERT INTO "${tableName}" (id_article, article_title, article_subtitle, article_main_image_url, company, date, article_tags_array, contents_array, created_at, updated_at)
-                     VALUES ($1, $2, $3, $4, $5, $6, $7::text[], $8::text[], NOW(), NOW())`,
+                    `INSERT INTO "${tableName}" (id_article, article_title, article_subtitle, article_main_image_url, company, date, created_at, updated_at, is_article_event, event_id)
+                     VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW(), $7, $8)`,
                     {
                         bind: [
                             payload.id_article,
@@ -219,8 +243,8 @@ export async function createArticle(articleData) {
                             payload.article_main_image_url || null,
                             payload.company || null,
                             payload.date,
-                            tagsLiteral,
-                            contentsLiteral
+                            payload.is_article_event ?? false,
+                            payload.event_id ?? ""
                         ]
                     }
                 );
@@ -228,6 +252,10 @@ export async function createArticle(articleData) {
                     attributes: ARTICLE_ATTRIBUTES_WITHOUT_HIGHLITED
                 });
                 if (!article) throw new Error("Article not found after insert");
+                const portalIds = Array.isArray(articleData.portalIds) ? articleData.portalIds.filter((id) => Number.isInteger(Number(id))) : [];
+                if (portalIds.length > 0) {
+                    await createArticlePublications(payload.id_article, portalIds.map(Number), articleData.articleTitle);
+                }
                 console.log(`[ArticleService] [${requestId}] Article created (without highlited_position):`, article.toJSON());
                 return { ...toApiArticle(article), highlited_position: "" };
             } catch (fallbackError) {
@@ -272,8 +300,6 @@ function buildUpdatePayload(article, articleData, includeHighlitedPosition = tru
     if (articleData.article_main_image_url !== undefined) payload.article_main_image_url = articleData.article_main_image_url;
     if (articleData.company !== undefined) payload.company = articleData.company;
     if (articleData.date !== undefined) payload.date = articleData.date;
-    if (articleData.article_tags_array !== undefined) payload.article_tags_array = articleData.article_tags_array;
-    if (articleData.contents_array !== undefined) payload.contents_array = articleData.contents_array;
     if (includeHighlitedPosition && articleData.highlited_position !== undefined) {
         const v = (articleData.highlited_position || "").trim();
         payload.highlited_position = v;

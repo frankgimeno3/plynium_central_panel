@@ -83,14 +83,6 @@ ArticleModel.init({
         type: DataTypes.DATE,
         allowNull: false
     },
-    article_tags_array: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
-        defaultValue: []
-    },
-    contents_array: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
-        defaultValue: []
-    },
     highlited_position: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -206,14 +198,6 @@ CompanyModel.init({
         allowNull: true,
         defaultValue: ""
     },
-    products_array: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
-        defaultValue: []
-    },
-    categories_array: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
-        defaultValue: []
-    },
     main_email: {
         type: DataTypes.STRING,
         allowNull: true,
@@ -275,10 +259,6 @@ ProductModel.init({
         type: DataTypes.STRING,
         allowNull: true,
         defaultValue: ""
-    },
-    product_categories_array: {
-        type: DataTypes.ARRAY(DataTypes.STRING),
-        defaultValue: []
     }
 }, {
     sequelize,

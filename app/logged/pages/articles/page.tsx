@@ -2,27 +2,30 @@
 
 import { FC, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 import ArticleMiniature from "./article_components/ArticleMiniature";
 import ArticleFilter from "./article_components/ArticleFilter";
 import { ArticleService } from "@/app/service/ArticleService";
 
-interface ArticlesProps {}
+interface ArticlesContentProps {}
 
-const Articles: FC<ArticlesProps> = ({}) => {
+const ArticlesContent: FC<ArticlesContentProps> = ({}) => {
+  const searchParams = useSearchParams();
+  const portalNamesParam = searchParams.get("portalNames") ?? "";
+  const portalNames = portalNamesParam ? portalNamesParam.split(",").map((s) => s.trim()).filter(Boolean) : [];
+
   const [allArticles, setAllArticles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchArticles = async () => {
     try {
-      // Fetch all articles from the API (includes JSON and dynamically created ones)
-      const apiArticles = await ArticleService.getAllArticles();
-      
-      // Filtrar y normalizar artículos válidos
+      const apiArticles = await ArticleService.getAllArticles(
+        portalNames.length > 0 ? { portalNames } : {}
+      );
       const validArticles = Array.isArray(apiArticles)
         ? apiArticles.filter((art: any) => art && art.id_article && art.articleTitle)
         : [];
-      
       setAllArticles(validArticles);
     } catch (error: unknown) {
       const msg =
@@ -42,7 +45,7 @@ const Articles: FC<ArticlesProps> = ({}) => {
 
   useEffect(() => {
     fetchArticles();
-  }, []);
+  }, [portalNamesParam]);
 
   return (
     <div className="flex flex-col w-full bg-white">
@@ -56,9 +59,7 @@ const Articles: FC<ArticlesProps> = ({}) => {
         </Link>
       </div>
 
-      <Suspense fallback={<div className='px-36 mx-7'><div className='flex flex-col border border-gray-100 shadow-xl text-center py-2 text-xs'><p>Loading filter...</p></div></div>}>
-        <ArticleFilter />
-      </Suspense>
+      <ArticleFilter selectedPortalNames={portalNames} />
 
       <div className="flex flex-wrap py-5 gap-12 justify-center ">
         {loading ? (
@@ -86,6 +87,12 @@ const Articles: FC<ArticlesProps> = ({}) => {
       </div>
     </div>
   );
-};
+}
+
+const Articles: FC = () => (
+  <Suspense fallback={<div className="flex flex-col w-full bg-white min-h-[200px] items-center justify-center"><p className="text-gray-500">Loading...</p></div>}>
+    <ArticlesContent />
+  </Suspense>
+);
 
 export default Articles;
