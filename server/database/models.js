@@ -307,6 +307,10 @@ BannerModel.init({
         type: DataTypes.INTEGER,
         allowNull: false,
         defaultValue: 0
+    },
+    appearance_weight: {
+        type: DataTypes.STRING(16),
+        allowNull: true
     }
 }, {
     sequelize,

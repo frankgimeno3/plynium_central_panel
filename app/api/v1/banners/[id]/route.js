@@ -40,6 +40,7 @@ export const PUT = createEndpoint(
         route: Joi.string().optional(),
         bannerRedirection: Joi.string().uri().optional(),
         position: Joi.number().integer().min(0).optional(),
+        appearanceWeight: Joi.string().valid("low", "medium", "high").optional(),
     }),
     true
 );

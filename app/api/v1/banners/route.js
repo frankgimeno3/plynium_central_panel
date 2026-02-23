@@ -37,6 +37,7 @@ export const POST = createEndpoint(
         positionType: Joi.string().valid("right", "top", "medium").required(),
         pageType: Joi.string().valid("home", "custom").required(),
         position: Joi.number().integer().min(0).optional().default(0),
+        appearanceWeight: Joi.string().valid("low", "medium", "high").optional(),
     }),
     true
 );

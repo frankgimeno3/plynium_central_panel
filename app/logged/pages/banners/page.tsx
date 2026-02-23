@@ -44,8 +44,8 @@ const Banners: FC = () => {
 
     const {
         homePageRightBanners,
-        homePageTopBanner,
-        generalMediumBanner,
+        homePageTopBanners,
+        generalMediumBanners,
         customTopSections,
         customRightSections,
         customMediumSections,
@@ -63,10 +63,14 @@ const Banners: FC = () => {
         setDeleteSectionId,
         setEditSectionId,
         setAdSectionType,
-        handleMoveBannerUp,
-        handleMoveBannerDown,
         handleAddHomePageTopBanner,
+        handleAddCustomTopBanner,
+        handleChangeAppearanceWeight,
+        handleDeleteTopBanner,
+        handleDeleteMediumBanner,
+        handleDeleteRightBanner,
         handleAddGeneralMediumBanner,
+        handleAddCustomMediumBanner,
         handleAddHomePageRightBanner,
         handleAddCustomRightBanner,
         handleAddCustomSection,
@@ -168,24 +172,30 @@ const Banners: FC = () => {
                         {/* Tab content */}
                         {activeTab === 'top' && (
                             <TopBannersTab
-                                homePageTopBanner={homePageTopBanner}
+                                homePageTopBanners={homePageTopBanners}
                                 customTopSections={customTopSections}
                                 onAddHomeTopBanner={handleAddHomePageTopBanner}
                                 onAddCustomSection={openTopCustomSectionModal}
+                                onAddBannerToSection={handleAddCustomTopBanner}
                                 onChangeImage={openChangeImageModal}
                                 onChangeRedirection={openChangeRedirectionModal}
+                                onChangeAppearanceWeight={handleChangeAppearanceWeight}
+                                onDeleteTopBanner={handleDeleteTopBanner}
                                 onEditRoute={openEditRouteModal}
                                 onDeleteSection={openDeleteModal}
                             />
                         )}
                         {activeTab === 'middle' && (
                             <MiddleBannersTab
-                                generalMediumBanner={generalMediumBanner}
+                                generalMediumBanners={generalMediumBanners}
                                 customMediumSections={customMediumSections}
                                 onAddGeneralMediumBanner={handleAddGeneralMediumBanner}
                                 onAddCustomSection={openMediumCustomSectionModal}
+                                onAddBannerToSection={handleAddCustomMediumBanner}
                                 onChangeImage={openChangeImageModal}
                                 onChangeRedirection={openChangeRedirectionModal}
+                                onChangeAppearanceWeight={handleChangeAppearanceWeight}
+                                onDeleteMediumBanner={handleDeleteMediumBanner}
                                 onEditRoute={openEditRouteModal}
                                 onDeleteSection={openDeleteModal}
                             />
@@ -197,10 +207,10 @@ const Banners: FC = () => {
                                 onAddHomeRightBanner={handleAddHomePageRightBanner}
                                 onAddCustomSection={openRightCustomSectionModal}
                                 onAddBannerToSection={handleAddCustomRightBanner}
-                                onMoveBannerUp={handleMoveBannerUp}
-                                onMoveBannerDown={handleMoveBannerDown}
                                 onChangeImage={openChangeImageModal}
                                 onChangeRedirection={openChangeRedirectionModal}
+                                onChangeAppearanceWeight={handleChangeAppearanceWeight}
+                                onDeleteRightBanner={handleDeleteRightBanner}
                                 onEditRoute={openEditRouteModal}
                                 onDeleteSection={openDeleteModal}
                             />

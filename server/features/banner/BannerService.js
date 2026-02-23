@@ -13,6 +13,7 @@ function toApiFormat(row) {
         positionType: r.position_type,
         pageType: r.page_type,
         position: r.position,
+        appearanceWeight: r.appearance_weight ?? "medium",
     };
 }
 
@@ -78,6 +79,7 @@ export async function createBanner(data) {
             position_type: data.positionType,
             page_type: data.pageType,
             position: data.position ?? 0,
+            appearance_weight: data.appearanceWeight ?? "medium",
         });
         return toApiFormat(row.toJSON());
     } catch (error) {
@@ -95,6 +97,7 @@ export async function updateBanner(id, data) {
         if (data.route !== undefined) row.route = data.route;
         if (data.bannerRedirection !== undefined) row.banner_redirection = data.bannerRedirection;
         if (data.position !== undefined) row.position = data.position;
+        if (data.appearanceWeight !== undefined) row.appearance_weight = data.appearanceWeight;
         // portal_id is immutable: never update it when editing a banner
 
         await row.save();
