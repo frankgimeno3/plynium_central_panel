@@ -1,23 +1,14 @@
 import {createEndpoint} from "../../../../../server/createEndpoint.js";
 import {NextResponse} from "next/server";
-import {createUser, getAllUsers, updateUser} from "../../../../../server/features/user/UserSerivce.js";
+import {createUser, updateUser} from "../../../../../server/features/user/UserSerivce.js";
+import {getUsersFromRds} from "../../../../../server/features/user/userRepository.js";
 import Joi from "joi";
 
+// GET: cualquier usuario autenticado puede ver la lista (datos desde RDS)
 export const GET = createEndpoint(async () => {
-    const users = await getAllUsers();
-    const parsedUsers = users.map((user, index) => {
-        const attributes = {}
-        user.Attributes.forEach((attribute) => {
-            attributes[attribute.Name] = attribute.Value
-        })
-        return {
-            username: user.Username,
-            enabled: user.Enabled,
-            attributes: attributes
-        }
-    })
-    return NextResponse.json(parsedUsers);
-}, null, true, ['admin']);
+    const users = await getUsersFromRds();
+    return NextResponse.json(users);
+}, null, true, []);
 
 export const PUT = createEndpoint(async (request, body) => {
     const result = await updateUser(body)

@@ -15,6 +15,7 @@ interface EditUserModalProps {
   initialUser: User;
   onSave: (updatedUser: User) => void;
   onCancel: () => void;
+  saveError?: string | null;
 }
 
 const EditUserModal: FC<EditUserModalProps> = ({
@@ -22,6 +23,7 @@ const EditUserModal: FC<EditUserModalProps> = ({
   initialUser,
   onSave,
   onCancel,
+  saveError,
 }) => {
   const [userFullName, setUserFullName] = useState<string>(initialUser.user_full_name);
   const [userName, setUserName] = useState<string>(initialUser.user_name);
@@ -134,6 +136,12 @@ const EditUserModal: FC<EditUserModalProps> = ({
         <h2 className="mb-4 text-xl font-semibold text-gray-800">
           Editar Usuario
         </h2>
+
+        {saveError && (
+          <p className="mb-4 rounded bg-red-50 p-2 text-sm text-red-700">
+            {saveError}
+          </p>
+        )}
 
         <div className="flex flex-col gap-4">
           <div>

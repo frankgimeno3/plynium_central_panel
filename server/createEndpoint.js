@@ -68,7 +68,7 @@ async function checkTokens(request, response) {
     }
     const {payload} = decodeJWT(idToken);
     const {email} = payload;
-    return [username, email, payload.sub, isRefreshed, accessToken, idToken, cookieKeys, expiresIn];
+    return [username, email, payload.sub, isRefreshed, accessToken, idToken, cookieKeys, expiresIn, payload];
 }
 
 export function createEndpoint(callback, schema = null, isProtected = false, roles = []) {
@@ -80,12 +80,13 @@ export function createEndpoint(callback, schema = null, isProtected = false, rol
         } catch (e) {
             return new Response(e.message, {status: 400});
         }
-        let username, sub, email, isRefreshed, accessToken, idToken, cookieKeys, cookieExpiresIn;
+        let username, sub, email, isRefreshed, accessToken, idToken, cookieKeys, cookieExpiresIn, tokenPayload;
         if (isProtected) {
             try {
-                [username, email, sub, isRefreshed, accessToken, idToken, cookieKeys, cookieExpiresIn] = await checkTokens(request, response);
+                [username, email, sub, isRefreshed, accessToken, idToken, cookieKeys, cookieExpiresIn, tokenPayload] = await checkTokens(request, response);
                 request.email = email;
                 request.sub = sub;
+                request.tokenPayload = tokenPayload;
             } catch (error) {
                 console.error(error);
 
@@ -95,13 +96,17 @@ export function createEndpoint(callback, schema = null, isProtected = false, rol
 
         if (isProtected && roles.length > 0) {
             try {
-                const userRoles = await getUserRoles(username);
+                let userRoles = await getUserRoles(username);
+                // Fallback: si no tiene grupos en Cognito, usar custom:role del token (común con Amplify)
+                if (userRoles.length === 0 && tokenPayload) {
+                    const customRole = tokenPayload['custom:role'] ?? tokenPayload.role;
+                    if (customRole) userRoles = [customRole];
+                }
                 const hasAccess = userRoles.some(role => roles.includes(role));
-                console.log(userRoles);
-                if(!hasAccess) return new Response("Prohibido ", {status: 403});
+                if (!hasAccess) return new Response("Forbidden", { status: 403 });
             } catch (e) {
-                console.log(e);
-                return new Response("Prohibido ", {status: 403});
+                console.error(e);
+                return new Response("Forbidden", { status: 403 });
             }
         }
 
