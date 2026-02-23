@@ -1,13 +1,22 @@
 import { createEndpoint } from "../../../../server/createEndpoint.js";
 import { NextResponse } from "next/server";
-import { getAllBanners, createBanner } from "../../../../server/features/banner/BannerService.js";
+import { getBannersByPortalId, createBanner } from "../../../../server/features/banner/BannerService.js";
 import Joi from "joi";
 
 export const runtime = "nodejs";
 
 export const GET = createEndpoint(
-    async () => {
-        const banners = await getAllBanners();
+    async (request) => {
+        const { searchParams } = new URL(request.url);
+        const portalIdParam = searchParams.get("portalId");
+        if (portalIdParam == null || portalIdParam === "") {
+            return NextResponse.json({ error: "portalId query is required" }, { status: 400 });
+        }
+        const portalId = parseInt(portalIdParam, 10);
+        if (Number.isNaN(portalId)) {
+            return NextResponse.json({ error: "portalId must be a number" }, { status: 400 });
+        }
+        const banners = await getBannersByPortalId(portalId);
         return NextResponse.json(banners);
     },
     null,
@@ -20,6 +29,7 @@ export const POST = createEndpoint(
         return NextResponse.json(banner);
     },
     Joi.object({
+        portalId: Joi.number().integer().required(),
         id: Joi.string().required(),
         src: Joi.string().uri().required(),
         route: Joi.string().optional().default("/"),

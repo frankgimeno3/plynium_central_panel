@@ -6,6 +6,7 @@ const DEFAULT_BANNER_REDIRECTION = 'https://www.vidrioperfil.com';
 
 export interface Banner {
     id: string;
+    portalId?: number;
     src: string;
     route: string;
     bannerRedirection: string;
@@ -21,7 +22,7 @@ export interface CustomSection {
     banners: Banner[];
 }
 
-export const useBanners = () => {
+export const useBanners = (portalId: number | null) => {
     // Home Page Right Banners state
     const [homePageRightBanners, setHomePageRightBanners] = useState<Banner[]>([]);
 
@@ -123,20 +124,29 @@ export const useBanners = () => {
         setCustomMediumSections(groupByRoute('medium'));
     }, []);
 
-    // Load banners from API (RDS) on mount only
+    // Reset banner state when portal changes; load banners for the selected portal only
     useEffect(() => {
+        setHomePageRightBanners([]);
+        setHomePageTopBanner(null);
+        setGeneralMediumBanner(null);
+        setCustomTopSections([]);
+        setCustomRightSections([]);
+        setCustomMediumSections([]);
+        if (portalId == null) return;
         let cancelled = false;
-        BannerService.getAllBanners()
+        BannerService.getBannersByPortalId(portalId)
             .then((data) => {
-                if (!cancelled && data && Array.isArray(data) && data.length > 0) {
-                    applyBannersListToState(data as Banner[]);
+                if (!cancelled && data && Array.isArray(data)) {
+                    if (data.length > 0) {
+                        applyBannersListToState(data as Banner[]);
+                    }
                 }
             })
             .catch((err) => {
                 if (!cancelled) console.error('Error loading banners from API:', err);
             });
         return () => { cancelled = true; };
-    }, [applyBannersListToState]);
+    }, [portalId, applyBannersListToState]);
 
     // Move banner up/down handlers
     const handleMoveBannerUp = (bannerId: string, section: 'home' | string, sectionType?: 'top' | 'right' | 'medium') => {
@@ -300,6 +310,7 @@ export const useBanners = () => {
     };
 
     const handleAddHomePageTopBanner = () => {
+        if (portalId == null) return;
         const newBanner: Banner = {
             id: generateBannerId('top', 'home'),
             src: DEFAULT_BANNER_IMAGE,
@@ -310,10 +321,11 @@ export const useBanners = () => {
             position: 0
         };
         setHomePageTopBanner(newBanner);
-        BannerService.createBanner(newBanner).catch((err) => console.error('Error persisting banner:', err));
+        BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
     };
 
     const handleAddGeneralMediumBanner = () => {
+        if (portalId == null) return;
         const newBanner: Banner = {
             id: generateBannerId('medium', 'home'),
             src: DEFAULT_BANNER_IMAGE,
@@ -324,10 +336,11 @@ export const useBanners = () => {
             position: 0
         };
         setGeneralMediumBanner(newBanner);
-        BannerService.createBanner(newBanner).catch((err) => console.error('Error persisting banner:', err));
+        BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
     };
 
     const handleAddHomePageRightBanner = () => {
+        if (portalId == null) return;
         const newBanner: Banner = {
             id: generateBannerId('right', 'home'),
             src: DEFAULT_BANNER_IMAGE,
@@ -338,10 +351,11 @@ export const useBanners = () => {
             position: homePageRightBanners.length
         };
         setHomePageRightBanners([...homePageRightBanners, newBanner]);
-        BannerService.createBanner(newBanner).catch((err) => console.error('Error persisting banner:', err));
+        BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
     };
 
     const handleAddCustomRightBanner = (sectionId: string) => {
+        if (portalId == null) return;
         const sectionIndex = customRightSections.findIndex(s => s.id === sectionId);
         if (sectionIndex !== -1) {
             const newSections = [...customRightSections];
@@ -357,11 +371,12 @@ export const useBanners = () => {
             };
             section.banners = [...section.banners, newBanner];
             setCustomRightSections(newSections);
-            BannerService.createBanner(newBanner).catch((err) => console.error('Error persisting banner:', err));
+            BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
         }
     };
 
     const handleAddCustomTopBanner = (sectionId: string) => {
+        if (portalId == null) return;
         const sectionIndex = customTopSections.findIndex(s => s.id === sectionId);
         if (sectionIndex !== -1) {
             const newSections = [...customTopSections];
@@ -377,11 +392,12 @@ export const useBanners = () => {
             };
             section.banners = [...section.banners, newBanner];
             setCustomTopSections(newSections);
-            BannerService.createBanner(newBanner).catch((err) => console.error('Error persisting banner:', err));
+            BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
         }
     };
 
     const handleAddCustomMediumBanner = (sectionId: string) => {
+        if (portalId == null) return;
         const sectionIndex = customMediumSections.findIndex(s => s.id === sectionId);
         if (sectionIndex !== -1) {
             const newSections = [...customMediumSections];
@@ -397,11 +413,12 @@ export const useBanners = () => {
             };
             section.banners = [...section.banners, newBanner];
             setCustomMediumSections(newSections);
-            BannerService.createBanner(newBanner).catch((err) => console.error('Error persisting banner:', err));
+            BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
         }
     };
 
     const handleAddCustomSection = (sectionName: string, sectionRoute: string, bannerSrc?: string) => {
+        if (portalId == null) return;
         const routeSlug = sectionRoute.replace(/\//g, '-');
         const newSection: CustomSection = {
             id: adSectionType === 'medium' ? `section-medium-${routeSlug}-${Date.now()}` : `section-${routeSlug}-${Date.now()}`,
@@ -421,7 +438,7 @@ export const useBanners = () => {
                 position: 0
             };
             newSection.banners = [newBanner];
-            BannerService.createBanner(newBanner).catch((err) => console.error('Error persisting banner:', err));
+            BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
         }
 
         if (adSectionType === 'top') {

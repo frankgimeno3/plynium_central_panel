@@ -1,8 +1,8 @@
 import apiClient from "../apiClient.js";
 
 export class BannerService {
-    static async getAllBanners() {
-        const response = await apiClient.get("/api/v1/banners");
+    static async getBannersByPortalId(portalId) {
+        const response = await apiClient.get("/api/v1/banners", { params: { portalId } });
         return response.data;
     }
 

@@ -277,6 +277,10 @@ BannerModel.init({
         primaryKey: true,
         unique: true
     },
+    portal_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
+    },
     src: {
         type: DataTypes.STRING(2048),
         allowNull: false
@@ -310,6 +314,7 @@ BannerModel.init({
     underscored: true,
     tableName: "banners",
     indexes: [
+        { fields: ["portal_id"] },
         { fields: ["page_type"] },
         { fields: ["position_type"] },
         { fields: ["route"] }

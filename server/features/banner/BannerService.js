@@ -6,6 +6,7 @@ function toApiFormat(row) {
     const r = row && typeof row.toJSON === "function" ? row.toJSON() : row;
     return {
         id: r.id,
+        portalId: r.portal_id,
         src: r.src,
         route: r.route,
         bannerRedirection: r.banner_redirection ?? "https://www.vidrioperfil.com",
@@ -15,10 +16,29 @@ function toApiFormat(row) {
     };
 }
 
+export async function getBannersByPortalId(portalId) {
+    try {
+        const rows = await BannerModel.findAll({
+            where: { portal_id: portalId },
+            order: [
+                ["page_type", "ASC"],
+                ["position_type", "ASC"],
+                ["route", "ASC"],
+                ["position", "ASC"],
+            ],
+        });
+        return rows.map((r) => toApiFormat(r.toJSON()));
+    } catch (error) {
+        console.error("Error fetching banners from database:", error);
+        throw error;
+    }
+}
+
 export async function getAllBanners() {
     try {
         const rows = await BannerModel.findAll({
             order: [
+                ["portal_id", "ASC"],
                 ["page_type", "ASC"],
                 ["position_type", "ASC"],
                 ["route", "ASC"],
@@ -45,8 +65,13 @@ export async function getBannerById(id) {
 
 export async function createBanner(data) {
     try {
+        const portalId = data.portalId;
+        if (portalId == null || portalId === undefined) {
+            throw new Error("portalId is required when creating a banner");
+        }
         const row = await BannerModel.create({
             id: data.id,
+            portal_id: portalId,
             src: data.src,
             route: data.route ?? "/",
             banner_redirection: data.bannerRedirection ?? "https://www.vidrioperfil.com",
@@ -70,6 +95,7 @@ export async function updateBanner(id, data) {
         if (data.route !== undefined) row.route = data.route;
         if (data.bannerRedirection !== undefined) row.banner_redirection = data.bannerRedirection;
         if (data.position !== undefined) row.position = data.position;
+        // portal_id is immutable: never update it when editing a banner
 
         await row.save();
         return toApiFormat(row.toJSON());
