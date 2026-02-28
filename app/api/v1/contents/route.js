@@ -16,6 +16,8 @@ export const POST = createEndpoint(async (request, body) => {
     return NextResponse.json(content);
 }, Joi.object({
     content_id: Joi.string().required(),
+    article_id: Joi.string().required(),
+    position: Joi.number().integer().min(0).optional(),
     content_type: Joi.string().required(),
     content_content: Joi.object({
         left: Joi.alternatives().try(Joi.string(), Joi.valid("no")).required(),

@@ -22,16 +22,24 @@ const PublicationSearchResultsContent: FC = () => {
         const numeroParam = searchParams.get('numero');
         const dateFromParam = searchParams.get('dateFrom');
         const dateToParam = searchParams.get('dateTo');
+        const portalNamesParam = searchParams.get('portalNames');
 
         if (revistaParam) currentFilters.revista = revistaParam;
         if (numeroParam) currentFilters.numero = numeroParam;
         if (dateFromParam) currentFilters.dateFrom = dateFromParam;
         if (dateToParam) currentFilters.dateTo = dateToParam;
+        if (portalNamesParam) currentFilters.portalNames = portalNamesParam;
 
         setFilters(currentFilters);
 
-        // Get all publications from API
-        const apiPublications = await PublicationService.getAllPublications();
+        const portalNames = portalNamesParam
+          ? portalNamesParam.split(',').map((s) => s.trim()).filter(Boolean)
+          : [];
+
+        // Get publications from API (optionally filtered by portal)
+        const apiPublications = await PublicationService.getAllPublications(
+          portalNames.length > 0 ? { portalNames } : {}
+        );
         const allPublications = Array.isArray(apiPublications) ? apiPublications : [];
 
         // Filter publications based on search params

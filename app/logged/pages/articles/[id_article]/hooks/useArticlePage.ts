@@ -602,9 +602,14 @@ export function useArticlePage(id_article: string) {
         );
         setContentsData(articleContents);
       } else {
-        await ContentService.createContent(newContent);
-
         const currentContentsArray = articleData.contents_array ?? [];
+        const position = contentModalPosition === null ? currentContentsArray.length : contentModalPosition;
+        await ContentService.createContent({
+          ...newContent,
+          article_id: id_article,
+          position,
+        });
+
         let newContentsArray: string[];
 
         if (contentModalPosition === null) {

@@ -4,6 +4,7 @@ import React, { FC, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import DatePicker from '@/app/logged/logged_components/DatePicker';
 import { EventsService } from '@/app/service/EventsService';
+import { PortalService } from '@/app/service/PortalService';
 
 const REGIONS = [
   'EUROPE',
@@ -103,6 +104,9 @@ const IdEvent: FC = () => {
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [eventPortals, setEventPortals] = useState<{ portalId: number; portalName: string; slug: string; status: string }[]>([]);
+  const [allPortals, setAllPortals] = useState<{ id: number; name: string }[]>([]);
+  const [portalActionLoading, setPortalActionLoading] = useState(false);
 
   useEffect(() => {
     if (!eventId) {
@@ -113,7 +117,11 @@ const IdEvent: FC = () => {
     (async () => {
       setLoading(true);
       try {
-        const data = await EventsService.getEventById(eventId);
+        const [data, portals, eventPortalsList] = await Promise.all([
+          EventsService.getEventById(eventId),
+          PortalService.getAllPortals(),
+          EventsService.getEventPortals(eventId).catch(() => []),
+        ]);
         if (!cancelled) {
           setEvent(data);
           setEventName(data.event_name);
@@ -125,6 +133,12 @@ const IdEvent: FC = () => {
           setEndDate(normalizeDateForInput(data.end_date));
           setEventMainImage(data.event_main_image ?? '');
           setImageLoadError(false);
+          setAllPortals(
+            Array.isArray(portals)
+              ? portals.map((p: any) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
+              : []
+          );
+          setEventPortals(Array.isArray(eventPortalsList) ? eventPortalsList : []);
         }
       } catch (err) {
         console.error('Error loading event:', err);
@@ -398,6 +412,87 @@ const IdEvent: FC = () => {
                 {getDuration()} day{getDuration() !== 1 ? 's' : ''}
               </p>
             </div>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-500">Visible in portals</label>
+          <div className="flex flex-col gap-2">
+            {eventPortals.length === 0 ? (
+              <p className="text-sm text-gray-400">Not visible in any portal yet.</p>
+            ) : (
+              <ul className="list-none flex flex-wrap gap-2">
+                {eventPortals.map((ep) => (
+                  <li
+                    key={ep.portalId}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm"
+                  >
+                    <span>{ep.portalName}</span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (portalActionLoading) return;
+                        setPortalActionLoading(true);
+                        try {
+                          const list = await EventsService.removeEventFromPortal(event.id_fair, ep.portalId);
+                          setEventPortals(Array.isArray(list) ? list : []);
+                        } catch (e: any) {
+                          alert(e?.message || e?.data?.message || 'Error removing from portal');
+                        } finally {
+                          setPortalActionLoading(false);
+                        }
+                      }}
+                      disabled={portalActionLoading}
+                      className="text-red-600 hover:text-red-800 disabled:opacity-50 text-xs font-medium"
+                    >
+                      Remove
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {allPortals.filter((p) => !eventPortals.some((ep) => ep.portalId === p.id)).length > 0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  id="add-event-portal-select"
+                  disabled={portalActionLoading}
+                  className="px-3 py-2 border rounded-xl bg-white text-gray-700 text-sm disabled:opacity-50 max-w-xs"
+                  defaultValue=""
+                >
+                  <option value="">Select portal to add…</option>
+                  {allPortals
+                    .filter((p) => !eventPortals.some((ep) => ep.portalId === p.id))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={portalActionLoading}
+                  onClick={async () => {
+                    const sel = document.getElementById('add-event-portal-select') as HTMLSelectElement;
+                    const portalId = sel?.value ? Number(sel.value) : 0;
+                    if (portalId && event) {
+                      setPortalActionLoading(true);
+                      try {
+                        const list = await EventsService.addEventToPortal(event.id_fair, portalId);
+                        setEventPortals(Array.isArray(list) ? list : []);
+                        sel.value = '';
+                      } catch (e: any) {
+                        alert(e?.message || e?.data?.message || 'Error adding to portal');
+                      } finally {
+                        setPortalActionLoading(false);
+                      }
+                    }
+                  }}
+                  className="px-3 py-2 text-xs rounded-xl bg-blue-950 text-white hover:bg-blue-950/90 disabled:opacity-50"
+                >
+                  {portalActionLoading ? '…' : 'Add to portal'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

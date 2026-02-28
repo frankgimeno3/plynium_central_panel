@@ -32,6 +32,7 @@ export const PUT = createEndpoint(async (request, body) => {
     article_tags_array: Joi.array().items(Joi.string()).optional(),
     contents_array: Joi.array().items(Joi.string()).optional(),
     highlited_position: Joi.string().allow("").optional(),
+    portalId: Joi.number().integer().optional(),
     is_article_event: Joi.boolean().optional(),
     event_id: Joi.string().allow("").optional()
 }), true);

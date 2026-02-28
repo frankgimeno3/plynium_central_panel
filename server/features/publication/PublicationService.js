@@ -1,8 +1,12 @@
 import PublicationModel from "./PublicationModel.js";
+import { createPublicationPortals } from "./PublicationPortalService.js";
 // Ensure models are initialized by importing models.js
 import "../../database/models.js";
 
-export async function getAllPublications() {
+/**
+ * @param {{ portalNames?: string[] }} opts - If portalNames is non-empty, only publications visible in at least one of those portals (by name) are returned.
+ */
+export async function getAllPublications(opts = {}) {
     try {
         // Check if model is initialized
         if (!PublicationModel.sequelize) {
@@ -10,19 +14,37 @@ export async function getAllPublications() {
             return [];
         }
 
+        const portalNames = Array.isArray(opts?.portalNames) ? opts.portalNames.filter(Boolean).map((n) => String(n).trim()) : [];
+
+        const transformPub = (p) => ({
+            id_publication: p.id_publication,
+            redirectionLink: p.redirection_link,
+            date: p.date ? new Date(p.date).toISOString().split('T')[0] : null,
+            revista: p.revista,
+            número: p.número,
+            publication_main_image_url: p.publication_main_image_url || ""
+        });
+
+        if (portalNames.length > 0) {
+            const placeholders = portalNames.map((_, i) => `:p${i}`).join(", ");
+            const replacements = Object.fromEntries(portalNames.map((n, i) => [`p${i}`, n]));
+            const [rows] = await PublicationModel.sequelize.query(
+                `SELECT DISTINCT p.id_publication, p.redirection_link, p.date, p.revista, p.número, p.publication_main_image_url
+                 FROM publications p
+                 INNER JOIN publication_portals pp ON pp.publication_id = p.id_publication
+                 INNER JOIN portals port ON port.id = pp.portal_id
+                 WHERE port.name IN (${placeholders})
+                 ORDER BY p.date DESC`,
+                { replacements }
+            );
+            return (rows || []).map(transformPub);
+        }
+
         const publications = await PublicationModel.findAll({
             order: [['date', 'DESC']]
         });
-        
-        // Transform database format to API format
-        return publications.map(publication => ({
-            id_publication: publication.id_publication,
-            redirectionLink: publication.redirection_link,
-            date: publication.date ? new Date(publication.date).toISOString().split('T')[0] : null,
-            revista: publication.revista,
-            número: publication.número,
-            publication_main_image_url: publication.publication_main_image_url || ""
-        }));
+
+        return publications.map(transformPub);
     } catch (error) {
         console.error('Error fetching publications from database:', error);
         console.error('Error name:', error.name);
@@ -114,7 +136,19 @@ export async function createPublication(publicationData) {
             número: publicationData.número != null ? String(publicationData.número) : publicationData.número,
             publication_main_image_url: publicationData.publication_main_image_url || ""
         });
-        
+
+        const portalIds = Array.isArray(publicationData.portalIds)
+            ? publicationData.portalIds.filter((id) => Number.isInteger(Number(id))).map(Number)
+            : [];
+        if (portalIds.length > 0) {
+            await createPublicationPortals(
+                publication.id_publication,
+                portalIds,
+                publicationData.redirectionLink ?? "",
+                publicationData.id_publication
+            );
+        }
+
         console.log(`[PublicationService] [${requestId}] Publication created successfully:`, publication.toJSON());
         
         // Transform database format to API format

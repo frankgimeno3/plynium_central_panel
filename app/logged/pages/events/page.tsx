@@ -3,6 +3,7 @@
 import React, { FC, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { EventsService } from '@/app/service/EventsService';
+import EventFilter, { EventFilterParams } from './event_components/EventFilter';
 
 interface Event {
   id_fair: string;
@@ -25,13 +26,26 @@ const IndustryEvents: FC = () => {
   const [calendarInitialized, setCalendarInitialized] = useState(false);
   const [viewMode, setViewMode] = useState<'months' | 'day'>('months');
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
+  const [filterParams, setFilterParams] = useState<EventFilterParams>({
+    name: '',
+    region: '',
+    dateFrom: '',
+    dateTo: '',
+    portalNames: [],
+  });
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
       try {
-        const data = await EventsService.getAllEvents();
+        const params: Record<string, string | string[] | undefined> = {};
+        if (filterParams.name) params.name = filterParams.name;
+        if (filterParams.region) params.region = filterParams.region;
+        if (filterParams.dateFrom) params.dateFrom = filterParams.dateFrom;
+        if (filterParams.dateTo) params.dateTo = filterParams.dateTo;
+        if (filterParams.portalNames.length > 0) params.portalNames = filterParams.portalNames;
+        const data = await EventsService.getAllEvents(params);
         if (!cancelled) setEvents(data);
       } catch (err: unknown) {
         const msg =
@@ -51,7 +65,7 @@ const IndustryEvents: FC = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [filterParams]);
 
   useEffect(() => {
     if (events.length > 0 && !calendarInitialized) {
@@ -310,6 +324,11 @@ const IndustryEvents: FC = () => {
           Create event
         </button>
       </div>
+
+      <EventFilter
+        onFilter={setFilterParams}
+        initialParams={filterParams}
+      />
 
       {viewMode === 'months' ? (
         <div className="flex flex-col lg:flex-row gap-8">

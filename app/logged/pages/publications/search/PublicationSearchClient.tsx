@@ -22,6 +22,9 @@ const PublicationSearchClient: FC<PublicationSearchClientProps> = ({ filteredPub
   if (filters.revista) {
     filterDescriptions.push(`Magazine: ${filters.revista}`);
   }
+  if (filters.portalNames) {
+    filterDescriptions.push(`Portal(s): ${filters.portalNames.split(',').map((s) => s.trim()).filter(Boolean).join(', ')}`);
+  }
   if (filters.numero) {
     filterDescriptions.push(`Number: ${filters.numero}`);
   }

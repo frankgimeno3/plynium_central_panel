@@ -6,10 +6,17 @@ import Joi from "joi";
 // Ensure Node.js runtime (not Edge) for database connections
 export const runtime = "nodejs";
 
-export const GET = createEndpoint(async () => {
-    const publications = await getAllPublications();
+const getSchema = Joi.object({
+    portalNames: Joi.string().optional(),
+});
+
+export const GET = createEndpoint(async (request, body) => {
+    const portalNames = body?.portalNames
+        ? String(body.portalNames).split(",").map((s) => s.trim()).filter(Boolean)
+        : [];
+    const publications = await getAllPublications({ portalNames });
     return NextResponse.json(publications);
-}, null, true);
+}, getSchema, true);
 
 export const POST = createEndpoint(async (request, body) => {
     const publication = await createPublication(body);
@@ -20,6 +27,7 @@ export const POST = createEndpoint(async (request, body) => {
     date: Joi.string().required(),
     magazine: Joi.string().required(),
     número: Joi.number().required(),
-    publication_main_image_url: Joi.string().optional().allow("")
+    publication_main_image_url: Joi.string().optional().allow(""),
+    portalIds: Joi.array().items(Joi.number().integer().min(1)).optional(),
 }), true);
 

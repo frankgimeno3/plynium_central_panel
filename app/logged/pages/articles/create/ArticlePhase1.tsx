@@ -195,7 +195,11 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
 
       <div className="space-y-2">
         <label className="font-bold text-lg">Portals * (select at least one)</label>
-        <p className="text-sm text-gray-600">Choose in which portal(s) this article will be published.</p>
+        <p className="text-sm text-gray-600">
+          {highlitedPosition
+            ? "When using a highlighted position, only one portal can be selected."
+            : "Choose in which portal(s) this article will be published."}
+        </p>
         <div className="flex flex-wrap gap-3">
           {portals.length === 0 ? (
             <p className="text-sm text-gray-500">Loading portals...</p>

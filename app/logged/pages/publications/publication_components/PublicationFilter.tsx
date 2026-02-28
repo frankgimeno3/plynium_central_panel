@@ -3,6 +3,7 @@ import { FC, useState, useMemo, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { PublicationService } from '@/app/service/PublicationService';
+import { PortalService } from '@/app/service/PortalService';
 import { publicationInterface } from '@/app/contents/interfaces';
 
 interface PublicationFilterProps {}
@@ -17,7 +18,21 @@ const PublicationFilterContent: FC<PublicationFilterProps> = ({ }) => {
   const [dateToMonth, setDateToMonth] = useState('');
   const [dateToYear, setDateToYear] = useState('');
   const [publications, setPublications] = useState<publicationInterface[]>([]);
+  const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
+  const [portalChecklist, setPortalChecklist] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    PortalService.getAllPortals()
+      .then((list: any[]) => {
+        setPortals(
+          Array.isArray(list)
+            ? list.map((p) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
+            : []
+        );
+      })
+      .catch(() => setPortals([]));
+  }, []);
 
   // Load publications from API
   useEffect(() => {
@@ -41,16 +56,20 @@ const PublicationFilterContent: FC<PublicationFilterProps> = ({ }) => {
     const numeroParam = searchParams.get('numero');
     const dateFromParam = searchParams.get('dateFrom');
     const dateToParam = searchParams.get('dateTo');
+    const portalNamesParam = searchParams.get('portalNames');
 
     if (revistaParam) setRevista(revistaParam);
     if (numeroParam) setNumero(numeroParam);
-    
+    if (portalNamesParam) {
+      setPortalChecklist(portalNamesParam.split(',').map((s) => s.trim()).filter(Boolean));
+    }
+
     if (dateFromParam) {
       const [year, month] = dateFromParam.split('-');
       if (year) setDateFromYear(year);
       if (month) setDateFromMonth(month);
     }
-    
+
     if (dateToParam) {
       const [year, month] = dateToParam.split('-');
       if (year) setDateToYear(year);
@@ -109,14 +128,23 @@ const PublicationFilterContent: FC<PublicationFilterProps> = ({ }) => {
     return !hasAnyDateField || hasAllDateFields;
   };
 
+  const togglePortal = (name: string) => {
+    setPortalChecklist((prev) =>
+      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
+    );
+  };
+
   const getFilterHref = () => {
     const params = new URLSearchParams();
-    
+
     if (revista) {
       params.set('revista', revista);
     }
     if (numero) {
       params.set('numero', numero);
+    }
+    if (portalChecklist.length > 0) {
+      params.set('portalNames', portalChecklist.join(','));
     }
     if (dateFromMonth && dateFromYear) {
       params.set('dateFrom', `${dateFromYear}-${dateFromMonth}`);
@@ -126,12 +154,19 @@ const PublicationFilterContent: FC<PublicationFilterProps> = ({ }) => {
     }
 
     const queryString = params.toString();
-    return queryString ? `/logged/pages/publications/search?${queryString}` : '#';
+    return queryString ? `/logged/pages/publications/search?${queryString}` : '/logged/pages/publications/search';
   };
 
-  const hasAnyFilter = revista || numero || dateFromMonth || dateFromYear || dateToMonth || dateToYear;
+  const hasAnyFilter =
+    revista ||
+    numero ||
+    portalChecklist.length > 0 ||
+    dateFromMonth ||
+    dateFromYear ||
+    dateToMonth ||
+    dateToYear;
   const dateRangeValid = isDateRangeValid();
-  const canFilter = (revista || numero || (dateFromMonth && dateFromYear && dateToMonth && dateToYear)) && dateRangeValid;
+  const canFilter = dateRangeValid;
 
   return (
     <div className='px-36 mx-7'>
@@ -144,6 +179,33 @@ const PublicationFilterContent: FC<PublicationFilterProps> = ({ }) => {
       {isFilterOpen && (
         <div className='bg-white mb-12 shadow-xl border border-gray-100 p-5'>
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4'>
+            {/* Portal filter */}
+            <div className='lg:col-span-6'>
+              <label className='block text-xs font-medium text-gray-700 mb-2'>
+                Portal (by name)
+              </label>
+              <div className='flex flex-wrap gap-3'>
+                {portals.length === 0 ? (
+                  <span className='text-gray-400 text-xs'>Loading portals...</span>
+                ) : (
+                  portals.map((p) => (
+                    <label
+                      key={p.id}
+                      className='flex items-center gap-2 cursor-pointer text-sm'
+                    >
+                      <input
+                        type='checkbox'
+                        checked={portalChecklist.includes(p.name)}
+                        onChange={() => togglePortal(p.name)}
+                        className='rounded border-gray-300'
+                      />
+                      <span>{p.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+            </div>
+
             {/* Magazine - Leftmost */}
             <div>
               <label className='block text-xs font-medium text-gray-700 mb-2'>

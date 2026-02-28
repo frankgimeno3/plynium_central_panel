@@ -150,14 +150,19 @@ export const useBanners = (portalId: number | null) => {
         let cancelled = false;
         BannerService.getBannersByPortalId(portalId)
             .then((data) => {
-                if (!cancelled && data && Array.isArray(data)) {
-                    if (data.length > 0) {
-                        applyBannersListToState(data as Banner[]);
-                    }
+                if (cancelled) return;
+                const list = Array.isArray(data) ? data : (data as { banners?: Banner[] })?.banners;
+                if (list && list.length > 0) {
+                    applyBannersListToState(list as Banner[]);
                 }
             })
             .catch((err) => {
-                if (!cancelled) console.error('Error loading banners from API:', err);
+                if (!cancelled) {
+                    const status = (err as { status?: number })?.status;
+                    const msg = (err as { message?: string })?.message;
+                    const body = (err as { data?: unknown })?.data;
+                    console.error('Error loading banners from API:', { status, message: msg, data: body });
+                }
             });
         return () => { cancelled = true; };
     }, [portalId, applyBannersListToState]);

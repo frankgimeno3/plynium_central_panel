@@ -10,7 +10,7 @@ export async function getPublicationsByArticleId(articleId) {
     if (!db.isConfigured()) return [];
     const sequelize = db.getSequelize();
     const [rows] = await sequelize.query(
-        `SELECT ap.id, ap.portal_id AS "portalId", p.name AS "portalName", ap.slug, ap.status
+        `SELECT ap.id, ap.portal_id AS "portalId", p.name AS "portalName", ap.slug, ap.status, ap.highlight_position AS "highlightPosition"
          FROM article_publications ap
          JOIN portals p ON p.id = ap.portal_id
          WHERE ap.article_id = :articleId
@@ -23,7 +23,24 @@ export async function getPublicationsByArticleId(articleId) {
         portalName: r.portalName,
         slug: r.slug,
         status: r.status,
+        highlightPosition: r.highlightPosition ?? "",
     }));
+}
+
+/**
+ * Get effective highlight_position for an article (for display when single publication).
+ * @param {string} articleId
+ * @returns {Promise<string>}
+ */
+export async function getEffectiveHighlightPosition(articleId) {
+    const db = Database.getInstance();
+    if (!db.isConfigured()) return "";
+    const sequelize = db.getSequelize();
+    const [rows] = await sequelize.query(
+        `SELECT highlight_position FROM article_publications WHERE article_id = :articleId AND (highlight_position IS NOT NULL AND highlight_position != '') LIMIT 1`,
+        { replacements: { articleId } }
+    );
+    return (rows?.[0]?.highlight_position ?? "").trim();
 }
 
 /**
@@ -83,6 +100,32 @@ export async function removeArticleFromPortal(articleId, portalId) {
         { replacements: { articleId, portalId } }
     );
     return getPublicationsByArticleId(articleId);
+}
+
+/**
+ * Set highlight_position for an article in a specific portal.
+ * Clears any other article_publication in the SAME portal that had this position.
+ * @param {string} articleId
+ * @param {number} portalId
+ * @param {string} highlightPosition - e.g. "Main article", "Position1", etc.
+ */
+export async function setHighlightPositionInPortal(articleId, portalId, highlightPosition) {
+    const pos = (highlightPosition || "").trim();
+    const db = Database.getInstance();
+    if (!db.isConfigured()) return;
+    const sequelize = db.getSequelize();
+    if (pos) {
+        await sequelize.query(
+            `UPDATE article_publications SET highlight_position = '' 
+             WHERE portal_id = :portalId AND highlight_position = :pos`,
+            { replacements: { portalId, pos } }
+        );
+    }
+    await sequelize.query(
+        `UPDATE article_publications SET highlight_position = :pos 
+         WHERE article_id = :articleId AND portal_id = :portalId`,
+        { replacements: { articleId, portalId, pos } }
+    );
 }
 
 /**

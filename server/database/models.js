@@ -97,6 +97,10 @@ ArticleModel.init({
         type: DataTypes.STRING,
         allowNull: true,
         defaultValue: ""
+    },
+    portal_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true
     }
 }, {
     sequelize,
@@ -115,6 +119,15 @@ ContentModel.init({
         primaryKey: true,
         unique: true
     },
+    article_id: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        references: { model: 'article', key: 'id_article' }
+    },
+    position: {
+        type: DataTypes.INTEGER,
+        allowNull: false
+    },
     content_type: {
         type: DataTypes.ENUM('text_image', 'image_text', 'just_image', 'just_text'),
         allowNull: false
@@ -128,7 +141,8 @@ ContentModel.init({
     modelName: 'content',
     underscored: true,
     indexes: [
-        {fields: ['content_type']}
+        {fields: ['content_type']},
+        {fields: ['article_id', 'position']}
     ]
 });
 

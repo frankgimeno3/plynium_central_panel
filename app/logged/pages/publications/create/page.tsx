@@ -3,6 +3,7 @@
 import React, { FC, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PublicationService } from "@/app/service/PublicationService";
+import { PortalService } from "@/app/service/PortalService";
 import DatePicker from "@/app/logged/logged_components/DatePicker";
 
 interface PublicationData {
@@ -26,6 +27,28 @@ const CreatePublication: FC = () => {
   const [publicationMainImageUrl, setPublicationMainImageUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isGeneratingId, setIsGeneratingId] = useState(true);
+  const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
+  const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    PortalService.getAllPortals()
+      .then((list: any[]) => {
+        setPortals(
+          Array.isArray(list)
+            ? list.map((p) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
+            : []
+        );
+      })
+      .catch(() => setPortals([]));
+  }, []);
+
+  const handleTogglePortal = (portalId: number) => {
+    setSelectedPortalIds((prev) =>
+      prev.includes(portalId)
+        ? prev.filter((id) => id !== portalId)
+        : [...prev, portalId]
+    );
+  };
 
   // Establecer fecha por defecto como hoy
   const getTodayDate = () => {
@@ -96,8 +119,9 @@ const CreatePublication: FC = () => {
   }, []);
 
   const handlePhase1Next = () => {
-    // Validar campos requeridos (imageUrl es opcional)
-    if (idPublication && redirectionLink && date && magazine && numero) {
+    // Validar campos requeridos (imageUrl es opcional). Portals: al menos uno si hay portales disponibles
+    const portalsValid = portals.length === 0 || selectedPortalIds.length >= 1;
+    if (idPublication && redirectionLink && date && magazine && numero && portalsValid) {
       setCurrentPhase(2);
     }
   };
@@ -109,13 +133,14 @@ const CreatePublication: FC = () => {
   const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const publicationData: PublicationData = {
+      const publicationData = {
         id_publication: idPublication,
         redirectionLink,
         date,
         magazine,
         número: Number(numero),
         publication_main_image_url: publicationMainImageUrl,
+        portalIds: selectedPortalIds.length > 0 ? selectedPortalIds : [],
       };
 
       console.log("Creating publication:", JSON.stringify(publicationData, null, 2));
@@ -151,7 +176,12 @@ const CreatePublication: FC = () => {
   };
 
   const isFormValid =
-    idPublication && redirectionLink && date && magazine && numero;
+    idPublication &&
+    redirectionLink &&
+    date &&
+    magazine &&
+    numero &&
+    (portals.length === 0 || selectedPortalIds.length >= 1);
 
   return (
     <div className="flex flex-col w-full bg-white min-h-screen">
@@ -222,6 +252,36 @@ const CreatePublication: FC = () => {
                 className="w-full"
                 placeholder="Seleccionar fecha"
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className="font-bold text-lg">Portales * (selecciona al menos uno)</label>
+              <p className="text-sm text-gray-600">
+                Elige en qué portal(es) será visible esta publicación.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {portals.length === 0 ? (
+                  <p className="text-sm text-gray-500">Cargando portales...</p>
+                ) : (
+                  portals.map((p) => (
+                    <label
+                      key={p.id}
+                      className="flex items-center gap-2 cursor-pointer text-sm border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedPortalIds.includes(p.id)}
+                        onChange={() => handleTogglePortal(p.id)}
+                        className="rounded border-gray-300"
+                      />
+                      <span>{p.name}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+              {selectedPortalIds.length === 0 && portals.length > 0 && (
+                <p className="text-sm text-amber-600">Selecciona al menos un portal para continuar.</p>
+              )}
             </div>
 
             <div className="space-y-2">

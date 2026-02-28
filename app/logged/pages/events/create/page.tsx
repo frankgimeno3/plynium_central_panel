@@ -4,6 +4,7 @@ import React, { FC, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import DatePicker from '@/app/logged/logged_components/DatePicker';
 import { EventsService } from '@/app/service/EventsService';
+import { PortalService } from '@/app/service/PortalService';
 
 const REGIONS = [
   'EUROPE',
@@ -96,6 +97,28 @@ const CreateEvent: FC = () => {
   const [errors, setErrors] = useState<Partial<Record<keyof EventForm, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [imageLoadError, setImageLoadError] = useState(false);
+  const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
+  const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    PortalService.getAllPortals()
+      .then((list: any[]) => {
+        setPortals(
+          Array.isArray(list)
+            ? list.map((p) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
+            : []
+        );
+      })
+      .catch(() => setPortals([]));
+  }, []);
+
+  const handleTogglePortal = (portalId: number) => {
+    setSelectedPortalIds((prev) =>
+      prev.includes(portalId)
+        ? prev.filter((id) => id !== portalId)
+        : [...prev, portalId]
+    );
+  };
 
   const loadEventId = useCallback(async () => {
     setIsGeneratingId(true);
@@ -121,21 +144,30 @@ const CreateEvent: FC = () => {
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
+  const [portalError, setPortalError] = useState<string | null>(null);
+
   const validate = (): boolean => {
+    setPortalError(null);
     const next: Partial<Record<keyof EventForm, string>> = {};
     if (!form.event_name.trim()) next.event_name = 'Event name is required';
     if (!form.country.trim()) next.country = 'Country is required';
     if (!form.location.trim()) next.location = 'Location is required';
     if (!form.start_date) next.start_date = 'Start date is required';
     if (!form.end_date) next.end_date = 'End date is required';
+    if (selectedPortalIds.length === 0 && portals.length > 0) {
+      setPortalError('Select at least one portal');
+    } else {
+      setPortalError(null);
+    }
     if (form.start_date && form.end_date && form.start_date > form.end_date) {
       next.end_date = 'End date must be on or after start date';
     }
     if (form.event_main_image.trim() && !isValidUrl(form.event_main_image)) {
       next.event_main_image = 'Please enter a valid URL (e.g. https://example.com/logo.png)';
     }
+    const portalInvalid = selectedPortalIds.length === 0 && portals.length > 0;
     setErrors(next);
-    return Object.keys(next).length === 0;
+    return Object.keys(next).length === 0 && !portalInvalid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,6 +185,7 @@ const CreateEvent: FC = () => {
         end_date: form.end_date,
         location: form.location.trim(),
         event_main_image: form.event_main_image.trim(),
+        portalIds: selectedPortalIds.length > 0 ? selectedPortalIds : [],
       });
       router.push('/logged/pages/events');
       router.refresh();
@@ -340,6 +373,40 @@ const CreateEvent: FC = () => {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-500 uppercase mb-2">
+              Portals * (select at least one)
+            </label>
+            <p className="text-sm text-gray-600 mb-2">
+              Choose in which portal(s) this event will be visible.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              {portals.length === 0 ? (
+                <p className="text-sm text-gray-500">Loading portals...</p>
+              ) : (
+                portals.map((p) => (
+                  <label
+                    key={p.id}
+                    className="flex items-center gap-2 cursor-pointer text-sm border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedPortalIds.includes(p.id)}
+                      onChange={() => handleTogglePortal(p.id)}
+                      className="rounded border-gray-300"
+                    />
+                    <span>{p.name}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            {(selectedPortalIds.length === 0 && portals.length > 0) && (
+              <p className="text-sm text-amber-600 mt-1">
+                {portalError || 'Select at least one portal to continue.'}
+              </p>
+            )}
           </div>
 
           <div>

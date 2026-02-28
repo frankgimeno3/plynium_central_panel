@@ -1,4 +1,5 @@
 import EventModel from "./EventModel.js";
+import { createEventPortals } from "./EventPortalService.js";
 import "../../database/models.js";
 
 function toApiEvent(event) {
@@ -29,12 +30,68 @@ function buildCreatePayload(eventData) {
   };
 }
 
-export async function getAllEvents() {
+/**
+ * @param {{ name?: string, region?: string, dateFrom?: string, dateTo?: string, portalNames?: string[] }} opts
+ * - name: partial match on event_name (case-insensitive)
+ * - region: exact match on region
+ * - dateFrom, dateTo: event overlaps [dateFrom, dateTo] if start_date <= dateTo AND end_date >= dateFrom (both required if either set)
+ * - portalNames: only events visible in at least one of these portals (by name)
+ */
+export async function getAllEvents(opts = {}) {
   try {
     if (!EventModel.sequelize) {
       console.warn("EventModel not initialized, returning empty array");
       return [];
     }
+
+    const name = typeof opts?.name === "string" ? opts.name.trim() : "";
+    const region = typeof opts?.region === "string" ? opts.region.trim() : "";
+    const dateFrom = typeof opts?.dateFrom === "string" ? opts.dateFrom.trim() : "";
+    const dateTo = typeof opts?.dateTo === "string" ? opts.dateTo.trim() : "";
+    const portalNames = Array.isArray(opts?.portalNames) ? opts.portalNames.filter(Boolean).map((n) => String(n).trim()) : [];
+
+    const hasFilters = name || region || (dateFrom && dateTo) || portalNames.length > 0;
+
+    if (hasFilters) {
+      const conditions = [];
+      const replacements = {};
+
+      if (name) {
+        conditions.push("e.event_name ILIKE :namePattern");
+        const escaped = name.replace(/[%_\\]/g, (c) => `\\${c}`);
+        replacements.namePattern = `%${escaped}%`;
+      }
+      if (region) {
+        conditions.push("e.region = :region");
+        replacements.region = region;
+      }
+      if (dateFrom && dateTo) {
+        conditions.push("e.start_date::date <= :dateTo");
+        conditions.push("e.end_date::date >= :dateFrom");
+        replacements.dateFrom = dateFrom;
+        replacements.dateTo = dateTo;
+      }
+
+      let joinClause = "";
+      if (portalNames.length > 0) {
+        const placeholders = portalNames.map((_, i) => `:p${i}`).join(", ");
+        portalNames.forEach((n, i) => { replacements[`p${i}`] = n; });
+        joinClause = ` INNER JOIN event_portals ep ON ep.event_id = e.id_fair
+         INNER JOIN portals p ON p.id = ep.portal_id AND p.name IN (${placeholders})`;
+      }
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+      const [rows] = await EventModel.sequelize.query(
+        `SELECT DISTINCT e.id_fair, e.event_name, e.country, e.main_description, e.region,
+                e.start_date, e.end_date, e.location, e.event_main_image
+         FROM events e${joinClause}
+         ${whereClause}
+         ORDER BY e.start_date ASC`,
+        { replacements }
+      );
+      return (rows || []).map((r) => toApiEvent(r));
+    }
+
     const events = await EventModel.findAll({
       order: [["start_date", "ASC"]],
     });
@@ -105,18 +162,36 @@ export async function createEvent(eventData) {
   }
   try {
     const event = await EventModel.create(buildCreatePayload(eventData));
+    const portalIds = Array.isArray(eventData.portalIds)
+      ? eventData.portalIds.filter((id) => Number.isInteger(Number(id))).map(Number)
+      : [];
+    if (portalIds.length > 0) {
+      await createEventPortals(event.id_fair, portalIds, eventData.event_name ?? "");
+    }
     return toApiEvent(event);
   } catch (error) {
     if (isEventsTableMissingError(error)) {
       console.warn("[EventService] Table 'events' missing, creating it...");
       await EventModel.sync();
       const event = await EventModel.create(buildCreatePayload(eventData));
+      const portalIds = Array.isArray(eventData.portalIds)
+        ? eventData.portalIds.filter((id) => Number.isInteger(Number(id))).map(Number)
+        : [];
+      if (portalIds.length > 0) {
+        await createEventPortals(event.id_fair, portalIds, eventData.event_name ?? "");
+      }
       return toApiEvent(event);
     }
     if (isEventMainImageColumnMissingError(error)) {
       console.warn("[EventService] Column 'event_main_image' missing, adding it...");
       await ensureEventMainImageColumn();
       const event = await EventModel.create(buildCreatePayload(eventData));
+      const portalIds = Array.isArray(eventData.portalIds)
+        ? eventData.portalIds.filter((id) => Number.isInteger(Number(id))).map(Number)
+        : [];
+      if (portalIds.length > 0) {
+        await createEventPortals(event.id_fair, portalIds, eventData.event_name ?? "");
+      }
       return toApiEvent(event);
     }
     throw error;

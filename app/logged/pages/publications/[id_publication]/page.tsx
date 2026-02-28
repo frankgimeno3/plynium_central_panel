@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 
 import { publicationInterface } from "@/app/contents/interfaces";
 import { PublicationService } from "@/app/service/PublicationService";
+import { PortalService } from "@/app/service/PortalService";
 import EditContentsModal from "@/app/logged/logged_components/modals/EditContentsModal";
 import DeletePublicationModal from "@/app/logged/logged_components/modals/DeletePublicationModal";
 import PublicationHeader from "./id_publication_components/PublicationHeader";
@@ -35,6 +36,11 @@ export default function IdPubblicationPage() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState<boolean>(false);
   const [isSaving, setIsSaving] = useState<boolean>(false);
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [publicationPortals, setPublicationPortals] = useState<
+    { portalId: number; portalName: string; slug: string; redirectUrl: string; status: string }[]
+  >([]);
+  const [allPortals, setAllPortals] = useState<{ id: number; name: string }[]>([]);
+  const [portalActionLoading, setPortalActionLoading] = useState<boolean>(false);
 
   const normalizePublication = (raw: any): publicationInterface => {
     return {
@@ -55,8 +61,19 @@ export default function IdPubblicationPage() {
 
       try {
         console.log("[IdPublicationPage] Calling PublicationService.getPublicationById with:", id_publication);
-        const publicationRaw = await PublicationService.getPublicationById(id_publication);
+        const [publicationRaw, portalsList, portalsListData] = await Promise.all([
+          PublicationService.getPublicationById(id_publication),
+          PortalService.getAllPortals(),
+          PublicationService.getPublicationPortals(id_publication).catch(() => []),
+        ]);
         console.log("[IdPublicationPage] Raw publication data received:", publicationRaw);
+
+        setAllPortals(
+          Array.isArray(portalsList)
+            ? portalsList.map((p: any) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
+            : []
+        );
+        setPublicationPortals(Array.isArray(portalsListData) ? portalsListData : []);
 
         if (!publicationRaw) {
           console.warn("[IdPublicationPage] No publication found for id:", id_publication);
@@ -315,6 +332,102 @@ export default function IdPubblicationPage() {
           onEditRevista={handleEditRevista}
           onEditNumero={handleEditNumber}
         />
+
+        <div className="flex flex-col gap-2">
+          <label className="text-sm font-medium text-gray-500">
+            Visible en portales
+          </label>
+          <div className="flex flex-col gap-2">
+            {publicationPortals.length === 0 ? (
+              <p className="text-sm text-gray-400">No visible en ningún portal aún.</p>
+            ) : (
+              <ul className="list-none flex flex-wrap gap-2">
+                {publicationPortals.map((pp) => (
+                  <li
+                    key={pp.portalId}
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm"
+                  >
+                    <span>{pp.portalName}</span>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (portalActionLoading) return;
+                        setPortalActionLoading(true);
+                        try {
+                          const list = await PublicationService.removePublicationFromPortal(
+                            id_publication,
+                            pp.portalId
+                          );
+                          setPublicationPortals(Array.isArray(list) ? list : []);
+                        } catch (e: any) {
+                          alert(
+                            e?.message || e?.data?.message || "Error al quitar del portal"
+                          );
+                        } finally {
+                          setPortalActionLoading(false);
+                        }
+                      }}
+                      disabled={portalActionLoading}
+                      className="text-red-600 hover:text-red-800 disabled:opacity-50 text-xs font-medium"
+                    >
+                      Quitar
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {allPortals.filter((p) => !publicationPortals.some((pp) => pp.portalId === p.id)).length >
+              0 && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  id="add-publication-portal-select"
+                  disabled={portalActionLoading}
+                  className="px-3 py-2 border rounded-xl bg-white text-gray-700 text-sm disabled:opacity-50 max-w-xs"
+                  defaultValue=""
+                >
+                  <option value="">Seleccionar portal para añadir…</option>
+                  {allPortals
+                    .filter((p) => !publicationPortals.some((pp) => pp.portalId === p.id))
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                </select>
+                <button
+                  type="button"
+                  disabled={portalActionLoading}
+                  onClick={async () => {
+                    const sel = document.getElementById(
+                      "add-publication-portal-select"
+                    ) as HTMLSelectElement;
+                    const portalId = sel?.value ? Number(sel.value) : 0;
+                    if (portalId && id_publication) {
+                      setPortalActionLoading(true);
+                      try {
+                        const list = await PublicationService.addPublicationToPortal(
+                          id_publication,
+                          portalId
+                        );
+                        setPublicationPortals(Array.isArray(list) ? list : []);
+                        sel.value = "";
+                      } catch (e: any) {
+                        alert(
+                          e?.message || e?.data?.message || "Error al añadir al portal"
+                        );
+                      } finally {
+                        setPortalActionLoading(false);
+                      }
+                    }
+                  }}
+                  className="px-3 py-2 text-xs rounded-xl bg-blue-950 text-white hover:bg-blue-950/90 disabled:opacity-50"
+                >
+                  {portalActionLoading ? "…" : "Añadir al portal"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </main>
 
       <EditContentsModal

@@ -62,10 +62,22 @@ export default function CreateArticlePage() {
   }, []);
 
   const handleTogglePortal = (portalId: number) => {
-    setSelectedPortalIds((prev) =>
-      prev.includes(portalId) ? prev.filter((id) => id !== portalId) : [...prev, portalId]
-    );
+    if (highlitedPosition) {
+      // When highlighted position is set, only one portal allowed
+      setSelectedPortalIds((prev) => (prev.includes(portalId) ? prev : [portalId]));
+    } else {
+      setSelectedPortalIds((prev) =>
+        prev.includes(portalId) ? prev.filter((id) => id !== portalId) : [...prev, portalId]
+      );
+    }
   };
+
+  // When user selects a highlighted position while multiple portals are selected, keep only the first
+  useEffect(() => {
+    if (highlitedPosition && selectedPortalIds.length > 1) {
+      setSelectedPortalIds((prev) => [prev[0]]);
+    }
+  }, [highlitedPosition, selectedPortalIds.length]);
 
   const generateArticleId = useCallback(async (): Promise<string> => {
     try {
@@ -229,12 +241,33 @@ export default function CreateArticlePage() {
     }
     setIsSubmitting(true);
     try {
-      const contentIds: string[] = [];
+      // Create article first (contents require article_id)
+      const articleData: ArticleData = {
+        id_article: idArticle,
+        articleTitle,
+        articleSubtitle,
+        article_main_image_url: articleMainImageUrl,
+        company,
+        date,
+        article_tags_array: tagsArray,
+        contents_array: [],
+        highlited_position: highlitedPosition || undefined,
+        is_article_event: isArticleEvent,
+        event_id: isArticleEvent ? eventId.trim() : "",
+        portalIds: selectedPortalIds.length > 0 ? selectedPortalIds : [],
+      };
+      await ArticleService.createArticle(articleData);
+
+      // Then create contents with article_id and position
       if (contents.length > 0) {
-        for (const content of contents) {
+        for (let i = 0; i < contents.length; i++) {
+          const content = contents[i];
           try {
-            await ContentService.createContent(content);
-            contentIds.push(content.content_id);
+            await ContentService.createContent({
+              ...content,
+              article_id: idArticle,
+              position: i,
+            });
           } catch (contentError: any) {
             let errorMessage = "Error desconocido";
             if (typeof contentError === "string") errorMessage = contentError;
@@ -252,21 +285,6 @@ export default function CreateArticlePage() {
           }
         }
       }
-      const articleData: ArticleData = {
-        id_article: idArticle,
-        articleTitle,
-        articleSubtitle,
-        article_main_image_url: articleMainImageUrl,
-        company,
-        date,
-        article_tags_array: tagsArray,
-        contents_array: contentIds,
-        highlited_position: highlitedPosition || undefined,
-        is_article_event: isArticleEvent,
-        event_id: isArticleEvent ? eventId.trim() : "",
-        portalIds: selectedPortalIds.length > 0 ? selectedPortalIds : [],
-      };
-      await ArticleService.createArticle(articleData);
       alert("Article created successfully!");
       router.push("/logged/pages/articles");
       router.refresh();

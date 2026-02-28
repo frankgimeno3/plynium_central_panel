@@ -1,3 +1,4 @@
+import { Op } from "sequelize";
 import ContentModel from "./ContentModel.js";
 // Ensure models are initialized by importing models.js
 import "../../database/models.js";
@@ -16,6 +17,24 @@ export async function getAllContents() {
         }));
     } catch (error) {
         console.error('Error fetching contents from database:', error);
+        throw error;
+    }
+}
+
+export async function getContentsByArticleId(articleId) {
+    try {
+        const contents = await ContentModel.findAll({
+            where: { article_id: articleId },
+            order: [['position', 'ASC']],
+            attributes: ['content_id', 'content_type', 'content_content']
+        });
+        return contents.map(c => ({
+            content_id: c.content_id,
+            content_type: c.content_type,
+            content_content: c.content_content
+        }));
+    } catch (error) {
+        console.error('Error fetching contents by article:', error);
         throw error;
     }
 }
@@ -54,8 +73,26 @@ export async function createContent(contentData) {
         console.log(`[ContentService] [${requestId}] Database: ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
         console.log(`[ContentService] [${requestId}] Creating content with data:`, JSON.stringify(contentData, null, 2));
         
+        if (!contentData.article_id) {
+            throw new Error('article_id is required when creating content');
+        }
+        const position = typeof contentData.position === 'number' ? contentData.position : 0;
+        // Shift existing contents to make room when inserting in the middle
+        const existing = await ContentModel.findAll({
+            where: { article_id: contentData.article_id, position: { [Op.gte]: position } },
+            order: [['position', 'DESC']],
+            attributes: ['content_id', 'position']
+        });
+        for (const row of existing) {
+            await ContentModel.update(
+                { position: row.position + 1 },
+                { where: { content_id: row.content_id } }
+            );
+        }
         const content = await ContentModel.create({
             content_id: contentData.content_id,
+            article_id: contentData.article_id,
+            position,
             content_type: contentData.content_type,
             content_content: contentData.content_content
         });

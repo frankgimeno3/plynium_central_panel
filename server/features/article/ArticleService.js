@@ -1,6 +1,7 @@
 import { Op } from "sequelize";
 import ArticleModel from "./ArticleModel.js";
-import { createArticlePublications } from "./ArticlePublicationService.js";
+import { createArticlePublications, setHighlightPositionInPortal, getPublicationsByArticleId, getEffectiveHighlightPosition } from "./ArticlePublicationService.js";
+import { getContentsByArticleId } from "../content/ContentService.js";
 // Ensure models are initialized by importing models.js
 import "../../database/models.js";
 
@@ -40,7 +41,7 @@ function toPostgresArrayLiteral(arr) {
     return "{" + escaped.join(",") + "}";
 }
 
-function toApiArticle(article) {
+function toApiArticle(article, contentsArray = []) {
     return {
         id_article: article.id_article,
         articleTitle: article.article_title,
@@ -49,7 +50,7 @@ function toApiArticle(article) {
         company: article.company,
         date: article.date ? new Date(article.date).toISOString().split('T')[0] : null,
         article_tags_array: [],
-        contents_array: [],
+        contents_array: contentsArray,
         highlited_position: article.highlited_position ?? "",
         is_article_event: article.is_article_event === true,
         event_id: article.event_id ?? ""
@@ -71,13 +72,14 @@ export async function getAllArticles(opts = {}) {
             const placeholders = portalNames.map((_, i) => `:p${i}`).join(", ");
             const replacements = Object.fromEntries(portalNames.map((n, i) => [`p${i}`, n]));
             const [rows] = await ArticleModel.sequelize.query(
-                `SELECT DISTINCT a.id_article, a.article_title, a.article_subtitle, a.article_main_image_url,
-                        a.company, a.date, a.highlited_position, a.is_article_event, a.event_id, a.created_at, a.updated_at
+                `SELECT DISTINCT ON (a.id_article) a.id_article, a.article_title, a.article_subtitle, a.article_main_image_url,
+                        a.company, a.date, COALESCE(NULLIF(trim(ap.highlight_position), ''), a.highlited_position) AS highlited_position,
+                        a.is_article_event, a.event_id, a.created_at, a.updated_at
                  FROM articles a
                  INNER JOIN article_publications ap ON ap.article_id = a.id_article
                  INNER JOIN portals p ON p.id = ap.portal_id
                  WHERE p.name IN (${placeholders})
-                 ORDER BY a.date DESC`,
+                 ORDER BY a.id_article, a.date DESC`,
                 { replacements }
             );
             return (rows || []).map((row) => toApiArticle(row));
@@ -130,7 +132,19 @@ export async function getArticleById(idArticle) {
         if (!article) {
             throw new Error(`Article with id ${idArticle} not found`);
         }
-        return toApiArticle(article);
+        let contentsArray = [];
+        try {
+            const contents = await getContentsByArticleId(idArticle);
+            contentsArray = contents.map(c => c.content_id);
+        } catch (e) {
+            // contents table may not have article_id column yet (legacy DB)
+        }
+        const apiArticle = toApiArticle(article, contentsArray);
+        try {
+            const effectiveHighlight = await getEffectiveHighlightPosition(idArticle);
+            if (effectiveHighlight) apiArticle.highlited_position = effectiveHighlight;
+        } catch (e) {}
+        return apiArticle;
     } catch (error) {
         if (isArticleEventColumnsMissingError(error)) {
             try {
@@ -161,6 +175,7 @@ export async function getArticleById(idArticle) {
 }
 
 function buildCreatePayload(articleData, includeHighlitedPosition = true) {
+    const portalIds = Array.isArray(articleData.portalIds) ? articleData.portalIds.filter((id) => Number.isInteger(Number(id))) : [];
     const base = {
         id_article: articleData.id_article,
         article_title: articleData.articleTitle,
@@ -171,9 +186,10 @@ function buildCreatePayload(articleData, includeHighlitedPosition = true) {
         is_article_event: articleData.is_article_event === true,
         event_id: (articleData.is_article_event === true && articleData.event_id) ? String(articleData.event_id).trim() : ""
     };
-    if (includeHighlitedPosition) {
-        base.highlited_position = (articleData.highlited_position || "").trim() || "";
+    if (portalIds.length > 0) {
+        base.portal_id = Number(portalIds[0]);
     }
+    // highlited_position is set per-portal in article_publications.highlight_position, not in articles
     return base;
 }
 
@@ -192,23 +208,14 @@ export async function createArticle(articleData) {
         console.log(`[ArticleService] [${requestId}] Creating article with data:`, JSON.stringify(articleData, null, 2));
 
         const highlitedPosition = (articleData.highlited_position || "").trim();
-        if (highlitedPosition) {
-            try {
-                await ArticleModel.update(
-                    { highlited_position: "" },
-                    { where: { highlited_position: highlitedPosition } }
-                );
-            } catch (updateErr) {
-                if (!updateErr.message?.includes('highlited_position') && !updateErr.message?.includes('does not exist')) {
-                    throw updateErr;
-                }
-            }
-        }
-
         const article = await ArticleModel.create(buildCreatePayload(articleData, true));
         const portalIds = Array.isArray(articleData.portalIds) ? articleData.portalIds.filter((id) => Number.isInteger(Number(id))) : [];
         if (portalIds.length > 0) {
             await createArticlePublications(article.id_article, portalIds.map(Number), articleData.articleTitle);
+            // Set highlight per-portal (only when single portal selected)
+            if (highlitedPosition && portalIds.length === 1) {
+                await setHighlightPositionInPortal(article.id_article, portalIds[0], highlitedPosition);
+            }
         }
         console.log(`[ArticleService] [${requestId}] Article created successfully:`, article.toJSON());
         return toApiArticle(article);
@@ -292,18 +299,14 @@ export async function createArticle(articleData) {
     }
 }
 
-/** Build DB update payload; use empty string for highlited_position when undefined/null so DB never gets null. */
-function buildUpdatePayload(article, articleData, includeHighlitedPosition = true) {
+/** Build DB update payload. highlited_position is handled per-portal via article_publications. */
+function buildUpdatePayload(article, articleData) {
     const payload = {};
     if (articleData.articleTitle !== undefined) payload.article_title = articleData.articleTitle;
     if (articleData.articleSubtitle !== undefined) payload.article_subtitle = articleData.articleSubtitle;
     if (articleData.article_main_image_url !== undefined) payload.article_main_image_url = articleData.article_main_image_url;
     if (articleData.company !== undefined) payload.company = articleData.company;
     if (articleData.date !== undefined) payload.date = articleData.date;
-    if (includeHighlitedPosition && articleData.highlited_position !== undefined) {
-        const v = (articleData.highlited_position || "").trim();
-        payload.highlited_position = v;
-    }
     if (articleData.is_article_event !== undefined) {
         payload.is_article_event = articleData.is_article_event === true;
         if (!payload.is_article_event) payload.event_id = "";
@@ -320,24 +323,17 @@ export async function updateArticle(idArticle, articleData) {
         }
         if (articleData.highlited_position !== undefined) {
             const newHighlitedPosition = (articleData.highlited_position || "").trim();
-            if (newHighlitedPosition) {
-                try {
-                    await ArticleModel.update(
-                        { highlited_position: "" },
-                        { where: { highlited_position: newHighlitedPosition, id_article: { [Op.ne]: idArticle } } }
-                    );
-                } catch (e) {
-                    if (!e.message?.includes('highlited_position') && !e.message?.includes('does not exist')) throw e;
-                }
+            const publications = await getPublicationsByArticleId(idArticle);
+            const portalId = articleData.portalId ?? (publications.length === 1 ? publications[0].portalId : null);
+            if (portalId != null) {
+                await setHighlightPositionInPortal(idArticle, portalId, newHighlitedPosition);
             }
         }
-        const payload = buildUpdatePayload(article, articleData, true);
-        if (Object.keys(payload).length === 0) {
-            return toApiArticle(article);
+        const payload = buildUpdatePayload(article, articleData);
+        if (Object.keys(payload).length > 0) {
+            await ArticleModel.update(payload, { where: { id_article: idArticle } });
         }
-        await ArticleModel.update(payload, { where: { id_article: idArticle } });
-        const updated = await ArticleModel.findByPk(idArticle);
-        return toApiArticle(updated);
+        return getArticleById(idArticle);
     } catch (error) {
         if (isArticleEventColumnsMissingError(error)) {
             try {
@@ -351,7 +347,7 @@ export async function updateArticle(idArticle, articleData) {
             try {
                 const article = await ArticleModel.findByPk(idArticle, { attributes: ARTICLE_ATTRIBUTES_WITHOUT_HIGHLITED });
                 if (!article) throw new Error(`Article with id ${idArticle} not found`);
-                const payload = buildUpdatePayload(article, articleData, false);
+                const payload = buildUpdatePayload(article, articleData);
                 if (Object.keys(payload).length > 0) {
                     await ArticleModel.update(payload, { where: { id_article: idArticle } });
                 }
