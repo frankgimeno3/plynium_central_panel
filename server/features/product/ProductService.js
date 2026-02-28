@@ -1,8 +1,11 @@
 import ProductModel from "./ProductModel.js";
+import { createProductPortals } from "./ProductPortalService.js";
 import "../../database/models.js";
 
 function toApiProduct(row) {
     if (!row) return null;
+    const cats = row.product_categories_array ?? row.productCategoriesArray;
+    const arr = Array.isArray(cats) ? cats : (typeof cats === "string" ? (cats ? [cats] : []) : []);
     return {
         productId: row.product_id,
         productName: row.product_name,
@@ -10,8 +13,27 @@ function toApiProduct(row) {
         company: row.company ?? "",
         productDescription: row.product_description ?? "",
         mainImageSrc: row.main_image_src ?? "",
-        productCategoriesArray: [],
+        productCategoriesArray: arr,
     };
+}
+
+/**
+ * Get products by company ID (products.company = companyId).
+ * @param {string} companyId
+ */
+export async function getProductsByCompanyId(companyId) {
+    if (!companyId || typeof companyId !== "string") return [];
+    try {
+        if (!ProductModel.sequelize) return [];
+        const rows = await ProductModel.findAll({
+            where: { company: companyId.trim() },
+            order: [["product_name", "ASC"]],
+        });
+        return rows.map(toApiProduct);
+    } catch (error) {
+        console.error("Error fetching products by company:", error);
+        return [];
+    }
 }
 
 export async function getAllProducts() {
@@ -64,6 +86,10 @@ export async function createProduct(data) {
         product_categories_array: Array.isArray(data.productCategoriesArray) ? data.productCategoriesArray : [],
     };
     const row = await ProductModel.create(payload);
+    const portalIds = Array.isArray(data.portalIds) ? data.portalIds.filter((id) => Number.isInteger(Number(id))).map(Number) : [];
+    if (portalIds.length > 0) {
+        await createProductPortals(row.product_id, portalIds, data.productName ?? "");
+    }
     return toApiProduct(row);
 }
 
@@ -78,6 +104,7 @@ export async function updateProduct(idProduct, data) {
     if (data.company !== undefined) updates.company = data.company;
     if (data.productDescription !== undefined) updates.product_description = data.productDescription;
     if (data.mainImageSrc !== undefined) updates.main_image_src = data.mainImageSrc;
+    if (data.productCategoriesArray !== undefined) updates.product_categories_array = Array.isArray(data.productCategoriesArray) ? data.productCategoriesArray : [];
     if (Object.keys(updates).length === 0) {
         return toApiProduct(row);
     }

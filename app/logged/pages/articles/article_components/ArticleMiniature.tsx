@@ -4,12 +4,18 @@ import Link from "next/link";
 import React, { FC, useState } from "react";
 import ArticleImagePlaceholder from "./ArticleImagePlaceholder";
 
+interface HighlightInfo {
+  portalName: string;
+  highlightPosition: string;
+}
+
 interface ArticleMiniatureProps {
   id_article: string;
   titulo: string;
   company: string;
   date: string;
   imageUrl: string;
+  highlightByPortal?: HighlightInfo[];
 }
 
 const ArticleMiniature: FC<ArticleMiniatureProps> = ({
@@ -18,6 +24,7 @@ const ArticleMiniature: FC<ArticleMiniatureProps> = ({
   company,
   date,
   imageUrl,
+  highlightByPortal = [],
 }) => {
   const [imgError, setImgError] = useState(false);
   const showPlaceholder = !imageUrl?.trim() || imgError;
@@ -44,6 +51,19 @@ const ArticleMiniature: FC<ArticleMiniatureProps> = ({
           <p className="text-gray-400 italic">{date}</p>
           <p>{company}</p>
         </div>
+
+        {highlightByPortal.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-2">
+            {highlightByPortal.map((h, i) => (
+              <span
+                key={i}
+                className="text-[10px] px-1.5 py-0.5 bg-blue-950/15 text-blue-950 rounded"
+              >
+                {h.highlightPosition} · {h.portalName}
+              </span>
+            ))}
+          </div>
+        )}
 
         <p className="text-[10px] text-gray-400 mt-3">ID: {id_article}</p>
       </div>

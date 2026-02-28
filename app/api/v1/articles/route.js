@@ -1,20 +1,24 @@
 import {createEndpoint} from "../../../../server/createEndpoint.js";
 import {NextResponse} from "next/server";
-import {getAllArticles, createArticle} from "../../../../server/features/article/ArticleService.js";
+import {getAllArticles, getAllArticlesWithHighlightInfo, createArticle} from "../../../../server/features/article/ArticleService.js";
 import Joi from "joi";
 
 // Ensure Node.js runtime (not Edge) for database connections
 export const runtime = "nodejs";
 
 const getSchema = Joi.object({
-    portalNames: Joi.string().optional()
+    portalNames: Joi.string().optional(),
+    withHighlightInfo: Joi.any().optional(),
 });
 
 export const GET = createEndpoint(async (request, body) => {
     const portalNames = body?.portalNames
         ? String(body.portalNames).split(",").map((s) => s.trim()).filter(Boolean)
         : [];
-    const articles = await getAllArticles({ portalNames });
+    const withHighlightInfo = body?.withHighlightInfo === true || body?.withHighlightInfo === "1" || body?.withHighlightInfo === "true";
+    const articles = withHighlightInfo
+        ? await getAllArticlesWithHighlightInfo({ portalNames })
+        : await getAllArticles({ portalNames });
     return NextResponse.json(articles);
 }, getSchema, true);
 

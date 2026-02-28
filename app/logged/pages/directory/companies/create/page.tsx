@@ -1,8 +1,9 @@
 'use client';
 
-import React, { FC, useState } from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { CompanyService } from '@/app/service/CompanyService';
+import { PortalService } from '@/app/service/PortalService';
 
 interface CompanyForm {
   commercialName: string;
@@ -41,6 +42,28 @@ const CreateCompanyProfile: FC = () => {
   const [form, setForm] = useState<CompanyForm>(initialForm);
   const [errors, setErrors] = useState<Partial<Record<keyof CompanyForm, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
+  const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    PortalService.getAllPortals()
+      .then((list: any[]) => {
+        setPortals(
+          Array.isArray(list)
+            ? list.map((p) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
+            : []
+        );
+      })
+      .catch(() => setPortals([]));
+  }, []);
+
+  const handleTogglePortal = (portalId: number) => {
+    setSelectedPortalIds((prev) =>
+      prev.includes(portalId)
+        ? prev.filter((id) => id !== portalId)
+        : [...prev, portalId]
+    );
+  };
 
   const update = (field: keyof CompanyForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -54,6 +77,7 @@ const CreateCompanyProfile: FC = () => {
     if (!form.category.trim()) next.category = 'Category is required';
     if (!form.mainEmail.trim()) next.mainEmail = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.mainEmail)) next.mainEmail = 'Invalid email format';
+    if (portals.length > 0 && selectedPortalIds.length === 0) next.portals = 'Select at least one portal';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -80,6 +104,7 @@ const CreateCompanyProfile: FC = () => {
         mailTelephone: form.mailTelephone.trim(),
         fullAddress: form.fullAddress.trim(),
         webLink: form.webLink.trim(),
+        portalIds: selectedPortalIds.length > 0 ? selectedPortalIds : [],
       });
       router.push('/logged/pages/directory/companies');
       router.refresh();
@@ -229,6 +254,38 @@ const CreateCompanyProfile: FC = () => {
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-950 focus:border-blue-950"
                 />
               </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
+                  Portals <span className="text-red-500">*</span>
+                </label>
+                <p className="text-sm text-gray-600 mb-2">
+                  Choose in which portal(s) this company will be visible.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  {portals.length === 0 ? (
+                    <p className="text-sm text-gray-500">Loading portals...</p>
+                  ) : (
+                    portals.map((p) => (
+                      <label
+                        key={p.id}
+                        className="flex items-center gap-2 cursor-pointer text-sm border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedPortalIds.includes(p.id)}
+                          onChange={() => handleTogglePortal(p.id)}
+                          className="rounded border-gray-300"
+                        />
+                        <span>{p.name}</span>
+                      </label>
+                    ))
+                  )}
+                </div>
+                {selectedPortalIds.length === 0 && portals.length > 0 && (
+                  <p className="text-sm text-amber-600 mt-1">Select at least one portal.</p>
+                )}
+              </div>
+
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
                   Categories (comma-separated)

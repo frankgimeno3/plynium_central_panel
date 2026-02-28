@@ -13,9 +13,10 @@ function mapRowToUser(row) {
   const role =
     row.user_role ?? row.role ?? "only articles";
   const validRole = VALID_ROLES.includes(role) ? role : "only articles";
+  const fullName = row.user_full_name ?? row.name ?? ([row.user_name, row.user_surnames].filter(Boolean).join(" ") || "");
   return {
     id_user: String(row.id_user ?? row.id ?? ""),
-    user_full_name: row.user_full_name ?? row.name ?? "",
+    user_full_name: fullName,
     user_name: row.user_name ?? row.email ?? row.username ?? "",
     user_role: validRole,
     user_description: row.user_description ?? ROLE_DESCRIPTIONS[validRole],
@@ -39,4 +40,34 @@ export async function getUsersFromRds() {
   );
   const list = Array.isArray(rows) ? rows : [];
   return list.map(mapRowToUser);
+}
+
+function mapRowToUserDetail(row) {
+  const base = mapRowToUser(row);
+  return {
+    ...base,
+    user_name: row.user_name ?? base.user_name ?? "",
+    user_surnames: row.user_surnames ?? "",
+    user_main_image_src: row.user_main_image_src ?? "",
+    user_current_company: row.user_current_company ?? null,
+    experience_array: row.experience_array ?? [],
+    preferences: row.preferences ?? null,
+  };
+}
+
+/**
+ * Obtiene un usuario por id_user desde RDS con todos los campos.
+ */
+export async function getUserByIdFromRds(id_user) {
+  const db = Database.getInstance();
+  if (!db.isConfigured()) {
+    throw new Error("Database not configured");
+  }
+  const sequelize = db.getSequelize();
+  const [rows] = await sequelize.query(
+    "SELECT * FROM users WHERE id_user = :id_user LIMIT 1",
+    { replacements: { id_user } }
+  );
+  const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  return row ? mapRowToUserDetail(row) : null;
 }

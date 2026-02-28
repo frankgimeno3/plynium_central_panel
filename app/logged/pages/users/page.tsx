@@ -1,43 +1,17 @@
 "use client";
 
-import React, { FC, useState } from 'react';
-import EditUserModal from '@/app/logged/logged_components/modals/EditUserModal';
-import { useUsers, type User } from './hooks/useUsers';
+import React, { FC } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUsers } from './hooks/useUsers';
 
 interface UsersProps {}
 
 const Users: FC<UsersProps> = () => {
-  const { users, loading, error, refetch, updateUser } = useUsers();
-  const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const router = useRouter();
+  const { users, loading, error, refetch } = useUsers();
 
-  const handleEditClick = (user: User) => {
-    setEditingUser(user);
-    setSaveError(null);
-    setIsModalOpen(true);
-  };
-
-  const handleSave = async (updatedUser: User) => {
-    if (!editingUser) return;
-    setSaveError(null);
-    try {
-      await updateUser(editingUser, {
-        user_full_name: updatedUser.user_full_name,
-        user_name: updatedUser.user_name,
-        user_role: updatedUser.user_role,
-      });
-      setIsModalOpen(false);
-      setEditingUser(null);
-    } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'Error al guardar');
-    }
-  };
-
-  const handleCancel = () => {
-    setIsModalOpen(false);
-    setEditingUser(null);
-    setSaveError(null);
+  const handleRowClick = (id_user: string) => {
+    router.push(`/logged/pages/users/${encodeURIComponent(id_user)}`);
   };
 
   return (
@@ -82,14 +56,15 @@ const Users: FC<UsersProps> = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
                     Descripción
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
-                    Acciones
-                  </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user) => (
-                  <tr key={user.id_user} className="hover:bg-gray-50">
+                  <tr
+                    key={user.id_user}
+                    onClick={() => handleRowClick(user.id_user)}
+                    className="hover:bg-gray-100 cursor-pointer transition-colors"
+                  >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-gray-200">
                       {user.id_user}
                     </td>
@@ -102,14 +77,6 @@ const Users: FC<UsersProps> = () => {
                     <td className="px-6 py-4 text-sm text-gray-900 border-b border-gray-200">
                       {user.user_description}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium border-b border-gray-200">
-                      <button
-                        onClick={() => handleEditClick(user)}
-                        className="text-blue-600 hover:text-blue-900"
-                      >
-                        Editar
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -117,16 +84,6 @@ const Users: FC<UsersProps> = () => {
           </div>
         )}
       </div>
-
-      {editingUser && (
-        <EditUserModal
-          isOpen={isModalOpen}
-          initialUser={editingUser}
-          onSave={handleSave}
-          onCancel={handleCancel}
-          saveError={saveError}
-        />
-      )}
     </div>
   );
 };

@@ -1,12 +1,13 @@
 "use client";
 
 import { FC } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useAdvertisements, TabFilter } from '../hooks/useAdvertisements';
 
 interface AdvertisementTableProps {}
 
 const AdvertisementTable: FC<AdvertisementTableProps> = () => {
+  const router = useRouter();
   const {
     currentTab,
     setCurrentTab,
@@ -105,50 +106,18 @@ const AdvertisementTable: FC<AdvertisementTableProps> = () => {
                 paginatedAdvertisements.map((advertisement) => (
                   <tr
                     key={advertisement.idAdvReq}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                    onClick={() => router.push(`/logged/pages/requests/quotations/${encodeURIComponent(advertisement.idAdvReq)}`)}
+                    className="hover:bg-gray-100 cursor-pointer transition-colors"
                   >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{advertisement.idAdvReq}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{advertisement.senderEmail}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{advertisement.senderCompany}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        href={`/logged/pages/advertisement/${encodeURIComponent(advertisement.idAdvReq)}`}
-                        className="text-sm text-gray-900 hover:text-blue-950"
-                      >
-                        {advertisement.idAdvReq}
-                      </Link>
+                      <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                        {formatState(advertisement.advReqState)}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        href={`/logged/pages/advertisement/${encodeURIComponent(advertisement.idAdvReq)}`}
-                        className="text-sm text-gray-900 hover:text-blue-950"
-                      >
-                        {advertisement.senderEmail}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        href={`/logged/pages/advertisement/${encodeURIComponent(advertisement.idAdvReq)}`}
-                        className="text-sm text-gray-900 hover:text-blue-950"
-                      >
-                        {advertisement.senderCompany}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        href={`/logged/pages/advertisement/${encodeURIComponent(advertisement.idAdvReq)}`}
-                        className="text-sm text-gray-900 hover:text-blue-950"
-                      >
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
-                          {formatState(advertisement.advReqState)}
-                        </span>
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <Link
-                        href={`/logged/pages/advertisement/${encodeURIComponent(advertisement.idAdvReq)}`}
-                        className="text-sm text-gray-500 hover:text-blue-950"
-                      >
-                        {formatDate(advertisement.senderDate)}
-                      </Link>
-                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(advertisement.senderDate)}</td>
                   </tr>
                 ))
               )}

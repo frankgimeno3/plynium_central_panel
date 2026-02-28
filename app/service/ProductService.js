@@ -6,6 +6,14 @@ export class ProductService {
         return response.data;
     }
 
+    static async getProductsByCompany(companyId) {
+        if (!companyId?.trim()) return [];
+        const response = await apiClient.get("/api/v1/products", {
+            params: { companyId: companyId.trim() },
+        });
+        return response.data;
+    }
+
     static async getProductById(idProduct) {
         const response = await apiClient.get(`/api/v1/products/${idProduct}`);
         return response.data;
@@ -23,6 +31,25 @@ export class ProductService {
 
     static async deleteProduct(idProduct) {
         const response = await apiClient.delete(`/api/v1/products/${idProduct}`);
+        return response.data;
+    }
+
+    static async getProductPortals(idProduct) {
+        const response = await apiClient.get(`/api/v1/products/${encodeURIComponent(idProduct)}/portals`);
+        return response.data;
+    }
+
+    static async addProductToPortal(idProduct, portalId) {
+        const response = await apiClient.post(`/api/v1/products/${encodeURIComponent(idProduct)}/portals`, {
+            portalId: Number(portalId),
+        });
+        return response.data;
+    }
+
+    static async removeProductFromPortal(idProduct, portalId) {
+        const response = await apiClient.delete(
+            `/api/v1/products/${encodeURIComponent(idProduct)}/portals/${portalId}`
+        );
         return response.data;
     }
 }

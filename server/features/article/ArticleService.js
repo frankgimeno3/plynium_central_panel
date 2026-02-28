@@ -58,6 +58,50 @@ function toApiArticle(article, contentsArray = []) {
 }
 
 /**
+ * Get all articles with highlight info per portal: highlightByPortal = [{ portalName, highlightPosition }].
+ * @param {{ portalNames?: string[] }} opts - If portalNames is non-empty, filter to those portals.
+ */
+export async function getAllArticlesWithHighlightInfo(opts = {}) {
+    const portalNames = Array.isArray(opts?.portalNames) ? opts.portalNames.filter(Boolean).map((n) => String(n).trim()) : [];
+    try {
+        if (!ArticleModel.sequelize) return [];
+        const sequelize = ArticleModel.sequelize;
+        const portalFilter = portalNames.length > 0
+            ? `AND p.name IN (${portalNames.map((_, i) => `:p${i}`).join(", ")})`
+            : "";
+        const replacements = portalNames.length > 0 ? Object.fromEntries(portalNames.map((n, i) => [`p${i}`, n])) : {};
+        const [rows] = await sequelize.query(
+            `SELECT a.id_article, a.article_title, a.article_subtitle, a.article_main_image_url,
+                    a.company, a.date, a.is_article_event, a.event_id,
+                    (SELECT COALESCE(json_agg(json_build_object('portalName', p2.name, 'highlightPosition', TRIM(ap2.highlight_position))), '[]'::json)
+                     FROM article_publications ap2
+                     JOIN portals p2 ON p2.id = ap2.portal_id
+                     WHERE ap2.article_id = a.id_article AND ap2.highlight_position IS NOT NULL AND TRIM(ap2.highlight_position) != '') AS highlight_info
+             FROM articles a
+             LEFT JOIN article_publications ap ON ap.article_id = a.id_article
+             LEFT JOIN portals p ON p.id = ap.portal_id
+             WHERE 1=1 ${portalFilter}
+             GROUP BY a.id_article, a.article_title, a.article_subtitle, a.article_main_image_url, a.company, a.date, a.is_article_event, a.event_id
+             ORDER BY a.date DESC`,
+            { replacements }
+        );
+        return (rows || []).map((r) => {
+            const base = toApiArticle({ ...r, highlited_position: "" });
+            let highlightByPortal = [];
+            try {
+                const arr = r.highlight_info;
+                if (Array.isArray(arr)) highlightByPortal = arr.filter((x) => x && x.portalName && x.highlightPosition);
+                else if (arr && typeof arr === "object") highlightByPortal = Object.values(arr).filter((x) => x && x.portalName && x.highlightPosition);
+            } catch (e) {}
+            return { ...base, highlightByPortal };
+        });
+    } catch (error) {
+        console.error("Error in getAllArticlesWithHighlightInfo:", error);
+        return [];
+    }
+}
+
+/**
  * @param {{ portalNames?: string[] }} opts - If portalNames is a non-empty array, only articles published in at least one of those portals (by name) are returned.
  */
 export async function getAllArticles(opts = {}) {

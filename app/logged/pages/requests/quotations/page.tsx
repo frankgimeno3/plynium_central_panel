@@ -1,15 +1,15 @@
 "use client";
 
 import React, { FC } from 'react';
-import AdvertisementTable from './advertisement_components/AdvertisementTable';
+import AdvertisementTable from '../advertisement_components/AdvertisementTable';
 
-interface AdvertisementProps {}
+interface QuotationsProps {}
 
-const Advertisement: FC<AdvertisementProps> = () => {
+const Quotations: FC<QuotationsProps> = () => {
   return (
     <div className="flex flex-col w-full bg-white">
       <div className="text-center bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Advertisement Requests</p>
+        <p className="text-2xl">Advertisement Quotations</p>
       </div>
       <div className="px-6 py-6">
         <AdvertisementTable />
@@ -18,4 +18,4 @@ const Advertisement: FC<AdvertisementProps> = () => {
   );
 };
 
-export default Advertisement;
+export default Quotations;

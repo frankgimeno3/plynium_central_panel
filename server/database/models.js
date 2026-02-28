@@ -273,6 +273,11 @@ ProductModel.init({
         type: DataTypes.STRING,
         allowNull: true,
         defaultValue: ""
+    },
+    product_categories_array: {
+        type: DataTypes.ARRAY(DataTypes.TEXT),
+        allowNull: true,
+        defaultValue: []
     }
 }, {
     sequelize,

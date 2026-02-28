@@ -7,6 +7,11 @@ class UserSerivce{
         return response.data;
     }
 
+    static async getUserById(id_user){
+        const response = await apiClient.get(`/api/v1/admin/user/${encodeURIComponent(id_user)}`);
+        return response.data;
+    }
+
     static async updateUser(username, name, email, password, enabled){
         const response = await apiClient.put('/api/v1/admin/user',{
             username,

@@ -1,4 +1,5 @@
 import CompanyModel from "./CompanyModel.js";
+import { createCompanyPortals } from "./CompanyPortalService.js";
 import "../../database/models.js";
 
 function toApiCompany(row) {
@@ -74,6 +75,10 @@ export async function createCompany(data) {
         web_link: data.webLink ?? "",
     };
     const row = await CompanyModel.create(payload);
+    const portalIds = Array.isArray(data.portalIds) ? data.portalIds.filter((id) => Number.isInteger(Number(id))).map(Number) : [];
+    if (portalIds.length > 0) {
+        await createCompanyPortals(row.company_id, portalIds, data.commercialName ?? "");
+    }
     return toApiCompany(row);
 }
 

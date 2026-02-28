@@ -1,8 +1,9 @@
 'use client';
 
-import React, { FC, useState } from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { ProductService } from '@/app/service/ProductService';
+import { CompanyService } from '@/app/service/CompanyService';
 
 interface ProductForm {
   productName: string;
@@ -33,6 +34,33 @@ const CreateProduct: FC = () => {
   const [form, setForm] = useState<ProductForm>(initialForm);
   const [errors, setErrors] = useState<Partial<Record<keyof ProductForm, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [companyPortals, setCompanyPortals] = useState<{ portalId: number; portalName: string }[]>([]);
+  const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (!form.company.trim()) {
+      setCompanyPortals([]);
+      setSelectedPortalIds([]);
+      return;
+    }
+    CompanyService.getCompanyPortals(form.company.trim())
+      .then((list: any[]) => {
+        setCompanyPortals(Array.isArray(list) ? list : []);
+        setSelectedPortalIds([]);
+      })
+      .catch(() => {
+        setCompanyPortals([]);
+        setSelectedPortalIds([]);
+      });
+  }, [form.company]);
+
+  const handleTogglePortal = (portalId: number) => {
+    setSelectedPortalIds((prev) =>
+      prev.includes(portalId)
+        ? prev.filter((id) => id !== portalId)
+        : [...prev, portalId]
+    );
+  };
 
   const update = (field: keyof ProductForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -68,6 +96,7 @@ const CreateProduct: FC = () => {
         productDescription: form.productDescription.trim(),
         mainImageSrc: form.mainImageSrc.trim(),
         productCategoriesArray,
+        portalIds: selectedPortalIds,
       });
       router.push('/logged/pages/directory/products');
       router.refresh();
@@ -139,16 +168,46 @@ const CreateProduct: FC = () => {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
-                  Company ID <span className="text-gray-400 font-normal">(optional)</span>
+                  Company ID <span className="text-gray-400 font-normal">(optional — required for portal assignment)</span>
                 </label>
                 <input
                   type="text"
                   value={form.company}
                   onChange={(e) => update('company', e.target.value)}
-                  placeholder="e.g. comp-001 — leave empty if not associated to a company"
+                  placeholder="e.g. comp_1234567_abc123 — enter company ID to assign portals"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-950 focus:border-blue-950"
                 />
               </div>
+
+              {form.company.trim() && (
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
+                    Portals (only portals where this company is visible)
+                  </label>
+                  {companyPortals.length === 0 ? (
+                    <p className="text-sm text-gray-500">
+                      Company not found or has no portals. Enter a valid company ID that is linked to at least one portal.
+                    </p>
+                  ) : (
+                    <div className="flex flex-wrap gap-3">
+                      {companyPortals.map((p) => (
+                        <label
+                          key={p.portalId}
+                          className="flex items-center gap-2 cursor-pointer text-sm border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedPortalIds.includes(p.portalId)}
+                            onChange={() => handleTogglePortal(p.portalId)}
+                            className="rounded border-gray-300"
+                          />
+                          <span>{p.portalName}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
                   Main Image URL

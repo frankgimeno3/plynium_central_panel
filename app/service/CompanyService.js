@@ -25,4 +25,23 @@ export class CompanyService {
         const response = await apiClient.delete(`/api/v1/companies/${idCompany}`);
         return response.data;
     }
+
+    static async getCompanyPortals(idCompany) {
+        const response = await apiClient.get(`/api/v1/companies/${encodeURIComponent(idCompany)}/portals`);
+        return response.data;
+    }
+
+    static async addCompanyToPortal(idCompany, portalId) {
+        const response = await apiClient.post(`/api/v1/companies/${encodeURIComponent(idCompany)}/portals`, {
+            portalId: Number(portalId),
+        });
+        return response.data;
+    }
+
+    static async removeCompanyFromPortal(idCompany, portalId) {
+        const response = await apiClient.delete(
+            `/api/v1/companies/${encodeURIComponent(idCompany)}/portals/${portalId}`
+        );
+        return response.data;
+    }
 }

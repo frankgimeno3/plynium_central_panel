@@ -31,6 +31,7 @@ interface Article {
   date: string;
   article_tags_array: string[];
   contents_array: string[];
+  highlightByPortal?: { portalName: string; highlightPosition: string }[];
 }
 
 interface PageProps {
@@ -74,7 +75,7 @@ const ArticleSearchResultsContent: FC = () => {
         setHeading(headingText);
 
         // Get all articles from API
-        const apiArticles = await ArticleService.getAllArticles();
+        const apiArticles = await ArticleService.getAllArticles({ withHighlightInfo: true });
         const allArticles = Array.isArray(apiArticles) 
           ? apiArticles.filter((art: any) => art && art.id_article && art.articleTitle)
           : [];
@@ -151,6 +152,8 @@ const ArticleSearchResultsContent: FC = () => {
                 titulo={a.articleTitle}
                 company={a.company}
                 date={a.date}
+                imageUrl={a.article_main_image_url || ""}
+                highlightByPortal={a.highlightByPortal || []}
               />
             ))
           ) : (

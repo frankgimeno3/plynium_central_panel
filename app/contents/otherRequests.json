@@ -1,0 +1,7 @@
+[
+  {"id":"oreq-001","author":"Ana García - ana.garcia@email.com","content":"Hola, me gustaría obtener más información sobre las posibilidades de colaboración con su plataforma para publicar artículos técnicos sobre vidrio arquitectónico. ¿Podrían indicarme el proceso y requisitos?","request_state":"Pending"},
+  {"id":"oreq-002","author":"Carlos Ruiz - carlos.ruiz@empresa.com","content":"Buenos días. Soy arquitecto y estoy interesado en añadir mi estudio al directorio de profesionales. ¿Cómo puedo registrarme y qué beneficios incluye el perfil básico?","request_state":"In Process"},
+  {"id":"oreq-003","author":"María López - mlopez@consultora.es","content":"Estimados, escribo en nombre de una asociación de fabricantes de vidrio. Nos interesa conocer las opciones de publicidad para eventos sectoriales. ¿Tienen paquetes especiales para asociaciones?","request_state":"Pending"},
+  {"id":"oreq-004","author":"Pedro Sánchez - pedro.s@hotmail.com","content":"He detectado un error en la ficha de mi empresa en el directorio. El teléfono de contacto está incorrecto. Por favor, contacten conmigo para actualizarlo.","request_state":"Other"},
+  {"id":"oreq-005","author":"Laura Martínez - laura.martinez@vidrieria.es","content":"Buscamos partners para un proyecto europeo sobre sostenibilidad en la fabricación de vidrio. ¿Su plataforma ofrece visibilidad a proyectos de I+D? Gracias.","request_state":"Pending"}
+]

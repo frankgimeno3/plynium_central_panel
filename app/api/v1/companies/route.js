@@ -26,4 +26,5 @@ export const POST = createEndpoint(async (request, body) => {
     mailTelephone: Joi.string().allow("").optional(),
     fullAddress: Joi.string().allow("").optional(),
     webLink: Joi.string().allow("").optional(),
+    portalIds: Joi.array().items(Joi.number().integer().min(1)).optional(),
 }), true);

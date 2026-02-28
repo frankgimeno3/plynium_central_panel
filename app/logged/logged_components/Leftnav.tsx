@@ -18,17 +18,20 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
   const pathname = usePathname();
   const [isDirectorySelected, setIsDirectorySelected] = useState(false);
   const [isContentsSelected, setIsContentsSelected] = useState(false);
-  const [isInboundSelected, setIsInboundSelected] = useState(false);
+  const [isAdvertisementSelected, setIsAdvertisementSelected] = useState(false);
+  const [isRequestsSelected, setIsRequestsSelected] = useState(false);
 
   const inContents = pathname.startsWith('/logged/pages/articles') || pathname.startsWith('/logged/pages/publications') || pathname.startsWith('/logged/pages/events');
-  const inAdvertisement = pathname.startsWith('/logged/pages/banners') || pathname.startsWith('/logged/pages/quotations') || pathname.startsWith('/logged/pages/advertisement');
+  const inAdvertisement = pathname.startsWith('/logged/pages/banners');
+  const inRequests = pathname.startsWith('/logged/pages/requests');
   const inPlyniumNetwork = pathname.startsWith('/logged/pages/users') || pathname.startsWith('/logged/pages/directory') || pathname.startsWith('/logged/pages/portals');
 
   useEffect(() => {
     setIsContentsSelected(inContents);
-    setIsInboundSelected(inAdvertisement);
+    setIsAdvertisementSelected(inAdvertisement);
+    setIsRequestsSelected(inRequests);
     setIsDirectorySelected(inPlyniumNetwork);
-  }, [pathname, inContents, inAdvertisement, inPlyniumNetwork]);
+  }, [pathname, inContents, inAdvertisement, inRequests, inPlyniumNetwork]);
 
 
 
@@ -64,8 +67,8 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
         </div>
       )}
 
-      <div className={`flex flex-row hover:bg-gray-200/50 hover:text-gray-900 cursor-pointer ${inAdvertisement ? 'bg-gray-200/70 text-gray-900' : ''}`} onClick={() => setIsInboundSelected(!isInboundSelected)}>
-        {isInboundSelected ? (
+      <div className={`flex flex-row hover:bg-gray-200/50 hover:text-gray-900 cursor-pointer ${inAdvertisement ? 'bg-gray-200/70 text-gray-900' : ''}`} onClick={() => setIsAdvertisementSelected(!isAdvertisementSelected)}>
+        {isAdvertisementSelected ? (
           <div className='text-gray-500 text-md pl-4 py-4 flex items-center'>
             <ChevronUpSvg size={16} />
           </div>
@@ -77,15 +80,41 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
         <p className={`text-md pl-4 py-4 ${inAdvertisement ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>Advertisement</p>
       </div>
 
-      {isInboundSelected && (
+      {isAdvertisementSelected && (
         <div className='flex flex-col px-5 text-sm'>
           <Link href='/logged/pages/banners' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/banners') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
             <LeftNavElement active={pathname.startsWith('/logged/pages/banners')} />
             <p className='pl-3'>Banners</p>
           </Link>
-          <Link href='/logged/pages/advertisement' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${(pathname.startsWith('/logged/pages/quotations') || pathname.startsWith('/logged/pages/advertisement')) ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-            <LeftNavElement active={pathname.startsWith('/logged/pages/quotations') || pathname.startsWith('/logged/pages/advertisement')} />
-            <p className='pl-3'>Quotations</p>
+        </div>
+      )}
+
+      <div className={`flex flex-row hover:bg-gray-200/50 hover:text-gray-900 cursor-pointer ${inRequests ? 'bg-gray-200/70 text-gray-900' : ''}`} onClick={() => setIsRequestsSelected(!isRequestsSelected)}>
+        {isRequestsSelected ? (
+          <div className="text-gray-500 text-md pl-4 py-4 flex items-center">
+            <ChevronUpSvg size={16} />
+          </div>
+        ) : (
+          <div className="text-gray-500 text-md pl-4 py-4 flex items-center">
+            <ChevronDownSvg size={16} />
+          </div>
+        )}
+        <p className={`text-md pl-4 py-4 ${inRequests ? 'text-gray-900 font-medium' : 'text-gray-500'}`}>Requests</p>
+      </div>
+
+      {isRequestsSelected && (
+        <div className="flex flex-col px-5 text-sm">
+          <Link href='/logged/pages/requests/quotations' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/requests/quotations') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+            <LeftNavElement active={pathname.startsWith('/logged/pages/requests/quotations')} />
+            <p className='pl-3'>Advertisement quotations</p>
+          </Link>
+          <Link href='/logged/pages/requests/company' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/requests/company') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+            <LeftNavElement active={pathname.startsWith('/logged/pages/requests/company')} />
+            <p className='pl-3'>Company</p>
+          </Link>
+          <Link href='/logged/pages/requests/requests' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/requests/requests') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+            <LeftNavElement active={pathname.startsWith('/logged/pages/requests/requests')} />
+            <p className='pl-3'>Other</p>
           </Link>
         </div>
       )}
