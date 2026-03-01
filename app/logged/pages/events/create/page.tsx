@@ -2,7 +2,6 @@
 
 import React, { FC, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import DatePicker from '@/app/logged/logged_components/DatePicker';
 import { EventsService } from '@/app/service/EventsService';
 import { PortalService } from '@/app/service/PortalService';
 
@@ -40,6 +39,88 @@ const initialForm: EventForm = {
   location: '',
   event_main_image: '',
 };
+
+function parseDateFields(dateStr: string): { day: string; month: string; year: string } {
+  if (!dateStr || dateStr.length < 10) return { day: '', month: '', year: '' };
+  const [y, m, d] = dateStr.split('-');
+  return {
+    day: d ? String(parseInt(d, 10) || '') : '',
+    month: m ? String(parseInt(m, 10) || '') : '',
+    year: y || '',
+  };
+}
+
+function buildDateStr(day: string, month: string, year: string): string {
+  const d = parseInt(day, 10);
+  const m = parseInt(month, 10);
+  const y = parseInt(year, 10);
+  if (!day || !month || !year || isNaN(d) || isNaN(m) || isNaN(y)) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  if (m < 1 || m > 12 || d < 1 || d > 31 || y < 1900 || y > 2100) return '';
+  return `${y}-${pad(m)}-${pad(Math.min(d, new Date(y, m, 0).getDate()))}`;
+}
+
+function DateInputs({
+  day,
+  month,
+  year,
+  onDayChange,
+  onMonthChange,
+  onYearChange,
+  error,
+}: {
+  day: string;
+  month: string;
+  year: string;
+  onDayChange: (v: string) => void;
+  onMonthChange: (v: string) => void;
+  onYearChange: (v: string) => void;
+  error?: string;
+}) {
+  const inputClass = `w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+    error ? 'border-red-500' : 'border-gray-300'
+  }`;
+  return (
+    <div className="grid grid-cols-3 gap-3">
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Day</label>
+        <input
+          type="number"
+          min={1}
+          max={31}
+          placeholder="DD"
+          value={day}
+          onChange={(e) => onDayChange(e.target.value)}
+          className={inputClass}
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Month</label>
+        <input
+          type="number"
+          min={1}
+          max={12}
+          placeholder="MM"
+          value={month}
+          onChange={(e) => onMonthChange(e.target.value)}
+          className={inputClass}
+        />
+      </div>
+      <div>
+        <label className="block text-xs font-medium text-gray-600 mb-1">Year</label>
+        <input
+          type="number"
+          min={1900}
+          max={2100}
+          placeholder="YYYY"
+          value={year}
+          onChange={(e) => onYearChange(e.target.value)}
+          className={inputClass}
+        />
+      </div>
+    </div>
+  );
+}
 
 function isValidUrl(s: string): boolean {
   const trimmed = s.trim();
@@ -99,6 +180,27 @@ const CreateEvent: FC = () => {
   const [imageLoadError, setImageLoadError] = useState(false);
   const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
   const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
+
+  const [startDay, setStartDay] = useState('');
+  const [startMonth, setStartMonth] = useState('');
+  const [startYear, setStartYear] = useState('');
+  const [endDay, setEndDay] = useState('');
+  const [endMonth, setEndMonth] = useState('');
+  const [endYear, setEndYear] = useState('');
+
+  const handleStartDateChange = (day: string, month: string, year: string) => {
+    setStartDay(day);
+    setStartMonth(month);
+    setStartYear(year);
+    update('start_date', buildDateStr(day, month, year));
+  };
+
+  const handleEndDateChange = (day: string, month: string, year: string) => {
+    setEndDay(day);
+    setEndMonth(month);
+    setEndYear(year);
+    update('end_date', buildDateStr(day, month, year));
+  };
 
   useEffect(() => {
     PortalService.getAllPortals()
@@ -336,29 +438,35 @@ const CreateEvent: FC = () => {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
+              <div className="md:col-span-2">
+                <div className="text-sm font-semibold text-gray-500 uppercase mb-2">
                   Start Date <span className="text-red-500">*</span>
-                </label>
-                <DatePicker
-                  value={form.start_date}
-                  onChange={(v) => update('start_date', v)}
-                  placeholder="Select start date"
-                  max={form.end_date || undefined}
+                </div>
+                <DateInputs
+                  day={startDay}
+                  month={startMonth}
+                  year={startYear}
+                  onDayChange={(v) => handleStartDateChange(v, startMonth, startYear)}
+                  onMonthChange={(v) => handleStartDateChange(startDay, v, startYear)}
+                  onYearChange={(v) => handleStartDateChange(startDay, startMonth, v)}
+                  error={errors.start_date}
                 />
                 {errors.start_date && (
                   <p className="mt-1 text-sm text-red-500">{errors.start_date}</p>
                 )}
               </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
+              <div className="md:col-span-2">
+                <div className="text-sm font-semibold text-gray-500 uppercase mb-2">
                   End Date <span className="text-red-500">*</span>
-                </label>
-                <DatePicker
-                  value={form.end_date}
-                  onChange={(v) => update('end_date', v)}
-                  placeholder="Select end date"
-                  min={form.start_date || undefined}
+                </div>
+                <DateInputs
+                  day={endDay}
+                  month={endMonth}
+                  year={endYear}
+                  onDayChange={(v) => handleEndDateChange(v, endMonth, endYear)}
+                  onMonthChange={(v) => handleEndDateChange(endDay, v, endYear)}
+                  onYearChange={(v) => handleEndDateChange(endDay, endMonth, v)}
+                  error={errors.end_date}
                 />
                 {errors.end_date && (
                   <p className="mt-1 text-sm text-red-500">{errors.end_date}</p>

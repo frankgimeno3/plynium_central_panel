@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FC, useEffect, useState } from "react";
-import DatePicker from "@/app/logged/logged_components/DatePicker";
+import { DateInputs, parseDateFields, buildDateStr } from "@/app/logged/logged_components/DateInputs";
 import { RichTextEditor } from "@/app/logged/logged_components/RichTextEditor";
 
 interface EditContentsModalProps {
@@ -22,12 +22,19 @@ const EditContentsModal: FC<EditContentsModalProps> = ({
   isRichText,
 }) => {
   const [currentValue, setCurrentValue] = useState<string>(initialValue);
+  const [dateDay, setDateDay] = useState("");
+  const [dateMonth, setDateMonth] = useState("");
+  const [dateYear, setDateYear] = useState("");
   // Rich text (B, I, lists, alignment) only for content text fields, not for title/subtitle/company/date/image URL
   const useRichEditor = isRichText ?? (title === "Edit contents");
 
   useEffect(() => {
     if (isOpen) {
       setCurrentValue(initialValue);
+      const p = parseDateFields(initialValue);
+      setDateDay(p.day);
+      setDateMonth(p.month);
+      setDateYear(p.year);
     }
   }, [initialValue, isOpen]);
 
@@ -103,11 +110,23 @@ const EditContentsModal: FC<EditContentsModalProps> = ({
 
         {isDateField ? (
           <div className="mb-4">
-            <DatePicker
-              value={currentValue}
-              onChange={setCurrentValue}
-              className="w-full"
-              placeholder="Seleccionar fecha"
+            <div className="text-sm font-semibold text-gray-700 mb-2">Fecha</div>
+            <DateInputs
+              day={dateDay}
+              month={dateMonth}
+              year={dateYear}
+              onDayChange={(v) => {
+                setDateDay(v);
+                setCurrentValue(buildDateStr(v, dateMonth, dateYear));
+              }}
+              onMonthChange={(v) => {
+                setDateMonth(v);
+                setCurrentValue(buildDateStr(dateDay, v, dateYear));
+              }}
+              onYearChange={(v) => {
+                setDateYear(v);
+                setCurrentValue(buildDateStr(dateDay, dateMonth, v));
+              }}
             />
           </div>
         ) : useRichEditor ? (

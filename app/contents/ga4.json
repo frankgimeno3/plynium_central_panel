@@ -1,0 +1,114 @@
+{
+  "portals": [
+    { "id": "glassinformer", "name": "Glassinformer" },
+    { "id": "fenestrator", "name": "Fenestrator" },
+    { "id": "buildinformer", "name": "Buildinformer" }
+  ],
+  "summaryByPortal": {
+    "glassinformer": {
+      "users": 12450,
+      "sessions": 18720,
+      "pageViews": 52340,
+      "bounceRate": 42.3,
+      "avgEngagementSeconds": 156,
+      "newUsers": 3120,
+      "conversions": 89
+    },
+    "fenestrator": {
+      "users": 8920,
+      "sessions": 11200,
+      "pageViews": 28900,
+      "bounceRate": 38.1,
+      "avgEngagementSeconds": 203,
+      "newUsers": 2100,
+      "conversions": 45
+    },
+    "buildinformer": {
+      "users": 5670,
+      "sessions": 7800,
+      "pageViews": 19200,
+      "bounceRate": 35.2,
+      "avgEngagementSeconds": 245,
+      "newUsers": 1560,
+      "conversions": 32
+    }
+  },
+  "tableRowsByPortal": {
+    "glassinformer": [
+      { "page": "/", "users": 4520, "sessions": 6200, "pageViews": 18500, "avgTime": 142, "bounceRate": 38.5 },
+      { "page": "/articles", "users": 3890, "sessions": 5120, "pageViews": 15200, "avgTime": 178, "bounceRate": 41.2 },
+      { "page": "/publications", "users": 2100, "sessions": 2980, "pageViews": 9800, "avgTime": 165, "bounceRate": 45.8 },
+      { "page": "/events", "users": 1850, "sessions": 3420, "pageViews": 6840, "avgTime": 198, "bounceRate": 32.1 }
+    ],
+    "fenestrator": [
+      { "page": "/", "users": 3200, "sessions": 4100, "pageViews": 10200, "avgTime": 185, "bounceRate": 35.2 },
+      { "page": "/companies", "users": 2800, "sessions": 3650, "pageViews": 8900, "avgTime": 212, "bounceRate": 38.4 },
+      { "page": "/products", "users": 2450, "sessions": 2980, "pageViews": 7200, "avgTime": 198, "bounceRate": 41.1 }
+    ],
+    "buildinformer": [
+      { "page": "/", "users": 2100, "sessions": 2800, "pageViews": 6800, "avgTime": 220, "bounceRate": 30.5 },
+      { "page": "/articulos", "users": 1850, "sessions": 2450, "pageViews": 5600, "avgTime": 265, "bounceRate": 33.2 },
+      { "page": "/eventos", "users": 1520, "sessions": 2100, "pageViews": 4800, "avgTime": 248, "bounceRate": 36.8 }
+    ]
+  },
+  "detailByPortal": {
+    "glassinformer": {
+      "trafficSource": [
+        { "source": "Organic Search", "users": 5200, "sessions": 8120, "percentage": 43.4 },
+        { "source": "Direct", "users": 3420, "sessions": 4980, "percentage": 26.6 },
+        { "source": "Social", "users": 2100, "sessions": 3120, "percentage": 16.7 },
+        { "source": "Referral", "users": 980, "sessions": 1420, "percentage": 7.6 },
+        { "source": "Paid Search", "users": 720, "sessions": 1080, "percentage": 5.7 }
+      ],
+      "deviceBreakdown": [
+        { "device": "Desktop", "users": 6450, "sessions": 9820, "percentage": 52.5 },
+        { "device": "Mobile", "users": 4780, "sessions": 6980, "percentage": 37.3 },
+        { "device": "Tablet", "users": 1220, "sessions": 1920, "percentage": 10.2 }
+      ],
+      "topPagesDetail": [
+        { "page": "/", "users": 4520, "sessions": 6200, "pageViews": 18500, "avgTime": 142, "bounceRate": 38.5, "entrances": 4520, "exits": 1820 },
+        { "page": "/articles", "users": 3890, "sessions": 5120, "pageViews": 15200, "avgTime": 178, "bounceRate": 41.2, "entrances": 2890, "exits": 2100 },
+        { "page": "/publications", "users": 2100, "sessions": 2980, "pageViews": 9800, "avgTime": 165, "bounceRate": 45.8, "entrances": 1500, "exits": 1250 },
+        { "page": "/events", "users": 1850, "sessions": 3420, "pageViews": 6840, "avgTime": 198, "bounceRate": 32.1, "entrances": 1200, "exits": 890 }
+      ]
+    },
+    "fenestrator": {
+      "trafficSource": [
+        { "source": "Organic Search", "users": 4120, "sessions": 5200, "percentage": 46.4 },
+        { "source": "Direct", "users": 2580, "sessions": 3200, "percentage": 28.6 },
+        { "source": "Referral", "users": 1200, "sessions": 1520, "percentage": 13.6 },
+        { "source": "Social", "users": 720, "sessions": 980, "percentage": 8.7 },
+        { "source": "Paid Search", "users": 300, "sessions": 500, "percentage": 4.5 }
+      ],
+      "deviceBreakdown": [
+        { "device": "Desktop", "users": 5120, "sessions": 6420, "percentage": 57.3 },
+        { "device": "Mobile", "users": 2980, "sessions": 3680, "percentage": 32.9 },
+        { "device": "Tablet", "users": 820, "sessions": 1100, "percentage": 9.8 }
+      ],
+      "topPagesDetail": [
+        { "page": "/", "users": 3200, "sessions": 4100, "pageViews": 10200, "avgTime": 185, "bounceRate": 35.2, "entrances": 3200, "exits": 1120 },
+        { "page": "/companies", "users": 2800, "sessions": 3650, "pageViews": 8900, "avgTime": 212, "bounceRate": 38.4, "entrances": 2100, "exits": 980 },
+        { "page": "/products", "users": 2450, "sessions": 2980, "pageViews": 7200, "avgTime": 198, "bounceRate": 41.1, "entrances": 1800, "exits": 890 }
+      ]
+    },
+    "buildinformer": {
+      "trafficSource": [
+        { "source": "Organic Search", "users": 2890, "sessions": 3650, "percentage": 46.8 },
+        { "source": "Direct", "users": 1850, "sessions": 2400, "percentage": 30.8 },
+        { "source": "Social", "users": 560, "sessions": 780, "percentage": 10.0 },
+        { "source": "Referral", "users": 420, "sessions": 580, "percentage": 7.4 },
+        { "source": "Paid Search", "users": 250, "sessions": 390, "percentage": 5.0 }
+      ],
+      "deviceBreakdown": [
+        { "device": "Desktop", "users": 3420, "sessions": 4320, "percentage": 55.4 },
+        { "device": "Mobile", "users": 1850, "sessions": 2680, "percentage": 34.4 },
+        { "device": "Tablet", "users": 400, "sessions": 800, "percentage": 10.2 }
+      ],
+      "topPagesDetail": [
+        { "page": "/", "users": 2100, "sessions": 2800, "pageViews": 6800, "avgTime": 220, "bounceRate": 30.5, "entrances": 2100, "exits": 640 },
+        { "page": "/articulos", "users": 1850, "sessions": 2450, "pageViews": 5600, "avgTime": 265, "bounceRate": 33.2, "entrances": 1420, "exits": 580 },
+        { "page": "/eventos", "users": 1520, "sessions": 2100, "pageViews": 4800, "avgTime": 248, "bounceRate": 36.8, "entrances": 1180, "exits": 520 }
+      ]
+    }
+  }
+}

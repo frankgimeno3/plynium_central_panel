@@ -4,7 +4,7 @@ import React, { FC, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { PublicationService } from "@/app/service/PublicationService";
 import { PortalService } from "@/app/service/PortalService";
-import DatePicker from "@/app/logged/logged_components/DatePicker";
+import { DateInputs, parseDateFields, buildDateStr } from "@/app/logged/logged_components/DateInputs";
 
 interface PublicationData {
   id_publication: string;
@@ -22,6 +22,9 @@ const CreatePublication: FC = () => {
   const [idPublication, setIdPublication] = useState("");
   const [redirectionLink, setRedirectionLink] = useState("");
   const [date, setDate] = useState("");
+  const [dateDay, setDateDay] = useState("");
+  const [dateMonth, setDateMonth] = useState("");
+  const [dateYear, setDateYear] = useState("");
   const [magazine, setMagazine] = useState("");
   const [numero, setNumero] = useState<string>("");
   const [publicationMainImageUrl, setPublicationMainImageUrl] = useState("");
@@ -48,6 +51,13 @@ const CreatePublication: FC = () => {
         ? prev.filter((id) => id !== portalId)
         : [...prev, portalId]
     );
+  };
+
+  const handleDateChange = (day: string, month: string, year: string) => {
+    setDateDay(day);
+    setDateMonth(month);
+    setDateYear(year);
+    setDate(buildDateStr(day, month, year));
   };
 
   // Establecer fecha por defecto como hoy
@@ -115,7 +125,12 @@ const CreatePublication: FC = () => {
     };
     
     loadPublicationId();
-    setDate(getTodayDate());
+    const today = getTodayDate();
+    setDate(today);
+    const p = parseDateFields(today);
+    setDateDay(p.day);
+    setDateMonth(p.month);
+    setDateYear(p.year);
   }, []);
 
   const handlePhase1Next = () => {
@@ -246,11 +261,13 @@ const CreatePublication: FC = () => {
 
             <div className="space-y-2">
               <label className="font-bold text-lg">Fecha *</label>
-              <DatePicker
-                value={date}
-                onChange={setDate}
-                className="w-full"
-                placeholder="Seleccionar fecha"
+              <DateInputs
+                day={dateDay}
+                month={dateMonth}
+                year={dateYear}
+                onDayChange={(v) => handleDateChange(v, dateMonth, dateYear)}
+                onMonthChange={(v) => handleDateChange(dateDay, v, dateYear)}
+                onYearChange={(v) => handleDateChange(dateDay, dateMonth, v)}
               />
             </div>
 

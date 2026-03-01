@@ -1,10 +1,10 @@
-import { createEndpoint } from "../../../../../server/createEndpoint.js";
+import { createEndpoint } from "@/server/createEndpoint.js";
 import { NextResponse } from "next/server";
 import {
     getHighlightedArticlesByPortal,
     getHighlightPositions,
     setHighlightedArticleForPosition,
-} from "../../../../../server/features/article/ArticlePublicationService.js";
+} from "@/server/features/article/ArticlePublicationService.js";
 import Joi from "joi";
 
 export const runtime = "nodejs";

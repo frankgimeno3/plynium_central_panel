@@ -1,8 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import DatePicker from "@/app/logged/logged_components/DatePicker";
+import { DateInputs, parseDateFields, buildDateStr } from "@/app/logged/logged_components/DateInputs";
 
 const HIGHLITED_POSITION_OPTIONS = [
   { value: "", label: "(None)" },
@@ -74,6 +74,24 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
   onNext,
 }) => {
   const router = useRouter();
+  const [dateDay, setDateDay] = useState("");
+  const [dateMonth, setDateMonth] = useState("");
+  const [dateYear, setDateYear] = useState("");
+
+  useEffect(() => {
+    const p = parseDateFields(date);
+    setDateDay(p.day);
+    setDateMonth(p.month);
+    setDateYear(p.year);
+  }, [date]);
+
+  const handleDateChange = (day: string, month: string, year: string) => {
+    setDateDay(day);
+    setDateMonth(month);
+    setDateYear(year);
+    setDate(buildDateStr(day, month, year));
+  };
+
   const canGoNext = !isGeneratingId && !!articleTitle && !!date && selectedPortalIds.length >= 1;
 
   return (
@@ -141,11 +159,13 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
 
       <div className="space-y-2">
         <label className="font-bold text-lg">Date *</label>
-        <DatePicker
-          value={date}
-          onChange={setDate}
-          className="w-full"
-          placeholder="Select date"
+        <DateInputs
+          day={dateDay}
+          month={dateMonth}
+          year={dateYear}
+          onDayChange={(v) => handleDateChange(v, dateMonth, dateYear)}
+          onMonthChange={(v) => handleDateChange(dateDay, v, dateYear)}
+          onYearChange={(v) => handleDateChange(dateDay, dateMonth, v)}
         />
       </div>
 

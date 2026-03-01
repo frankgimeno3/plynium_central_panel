@@ -71,3 +71,44 @@ export async function getUserByIdFromRds(id_user) {
   const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
   return row ? mapRowToUserDetail(row) : null;
 }
+
+/**
+ * Obtiene un usuario por id_user o user_name (email). Útil para Cognito username.
+ */
+export async function getUserByIdOrUsernameFromRds(idOrUsername) {
+  if (!idOrUsername) return null;
+  const db = Database.getInstance();
+  if (!db.isConfigured()) {
+    return null;
+  }
+  const sequelize = db.getSequelize();
+  const [rows] = await sequelize.query(
+    "SELECT * FROM users WHERE id_user = :val OR user_name = :val LIMIT 1",
+    { replacements: { val: idOrUsername } }
+  );
+  const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+  return row ? mapRowToUser(row) : null;
+}
+
+/**
+ * Obtiene un usuario por cognito_sub (UUID de Cognito).
+ * Requiere que la columna cognito_sub exista y esté poblada (migración 018).
+ */
+export async function getUserByCognitoSubFromRds(cognitoSub) {
+  if (!cognitoSub) return null;
+  const db = Database.getInstance();
+  if (!db.isConfigured()) {
+    return null;
+  }
+  const sequelize = db.getSequelize();
+  try {
+    const [rows] = await sequelize.query(
+      "SELECT * FROM users WHERE cognito_sub = :val LIMIT 1",
+      { replacements: { val: cognitoSub } }
+    );
+    const row = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+    return row ? mapRowToUser(row) : null;
+  } catch {
+    return null;
+  }
+}
