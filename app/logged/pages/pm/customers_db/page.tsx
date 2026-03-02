@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC } from "react";
+import React, { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import customersData from "@/app/contents/customers.json";
 
@@ -23,7 +23,18 @@ type Customer = {
 
 const CustomersDbPage: FC = () => {
   const router = useRouter();
-  const customers = customersData as Customer[];
+  const all = (customersData as Customer[]).slice();
+  const [filter, setFilter] = useState({ id: "", name: "", cif: "", country: "" });
+
+  const filtered = useMemo(() => {
+    let list = [...all];
+    if (filter.id) list = list.filter((c) => c.id_customer.toLowerCase().includes(filter.id.toLowerCase()));
+    if (filter.name) list = list.filter((c) => c.name.toLowerCase().includes(filter.name.toLowerCase()));
+    if (filter.cif) list = list.filter((c) => c.cif?.toLowerCase().includes(filter.cif.toLowerCase()));
+    if (filter.country) list = list.filter((c) => c.country?.toLowerCase().includes(filter.country.toLowerCase()));
+    return list;
+  }, [all, filter]);
+
   const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
 
   return (
@@ -32,7 +43,54 @@ const CustomersDbPage: FC = () => {
         <p className="text-2xl">Customers DB</p>
       </div>
 
-      <div className="overflow-x-auto p-12">
+      <div className="flex flex-col gap-4 p-12">
+        <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">ID</label>
+              <input
+                type="text"
+                value={filter.id}
+                onChange={(e) => setFilter((f) => ({ ...f, id: e.target.value }))}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Search by ID"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Name</label>
+              <input
+                type="text"
+                value={filter.name}
+                onChange={(e) => setFilter((f) => ({ ...f, name: e.target.value }))}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Search by company name"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">CIF</label>
+              <input
+                type="text"
+                value={filter.cif}
+                onChange={(e) => setFilter((f) => ({ ...f, cif: e.target.value }))}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Search by CIF"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Country</label>
+              <input
+                type="text"
+                value={filter.country}
+                onChange={(e) => setFilter((f) => ({ ...f, country: e.target.value }))}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Search by country"
+              />
+            </div>
+          </div>
+        </div>
+
+      <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
           <thead className="bg-gray-50">
             <tr>
@@ -47,7 +105,7 @@ const CustomersDbPage: FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {customers.map((c) => (
+            {filtered.map((c) => (
               <tr
                 key={c.id_customer}
                 onClick={() => router.push(`/logged/pages/pm/customers_db/${c.id_customer}`)}
@@ -65,6 +123,7 @@ const CustomersDbPage: FC = () => {
             ))}
           </tbody>
         </table>
+      </div>
       </div>
     </div>
   );

@@ -27,8 +27,8 @@ type Project = {
   id_contract: string;
   title: string;
   status: string;
-  start_date: string;
-  end_date: string;
+  project_type?: string;
+  publication_date?: string;
 };
 
 const ContractDetailPage: FC<{ params: Promise<{ id_project: string }> }> = ({ params }) => {
@@ -107,7 +107,7 @@ const ContractDetailPage: FC<{ params: Promise<{ id_project: string }> }> = ({ p
               >
                 <div>
                   <p className="font-medium">{p.title}</p>
-                  <p className="text-sm text-gray-500">{p.start_date} – {p.end_date}</p>
+                  <p className="text-sm text-gray-500">{p.project_type?.replace(/_/g, " ")} · {p.publication_date ?? "—"}</p>
                 </div>
                 <span className={`px-2 py-1 rounded text-xs ${p.status === "published" ? "bg-green-100" : p.status === "ok_production" ? "bg-blue-100" : "bg-gray-100"}`}>{p.status.replace("_", " ")}</span>
               </div>

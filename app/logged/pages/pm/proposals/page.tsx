@@ -3,6 +3,7 @@
 import React, { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import proposalsData from "@/app/contents/proposals.json";
+import customersData from "@/app/contents/customers.json";
 
 type Proposal = {
   id_proposal: string;
@@ -13,17 +14,21 @@ type Proposal = {
   date_created: string;
 };
 
+type Customer = { id_customer: string; name: string };
+
 const ITEMS_PER_PAGE = 12;
 
 const ProposalsPage: FC = () => {
   const router = useRouter();
   const all = (proposalsData as Proposal[]).slice();
-  const [filter, setFilter] = useState({ id: "", title: "", status: "" });
+  const customers = customersData as Customer[];
+  const getCompanyName = (id: string) => customers.find((c) => c.id_customer === id)?.name ?? id;
+  const [filter, setFilter] = useState({ id: "", company: "", status: "" });
 
   const filtered = useMemo(() => {
     let list = [...all];
     if (filter.id) list = list.filter((p) => p.id_proposal.toLowerCase().includes(filter.id.toLowerCase()));
-    if (filter.title) list = list.filter((p) => p.title.toLowerCase().includes(filter.title.toLowerCase()));
+    if (filter.company) list = list.filter((p) => getCompanyName(p.id_customer).toLowerCase().includes(filter.company.toLowerCase()));
     if (filter.status) list = list.filter((p) => p.status.toLowerCase().includes(filter.status.toLowerCase()));
     return list;
   }, [all, filter]);
@@ -56,24 +61,27 @@ const ProposalsPage: FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Title</label>
+              <label className="block text-xs text-gray-600 mb-1">Company</label>
               <input
                 type="text"
-                value={filter.title}
-                onChange={(e) => { setFilter((f) => ({ ...f, title: e.target.value })); setPage(1); }}
+                value={filter.company}
+                onChange={(e) => { setFilter((f) => ({ ...f, company: e.target.value })); setPage(1); }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search by title"
+                placeholder="Search by company"
               />
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-1">Status</label>
-              <input
-                type="text"
+              <select
                 value={filter.status}
                 onChange={(e) => { setFilter((f) => ({ ...f, status: e.target.value })); setPage(1); }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="pending, accepted, rejected"
-              />
+              >
+                <option value="">All</option>
+                <option value="pending">pending</option>
+                <option value="accepted">accepted</option>
+                <option value="rejected">rejected</option>
+              </select>
             </div>
           </div>
         </div>
@@ -83,7 +91,7 @@ const ProposalsPage: FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Title</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount (€)</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
@@ -93,7 +101,7 @@ const ProposalsPage: FC = () => {
               {paginated.map((p) => (
                 <tr key={p.id_proposal} onClick={() => router.push(`/logged/pages/pm/proposals/${p.id_proposal}`)} className={rowClass}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.id_proposal}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{p.title}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{getCompanyName(p.id_customer)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
                       p.status === "accepted" ? "bg-green-100 text-green-800" :
@@ -108,12 +116,12 @@ const ProposalsPage: FC = () => {
           </table>
         </div>
 
-        {filtered.length > ITEMS_PER_PAGE && (
+        {(filtered.length > ITEMS_PER_PAGE || totalPages > 1) && (
           <div className="flex items-center justify-between">
             <p className="text-sm text-gray-600">
               Showing {start + 1}–{Math.min(start + ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
             </p>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -122,6 +130,7 @@ const ProposalsPage: FC = () => {
               >
                 ← Previous
               </button>
+              <span className="text-sm text-gray-600">Page {page} of {totalPages || 1}</span>
               <button
                 type="button"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
