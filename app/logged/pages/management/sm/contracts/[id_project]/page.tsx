@@ -6,6 +6,7 @@ import Link from "next/link";
 import contractsData from "@/app/contents/contracts.json";
 import customersData from "@/app/contents/customers.json";
 import projectsData from "@/app/contents/projects.json";
+import servicesData from "@/app/contents/services.json";
 
 type Contract = {
   id_contract: string;
@@ -27,9 +28,11 @@ type Project = {
   id_contract: string;
   title: string;
   status: string;
-  project_type?: string;
+  service?: string;
   publication_date?: string;
 };
+
+type Service = { id_service: string; name: string };
 
 const ContractDetailPage: FC<{ params: Promise<{ id_project: string }> }> = ({ params }) => {
   const router = useRouter();
@@ -42,12 +45,14 @@ const ContractDetailPage: FC<{ params: Promise<{ id_project: string }> }> = ({ p
   const projects = contract
     ? (projectsData as Project[]).filter((p) => p.id_contract === contract.id_contract)
     : [];
+  const services = servicesData as Service[];
+  const getServiceName = (id: string) => services.find((s) => s.id_service === id)?.name?.replace(/_/g, " ") ?? id;
 
   if (!contract) {
     return (
       <div className="flex flex-col w-full p-12">
         <p className="text-gray-500">Contract not found.</p>
-        <Link href="/logged/pages/pm/projects" className="text-blue-600 hover:underline mt-4">
+        <Link href="/logged/pages/management/sm/projects" className="text-blue-600 hover:underline mt-4">
           ← Back to Projects
         </Link>
       </div>
@@ -59,7 +64,7 @@ const ContractDetailPage: FC<{ params: Promise<{ id_project: string }> }> = ({ p
       <div className="text-center bg-blue-950/70 p-5 text-white flex items-center justify-center gap-4">
         <button
           type="button"
-          onClick={() => router.push("/logged/pages/pm/projects")}
+          onClick={() => router.push("/logged/pages/management/sm/projects")}
           className="text-white/90 hover:text-white text-sm"
         >
           ← Back
@@ -83,14 +88,14 @@ const ContractDetailPage: FC<{ params: Promise<{ id_project: string }> }> = ({ p
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase">Proposal</p>
-            <Link href={`/logged/pages/pm/proposals/${contract.id_proposal}`} className="text-blue-600 hover:underline">{contract.id_proposal}</Link>
+            <Link href={`/logged/pages/management/sm/proposals/${contract.id_proposal}`} className="text-blue-600 hover:underline">{contract.id_proposal}</Link>
           </div>
         </div>
 
         {customer && (
           <div className="border-t pt-6">
             <p className="text-sm font-medium text-gray-700 mb-2">Customer</p>
-            <Link href={`/logged/pages/pm/customers_db/${customer.id_customer}`} className="text-blue-600 hover:underline">
+            <Link href={`/logged/pages/management/sm/customers_db/${customer.id_customer}`} className="text-blue-600 hover:underline">
               {customer.name}
             </Link>
           </div>
@@ -102,12 +107,12 @@ const ContractDetailPage: FC<{ params: Promise<{ id_project: string }> }> = ({ p
             {projects.map((p) => (
               <div
                 key={p.id_project}
-                onClick={() => router.push(`/logged/pages/pm/projects/${p.id_project}`)}
+                onClick={() => router.push(`/logged/pages/management/sm/projects/${p.id_project}`)}
                 className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-blue-50/80 transition-colors"
               >
                 <div>
                   <p className="font-medium">{p.title}</p>
-                  <p className="text-sm text-gray-500">{p.project_type?.replace(/_/g, " ")} · {p.publication_date ?? "—"}</p>
+                  <p className="text-sm text-gray-500">{p.service ? getServiceName(p.service) : "—"} · {p.publication_date ?? "—"}</p>
                 </div>
                 <span className={`px-2 py-1 rounded text-xs ${p.status === "published" ? "bg-green-100" : p.status === "ok_production" ? "bg-blue-100" : "bg-gray-100"}`}>{p.status.replace("_", " ")}</span>
               </div>

@@ -18,20 +18,26 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
   const pathname = usePathname();
   const [isDirectorySelected, setIsDirectorySelected] = useState(false);
   const [isContentsSelected, setIsContentsSelected] = useState(false);
+  const [isManagementSelected, setIsManagementSelected] = useState(false);
+  const [isSalesManagementSelected, setIsSalesManagementSelected] = useState(false);
   const [isProjectManagementSelected, setIsProjectManagementSelected] = useState(false);
   const [isRequestsSelected, setIsRequestsSelected] = useState(false);
 
   const inContents = pathname.startsWith('/logged/pages/contents');
-  const inProjectManagement = pathname.startsWith('/logged/pages/pm');
+  const inManagement = pathname.startsWith('/logged/pages/management');
+  const inSalesManagement = pathname.startsWith('/logged/pages/management/sm');
+  const inProjectManagement = pathname.startsWith('/logged/pages/management/newsletter_management') || pathname.startsWith('/logged/pages/management/publications_management');
   const inRequests = pathname.startsWith('/logged/pages/requests');
   const inPlyniumNetwork = pathname.startsWith('/logged/pages/users') || pathname.startsWith('/logged/pages/directory') || pathname.startsWith('/logged/pages/portals');
 
   useEffect(() => {
     setIsContentsSelected(inContents);
-    setIsProjectManagementSelected(inProjectManagement);
+    setIsManagementSelected(inManagement);
+    setIsSalesManagementSelected((prev) => (inSalesManagement ? true : prev));
+    setIsProjectManagementSelected((prev) => (inProjectManagement ? true : prev));
     setIsRequestsSelected(inRequests);
     setIsDirectorySelected(inPlyniumNetwork);
-  }, [pathname, inContents, inProjectManagement, inRequests, inPlyniumNetwork]);
+  }, [pathname, inContents, inManagement, inSalesManagement, inProjectManagement, inRequests, inPlyniumNetwork]);
 
 
 
@@ -71,8 +77,8 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
         </div>
       )}
 
-      <div className={`flex flex-row hover:bg-gray-200/50 hover:text-gray-900 cursor-pointer ${inProjectManagement ? 'bg-gray-200/70 text-gray-900' : ''}`} onClick={() => setIsProjectManagementSelected(!isProjectManagementSelected)}>
-        {isProjectManagementSelected ? (
+      <div className={`flex flex-row hover:bg-gray-200/50 hover:text-gray-900 cursor-pointer ${inManagement ? 'bg-gray-200/70 text-gray-900' : ''}`} onClick={() => setIsManagementSelected(!isManagementSelected)}>
+        {isManagementSelected ? (
           <div className='text-gray-500 text-md pl-4 py-4 flex items-center'>
             <ChevronUpSvg size={16} />
           </div>
@@ -81,31 +87,57 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
             <ChevronDownSvg size={16} />
           </div>
         )}
-        <p className={`text-md pl-4 py-4 ${inProjectManagement ? 'text-gray-900 font-medium' : 'text-gray-500'}`} suppressHydrationWarning>Project Management</p>
+        <p className={`text-md pl-4 py-4 ${inManagement ? 'text-gray-900 font-medium' : 'text-gray-500'}`} suppressHydrationWarning>Management</p>
       </div>
 
-      {isProjectManagementSelected && (
+      {isManagementSelected && (
         <div className='flex flex-col px-5 text-sm'>
-          <Link href='/logged/pages/pm' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname === '/logged/pages/pm' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-            <LeftNavElement active={pathname === '/logged/pages/pm'} />
-            <p className='pl-3'>Dashboard</p>
+          <Link href='/logged/pages/management' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname === '/logged/pages/management' ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+            <LeftNavElement active={pathname === '/logged/pages/management'} />
+            <p className='pl-3'>Management Dashboard</p>
           </Link>
-          <Link href='/logged/pages/pm/contracts' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/pm/contracts') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-            <LeftNavElement active={pathname.startsWith('/logged/pages/pm/contracts')} />
-            <p className='pl-3'>Contracts</p>
-          </Link>
-          <Link href='/logged/pages/pm/projects' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/pm/projects') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-            <LeftNavElement active={pathname.startsWith('/logged/pages/pm/projects')} />
-            <p className='pl-3'>Projects</p>
-          </Link>
-          <Link href='/logged/pages/pm/proposals' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/pm/proposals') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-            <LeftNavElement active={pathname.startsWith('/logged/pages/pm/proposals')} />
-            <p className='pl-3'>Proposals</p>
-          </Link>
-          <Link href='/logged/pages/pm/customers_db' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/pm/customers_db') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-            <LeftNavElement active={pathname.startsWith('/logged/pages/pm/customers_db')} />
-            <p className='pl-3'>Customers DB</p>
-          </Link>
+
+          <div className={`flex flex-row hover:bg-gray-200/30 cursor-pointer pl-4 py-2 ${inSalesManagement ? 'text-gray-900' : 'text-gray-600'}`} onClick={() => setIsSalesManagementSelected(!isSalesManagementSelected)}>
+            {isSalesManagementSelected ? <ChevronUpSvg size={14} /> : <ChevronDownSvg size={14} />}
+            <p className='pl-2 text-sm font-medium'>Sales Management</p>
+          </div>
+          {isSalesManagementSelected && (
+            <div className='flex flex-col pl-6'>
+              <Link href='/logged/pages/management/sm/customers_db' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/management/sm/customers_db') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+                <LeftNavElement active={pathname.startsWith('/logged/pages/management/sm/customers_db')} />
+                <p className='pl-3'>Customers DB</p>
+              </Link>
+              <Link href='/logged/pages/management/sm/proposals' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/management/sm/proposals') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+                <LeftNavElement active={pathname.startsWith('/logged/pages/management/sm/proposals')} />
+                <p className='pl-3'>Proposals</p>
+              </Link>
+              <Link href='/logged/pages/management/sm/contracts' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/management/sm/contracts') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+                <LeftNavElement active={pathname.startsWith('/logged/pages/management/sm/contracts')} />
+                <p className='pl-3'>Contracts</p>
+              </Link>
+              <Link href='/logged/pages/management/sm/projects' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/management/sm/projects') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+                <LeftNavElement active={pathname.startsWith('/logged/pages/management/sm/projects')} />
+                <p className='pl-3'>Projects</p>
+              </Link>
+            </div>
+          )}
+
+          <div className={`flex flex-row hover:bg-gray-200/30 cursor-pointer pl-4 py-2 ${inProjectManagement ? 'text-gray-900' : 'text-gray-600'}`} onClick={() => setIsProjectManagementSelected(!isProjectManagementSelected)}>
+            {isProjectManagementSelected ? <ChevronUpSvg size={14} /> : <ChevronDownSvg size={14} />}
+            <p className='pl-2 text-sm font-medium'>Project Management</p>
+          </div>
+          {isProjectManagementSelected && (
+            <div className='flex flex-col pl-6'>
+              <Link href='/logged/pages/management/newsletter_management' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/management/newsletter_management') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+                <LeftNavElement active={pathname.startsWith('/logged/pages/management/newsletter_management')} />
+                <p className='pl-3'>Newsletter Management</p>
+              </Link>
+              <Link href='/logged/pages/management/publications_management' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/management/publications_management') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+                <LeftNavElement active={pathname.startsWith('/logged/pages/management/publications_management')} />
+                <p className='pl-3'>Publications Management</p>
+              </Link>
+            </div>
+          )}
         </div>
       )}
 

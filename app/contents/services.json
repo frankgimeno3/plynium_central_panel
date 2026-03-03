@@ -1,0 +1,8 @@
+[
+  { "id_service": "srv-001", "name": "newsletter", "tariff_price_eur": 450 },
+  { "id_service": "srv-002", "name": "portal_article", "tariff_price_eur": 650 },
+  { "id_service": "srv-003", "name": "portal_premium_profile", "tariff_price_eur": 1200 },
+  { "id_service": "srv-004", "name": "magazine_advertisement", "tariff_price_eur": 850, "publication_date": "2025-06-01" },
+  { "id_service": "srv-005", "name": "portal_banner", "tariff_price_eur": 550 },
+  { "id_service": "srv-006", "name": "magazine_article", "tariff_price_eur": 720 }
+]

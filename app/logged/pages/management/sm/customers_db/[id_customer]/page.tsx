@@ -47,7 +47,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
     return (
       <div className="flex flex-col w-full p-12">
         <p className="text-gray-500">Customer not found.</p>
-        <Link href="/logged/pages/pm/customers_db" className="text-blue-600 hover:underline mt-4">
+        <Link href="/logged/pages/management/sm/customers_db" className="text-blue-600 hover:underline mt-4">
           ← Back to Customers
         </Link>
       </div>
@@ -59,7 +59,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
       <div className="text-center bg-blue-950/70 p-5 text-white flex items-center justify-center gap-4">
         <button
           type="button"
-          onClick={() => router.push("/logged/pages/pm/customers_db")}
+          onClick={() => router.push("/logged/pages/management/sm/customers_db")}
           className="text-white/90 hover:text-white text-sm"
         >
           ← Back
@@ -119,7 +119,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
               proposals.map((p) => (
                 <div
                   key={p.id_proposal}
-                  onClick={() => router.push(`/logged/pages/pm/proposals/${p.id_proposal}`)}
+                  onClick={() => router.push(`/logged/pages/management/sm/proposals/${p.id_proposal}`)}
                   className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-blue-50/80 transition-colors"
                 >
                   <div>
@@ -145,7 +145,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
               contracts.map((c) => (
                 <div
                   key={c.id_contract}
-                  onClick={() => router.push(`/logged/pages/pm/contracts/${c.id_contract}`)}
+                  onClick={() => router.push(`/logged/pages/management/sm/contracts/${c.id_contract}`)}
                   className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-blue-50/80 transition-colors"
                 >
                   <p className="font-medium">{c.title}</p>
@@ -168,7 +168,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
               projects.map((p) => (
                 <div
                   key={p.id_project}
-                  onClick={() => router.push(`/logged/pages/pm/projects/${p.id_project}`)}
+                  onClick={() => router.push(`/logged/pages/management/sm/projects/${p.id_project}`)}
                   className="flex items-center justify-between p-4 border rounded-lg cursor-pointer hover:bg-blue-50/80 transition-colors"
                 >
                   <p className="font-medium">{p.title}</p>

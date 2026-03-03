@@ -2,34 +2,35 @@
 
 import React, { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import proposalsData from "@/app/contents/proposals.json";
+import contractsData from "@/app/contents/contracts.json";
 import customersData from "@/app/contents/customers.json";
 
-type Proposal = {
+type Contract = {
+  id_contract: string;
   id_proposal: string;
   id_customer: string;
-  status: string;
+  process_state: string;
+  payment_state: string;
   title: string;
-  amount_eur: number;
-  date_created: string;
 };
 
 type Customer = { id_customer: string; name: string };
 
 const ITEMS_PER_PAGE = 12;
 
-const ProposalsPage: FC = () => {
+const ContractsPage: FC = () => {
   const router = useRouter();
-  const all = (proposalsData as Proposal[]).slice();
+  const all = (contractsData as Contract[]).slice();
   const customers = customersData as Customer[];
   const getCompanyName = (id: string) => customers.find((c) => c.id_customer === id)?.name ?? id;
-  const [filter, setFilter] = useState({ id: "", company: "", status: "" });
+  const [filter, setFilter] = useState({ id: "", company: "", process: "", payment: "" });
 
   const filtered = useMemo(() => {
     let list = [...all];
-    if (filter.id) list = list.filter((p) => p.id_proposal.toLowerCase().includes(filter.id.toLowerCase()));
-    if (filter.company) list = list.filter((p) => getCompanyName(p.id_customer).toLowerCase().includes(filter.company.toLowerCase()));
-    if (filter.status) list = list.filter((p) => p.status.toLowerCase().includes(filter.status.toLowerCase()));
+    if (filter.id) list = list.filter((c) => c.id_contract.toLowerCase().includes(filter.id.toLowerCase()));
+    if (filter.company) list = list.filter((c) => getCompanyName(c.id_customer).toLowerCase().includes(filter.company.toLowerCase()));
+    if (filter.process) list = list.filter((c) => c.process_state.toLowerCase().includes(filter.process.toLowerCase()));
+    if (filter.payment) list = list.filter((c) => c.payment_state.toLowerCase().includes(filter.payment.toLowerCase()));
     return list;
   }, [all, filter]);
 
@@ -43,13 +44,13 @@ const ProposalsPage: FC = () => {
   return (
     <div className="flex flex-col w-full bg-white">
       <div className="text-center bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Proposals</p>
+        <p className="text-2xl">Contracts</p>
       </div>
 
       <div className="flex flex-col w-full gap-4 p-12">
         <div className="bg-white border border-gray-200 rounded-lg p-4">
           <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs text-gray-600 mb-1">ID</label>
               <input
@@ -71,16 +72,27 @@ const ProposalsPage: FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Status</label>
+              <label className="block text-xs text-gray-600 mb-1">Process state</label>
               <select
-                value={filter.status}
-                onChange={(e) => { setFilter((f) => ({ ...f, status: e.target.value })); setPage(1); }}
+                value={filter.process}
+                onChange={(e) => { setFilter((f) => ({ ...f, process: e.target.value })); setPage(1); }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All</option>
+                <option value="active">active</option>
+                <option value="expired">expired</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs text-gray-600 mb-1">Payment state</label>
+              <select
+                value={filter.payment}
+                onChange={(e) => { setFilter((f) => ({ ...f, payment: e.target.value })); setPage(1); }}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="">All</option>
+                <option value="paid">paid</option>
                 <option value="pending">pending</option>
-                <option value="accepted">accepted</option>
-                <option value="rejected">rejected</option>
               </select>
             </div>
           </div>
@@ -92,24 +104,21 @@ const ProposalsPage: FC = () => {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount (€)</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {paginated.map((p) => (
-                <tr key={p.id_proposal} onClick={() => router.push(`/logged/pages/pm/proposals/${p.id_proposal}`)} className={rowClass}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.id_proposal}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{getCompanyName(p.id_customer)}</td>
+              {paginated.map((c) => (
+                <tr key={c.id_contract} onClick={() => router.push(`/logged/pages/management/sm/contracts/${c.id_contract}`)} className={rowClass}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{c.id_contract}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{getCompanyName(c.id_customer)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      p.status === "accepted" ? "bg-green-100 text-green-800" :
-                      p.status === "rejected" ? "bg-red-100 text-red-800" : "bg-amber-100 text-amber-800"
-                    }`}>{p.status}</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${c.process_state === "active" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>{c.process_state}</span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.amount_eur?.toLocaleString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.date_created}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${c.payment_state === "paid" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{c.payment_state}</span>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -147,4 +156,4 @@ const ProposalsPage: FC = () => {
   );
 };
 
-export default ProposalsPage;
+export default ContractsPage;

@@ -2,35 +2,48 @@
 
 import React, { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import projectsData from "@/app/contents/projects.json";
 import contractsData from "@/app/contents/contracts.json";
 import customersData from "@/app/contents/customers.json";
+import servicesData from "@/app/contents/services.json";
 
-type Contract = {
+type Project = {
+  id_project: string;
   id_contract: string;
-  id_proposal: string;
-  id_customer: string;
-  process_state: string;
-  payment_state: string;
   title: string;
+  status: string;
+  service: string;
+  publication_date: string;
+  publication_id?: string;
+  pm_events_array?: string[];
 };
 
+type Service = { id_service: string; name: string };
+type Contract = { id_contract: string; id_customer: string };
 type Customer = { id_customer: string; name: string };
 
 const ITEMS_PER_PAGE = 12;
 
-const ContractsPage: FC = () => {
+const ProjectsPage: FC = () => {
   const router = useRouter();
-  const all = (contractsData as Contract[]).slice();
+  const all = (projectsData as Project[]).slice();
+  const contracts = contractsData as Contract[];
   const customers = customersData as Customer[];
-  const getCompanyName = (id: string) => customers.find((c) => c.id_customer === id)?.name ?? id;
-  const [filter, setFilter] = useState({ id: "", company: "", process: "", payment: "" });
+  const services = servicesData as Service[];
+  const getCompanyName = (idContract: string) => {
+    const c = contracts.find((x) => x.id_contract === idContract);
+    return c ? (customers.find((cust) => cust.id_customer === c.id_customer)?.name ?? c.id_customer) : idContract;
+  };
+  const getServiceName = (idService: string) =>
+    services.find((s) => s.id_service === idService)?.name?.replace(/_/g, " ") ?? idService;
+  const [filter, setFilter] = useState({ id: "", company: "", status: "", service: "" });
 
   const filtered = useMemo(() => {
     let list = [...all];
-    if (filter.id) list = list.filter((c) => c.id_contract.toLowerCase().includes(filter.id.toLowerCase()));
-    if (filter.company) list = list.filter((c) => getCompanyName(c.id_customer).toLowerCase().includes(filter.company.toLowerCase()));
-    if (filter.process) list = list.filter((c) => c.process_state.toLowerCase().includes(filter.process.toLowerCase()));
-    if (filter.payment) list = list.filter((c) => c.payment_state.toLowerCase().includes(filter.payment.toLowerCase()));
+    if (filter.id) list = list.filter((p) => p.id_project.toLowerCase().includes(filter.id.toLowerCase()));
+    if (filter.company) list = list.filter((p) => getCompanyName(p.id_contract).toLowerCase().includes(filter.company.toLowerCase()));
+    if (filter.status) list = list.filter((p) => p.status.toLowerCase().includes(filter.status.toLowerCase()));
+    if (filter.service) list = list.filter((p) => p.service === filter.service);
     return list;
   }, [all, filter]);
 
@@ -44,7 +57,7 @@ const ContractsPage: FC = () => {
   return (
     <div className="flex flex-col w-full bg-white">
       <div className="text-center bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Contracts</p>
+        <p className="text-2xl">Projects</p>
       </div>
 
       <div className="flex flex-col w-full gap-4 p-12">
@@ -72,27 +85,30 @@ const ContractsPage: FC = () => {
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Process state</label>
+              <label className="block text-xs text-gray-600 mb-1">Status</label>
               <select
-                value={filter.process}
-                onChange={(e) => { setFilter((f) => ({ ...f, process: e.target.value })); setPage(1); }}
+                value={filter.status}
+                onChange={(e) => { setFilter((f) => ({ ...f, status: e.target.value })); setPage(1); }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All</option>
-                <option value="active">active</option>
-                <option value="expired">expired</option>
+                <option value="calendarized">calendarized</option>
+                <option value="pending_materials">pending_materials</option>
+                <option value="ok_production">ok_production</option>
+                <option value="published">published</option>
               </select>
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Payment state</label>
+              <label className="block text-xs text-gray-600 mb-1">Service</label>
               <select
-                value={filter.payment}
-                onChange={(e) => { setFilter((f) => ({ ...f, payment: e.target.value })); setPage(1); }}
+                value={filter.service}
+                onChange={(e) => { setFilter((f) => ({ ...f, service: e.target.value })); setPage(1); }}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="">All</option>
-                <option value="paid">paid</option>
-                <option value="pending">pending</option>
+                {services.map((s) => (
+                  <option key={s.id_service} value={s.id_service}>{s.name?.replace(/_/g, " ")}</option>
+                ))}
               </select>
             </div>
           </div>
@@ -104,21 +120,25 @@ const ContractsPage: FC = () => {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Publication date</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {paginated.map((c) => (
-                <tr key={c.id_contract} onClick={() => router.push(`/logged/pages/pm/contracts/${c.id_contract}`)} className={rowClass}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{c.id_contract}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{getCompanyName(c.id_customer)}</td>
+              {paginated.map((p) => (
+                <tr key={p.id_project} onClick={() => router.push(`/logged/pages/management/sm/projects/${p.id_project}`)} className={rowClass}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.id_project}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{getCompanyName(p.id_contract)}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{getServiceName(p.service)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${c.process_state === "active" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-800"}`}>{c.process_state}</span>
+                    <span className={`px-2 py-1 rounded text-xs font-medium ${
+                      p.status === "published" ? "bg-green-100 text-green-800" :
+                      p.status === "ok_production" ? "bg-blue-100 text-blue-800" :
+                      p.status === "pending_materials" ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-800"
+                    }`}>{p.status.replace("_", " ")}</span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${c.payment_state === "paid" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{c.payment_state}</span>
-                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.publication_date}</td>
                 </tr>
               ))}
             </tbody>
@@ -156,4 +176,4 @@ const ContractsPage: FC = () => {
   );
 };
 
-export default ContractsPage;
+export default ProjectsPage;

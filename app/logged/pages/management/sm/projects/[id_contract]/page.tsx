@@ -6,6 +6,7 @@ import Link from "next/link";
 import projectsData from "@/app/contents/projects.json";
 import contractsData from "@/app/contents/contracts.json";
 import customersData from "@/app/contents/customers.json";
+import servicesData from "@/app/contents/services.json";
 import pmEventsData from "@/app/contents/pm_events.json";
 
 type Project = {
@@ -13,11 +14,13 @@ type Project = {
   id_contract: string;
   title: string;
   status: string;
-  project_type?: string;
+  service?: string;
   publication_date?: string;
   publication_id?: string;
   pm_events_array?: string[];
 };
+
+type Service = { id_service: string; name: string };
 
 type Contract = {
   id_contract: string;
@@ -43,6 +46,9 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
   const router = useRouter();
   const { id_contract } = use(params);
   const project = (projectsData as Project[]).find((p) => p.id_project === id_contract);
+  const services = servicesData as Service[];
+  const getServiceName = (idService: string) =>
+    services.find((s) => s.id_service === idService)?.name?.replace(/_/g, " ") ?? idService;
   const contract = project
     ? (contractsData as Contract[]).find((c) => c.id_contract === project.id_contract)
     : null;
@@ -58,7 +64,7 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
     return (
       <div className="flex flex-col w-full p-12">
         <p className="text-gray-500">Project not found.</p>
-        <Link href="/logged/pages/pm/projects" className="text-blue-600 hover:underline mt-4">
+        <Link href="/logged/pages/management/sm/projects" className="text-blue-600 hover:underline mt-4">
           ← Back to Projects
         </Link>
       </div>
@@ -83,7 +89,7 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
       <div className="text-center bg-blue-950/70 p-5 text-white flex items-center justify-center gap-4">
         <button
           type="button"
-          onClick={() => router.push("/logged/pages/pm/projects")}
+          onClick={() => router.push("/logged/pages/management/sm/projects")}
           className="text-white/90 hover:text-white text-sm"
         >
           ← Back
@@ -98,8 +104,8 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
             <p className="font-medium">{project.id_project}</p>
           </div>
           <div>
-            <p className="text-xs text-gray-500 uppercase">Project type</p>
-            <p className="font-medium">{project.project_type?.replace(/_/g, " ") ?? "—"}</p>
+            <p className="text-xs text-gray-500 uppercase">Service</p>
+            <p className="font-medium">{project.service ? getServiceName(project.service) : "—"}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase">Status</p>
@@ -122,7 +128,7 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
         {contract && (
           <div className="border-t pt-6">
             <p className="text-sm font-medium text-gray-700 mb-2">Contract</p>
-            <Link href={`/logged/pages/pm/contracts/${contract.id_contract}`} className="text-blue-600 hover:underline">
+            <Link href={`/logged/pages/management/sm/contracts/${contract.id_contract}`} className="text-blue-600 hover:underline">
               {contract.title} ({contract.id_contract})
             </Link>
           </div>
@@ -131,7 +137,7 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
         {customer && (
           <div className="border-t pt-6">
             <p className="text-sm font-medium text-gray-700 mb-2">Customer</p>
-            <Link href={`/logged/pages/pm/customers_db/${customer.id_customer}`} className="text-blue-600 hover:underline">
+            <Link href={`/logged/pages/management/sm/customers_db/${customer.id_customer}`} className="text-blue-600 hover:underline">
               {customer.name}
             </Link>
           </div>
@@ -155,7 +161,7 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
                   </div>
                 ))}
             </div>
-            <Link href="/logged/pages/pm" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
+            <Link href="/logged/pages/management" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
               View in Dashboard →
             </Link>
           </div>

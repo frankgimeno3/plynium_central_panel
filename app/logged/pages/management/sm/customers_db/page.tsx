@@ -108,7 +108,7 @@ const CustomersDbPage: FC = () => {
             {filtered.map((c) => (
               <tr
                 key={c.id_customer}
-                onClick={() => router.push(`/logged/pages/pm/customers_db/${c.id_customer}`)}
+                onClick={() => router.push(`/logged/pages/management/sm/customers_db/${c.id_customer}`)}
                 className={rowClass}
               >
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{c.id_customer}</td>
