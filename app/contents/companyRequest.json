@@ -8,10 +8,10 @@
       "nombre_comercial": "Acme Glass Solutions",
       "nombre_fiscal": "Acme Glass Solutions S.L.",
       "tax_id": "B12345678",
-      "cargo_creador": "Director Comercial",
+      "cargo_creador": "Commercial Director",
       "web_empresa": "https://acmeglass.es",
-      "pais_empresa": "España",
-      "descripcion_empresa": "Fabricantes de vidrio arquitectónico de alta calidad para edificios comerciales y residenciales. Especialistas en fachadas y cerramientos."
+      "pais_empresa": "Spain",
+      "descripcion_empresa": "Manufacturers of high-quality architectural glass for commercial and residential buildings. Specialists in facades and glazing systems."
     }
   },
   {
@@ -26,7 +26,7 @@
       "cargo_creador": "CEO",
       "web_empresa": "https://eurovidrio.com",
       "pais_empresa": "Portugal",
-      "descripcion_empresa": "Líder en vidrio templado y laminado para el sector automovilístico y construcción. Más de 25 años de experiencia."
+      "descripcion_empresa": "Leader in tempered and laminated glass for the automotive and construction sectors. Over 25 years of experience."
     }
   },
   {
@@ -38,10 +38,10 @@
       "nombre_comercial": "Cristalería del Norte",
       "nombre_fiscal": "Cristalería del Norte S.L.U.",
       "tax_id": "B98765432",
-      "cargo_creador": "Gerente",
+      "cargo_creador": "Manager",
       "web_empresa": "https://cristaleriadelnorte.es",
-      "pais_empresa": "España",
-      "descripcion_empresa": "Distribuidores mayoristas de vidrio plano. Servicio de corte, templado y laminado a medida para profesionales."
+      "pais_empresa": "Spain",
+      "descripcion_empresa": "Wholesale distributors of flat glass. Custom cutting, tempering and laminating services for professionals."
     }
   },
   {
@@ -55,8 +55,8 @@
       "tax_id": "DE123456789",
       "cargo_creador": "Marketing Manager",
       "web_empresa": "https://glassinnovate.de",
-      "pais_empresa": "Alemania",
-      "descripcion_empresa": "Tecnología de vidrio inteligente y soluciones de control solar. Investigación y desarrollo de nuevos materiales."
+      "pais_empresa": "Germany",
+      "descripcion_empresa": "Smart glass technology and solar control solutions. Research and development of new materials."
     }
   },
   {
@@ -68,10 +68,10 @@
       "nombre_comercial": "Vidrios Mediterráneos",
       "nombre_fiscal": "Vidrios Mediterráneos S.L.",
       "tax_id": "B45678901",
-      "cargo_creador": "Propietario",
+      "cargo_creador": "Owner",
       "web_empresa": "https://vidriosmediterraneos.com",
-      "pais_empresa": "España",
-      "descripcion_empresa": "Instalación de ventanas y cerramientos de aluminio con vidrio. Servicio integral para reformas y obra nueva."
+      "pais_empresa": "Spain",
+      "descripcion_empresa": "Installation of aluminium windows and glazing. Full service for refurbishment and new build."
     }
   }
 ]

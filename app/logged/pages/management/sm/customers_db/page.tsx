@@ -2,6 +2,7 @@
 
 import React, { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import customersData from "@/app/contents/customers.json";
 
 type Customer = {
@@ -39,8 +40,26 @@ const CustomersDbPage: FC = () => {
 
   return (
     <div className="flex flex-col w-full bg-white">
-      <div className="text-center bg-blue-950/70 p-5 text-white">
+      <div className="flex items-center justify-center gap-3 flex-wrap bg-blue-950/70 p-5 text-white">
         <p className="text-2xl">Customers DB</p>
+        <Link
+          href="/logged/pages/management/sm/customers_db/create"
+          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+        >
+          Nueva cuenta
+        </Link>
+        <Link
+          href="/logged/pages/management/sm/customers_db/mass-ops/import"
+          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+        >
+          Import
+        </Link>
+        <Link
+          href="/logged/pages/management/sm/customers_db/mass-ops/export"
+          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+        >
+          Export
+        </Link>
       </div>
 
       <div className="flex flex-col gap-4 p-12">

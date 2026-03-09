@@ -47,8 +47,8 @@
     ],
     "buildinformer": [
       { "page": "/", "users": 2100, "sessions": 2800, "pageViews": 6800, "avgTime": 220, "bounceRate": 30.5 },
-      { "page": "/articulos", "users": 1850, "sessions": 2450, "pageViews": 5600, "avgTime": 265, "bounceRate": 33.2 },
-      { "page": "/eventos", "users": 1520, "sessions": 2100, "pageViews": 4800, "avgTime": 248, "bounceRate": 36.8 }
+      { "page": "/articles", "users": 1850, "sessions": 2450, "pageViews": 5600, "avgTime": 265, "bounceRate": 33.2 },
+      { "page": "/events", "users": 1520, "sessions": 2100, "pageViews": 4800, "avgTime": 248, "bounceRate": 36.8 }
     ]
   },
   "detailByPortal": {
@@ -106,8 +106,8 @@
       ],
       "topPagesDetail": [
         { "page": "/", "users": 2100, "sessions": 2800, "pageViews": 6800, "avgTime": 220, "bounceRate": 30.5, "entrances": 2100, "exits": 640 },
-        { "page": "/articulos", "users": 1850, "sessions": 2450, "pageViews": 5600, "avgTime": 265, "bounceRate": 33.2, "entrances": 1420, "exits": 580 },
-        { "page": "/eventos", "users": 1520, "sessions": 2100, "pageViews": 4800, "avgTime": 248, "bounceRate": 36.8, "entrances": 1180, "exits": 520 }
+        { "page": "/articles", "users": 1850, "sessions": 2450, "pageViews": 5600, "avgTime": 265, "bounceRate": 33.2, "entrances": 1420, "exits": 580 },
+        { "page": "/events", "users": 1520, "sessions": 2100, "pageViews": 4800, "avgTime": 248, "bounceRate": 36.8, "entrances": 1180, "exits": 520 }
       ]
     }
   }

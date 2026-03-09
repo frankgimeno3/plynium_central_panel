@@ -1,0 +1,56 @@
+[
+  {
+    "id_service": "srv-001",
+    "name": "newsletter",
+    "display_name": "Newsletter banner",
+    "description": "Promotional banner insertion in sector newsletter. Reach to B2B subscriber base.",
+    "tariff_price_eur": 450,
+    "unit": "insertion",
+    "delivery_days": 5
+  },
+  {
+    "id_service": "srv-002",
+    "name": "portal_article",
+    "display_name": "Portal article",
+    "description": "Technical or corporate article published on the portal. Includes copywriting and layout.",
+    "tariff_price_eur": 650,
+    "unit": "article",
+    "delivery_days": 10
+  },
+  {
+    "id_service": "srv-003",
+    "name": "portal_premium_profile",
+    "display_name": "Premium portal profile",
+    "description": "Featured company profile on portal with logo, description and link. Priority visibility.",
+    "tariff_price_eur": 1200,
+    "unit": "profile/year",
+    "delivery_days": 3
+  },
+  {
+    "id_service": "srv-004",
+    "name": "magazine_advertisement",
+    "display_name": "Magazine advertisement",
+    "description": "Advertising space in specialist magazine (Glass Today, Glass Magazine or other). Design included.",
+    "tariff_price_eur": 850,
+    "unit": "advert",
+    "delivery_days": 15
+  },
+  {
+    "id_service": "srv-005",
+    "name": "portal_banner",
+    "display_name": "Portal banner",
+    "description": "Promotional banner on homepage or portal section. Standard formats, rotation included.",
+    "tariff_price_eur": 550,
+    "unit": "banner/month",
+    "delivery_days": 5
+  },
+  {
+    "id_service": "srv-006",
+    "name": "magazine_article",
+    "display_name": "Magazine article",
+    "description": "Article in specialist publication (Skylights Today, Glass and Construction, etc.). Copywriting and editing.",
+    "tariff_price_eur": 720,
+    "unit": "article",
+    "delivery_days": 20
+  }
+]

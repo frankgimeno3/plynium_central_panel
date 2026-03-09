@@ -2,6 +2,7 @@
 
 import React, { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import proposalsData from "@/app/contents/proposals.json";
 import customersData from "@/app/contents/customers.json";
 import servicesData from "@/app/contents/services.json";
@@ -48,8 +49,14 @@ const ProposalsPage: FC = () => {
 
   return (
     <div className="flex flex-col w-full bg-white">
-      <div className="text-center bg-blue-950/70 p-5 text-white">
+      <div className="flex items-center justify-center gap-3 flex-wrap bg-blue-950/70 p-5 text-white">
         <p className="text-2xl">Proposals</p>
+        <Link
+          href="/logged/pages/management/sm/proposals/create"
+          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+        >
+          Crear
+        </Link>
       </div>
 
       <div className="flex flex-col w-full gap-4 p-12">

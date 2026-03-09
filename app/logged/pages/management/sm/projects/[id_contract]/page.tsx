@@ -85,8 +85,8 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
   };
 
   return (
-    <div className="flex flex-col w-full bg-white">
-      <div className="text-center bg-blue-950/70 p-5 text-white flex items-center justify-center gap-4">
+    <div className="flex flex-col flex-1 min-w-0 w-full min-h-screen bg-white">
+      <div className="text-center bg-blue-950/70 p-5 text-white flex items-center justify-center gap-4 shrink-0">
         <button
           type="button"
           onClick={() => router.push("/logged/pages/management/sm/projects")}
@@ -97,7 +97,7 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
         <p className="text-2xl">Project: {project.title}</p>
       </div>
 
-      <div className="p-12 max-w-3xl space-y-6">
+      <div className="flex-1 p-12 w-full space-y-6 overflow-auto">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-gray-500 uppercase">ID</p>

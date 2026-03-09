@@ -1,8 +1,8 @@
 [
   {
     "id_planned_publication": "pub-001",
-    "edition_name": "Glass Today Marzo 2025",
-    "theme": "Innovación en vidrio arquitectónico",
+    "edition_name": "Glass Today March 2025",
+    "theme": "Innovation in architectural glass",
     "publication_date": "2025-05-15",
     "cover": { "id_advertiser": "cust-002", "id_project": "proj-004", "image_src": "/pub001/cover.jpg", "state": "content ok", "content_type": "cover" },
     "inside_cover": { "id_advertiser": "cust-004", "id_project": "proj-010", "image_src": "/pub001/inside_cover.jpg", "state": "pending", "content_type": "inside_cover" },
@@ -20,8 +20,8 @@
   },
   {
     "id_planned_publication": "pub-002",
-    "edition_name": "Vidrio y Construcción Junio 2025",
-    "theme": "Construcción sostenible",
+    "edition_name": "Glass and Construction June 2025",
+    "theme": "Sustainable construction",
     "publication_date": "2025-06-30",
     "cover": { "id_advertiser": "cust-001", "id_project": "proj-006", "image_src": "/pub002/cover.jpg", "state": "pending", "content_type": "cover" },
     "inside_cover": { "id_advertiser": "cust-002", "id_project": "proj-016", "image_src": "/pub002/inside_cover.jpg", "state": "pending", "content_type": "inside_cover" },
@@ -39,8 +39,8 @@
   },
   {
     "id_planned_publication": "pub-003",
-    "edition_name": "Vidrio Industrial Febrero 2025",
-    "theme": "Procesos industriales",
+    "edition_name": "Industrial Glass February 2025",
+    "theme": "Industrial processes",
     "publication_date": "2025-02-10",
     "cover": { "id_advertiser": "cust-003", "id_project": "proj-013", "image_src": "/pub003/cover.jpg", "state": "content ok", "content_type": "cover" },
     "inside_cover": { "id_advertiser": "cust-004", "id_project": "proj-023", "image_src": "/pub003/inside_cover.jpg", "state": "pending", "content_type": "inside_cover" },

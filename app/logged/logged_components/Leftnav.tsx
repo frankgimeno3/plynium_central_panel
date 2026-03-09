@@ -26,7 +26,7 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
   const inContents = pathname.startsWith('/logged/pages/contents');
   const inManagement = pathname.startsWith('/logged/pages/management');
   const inSalesManagement = pathname.startsWith('/logged/pages/management/sm');
-  const inProjectManagement = pathname.startsWith('/logged/pages/management/newsletter_management') || pathname.startsWith('/logged/pages/management/publications_management');
+  const inProjectManagement = pathname.startsWith('/logged/pages/management/sm/services') || pathname.startsWith('/logged/pages/management/newsletter_management') || pathname.startsWith('/logged/pages/management/publications_management');
   const inRequests = pathname.startsWith('/logged/pages/requests');
   const inPlyniumNetwork = pathname.startsWith('/logged/pages/users') || pathname.startsWith('/logged/pages/directory') || pathname.startsWith('/logged/pages/portals');
 
@@ -107,6 +107,10 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
                 <LeftNavElement active={pathname.startsWith('/logged/pages/management/sm/customers_db')} />
                 <p className='pl-3'>Customers DB</p>
               </Link>
+              <Link href='/logged/pages/management/sm/contacts_db' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/management/sm/contacts_db') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+                <LeftNavElement active={pathname.startsWith('/logged/pages/management/sm/contacts_db')} />
+                <p className='pl-3'>Contacts DB</p>
+              </Link>
               <Link href='/logged/pages/management/sm/proposals' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/management/sm/proposals') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
                 <LeftNavElement active={pathname.startsWith('/logged/pages/management/sm/proposals')} />
                 <p className='pl-3'>Proposals</p>
@@ -128,6 +132,10 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
           </div>
           {isProjectManagementSelected && (
             <div className='flex flex-col pl-6'>
+              <Link href='/logged/pages/management/sm/services' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/management/sm/services') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+                <LeftNavElement active={pathname.startsWith('/logged/pages/management/sm/services')} />
+                <p className='pl-3'>Services</p>
+              </Link>
               <Link href='/logged/pages/management/newsletter_management' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/management/newsletter_management') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
                 <LeftNavElement active={pathname.startsWith('/logged/pages/management/newsletter_management')} />
                 <p className='pl-3'>Newsletter Management</p>
@@ -188,19 +196,19 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
         <div className='flex flex-col px-5 text-sm'>
           <Link href='/logged/pages/directory/companies' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/directory/companies') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
             <LeftNavElement active={pathname.startsWith('/logged/pages/directory/companies')} />
-            <p className='pl-3'>Companies</p>
+            <p className='pl-3'>Published Companies</p>
           </Link>
           <Link href='/logged/pages/directory/products' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/directory/products') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
             <LeftNavElement active={pathname.startsWith('/logged/pages/directory/products')} />
-            <p className='pl-3'>Products</p>
+            <p className='pl-3'>Published Products</p>
           </Link>
           <Link href='/logged/pages/portals' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/portals') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
             <LeftNavElement active={pathname.startsWith('/logged/pages/portals')} />
-            <p className='pl-3'>Portals</p>
+            <p className='pl-3'>Published Portals</p>
           </Link>
           <Link href='/logged/pages/users' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-4 cursor-pointer ${pathname.startsWith('/logged/pages/users') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
             <LeftNavElement active={pathname.startsWith('/logged/pages/users')} />
-            <p className='pl-3'>Users</p>
+            <p className='pl-3'>Registered Users</p>
           </Link>
         </div>
       )}

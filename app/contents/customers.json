@@ -3,66 +3,130 @@
     "id_customer": "cust-001",
     "name": "Cristalería Mediterránea S.L.",
     "cif": "B12345678",
-    "country": "España",
+    "country": "Spain",
+    "address": "Pol. Ind. Sur, Nave 12, 28021 Madrid",
+    "phone": "+34 912 345 670",
+    "email": "info@cristalmediterranea.es",
+    "website": "https://cristalmediterranea.es",
+    "industry": "Glass and glazing",
+    "segment": "Enterprise",
+    "owner": "Laura Martínez",
+    "source": "Web",
+    "status": "active",
+    "revenue_eur": 192000,
+    "next_activity": "Follow-up call - 15/03/2025",
+    "tags": ["VIP", "Facades", "New build"],
     "contact": {
       "name": "María García López",
-      "role": "Directora Comercial",
+      "role": "Commercial Director",
       "email": "maria.garcia@cristalmediterranea.es",
       "phone": "+34 912 345 678"
     },
+    "contacts": [
+      { "name": "María García López", "role": "Commercial Director", "email": "maria.garcia@cristalmediterranea.es", "phone": "+34 912 345 678" },
+      { "name": "Antonio Ruiz", "role": "Site Manager", "email": "antonio.ruiz@cristalmediterranea.es", "phone": "+34 912 345 679" }
+    ],
     "comments": [
-      { "text": "Cliente muy interesado en ampliación. Seguir en Q2.", "date": "2025-01-20", "author": "M. García" }
+      { "text": "Client very interested in expansion. Follow up in Q2.", "date": "2025-01-20", "author": "M. García" }
     ],
     "proposals": ["prop-001", "prop-002", "prop-003", "prop-004", "prop-005", "prop-006"],
     "contracts": ["cont-001", "cont-002"],
-    "projects": ["proj-001", "proj-002", "proj-003", "proj-004", "proj-005", "proj-006"]
+    "projects": ["proj-001", "proj-002", "proj-003", "proj-004", "proj-005", "proj-006"],
+    "related_accounts": ["cust-002"],
+    "portal_products": {
+      "glassinformer": ["proj-001", "proj-002", "proj-003", "proj-005", "proj-006"],
+      "fenestrator": ["proj-001", "proj-003"],
+      "buildinformer": ["proj-002", "proj-005"]
+    }
   },
   {
     "id_customer": "cust-002",
     "name": "Vidrios del Norte S.A.",
     "cif": "B87654321",
-    "country": "España",
+    "country": "Spain",
+    "address": "Ctra. N-1 km 420, 20018 San Sebastián",
+    "industry": "Glass distribution",
+    "segment": "Enterprise",
+    "owner": "Laura Martínez",
+    "source": "Trade fair",
+    "status": "active",
+    "revenue_eur": 277000,
     "contact": {
       "name": "Carlos Fernández Ruiz",
-      "role": "Gerente de Compras",
+      "role": "Purchasing Manager",
       "email": "carlos.fernandez@vidriosnorte.es",
       "phone": "+34 943 567 890"
     },
+    "contacts": [
+      { "name": "Carlos Fernández Ruiz", "role": "Purchasing Manager", "email": "carlos.fernandez@vidriosnorte.es", "phone": "+34 943 567 890" }
+    ],
     "comments": [],
     "proposals": ["prop-007", "prop-008", "prop-009", "prop-010", "prop-011", "prop-012"],
     "contracts": ["cont-003", "cont-004"],
-    "projects": ["proj-007", "proj-008", "proj-009", "proj-010", "proj-011", "proj-012"]
+    "projects": ["proj-007", "proj-008", "proj-009", "proj-010", "proj-011", "proj-012"],
+    "related_accounts": ["cust-001", "cust-003"],
+    "portal_products": {
+      "glassinformer": ["proj-007", "proj-008", "proj-009"],
+      "fenestrator": ["proj-007", "proj-008"],
+      "buildinformer": ["proj-010", "proj-011", "proj-012"]
+    }
   },
   {
     "id_customer": "cust-003",
     "name": "Glass Solutions Portugal Lda",
     "cif": "PT987654321",
     "country": "Portugal",
+    "industry": "Construction",
+    "segment": "Enterprise",
+    "owner": "Pedro Silva",
+    "source": "Referral",
+    "status": "active",
     "contact": {
       "name": "Ana Santos Costa",
       "role": "Project Manager",
       "email": "ana.santos@glasssolutions.pt",
       "phone": "+351 21 123 4567"
     },
+    "contacts": [
+      { "name": "Ana Santos Costa", "role": "Project Manager", "email": "ana.santos@glasssolutions.pt", "phone": "+351 21 123 4567" }
+    ],
     "comments": [],
     "proposals": ["prop-013", "prop-014", "prop-015", "prop-016", "prop-017", "prop-018"],
     "contracts": ["cont-005", "cont-006"],
-    "projects": ["proj-013", "proj-014", "proj-015", "proj-016", "proj-017", "proj-018"]
+    "projects": ["proj-013", "proj-014", "proj-015", "proj-016", "proj-017", "proj-018"],
+    "related_accounts": ["cust-002"],
+    "portal_products": {
+      "glassinformer": ["proj-013", "proj-015", "proj-016", "proj-017", "proj-018"],
+      "buildinformer": ["proj-014"]
+    }
   },
   {
     "id_customer": "cust-004",
     "name": "Fenêtres Élégantes SARL",
     "cif": "FR12345678901",
-    "country": "Francia",
+    "country": "France",
+    "industry": "Joinery and windows",
+    "segment": "Enterprise",
+    "owner": "Pedro Silva",
+    "source": "Web",
+    "status": "prospect",
     "contact": {
       "name": "Pierre Dubois",
-      "role": "Directeur Général",
+      "role": "Managing Director",
       "email": "pierre.dubois@fenetres-elegantes.fr",
       "phone": "+33 1 23 45 67 89"
     },
+    "contacts": [
+      { "name": "Pierre Dubois", "role": "Managing Director", "email": "pierre.dubois@fenetres-elegantes.fr", "phone": "+33 1 23 45 67 89" }
+    ],
     "comments": [],
     "proposals": ["prop-019", "prop-020", "prop-021", "prop-022", "prop-023", "prop-024"],
     "contracts": ["cont-007", "cont-008"],
-    "projects": ["proj-019", "proj-020", "proj-021", "proj-022", "proj-023", "proj-024"]
+    "projects": ["proj-019", "proj-020", "proj-021", "proj-022", "proj-023", "proj-024"],
+    "related_accounts": [],
+    "portal_products": {
+      "glassinformer": ["proj-019", "proj-020", "proj-021"],
+      "fenestrator": ["proj-022", "proj-023", "proj-024"]
+    }
   }
 ]

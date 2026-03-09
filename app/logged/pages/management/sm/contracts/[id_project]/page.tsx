@@ -15,6 +15,7 @@ type Contract = {
   process_state: string;
   payment_state: string;
   title: string;
+  amount_eur?: number;
 };
 
 type Customer = {
@@ -60,8 +61,8 @@ const ContractDetailPage: FC<{ params: Promise<{ id_project: string }> }> = ({ p
   }
 
   return (
-    <div className="flex flex-col w-full bg-white">
-      <div className="text-center bg-blue-950/70 p-5 text-white flex items-center justify-center gap-4">
+    <div className="flex flex-col flex-1 min-w-0 w-full min-h-screen bg-white">
+      <div className="text-center bg-blue-950/70 p-5 text-white flex items-center justify-center gap-4 shrink-0">
         <button
           type="button"
           onClick={() => router.push("/logged/pages/management/sm/projects")}
@@ -72,7 +73,7 @@ const ContractDetailPage: FC<{ params: Promise<{ id_project: string }> }> = ({ p
         <p className="text-2xl">Contract: {contract.title}</p>
       </div>
 
-      <div className="p-12 max-w-4xl space-y-8">
+      <div className="flex-1 p-12 w-full space-y-8 overflow-auto">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
             <p className="text-xs text-gray-500 uppercase">ID</p>
@@ -90,6 +91,12 @@ const ContractDetailPage: FC<{ params: Promise<{ id_project: string }> }> = ({ p
             <p className="text-xs text-gray-500 uppercase">Proposal</p>
             <Link href={`/logged/pages/management/sm/proposals/${contract.id_proposal}`} className="text-blue-600 hover:underline">{contract.id_proposal}</Link>
           </div>
+          {contract.amount_eur != null && (
+            <div>
+              <p className="text-xs text-gray-500 uppercase">Amount (€)</p>
+              <p className="font-medium">{contract.amount_eur.toLocaleString()}</p>
+            </div>
+          )}
         </div>
 
         {customer && (

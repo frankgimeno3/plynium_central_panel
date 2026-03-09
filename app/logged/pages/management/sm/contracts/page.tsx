@@ -12,6 +12,7 @@ type Contract = {
   process_state: string;
   payment_state: string;
   title: string;
+  amount_eur?: number;
 };
 
 type Customer = { id_customer: string; name: string };
@@ -106,6 +107,7 @@ const ContractsPage: FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Process</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount (€)</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -119,6 +121,7 @@ const ContractsPage: FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <span className={`px-2 py-1 rounded text-xs font-medium ${c.payment_state === "paid" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>{c.payment_state}</span>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{c.amount_eur != null ? c.amount_eur.toLocaleString() : "—"}</td>
                 </tr>
               ))}
             </tbody>

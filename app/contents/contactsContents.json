@@ -1,0 +1,52 @@
+[
+  {
+    "id_contact": "cont-001",
+    "name": "María García López",
+    "role": "Commercial Director",
+    "email": "maria.garcia@cristalmediterranea.es",
+    "phone": "+34 912 345 678",
+    "id_customer": "cust-001",
+    "company_name": "Cristalería Mediterránea S.L.",
+    "comments": []
+  },
+  {
+    "id_contact": "cont-002",
+    "name": "Antonio Ruiz",
+    "role": "Site Manager",
+    "email": "antonio.ruiz@cristalmediterranea.es",
+    "phone": "+34 912 345 679",
+    "id_customer": "cust-001",
+    "company_name": "Cristalería Mediterránea S.L.",
+    "comments": []
+  },
+  {
+    "id_contact": "cont-003",
+    "name": "Carlos Fernández Ruiz",
+    "role": "Purchasing Manager",
+    "email": "carlos.fernandez@vidriosnorte.es",
+    "phone": "+34 943 567 890",
+    "id_customer": "cust-002",
+    "company_name": "Vidrios del Norte S.A.",
+    "comments": []
+  },
+  {
+    "id_contact": "cont-004",
+    "name": "Ana Santos Costa",
+    "role": "Project Manager",
+    "email": "ana.santos@glasssolutions.pt",
+    "phone": "+351 21 123 4567",
+    "id_customer": "cust-003",
+    "company_name": "Glass Solutions Portugal Lda",
+    "comments": []
+  },
+  {
+    "id_contact": "cont-005",
+    "name": "Pierre Dubois",
+    "role": "Managing Director",
+    "email": "pierre.dubois@fenetres-elegantes.fr",
+    "phone": "+33 1 23 45 67 89",
+    "id_customer": "cust-004",
+    "company_name": "Fenêtres Élégantes SARL",
+    "comments": []
+  }
+]

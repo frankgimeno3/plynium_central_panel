@@ -11,17 +11,24 @@ export interface articleInterface {
   is_article_event?: boolean;
   event_id?: string;
 }
+/** Miniature/card view of an article (content title, subtitle, image) */
 export interface articleMiniatureInterface {
-    contenidoTitulo: string,
-    contenidoSubtitulo: string,
-    url_imagen: string
+    /** Content title */
+    contenidoTitulo: string;
+    /** Content subtitle */
+    contenidoSubtitulo: string;
+    /** Image URL */
+    url_imagen: string;
 }
 
+/** Publication (e.g. magazine issue). revista = magazine name, número = issue number */
 export interface publicationInterface {
   id_publication: string;
   redirectionLink: string;
   date: string;
+  /** Magazine name */
   revista: string;
+  /** Issue number */
   número: number | string;
   publication_main_image_url: string;
 }
