@@ -1,0 +1,56 @@
+[
+  {
+    "contract_code": "C25.0000011",
+    "client_id": "cust-001",
+    "client_name": "Vidrios del Norte S.L.",
+    "invoices": [
+      {
+        "invoice_id": "INV-C25.0000011-01",
+        "amount_eur": 2400,
+        "issue_date": "2025-01-15",
+        "orders": [
+          { "order_code": "C25.0000011-001", "collection_date": "2025-02-01", "status": "paid", "amount_eur": 1200 },
+          { "order_code": "C25.0000011-002", "collection_date": "2025-03-01", "status": "pending", "amount_eur": 1200 }
+        ]
+      }
+    ]
+  },
+  {
+    "contract_code": "C25.0000012",
+    "client_id": "cust-002",
+    "client_name": "Cristalería López",
+    "invoices": [
+      {
+        "invoice_id": "INV-C25.0000012-01",
+        "amount_eur": 850,
+        "issue_date": "2025-02-10",
+        "orders": [
+          { "order_code": "C25.0000012-001", "collection_date": "2025-03-15", "status": "paid", "amount_eur": 850 }
+        ]
+      },
+      {
+        "invoice_id": "INV-C25.0000012-02",
+        "amount_eur": 650,
+        "issue_date": "2025-03-01",
+        "orders": [
+          { "order_code": "C25.0000012-002", "collection_date": "2025-04-01", "status": "pending", "amount_eur": 650 }
+        ]
+      }
+    ]
+  },
+  {
+    "contract_code": "C24.0000089",
+    "client_id": "cust-003",
+    "client_name": "Glass Solutions Ltd",
+    "invoices": [
+      {
+        "invoice_id": "INV-C24.0000089-01",
+        "amount_eur": 1500,
+        "issue_date": "2024-11-20",
+        "orders": [
+          { "order_code": "C24.0000089-001", "collection_date": "2024-12-15", "status": "paid", "amount_eur": 1500 }
+        ]
+      }
+    ]
+  }
+]

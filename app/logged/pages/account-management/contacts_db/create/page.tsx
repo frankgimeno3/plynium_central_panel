@@ -1,0 +1,142 @@
+"use client";
+
+import React, { FC, useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+
+const CreateContactPage: FC = () => {
+  const router = useRouter();
+  const [form, setForm] = useState({
+    id_contact: "",
+    name: "",
+    role: "",
+    email: "",
+    phone: "",
+    id_customer: "",
+    company_name: "",
+  });
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // Sin funcionalidad real: solo navegar atrás
+    router.push("/logged/pages/account-management/contacts_db");
+  };
+
+  return (
+    <div className="flex flex-col w-full min-w-0 bg-white">
+      <div className="w-full flex items-center justify-between gap-4 bg-blue-950/70 p-5 text-white">
+        <p className="text-2xl">Nuevo contacto</p>
+        <Link
+          href="/logged/pages/account-management/contacts_db"
+          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
+        >
+          ← Volver
+        </Link>
+      </div>
+
+      <div className="p-12 w-full">
+        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">ID contacto</label>
+            <input
+              type="text"
+              name="id_contact"
+              value={form.id_contact}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="ej. cont-006"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Nombre</label>
+            <input
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Nombre completo"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Rol</label>
+            <input
+              type="text"
+              name="role"
+              value={form.role}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="ej. Directora Comercial"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Email</label>
+            <input
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="email@empresa.com"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Teléfono</label>
+            <input
+              type="text"
+              name="phone"
+              value={form.phone}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="+34 912 345 678"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">ID cliente</label>
+            <input
+              type="text"
+              name="id_customer"
+              value={form.id_customer}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="ej. cust-001"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Empresa</label>
+            <input
+              type="text"
+              name="company_name"
+              value={form.company_name}
+              onChange={handleChange}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Nombre de la empresa"
+            />
+          </div>
+          <div className="flex gap-3 pt-4">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              Crear contacto
+            </button>
+            <button
+              type="button"
+              onClick={() => router.push("/logged/pages/account-management/contacts_db")}
+              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+export default CreateContactPage;

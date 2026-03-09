@@ -7,6 +7,7 @@ import otherRequestsData from '@/app/contents/otherRequests.json';
 import companyRequestData from '@/app/contents/companyRequest.json';
 import advertisementRequestData from '@/app/contents/advertisementRequest.json';
 import ga4Data from '@/app/contents/ga4.json';
+import ManagementDashboard from './logged_components/ManagementDashboard';
 
 type NotificationState = 'unread' | 'read' | 'solved';
 
@@ -87,6 +88,10 @@ const Logged: FC<LoggedProps> = ({ }) => {
   return (
     <div className='flex flex-col w-full bg-white p-12'>
       <p className='font-bold text-2xl'>Welcome, {userName}</p>
+
+      <p className='mt-10 font-bold mb-3'>Management Dashboard</p>
+      <ManagementDashboard />
+
       <p className='mt-12 font-bold mb-3'>Main notifications</p>
 
       {/* Tabs */}
@@ -146,7 +151,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
               item.type === 'other' ? (
                 <Link
                   key={item.id}
-                  href={`/logged/pages/requests/requests/${encodeURIComponent(item.id)}`}
+                  href={`/logged/pages/account-management/requests/requests/${encodeURIComponent(item.id)}`}
                   className='flex flex-row justify-between bg-white p-4 border-b border-gray-100 cursor-pointer hover:bg-white/70'
                 >
                   <div>
@@ -158,7 +163,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
               ) : item.type === 'company' ? (
                 <Link
                   key={item.companyRequestId}
-                  href={`/logged/pages/requests/company/${encodeURIComponent(item.companyRequestId)}`}
+                  href={`/logged/pages/account-management/requests/company/${encodeURIComponent(item.companyRequestId)}`}
                   className='flex flex-row justify-between bg-white p-4 border-b border-gray-100 cursor-pointer hover:bg-white/70'
                 >
                   <div>
@@ -170,7 +175,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
               ) : (
                 <Link
                   key={item.idAdvReq}
-                  href={`/logged/pages/requests/quotations/${encodeURIComponent(item.idAdvReq)}`}
+                  href={`/logged/pages/account-management/requests/quotations/${encodeURIComponent(item.idAdvReq)}`}
                   className='flex flex-row justify-between bg-white p-4 border-b border-gray-100 cursor-pointer hover:bg-white/70'
                 >
                   <div>

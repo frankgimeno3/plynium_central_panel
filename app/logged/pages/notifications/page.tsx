@@ -115,7 +115,7 @@ const NotificationsPage: FC = () => {
                 {pendingOtherRequests.map((r) => (
                   <Link
                     key={r.id}
-                    href={`/logged/pages/requests/requests/${encodeURIComponent(r.id)}`}
+                    href={`/logged/pages/account-management/requests/requests/${encodeURIComponent(r.id)}`}
                     className='bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 cursor-pointer'
                   >
                     <p className='font-medium text-gray-900'>{r.author}</p>
@@ -126,7 +126,7 @@ const NotificationsPage: FC = () => {
                 {pendingCompanyRequests.map((r) => (
                   <Link
                     key={r.companyRequestId}
-                    href={`/logged/pages/requests/company/${encodeURIComponent(r.companyRequestId)}`}
+                    href={`/logged/pages/account-management/requests/company/${encodeURIComponent(r.companyRequestId)}`}
                     className='bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 cursor-pointer'
                   >
                     <p className='font-medium text-gray-900'>{r.content.nombre_comercial}</p>
@@ -137,7 +137,7 @@ const NotificationsPage: FC = () => {
                 {pendingAdvertisementRequests.map((r) => (
                   <Link
                     key={r.idAdvReq}
-                    href={`/logged/pages/requests/quotations/${encodeURIComponent(r.idAdvReq)}`}
+                    href={`/logged/pages/account-management/requests/quotations/${encodeURIComponent(r.idAdvReq)}`}
                     className='bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 cursor-pointer'
                   >
                     <p className='font-medium text-gray-900'>{r.senderCompany}</p>

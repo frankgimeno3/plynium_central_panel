@@ -1,0 +1,20 @@
+[
+  {
+    "id_provider": "prov-001",
+    "name": "Suministros Técnicos Glass",
+    "contact_email": "pedidos@suministrosglass.com",
+    "contact_phone": "+34 912 345 678"
+  },
+  {
+    "id_provider": "prov-002",
+    "name": "Logística y Envíos S.L.",
+    "contact_email": "info@logisticaenvios.es",
+    "contact_phone": "+34 913 456 789"
+  },
+  {
+    "id_provider": "prov-003",
+    "name": "Software & IT Services",
+    "contact_email": "comercial@softwareit.com",
+    "contact_phone": "+34 914 567 890"
+  }
+]
