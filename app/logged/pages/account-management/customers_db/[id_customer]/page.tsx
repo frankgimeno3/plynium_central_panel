@@ -3,6 +3,8 @@
 import React, { FC, use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import customersData from "@/app/contents/customers.json";
 import proposalsData from "@/app/contents/proposals.json";
 import contractsData from "@/app/contents/contracts.json";
@@ -98,12 +100,15 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
 
   if (!customer) {
     return (
-      <div className="flex flex-col flex-1 w-full p-12 bg-white">
-        <p className="text-gray-500">Cliente no encontrado.</p>
-        <Link href="/logged/pages/account-management/customers_db" className="text-blue-600 hover:underline mt-4">
-          ← Volver a Clientes
-        </Link>
-      </div>
+      <PageContentLayout
+        pageTitle="Cliente no encontrado"
+        breadcrumbs={[{ label: "Account management", href: "/logged/pages/account-management/customers_db" }, { label: "Customers DB", href: "/logged/pages/account-management/customers_db" }]}
+        buttons={[{ label: "Volver a Clientes", href: "/logged/pages/account-management/customers_db" }]}
+      >
+        <PageContentSection>
+          <p className="text-gray-500">Cliente no encontrado.</p>
+        </PageContentSection>
+      </PageContentLayout>
     );
   }
 
@@ -116,37 +121,20 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
     { key: "contactos", label: "Contactos" },
   ];
 
-  return (
-    <div className="flex flex-col flex-1 min-h-0 w-full bg-white overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 flex items-center justify-between gap-4 bg-blue-950/90 px-6 py-4 text-white">
-        <div className="flex items-center gap-4">
-          <button
-            type="button"
-            onClick={() => router.push("/logged/pages/account-management/customers_db")}
-            className="text-white/90 hover:text-white text-sm font-medium"
-          >
-            ← Volver
-          </button>
-          <h1 className="text-xl md:text-2xl font-semibold truncate">{customer.name}</h1>
-          {customer.status && (
-            <span
-              className={`px-2 py-0.5 rounded text-xs font-medium ${
-                customer.status === "activo"
-                  ? "bg-emerald-500/30 text-emerald-100"
-                  : customer.status === "prospecto"
-                    ? "bg-amber-500/30 text-amber-100"
-                    : "bg-gray-500/30 text-gray-200"
-              }`}
-            >
-              {customer.status}
-            </span>
-          )}
-        </div>
-      </div>
+  const breadcrumbs = [
+    { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+    { label: "Customers DB", href: "/logged/pages/account-management/customers_db" },
+    { label: customer.name },
+  ];
 
-      {/* Tabs */}
-      <div className="flex-shrink-0 border-b border-gray-200 bg-gray-50/80">
+  return (
+    <PageContentLayout
+      pageTitle={customer.name}
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "Volver a Clientes", href: "/logged/pages/account-management/customers_db" }]}
+    >
+      <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
+        <div className="flex border-b border-gray-200 bg-gray-50/80">
         <div className="flex">
           {tabs.map((tab) => (
             <button
@@ -536,7 +524,8 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
           </div>
         )}
       </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

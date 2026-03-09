@@ -2,6 +2,8 @@
 
 import React, { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import plannedNewslettersData from "@/app/contents/planned_newsletters.json";
 
 type PlannedNewsletter = {
@@ -35,15 +37,15 @@ const NewsletterManagementPage: FC = () => {
 
   const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
 
-  return (
-    <div className="flex flex-col w-full bg-white min-h-screen">
-      <div className="text-center bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Planned Newsletters</p>
-      </div>
+  const breadcrumbs = [
+    { label: "Production", href: "/logged/pages/production/projects" },
+    { label: "Planned Newsletters" },
+  ];
 
-      <div className="flex flex-col w-full gap-4 p-12">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+  return (
+    <PageContentLayout pageTitle="Planned Newsletters" breadcrumbs={breadcrumbs}>
+      <PageContentSection>
+        <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs text-gray-600 mb-1">ID</label>
@@ -76,8 +78,9 @@ const NewsletterManagementPage: FC = () => {
               />
             </div>
           </div>
-        </div>
+      </PageContentSection>
 
+      <PageContentSection>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -133,8 +136,8 @@ const NewsletterManagementPage: FC = () => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

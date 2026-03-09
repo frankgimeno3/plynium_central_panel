@@ -1,6 +1,8 @@
 "use client";
 
 import React, { FC, useMemo, useState } from "react";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import providersData from "@/app/contents/providers.json";
 import type { Provider } from "@/app/contents/interfaces";
 
@@ -21,15 +23,15 @@ const ProvidersPage: FC = () => {
     return list;
   }, [all, filter]);
 
-  return (
-    <div className="flex flex-col w-full bg-white">
-      <div className="flex items-center justify-center gap-3 flex-wrap bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Providers</p>
-      </div>
+  const breadcrumbs = [
+    { label: "Administration", href: "/logged/pages/administration" },
+    { label: "Providers" },
+  ];
 
-      <div className="flex flex-col w-full gap-4 p-12">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+  return (
+    <PageContentLayout pageTitle="Providers" breadcrumbs={breadcrumbs}>
+      <PageContentSection>
+        <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs text-gray-600 mb-1">ID</label>
@@ -52,8 +54,9 @@ const ProvidersPage: FC = () => {
               />
             </div>
           </div>
-        </div>
+      </PageContentSection>
 
+      <PageContentSection>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -80,8 +83,8 @@ const ProvidersPage: FC = () => {
         {filtered.length === 0 && (
           <p className="text-sm text-gray-500 text-center py-8">No providers match the filters.</p>
         )}
-      </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

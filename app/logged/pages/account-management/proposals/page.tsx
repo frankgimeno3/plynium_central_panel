@@ -3,6 +3,8 @@
 import React, { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import proposalsData from "@/app/contents/proposals.json";
 import customersData from "@/app/contents/customers.json";
 import servicesData from "@/app/contents/services.json";
@@ -47,21 +49,19 @@ const ProposalsPage: FC = () => {
 
   const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
 
-  return (
-    <div className="flex flex-col w-full bg-white">
-      <div className="flex items-center justify-center gap-3 flex-wrap bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Proposals</p>
-        <Link
-          href="/logged/pages/account-management/proposals/create"
-          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-        >
-          Crear
-        </Link>
-      </div>
+  const breadcrumbs = [
+    { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+    { label: "Proposals" },
+  ];
 
-      <div className="flex flex-col w-full gap-4 p-12">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+  return (
+    <PageContentLayout
+      pageTitle="Proposals"
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "Crear", href: "/logged/pages/account-management/proposals/create" }]}
+    >
+      <PageContentSection>
+        <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs text-gray-600 mb-1">ID</label>
@@ -110,8 +110,9 @@ const ProposalsPage: FC = () => {
               </select>
             </div>
           </div>
-        </div>
+      </PageContentSection>
 
+      <PageContentSection>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -174,8 +175,8 @@ const ProposalsPage: FC = () => {
             </div>
           </div>
         )}
-      </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

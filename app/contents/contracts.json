@@ -1,10 +1,10 @@
 [
-  { "id_contract": "cont-001", "id_proposal": "prop-003", "id_customer": "cust-001", "process_state": "active", "payment_state": "paid", "title": "Main warehouse expansion project", "amount_eur": 125000 },
-  { "id_contract": "cont-002", "id_proposal": "prop-004", "id_customer": "cust-001", "process_state": "active", "payment_state": "pending", "title": "Glazed lobby cladding", "amount_eur": 67000 },
-  { "id_contract": "cont-003", "id_proposal": "prop-009", "id_customer": "cust-002", "process_state": "active", "payment_state": "pending", "title": "Ventilated facade headquarters building", "amount_eur": 185000 },
-  { "id_contract": "cont-004", "id_proposal": "prop-010", "id_customer": "cust-002", "process_state": "expired", "payment_state": "paid", "title": "Production floor skylights", "amount_eur": 92000 },
-  { "id_contract": "cont-005", "id_proposal": "prop-015", "id_customer": "cust-003", "process_state": "active", "payment_state": "paid", "title": "Factory window refurbishment", "amount_eur": 78000 },
-  { "id_contract": "cont-006", "id_proposal": "prop-016", "id_customer": "cust-003", "process_state": "active", "payment_state": "pending", "title": "Residential double glazing", "amount_eur": 54000 },
-  { "id_contract": "cont-007", "id_proposal": "prop-021", "id_customer": "cust-004", "process_state": "active", "payment_state": "pending", "title": "Curtain wall facade HQ", "amount_eur": 210000 },
-  { "id_contract": "cont-008", "id_proposal": "prop-022", "id_customer": "cust-004", "process_state": "expired", "payment_state": "paid", "title": "Showroom skylights", "amount_eur": 45000 }
+  { "id_contract": "cont-001", "id_proposal": "prop-003", "id_customer": "cust-001", "agent": "Laura Martínez", "process_state": "active", "payment_state": "paid", "title": "Main warehouse expansion project", "amount_eur": 125000 },
+  { "id_contract": "cont-002", "id_proposal": "prop-004", "id_customer": "cust-001", "agent": "Laura Martínez", "process_state": "active", "payment_state": "pending", "title": "Glazed lobby cladding", "amount_eur": 67000 },
+  { "id_contract": "cont-003", "id_proposal": "prop-009", "id_customer": "cust-002", "agent": "Laura Martínez", "process_state": "active", "payment_state": "pending", "title": "Ventilated facade headquarters building", "amount_eur": 185000 },
+  { "id_contract": "cont-004", "id_proposal": "prop-010", "id_customer": "cust-002", "agent": "Laura Martínez", "process_state": "expired", "payment_state": "paid", "title": "Production floor skylights", "amount_eur": 92000 },
+  { "id_contract": "cont-005", "id_proposal": "prop-015", "id_customer": "cust-003", "agent": "Pedro Silva", "process_state": "active", "payment_state": "paid", "title": "Factory window refurbishment", "amount_eur": 78000 },
+  { "id_contract": "cont-006", "id_proposal": "prop-016", "id_customer": "cust-003", "agent": "Pedro Silva", "process_state": "active", "payment_state": "pending", "title": "Residential double glazing", "amount_eur": 54000 },
+  { "id_contract": "cont-007", "id_proposal": "prop-021", "id_customer": "cust-004", "agent": "Pedro Silva", "process_state": "active", "payment_state": "pending", "title": "Curtain wall facade HQ", "amount_eur": 210000 },
+  { "id_contract": "cont-008", "id_proposal": "prop-022", "id_customer": "cust-004", "agent": "Pedro Silva", "process_state": "expired", "payment_state": "paid", "title": "Showroom skylights", "amount_eur": 45000 }
 ]

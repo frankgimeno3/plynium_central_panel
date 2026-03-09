@@ -3,6 +3,8 @@
 import React, { FC, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import proposalsData from "@/app/contents/proposals.json";
 import customersData from "@/app/contents/customers.json";
 import servicesData from "@/app/contents/services.json";
@@ -36,29 +38,31 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
 
   if (!proposal) {
     return (
-      <div className="flex flex-col w-full p-12">
-        <p className="text-gray-500">Proposal not found.</p>
-        <Link href="/logged/pages/production/projects" className="text-blue-600 hover:underline mt-4">
-          ← Back to Projects
-        </Link>
-      </div>
+      <PageContentLayout
+        pageTitle="Proposal not found"
+        breadcrumbs={[{ label: "Account management", href: "/logged/pages/account-management/customers_db" }, { label: "Proposals", href: "/logged/pages/account-management/proposals" }]}
+        buttons={[{ label: "Back to Proposals", href: "/logged/pages/account-management/proposals" }]}
+      >
+        <PageContentSection>
+          <p className="text-gray-500">Proposal not found.</p>
+        </PageContentSection>
+      </PageContentLayout>
     );
   }
 
-  return (
-    <div className="flex flex-col flex-1 min-w-0 w-full min-h-screen bg-white">
-      <div className="text-center bg-blue-950/70 p-5 text-white flex items-center justify-center gap-4 shrink-0">
-        <button
-          type="button"
-          onClick={() => router.push("/logged/pages/production/projects")}
-          className="text-white/90 hover:text-white text-sm"
-        >
-          ← Back
-        </button>
-        <p className="text-2xl">Proposal: {proposal.title}</p>
-      </div>
+  const breadcrumbs = [
+    { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+    { label: "Proposals", href: "/logged/pages/account-management/proposals" },
+    { label: proposal.title },
+  ];
 
-      <div className="flex-1 p-12 w-full space-y-6 overflow-auto">
+  return (
+    <PageContentLayout
+      pageTitle={`Proposal: ${proposal.title}`}
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "Back to Proposals", href: "/logged/pages/account-management/proposals" }]}
+    >
+      <PageContentSection>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-gray-500 uppercase">ID</p>
@@ -82,7 +86,7 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
         </div>
 
         {proposal.servicesArray && proposal.servicesArray.length > 0 && (
-          <div className="border-t pt-6">
+            <div className="border-t pt-6">
             <p className="text-sm font-medium text-gray-700 mb-3">Services</p>
             <div className="space-y-3">
               {proposal.servicesArray.map((svc, idx) => (
@@ -114,8 +118,8 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
             )}
           </div>
         )}
-      </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

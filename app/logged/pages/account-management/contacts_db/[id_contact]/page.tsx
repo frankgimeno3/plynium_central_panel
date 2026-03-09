@@ -3,6 +3,8 @@
 import React, { FC, use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import contactsData from "@/app/contents/contactsContents.json";
 
 type CommentItem = { id?: string; text: string; date?: string; author?: string };
@@ -48,12 +50,15 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
 
   if (!contact) {
     return (
-      <div className="flex flex-col flex-1 w-full min-w-0 p-12 bg-white">
-        <p className="text-gray-500">Contacto no encontrado.</p>
-        <Link href="/logged/pages/account-management/contacts_db" className="text-blue-600 hover:underline mt-4">
-          ← Volver a Contactos
-        </Link>
-      </div>
+      <PageContentLayout
+        pageTitle="Contacto no encontrado"
+        breadcrumbs={[{ label: "Account management", href: "/logged/pages/account-management/customers_db" }, { label: "Contacts DB", href: "/logged/pages/account-management/contacts_db" }]}
+        buttons={[{ label: "Volver a Contactos", href: "/logged/pages/account-management/contacts_db" }]}
+      >
+        <PageContentSection>
+          <p className="text-gray-500">Contacto no encontrado.</p>
+        </PageContentSection>
+      </PageContentLayout>
     );
   }
 
@@ -62,29 +67,20 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
     { key: "comentarios", label: "Comentarios" },
   ];
 
-  return (
-    <div className="flex flex-col flex-1 min-h-0 w-full min-w-0 bg-white overflow-hidden">
-      {/* Header */}
-      <div className="flex-shrink-0 w-full flex items-center justify-between gap-4 bg-blue-950/90 px-6 py-4 text-white">
-        <div className="flex items-center gap-4 min-w-0">
-          <button
-            type="button"
-            onClick={() => router.push("/logged/pages/account-management/contacts_db")}
-            className="text-white/90 hover:text-white text-sm font-medium shrink-0"
-          >
-            ← Volver
-          </button>
-          <h1 className="text-xl md:text-2xl font-semibold truncate min-w-0">{contact.name}</h1>
-          {contact.role && (
-            <span className="px-2 py-0.5 rounded text-xs font-medium bg-blue-500/30 text-blue-100 shrink-0">
-              {contact.role}
-            </span>
-          )}
-        </div>
-      </div>
+  const breadcrumbs = [
+    { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+    { label: "Contacts DB", href: "/logged/pages/account-management/contacts_db" },
+    { label: contact.name },
+  ];
 
-      {/* Tabs */}
-      <div className="flex-shrink-0 w-full border-b border-gray-200 bg-gray-50/80">
+  return (
+    <PageContentLayout
+      pageTitle={contact.name}
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "Volver a Contactos", href: "/logged/pages/account-management/contacts_db" }]}
+    >
+      <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
+        <div className="flex border-b border-gray-200 bg-gray-50/80">
         <div className="flex w-full">
           {tabs.map((tab) => (
             <button
@@ -102,11 +98,10 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
                 <span className="ml-1.5 text-xs text-gray-500">({comments.length})</span>
               )}
             </button>
-          ))}
+          )          )}
         </div>
       </div>
 
-      {/* Tab content */}
       <div className="flex-1 min-h-0 overflow-auto w-full min-w-0">
         {currentTab === "principal" && (
           <div className="p-6 w-full max-w-none box-border space-y-6">
@@ -181,7 +176,8 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
           </div>
         )}
       </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

@@ -3,6 +3,8 @@
 import React, { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import contactsData from "@/app/contents/contactsContents.json";
 
 type Contact = {
@@ -32,33 +34,21 @@ const ContactsDbPage: FC = () => {
 
   const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
 
-  return (
-    <div className="flex flex-col w-full min-w-0 bg-white">
-      <div className="w-full flex items-center justify-center gap-3 flex-wrap bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Contacts DB</p>
-        <Link
-          href="/logged/pages/account-management/contacts_db/create"
-          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-        >
-          Nuevo contacto
-        </Link>
-        <Link
-          href="/logged/pages/account-management/contacts_db/mass-ops/import"
-          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-        >
-          Import
-        </Link>
-        <Link
-          href="/logged/pages/account-management/contacts_db/mass-ops/export"
-          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-        >
-          Export
-        </Link>
-      </div>
+  const breadcrumbs = [
+    { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+    { label: "Contacts DB" },
+  ];
 
-      <div className="flex flex-col gap-4 p-12 w-full min-w-0 box-border">
-        <div className="w-full bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+  const buttons = [
+    { label: "Nuevo contacto", href: "/logged/pages/account-management/contacts_db/create" },
+    { label: "Import", href: "/logged/pages/account-management/contacts_db/mass-ops/import" },
+    { label: "Export", href: "/logged/pages/account-management/contacts_db/mass-ops/export" },
+  ];
+
+  return (
+    <PageContentLayout pageTitle="Contacts DB" breadcrumbs={breadcrumbs} buttons={buttons}>
+      <PageContentSection>
+        <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
             <div className="min-w-0">
               <label className="block text-xs text-gray-600 mb-1">ID</label>
@@ -101,8 +91,9 @@ const ContactsDbPage: FC = () => {
               />
             </div>
           </div>
-        </div>
+      </PageContentSection>
 
+      <PageContentSection>
         <div className="w-full min-w-0 overflow-x-auto">
           <table className="w-full min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -133,8 +124,8 @@ const ContactsDbPage: FC = () => {
             </tbody>
           </table>
         </div>
-      </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

@@ -3,6 +3,8 @@
 import React, { FC, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import plannedNewslettersData from "@/app/contents/planned_newsletters.json";
 
 type NewsletterBanner = {
@@ -43,29 +45,34 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
 
   if (!newsletter) {
     return (
-      <div className="flex flex-col w-full p-12">
-        <p className="text-gray-500">Newsletter not found.</p>
-        <Link href="/logged/pages/production/newsletter_management" className="text-blue-600 hover:underline mt-4">
-          ← Back to Planned Newsletters
-        </Link>
-      </div>
+      <PageContentLayout
+        pageTitle="Newsletter not found"
+        breadcrumbs={[
+          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Planned Newsletters", href: "/logged/pages/production/newsletter_management" },
+        ]}
+        buttons={[{ label: "Back to Planned Newsletters", href: "/logged/pages/production/newsletter_management" }]}
+      >
+        <PageContentSection>
+          <p className="text-gray-500">Newsletter not found.</p>
+        </PageContentSection>
+      </PageContentLayout>
     );
   }
 
-  return (
-    <div className="flex flex-col w-full min-w-0 bg-white min-h-screen">
-      <div className="w-full text-center bg-blue-950/70 p-5 text-white flex items-center justify-center gap-4">
-        <button
-          type="button"
-          onClick={() => router.push("/logged/pages/production/newsletter_management")}
-          className="text-white/90 hover:text-white text-sm"
-        >
-          ← Back
-        </button>
-        <p className="text-2xl">{newsletter.edition_name}</p>
-      </div>
+  const breadcrumbs = [
+    { label: "Production", href: "/logged/pages/production/projects" },
+    { label: "Planned Newsletters", href: "/logged/pages/production/newsletter_management" },
+    { label: newsletter.edition_name },
+  ];
 
-      <div className="w-full p-8 md:p-12 space-y-8">
+  return (
+    <PageContentLayout
+      pageTitle={newsletter.edition_name}
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "Back to Planned Newsletters", href: "/logged/pages/production/newsletter_management" }]}
+    >
+      <PageContentSection>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
             <p className="text-xs text-gray-500 uppercase">ID</p>
@@ -96,9 +103,11 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
             </div>
           )}
         </div>
+      </PageContentSection>
 
-        {newsletter.newsletter_banners && newsletter.newsletter_banners.length > 0 && (
-          <div className="border-t pt-8">
+      {newsletter.newsletter_banners && newsletter.newsletter_banners.length > 0 && (
+        <PageContentSection>
+          <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Banners</h3>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {newsletter.newsletter_banners
@@ -123,10 +132,12 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
                 ))}
             </div>
           </div>
-        )}
+        </PageContentSection>
+      )}
 
-        {newsletter.newsletter_contents && newsletter.newsletter_contents.length > 0 && (
-          <div className="border-t pt-8">
+      {newsletter.newsletter_contents && newsletter.newsletter_contents.length > 0 && (
+        <PageContentSection>
+          <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Contents</h3>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {newsletter.newsletter_contents
@@ -153,9 +164,9 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
                 ))}
             </div>
           </div>
-        )}
-      </div>
-    </div>
+        </PageContentSection>
+      )}
+    </PageContentLayout>
   );
 };
 

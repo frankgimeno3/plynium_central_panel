@@ -3,6 +3,8 @@
 import { FC, useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import notificationsData from '@/app/contents/notifications.json';
 import otherRequestsData from '@/app/contents/otherRequests.json';
 import companyRequestData from '@/app/contents/companyRequest.json';
@@ -85,14 +87,12 @@ const NotificationsPage: FC = () => {
     { key: 'other', label: 'Other' }
   ];
 
+  const breadcrumbs = [{ label: 'Notifications' }];
+
   return (
-    <div className='flex flex-col w-full bg-white'>
-      <div className='text-center bg-blue-950/70 p-5 text-white'>
-        <p className='text-2xl'>Notifications</p>
-        <p className='text-sm text-blue-100 mt-1'>Manage all your notifications</p>
-      </div>
-      <div className='px-6 py-6'>
-        <div className='flex border-b border-gray-200 bg-white'>
+    <PageContentLayout pageTitle="Notifications" breadcrumbs={breadcrumbs}>
+      <PageContentSection className="p-0 overflow-hidden">
+        <div className="flex border-b border-gray-200">
           {tabs.map((tab) => (
             <button
               key={tab.key}
@@ -108,9 +108,9 @@ const NotificationsPage: FC = () => {
           ))}
         </div>
 
-        <div className='bg-white shadow-sm rounded-b-lg overflow-hidden'>
+        <div className='p-6'>
           {currentTab === 'other' ? (
-            <div className='p-6'>
+            <>
               <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
                 {pendingOtherRequests.map((r) => (
                   <Link
@@ -149,7 +149,7 @@ const NotificationsPage: FC = () => {
               {pendingOtherRequests.length === 0 && pendingCompanyRequests.length === 0 && pendingAdvertisementRequests.length === 0 && (
                 <p className='text-gray-500 text-center py-8'>No pending requests</p>
               )}
-            </div>
+            </>
           ) : (
             <div className='overflow-x-auto'>
               <table className='min-w-full divide-y divide-gray-200'>
@@ -204,8 +204,8 @@ const NotificationsPage: FC = () => {
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

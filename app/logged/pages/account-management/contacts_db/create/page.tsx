@@ -3,6 +3,8 @@
 import React, { FC, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 
 const CreateContactPage: FC = () => {
   const router = useRouter();
@@ -27,20 +29,20 @@ const CreateContactPage: FC = () => {
     router.push("/logged/pages/account-management/contacts_db");
   };
 
-  return (
-    <div className="flex flex-col w-full min-w-0 bg-white">
-      <div className="w-full flex items-center justify-between gap-4 bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Nuevo contacto</p>
-        <Link
-          href="/logged/pages/account-management/contacts_db"
-          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-        >
-          ← Volver
-        </Link>
-      </div>
+  const breadcrumbs = [
+    { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+    { label: "Contacts DB", href: "/logged/pages/account-management/contacts_db" },
+    { label: "Nuevo contacto" },
+  ];
 
-      <div className="p-12 w-full">
-        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+  return (
+    <PageContentLayout
+      pageTitle="Nuevo contacto"
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "← Volver", href: "/logged/pages/account-management/contacts_db" }]}
+    >
+      <PageContentSection>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs text-gray-600 mb-1">ID contacto</label>
             <input
@@ -134,8 +136,8 @@ const CreateContactPage: FC = () => {
             </button>
           </div>
         </form>
-      </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

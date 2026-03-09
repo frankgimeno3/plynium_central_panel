@@ -1,6 +1,9 @@
 "use client";
 
 import React, { FC, useMemo, useState } from "react";
+import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import issuedInvoicesData from "@/app/contents/issued_invoices.json";
 import type { AdministrationContract, OrderRow } from "@/app/contents/interfaces";
 
@@ -12,11 +15,15 @@ function flattenOrders(contracts: AdministrationContract[]): OrderRow[] {
         rows.push({
           order_code: order.order_code,
           contract_code: c.contract_code,
+          id_contract: c.id_contract,
           invoice_id: inv.invoice_id,
+          invoice_state: inv.invoice_state,
           collection_date: order.collection_date,
           payment_status: order.status,
           client_id: c.client_id,
           client_name: c.client_name,
+          agent: order.agent ?? c.agent,
+          id_contact: order.id_contact,
           amount_eur: order.amount_eur,
         });
       }
@@ -32,7 +39,7 @@ const AdministrationPage: FC = () => {
   );
   const [filter, setFilter] = useState({
     order: "",
-    contract: "",
+    agent: "",
     client: "",
     status: "" as "" | "paid" | "pending",
   });
@@ -43,9 +50,9 @@ const AdministrationPage: FC = () => {
       list = list.filter((o) =>
         o.order_code.toLowerCase().includes(filter.order.toLowerCase())
       );
-    if (filter.contract)
+    if (filter.agent)
       list = list.filter((o) =>
-        o.contract_code.toLowerCase().includes(filter.contract.toLowerCase())
+        (o.agent ?? "").toLowerCase().includes(filter.agent.toLowerCase())
       );
     if (filter.client)
       list = list.filter((o) =>
@@ -56,15 +63,15 @@ const AdministrationPage: FC = () => {
     return list;
   }, [allOrders, filter]);
 
-  return (
-    <div className="flex flex-col w-full bg-white">
-      <div className="flex items-center justify-center gap-3 flex-wrap bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Administration — Orders overview</p>
-      </div>
+  const breadcrumbs = [
+    { label: "Administration", href: "/logged/pages/administration" },
+    { label: "Orders" },
+  ];
 
-      <div className="flex flex-col w-full gap-4 p-12">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+  return (
+    <PageContentLayout pageTitle="Administration — Orders" breadcrumbs={breadcrumbs}>
+      <PageContentSection>
+        <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs text-gray-600 mb-1">Order</label>
@@ -80,16 +87,16 @@ const AdministrationPage: FC = () => {
             </div>
             <div>
               <label className="block text-xs text-gray-600 mb-1">
-                Contract
+                Agent
               </label>
               <input
                 type="text"
-                value={filter.contract}
+                value={filter.agent}
                 onChange={(e) =>
-                  setFilter((f) => ({ ...f, contract: e.target.value }))
+                  setFilter((f) => ({ ...f, agent: e.target.value }))
                 }
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="e.g. C25.0000011"
+                placeholder="Agent name"
               />
             </div>
             <div>
@@ -122,8 +129,9 @@ const AdministrationPage: FC = () => {
               </select>
             </div>
           </div>
-        </div>
+      </PageContentSection>
 
+      <PageContentSection>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -132,10 +140,13 @@ const AdministrationPage: FC = () => {
                   Order
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contract
+                  Agent
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Invoice
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Invoice state
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Collection date
@@ -155,13 +166,31 @@ const AdministrationPage: FC = () => {
               {filtered.map((row) => (
                 <tr key={row.order_code} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {row.order_code}
+                    <Link
+                      href={`/logged/pages/administration/${encodeURIComponent(row.order_code)}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {row.order_code}
+                    </Link>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {row.contract_code}
+                    {row.agent ?? "—"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                     {row.invoice_id}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                        row.invoice_state === "ok"
+                          ? "bg-green-100 text-green-800"
+                          : row.invoice_state === "cancelled"
+                            ? "bg-red-100 text-red-800"
+                            : "bg-gray-100 text-gray-800"
+                      }`}
+                    >
+                      {row.invoice_state ?? "—"}
+                    </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {row.collection_date}
@@ -194,8 +223,8 @@ const AdministrationPage: FC = () => {
             No orders match the filters.
           </p>
         )}
-      </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

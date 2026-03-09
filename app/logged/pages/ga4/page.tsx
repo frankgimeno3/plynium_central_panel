@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import ga4Data from "@/app/contents/ga4.json";
 
 interface Ga4Data {
@@ -33,41 +34,41 @@ export default function GA4Page() {
   const tableRows = currentPortal ? (data.tableRowsByPortal?.[currentPortal.id] ?? []) : [];
   const detailedRows = detail?.topPagesDetail ?? tableRows.map((r) => ({ ...r, entrances: 0, exits: 0 }));
 
+  const breadcrumbs = [{ label: "GA4" }];
+
   return (
-    <div className="flex flex-col w-full bg-white p-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Google Analytics 4</h1>
-        <Link
-          href="/logged"
-          className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm"
-        >
-          ← Back to dashboard
-        </Link>
-      </div>
+    <PageContentLayout
+      pageTitle="Google Analytics 4"
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "Back to dashboard", href: "/logged" }]}
+    >
+      <PageContentSection className="p-0 overflow-hidden">
+        <div className="flex border-b border-gray-200">
+          {portals.map((p, i) => (
+            <button
+              key={p.id}
+              onClick={() => setActivePortalIdx(i)}
+              className={`px-6 py-3 text-sm font-medium transition-colors ${
+                activePortalIdx === i
+                  ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              {p.name}
+            </button>
+          ))}
+        </div>
+        {!currentPortal ? (
+          <div className="p-6">
+            <p className="text-gray-500">No portal selected</p>
+          </div>
+        ) : null}
+      </PageContentSection>
 
-      {/* Portal tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
-        {portals.map((p, i) => (
-          <button
-            key={p.id}
-            onClick={() => setActivePortalIdx(i)}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activePortalIdx === i
-                ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
-          >
-            {p.name}
-          </button>
-        ))}
-      </div>
-
-      {!currentPortal ? (
-        <p className="text-gray-500">No portal selected</p>
-      ) : (
+      {currentPortal ? (
         <>
-          {/* Metrics cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+          <PageContentSection>
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             {summary && (
               <>
                 <MetricCard label="Users" value={summary.users.toLocaleString()} />
@@ -79,10 +80,10 @@ export default function GA4Page() {
                 <MetricCard label="Conversions" value={summary.conversions.toString()} />
               </>
             )}
-          </div>
+            </div>
+          </PageContentSection>
 
-          {/* Table - more detail */}
-          <div className="mb-8">
+          <PageContentSection>
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Top pages (detailed)</h2>
             <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
               <table className="w-full text-sm">
@@ -118,12 +119,11 @@ export default function GA4Page() {
                 </tbody>
               </table>
             </div>
-          </div>
+          </PageContentSection>
 
-          {/* Typical GA4 analytics panels */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Traffic source */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <PageContentSection>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div>
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Traffic source</h2>
               <div className="space-y-3">
                 {detail?.trafficSource?.map((ts, i) => (
@@ -142,8 +142,7 @@ export default function GA4Page() {
               </div>
             </div>
 
-            {/* Device breakdown */}
-            <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div>
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Device breakdown</h2>
               <div className="space-y-3">
                 {detail?.deviceBreakdown?.map((d, i) => (
@@ -161,18 +160,18 @@ export default function GA4Page() {
                 ))}
               </div>
             </div>
-          </div>
+            </div>
+          </PageContentSection>
 
-          {/* Engagement overview (mock chart area) */}
-          <div className="mt-8 bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <PageContentSection>
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Engagement over time</h2>
             <div className="h-48 flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
               <p className="text-gray-400 text-sm">Chart placeholder (mock data)</p>
             </div>
-          </div>
+          </PageContentSection>
         </>
-      )}
-    </div>
+      ) : null}
+    </PageContentLayout>
   );
 }
 

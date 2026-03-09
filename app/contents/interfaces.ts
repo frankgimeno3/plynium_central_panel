@@ -69,6 +69,8 @@ export interface Order {
   collection_date: string;
   status: 'paid' | 'pending';
   amount_eur: number;
+  agent?: string;
+  id_contact?: string;
 }
 
 /** Issued invoice belonging to a contract. A contract has at least one invoice. */
@@ -76,14 +78,17 @@ export interface IssuedInvoice {
   invoice_id: string;
   amount_eur: number;
   issue_date: string;
+  invoice_state?: 'created' | 'ok' | 'cancelled';
   orders: Order[];
 }
 
 /** Contract code format: CXX.000000Y (XX = year, Y = serial) */
 export interface AdministrationContract {
   contract_code: string;
+  id_contract?: string;
   client_id: string;
   client_name: string;
+  agent?: string;
   invoices: IssuedInvoice[];
 }
 
@@ -91,11 +96,16 @@ export interface AdministrationContract {
 export interface OrderRow {
   order_code: string;
   contract_code: string;
+  id_contract?: string;
   invoice_id: string;
+  invoice_state?: 'created' | 'ok' | 'cancelled';
   collection_date: string;
   payment_status: 'paid' | 'pending';
   client_id: string;
   client_name: string;
+  agent?: string;
+  id_contact?: string;
+  id_proposal?: string;
   amount_eur: number;
 }
 
@@ -104,6 +114,14 @@ export interface Provider {
   name: string;
   contact_email?: string;
   contact_phone?: string;
+}
+
+/** Agent assigned to accounts (customers) and proposals. */
+export interface Agent {
+  id_agent: string;
+  name: string;
+  email?: string;
+  phone?: string;
 }
 
 export interface ProviderInvoice {

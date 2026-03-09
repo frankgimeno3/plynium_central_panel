@@ -3,6 +3,8 @@
 import React, { FC, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import projectsData from "@/app/contents/projects.json";
 import contractsData from "@/app/contents/contracts.json";
 import customersData from "@/app/contents/customers.json";
@@ -62,12 +64,18 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
 
   if (!project) {
     return (
-      <div className="flex flex-col w-full p-12">
-        <p className="text-gray-500">Project not found.</p>
-        <Link href="/logged/pages/production/projects" className="text-blue-600 hover:underline mt-4">
-          ← Back to Projects
-        </Link>
-      </div>
+      <PageContentLayout
+        pageTitle="Project not found"
+        breadcrumbs={[
+          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Projects", href: "/logged/pages/production/projects" },
+        ]}
+        buttons={[{ label: "Back to Projects", href: "/logged/pages/production/projects" }]}
+      >
+        <PageContentSection>
+          <p className="text-gray-500">Project not found.</p>
+        </PageContentSection>
+      </PageContentLayout>
     );
   }
 
@@ -84,20 +92,19 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
     publication_date: "Publication date",
   };
 
-  return (
-    <div className="flex flex-col flex-1 min-w-0 w-full min-h-screen bg-white">
-      <div className="text-center bg-blue-950/70 p-5 text-white flex items-center justify-center gap-4 shrink-0">
-        <button
-          type="button"
-          onClick={() => router.push("/logged/pages/production/projects")}
-          className="text-white/90 hover:text-white text-sm"
-        >
-          ← Back
-        </button>
-        <p className="text-2xl">Project: {project.title}</p>
-      </div>
+  const breadcrumbs = [
+    { label: "Production", href: "/logged/pages/production/projects" },
+    { label: "Projects", href: "/logged/pages/production/projects" },
+    { label: project.title },
+  ];
 
-      <div className="flex-1 p-12 w-full space-y-6 overflow-auto">
+  return (
+    <PageContentLayout
+      pageTitle={`Project: ${project.title}`}
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "Back to Projects", href: "/logged/pages/production/projects" }]}
+    >
+      <PageContentSection>
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-gray-500 uppercase">ID</p>
@@ -124,27 +131,33 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
             </div>
           )}
         </div>
+      </PageContentSection>
 
-        {contract && (
-          <div className="border-t pt-6">
+      {contract && (
+        <PageContentSection>
+          <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Contract</p>
             <Link href={`/logged/pages/account-management/contracts/${contract.id_contract}`} className="text-blue-600 hover:underline">
               {contract.title} ({contract.id_contract})
             </Link>
           </div>
-        )}
+        </PageContentSection>
+      )}
 
-        {customer && (
-          <div className="border-t pt-6">
+      {customer && (
+        <PageContentSection>
+          <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Customer</p>
             <Link href={`/logged/pages/account-management/customers_db/${customer.id_customer}`} className="text-blue-600 hover:underline">
               {customer.name}
             </Link>
           </div>
-        )}
+        </PageContentSection>
+      )}
 
-        {linkedEvents.length > 0 && (
-          <div className="border-t pt-6">
+      {linkedEvents.length > 0 && (
+        <PageContentSection>
+          <div>
             <p className="text-sm font-medium text-gray-700 mb-4">Events</p>
             <div className="space-y-2">
               {linkedEvents
@@ -165,9 +178,9 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
               View in Dashboard →
             </Link>
           </div>
-        )}
-      </div>
-    </div>
+        </PageContentSection>
+      )}
+    </PageContentLayout>
   );
 };
 

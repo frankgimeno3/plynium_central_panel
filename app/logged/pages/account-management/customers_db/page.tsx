@@ -3,6 +3,8 @@
 import React, { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import customersData from "@/app/contents/customers.json";
 
 type Customer = {
@@ -38,33 +40,21 @@ const CustomersDbPage: FC = () => {
 
   const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
 
-  return (
-    <div className="flex flex-col w-full bg-white">
-      <div className="flex items-center justify-center gap-3 flex-wrap bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Customers DB</p>
-        <Link
-          href="/logged/pages/account-management/customers_db/create"
-          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-        >
-          Nueva cuenta
-        </Link>
-        <Link
-          href="/logged/pages/account-management/customers_db/mass-ops/import"
-          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-        >
-          Import
-        </Link>
-        <Link
-          href="/logged/pages/account-management/customers_db/mass-ops/export"
-          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-        >
-          Export
-        </Link>
-      </div>
+  const breadcrumbs = [
+    { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+    { label: "Customers DB" },
+  ];
 
-      <div className="flex flex-col gap-4 p-12">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+  const buttons = [
+    { label: "Nueva cuenta", href: "/logged/pages/account-management/customers_db/create" },
+    { label: "Import", href: "/logged/pages/account-management/customers_db/mass-ops/import" },
+    { label: "Export", href: "/logged/pages/account-management/customers_db/mass-ops/export" },
+  ];
+
+  return (
+    <PageContentLayout pageTitle="Customers DB" breadcrumbs={breadcrumbs} buttons={buttons}>
+      <PageContentSection>
+        <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <label className="block text-xs text-gray-600 mb-1">ID</label>
@@ -107,9 +97,10 @@ const CustomersDbPage: FC = () => {
               />
             </div>
           </div>
-        </div>
+      </PageContentSection>
 
-      <div className="overflow-x-auto">
+      <PageContentSection>
+        <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
           <thead className="bg-gray-50">
             <tr>
@@ -142,9 +133,9 @@ const CustomersDbPage: FC = () => {
             ))}
           </tbody>
         </table>
-      </div>
-      </div>
-    </div>
+        </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

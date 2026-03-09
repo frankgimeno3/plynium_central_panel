@@ -1,6 +1,9 @@
 "use client";
 
 import React, { FC, useMemo, useState } from "react";
+import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import issuedInvoicesData from "@/app/contents/issued_invoices.json";
 import type { AdministrationContract, IssuedInvoice, Order } from "@/app/contents/interfaces";
 
@@ -64,15 +67,15 @@ const IssuedInvoicesPage: FC = () => {
     return list;
   }, [all, filter]);
 
-  return (
-    <div className="flex flex-col w-full bg-white">
-      <div className="flex items-center justify-center gap-3 flex-wrap bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Issued invoices</p>
-      </div>
+  const breadcrumbs = [
+    { label: "Administration", href: "/logged/pages/administration" },
+    { label: "Issued invoices" },
+  ];
 
-      <div className="flex flex-col w-full gap-4 p-12">
-        <div className="bg-white border border-gray-200 rounded-lg p-4">
-          <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+  return (
+    <PageContentLayout pageTitle="Issued invoices" breadcrumbs={breadcrumbs}>
+      <PageContentSection>
+        <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs text-gray-600 mb-1">Contract</label>
@@ -111,8 +114,9 @@ const IssuedInvoicesPage: FC = () => {
               />
             </div>
           </div>
-        </div>
+      </PageContentSection>
 
+      <PageContentSection>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -130,7 +134,14 @@ const IssuedInvoicesPage: FC = () => {
                 <tr key={r.invoice_id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{r.contract_code}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.client_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{r.invoice_id}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    <Link
+                      href={`/logged/pages/administration/issued-invoices/${encodeURIComponent(r.invoice_id)}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {r.invoice_id}
+                    </Link>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.issue_date}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{r.amount_eur.toLocaleString()}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
@@ -148,8 +159,8 @@ const IssuedInvoicesPage: FC = () => {
         {filtered.length === 0 && (
           <p className="text-sm text-gray-500 text-center py-8">No issued invoices match the filters.</p>
         )}
-      </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

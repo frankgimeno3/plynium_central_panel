@@ -1,6 +1,8 @@
 "use client";
 
 import React, { FC, useState, useMemo } from "react";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import issuedInvoicesData from "@/app/contents/issued_invoices.json";
 import providerInvoicesData from "@/app/contents/provider_invoices.json";
 import type { AdministrationContract, ProviderInvoice } from "@/app/contents/interfaces";
@@ -64,13 +66,14 @@ const BanksPage: FC = () => {
 
   const displayList = activeTab === "revenues" ? revenues : activeTab === "payments" ? payments : combined;
 
-  return (
-    <div className="flex flex-col w-full bg-white">
-      <div className="flex items-center justify-center gap-3 flex-wrap bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Banks — Cash flow forecast</p>
-      </div>
+  const breadcrumbs = [
+    { label: "Administration", href: "/logged/pages/administration" },
+    { label: "Banks — Cash flow forecast" },
+  ];
 
-      <div className="flex flex-col w-full gap-4 p-12">
+  return (
+    <PageContentLayout pageTitle="Banks — Cash flow forecast" breadcrumbs={breadcrumbs}>
+      <PageContentSection>
         <p className="text-gray-600 mb-2">
           Previsión de cobros (issued invoices, orders pending) y pagos (provider invoices). Based on current issued and provider invoice data.
         </p>
@@ -101,7 +104,7 @@ const BanksPage: FC = () => {
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto mt-4">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
               <tr>
@@ -137,8 +140,8 @@ const BanksPage: FC = () => {
         {displayList.length === 0 && (
           <p className="text-sm text-gray-500 text-center py-8">No forecast items in this view.</p>
         )}
-      </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

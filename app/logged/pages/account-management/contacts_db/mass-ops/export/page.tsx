@@ -2,6 +2,8 @@
 
 import React, { FC, useState, useMemo } from "react";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import contactsData from "@/app/contents/contactsContents.json";
 
 type Contact = {
@@ -98,19 +100,20 @@ const ExportContactsPage: FC = () => {
 
   const backUrl = "/logged/pages/account-management/contacts_db";
 
-  return (
-    <div className="flex flex-col w-full min-w-0 bg-white">
-      <div className="w-full flex items-center justify-between gap-4 bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Exportar contactos</p>
-        <Link
-          href={backUrl}
-          className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors"
-        >
-          ← Volver a Contactos
-        </Link>
-      </div>
+  const breadcrumbs = [
+    { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+    { label: "Contacts DB", href: backUrl },
+    { label: "Export" },
+  ];
 
-      <div className="p-12 w-full max-w-2xl">
+  return (
+    <PageContentLayout
+      pageTitle="Exportar contactos"
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "Volver a Contactos", href: backUrl }]}
+    >
+      <PageContentSection>
+      <div className="max-w-2xl">
         {phase === "config" && (
           <div className="space-y-6">
             <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -224,7 +227,8 @@ const ExportContactsPage: FC = () => {
           </div>
         )}
       </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

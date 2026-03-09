@@ -3,6 +3,8 @@
 import React, { FC, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import * as XLSX from "xlsx";
 
 const CONTACTS_IMPORT_COLUMNS = [
@@ -136,16 +138,20 @@ const ImportContactsPage: FC = () => {
 
   const backUrl = "/logged/pages/account-management/contacts_db";
 
-  return (
-    <div className="flex flex-col w-full min-w-0 bg-white">
-      <div className="w-full flex items-center justify-between gap-4 bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Importar contactos</p>
-        <Link href={backUrl} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors">
-          ← Volver a Contactos
-        </Link>
-      </div>
+  const breadcrumbs = [
+    { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+    { label: "Contacts DB", href: backUrl },
+    { label: "Import" },
+  ];
 
-      <div className="p-12 w-full max-w-2xl">
+  return (
+    <PageContentLayout
+      pageTitle="Importar contactos"
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "Volver a Contactos", href: backUrl }]}
+    >
+      <PageContentSection>
+      <div className="max-w-2xl">
         {phase === "upload" && (
           <>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
@@ -216,7 +222,8 @@ const ImportContactsPage: FC = () => {
           </div>
         )}
       </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

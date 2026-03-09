@@ -3,6 +3,8 @@
 import React, { FC, use } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import plannedPublicationsData from "@/app/contents/planned_publications.json";
 
 type PublicationSlot = {
@@ -43,12 +45,18 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
 
   if (!publication) {
     return (
-      <div className="flex flex-col w-full p-12">
-        <p className="text-gray-500">Publication not found.</p>
-        <Link href="/logged/pages/production/publications_management" className="text-blue-600 hover:underline mt-4">
-          ← Back to Planned Publications
-        </Link>
-      </div>
+      <PageContentLayout
+        pageTitle="Publication not found"
+        breadcrumbs={[
+          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Planned Publications", href: "/logged/pages/production/publications_management" },
+        ]}
+        buttons={[{ label: "Back to Planned Publications", href: "/logged/pages/production/publications_management" }]}
+      >
+        <PageContentSection>
+          <p className="text-gray-500">Publication not found.</p>
+        </PageContentSection>
+      </PageContentLayout>
     );
   }
 
@@ -96,20 +104,19 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
     );
   };
 
-  return (
-    <div className="flex flex-col w-full min-w-0 bg-white min-h-screen">
-      <div className="w-full text-center bg-blue-950/70 p-5 text-white flex items-center justify-center gap-4">
-        <button
-          type="button"
-          onClick={() => router.push("/logged/pages/production/publications_management")}
-          className="text-white/90 hover:text-white text-sm"
-        >
-          ← Back
-        </button>
-        <p className="text-2xl">{publication.edition_name}</p>
-      </div>
+  const breadcrumbs = [
+    { label: "Production", href: "/logged/pages/production/projects" },
+    { label: "Planned Publications", href: "/logged/pages/production/publications_management" },
+    { label: publication.edition_name },
+  ];
 
-      <div className="w-full p-8 md:p-12 space-y-8">
+  return (
+    <PageContentLayout
+      pageTitle={publication.edition_name}
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "Back to Planned Publications", href: "/logged/pages/production/publications_management" }]}
+    >
+      <PageContentSection>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
             <p className="text-xs text-gray-500 uppercase">ID</p>
@@ -128,18 +135,18 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
             <p className="font-medium">{publication.publication_date}</p>
           </div>
         </div>
+      </PageContentSection>
 
-        <div className="border-t pt-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Publication layout</h3>
-          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-            {slots.map((key) => {
-              const slot = publication[key] as PublicationSlot;
-              return slot ? renderSlot(key as string, slot) : null;
-            })}
-          </div>
+      <PageContentSection>
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Publication layout</h3>
+        <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          {slots.map((key) => {
+            const slot = publication[key] as PublicationSlot;
+            return slot ? renderSlot(key as string, slot) : null;
+          })}
         </div>
-      </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 

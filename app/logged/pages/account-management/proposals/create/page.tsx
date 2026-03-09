@@ -3,6 +3,8 @@
 import React, { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import customersData from "@/app/contents/customers.json";
 import contactsData from "@/app/contents/contactsContents.json";
 import servicesData from "@/app/contents/servicesContents.json";
@@ -86,15 +88,19 @@ const CreateProposalPage: FC = () => {
 
   const backUrl = "/logged/pages/account-management/proposals";
 
-  return (
-    <div className="flex flex-col w-full min-w-0 bg-white">
-      <div className="w-full flex items-center justify-between gap-4 bg-blue-950/70 p-5 text-white">
-        <p className="text-2xl">Nueva propuesta</p>
-        <Link href={backUrl} className="px-4 py-2 bg-white/20 hover:bg-white/30 rounded-lg text-sm font-medium transition-colors">
-          ← Volver
-        </Link>
-      </div>
+  const breadcrumbs = [
+    { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+    { label: "Proposals", href: backUrl },
+    { label: "Nueva propuesta" },
+  ];
 
+  return (
+    <PageContentLayout
+      pageTitle="Nueva propuesta"
+      breadcrumbs={breadcrumbs}
+      buttons={[{ label: "Volver", href: backUrl }]}
+    >
+      <PageContentSection className="p-0">
       <div className="p-6 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-4">
           {([1, 2, 3, 4] as Step[]).map((s) => (
@@ -346,11 +352,11 @@ const CreateProposalPage: FC = () => {
               <dl className="space-y-2 text-sm">
                 <div>
                   <dt className="text-gray-500">Cuenta</dt>
-                  <dd className="font-medium">{selectedCustomer?.name ?? form.id_customer || "—"}</dd>
+                  <dd className="font-medium">{(selectedCustomer?.name ?? form.id_customer) || "—"}</dd>
                 </div>
                 <div>
                   <dt className="text-gray-500">Contacto</dt>
-                  <dd className="font-medium">{selectedContact?.name ?? form.id_contact || "—"} {selectedContact?.email ? `(${selectedContact.email})` : ""}</dd>
+                  <dd className="font-medium">{(selectedContact?.name ?? form.id_contact) || "—"} {selectedContact?.email ? `(${selectedContact.email})` : ""}</dd>
                 </div>
                 <div>
                   <dt className="text-gray-500">Título</dt>
@@ -401,7 +407,8 @@ const CreateProposalPage: FC = () => {
           </div>
         )}
       </div>
-    </div>
+      </PageContentSection>
+    </PageContentLayout>
   );
 };
 
