@@ -105,7 +105,7 @@ const Banners: FC = () => {
     const selectedPortal = portals.find((p) => p.id === selectedPortalId);
 
     const breadcrumbs = [
-        { label: "Contents", href: "/logged/pages/network/contents/articles" },
+        { label: "Contents" },
         { label: "Banners" },
     ];
 
@@ -121,10 +121,10 @@ const Banners: FC = () => {
                 {selectedPortalId == null ? (
                     <>
                         <div className="flex items-center justify-between">
-                            <p className="text-lg text-gray-700">Selecciona un portal para gestionar sus banners</p>
+                            <p className="text-lg text-gray-700">Select a portal to manage its banners</p>
                         </div>
                         {portalsLoading ? (
-                            <p className="text-gray-500">Cargando portales...</p>
+                            <p className="text-gray-500">Loading portals...</p>
                         ) : (
                             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {portals.map((portal) => (
@@ -144,24 +144,12 @@ const Banners: FC = () => {
                             </div>
                         )}
                         {!portalsLoading && portals.length === 0 && (
-                            <p className="text-gray-500">No hay portales configurados.</p>
+                            <p className="text-gray-500">No portals configured.</p>
                         )}
                     </>
                 ) : (
                     <>
-                        <div className="flex items-center gap-4">
-                            <button
-                                type="button"
-                                onClick={() => setSelectedPortalId(null)}
-                                className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                            >
-                                ← Volver a portales
-                            </button>
-                            <span className="text-gray-600">
-                                Portal: <strong>{selectedPortal?.name ?? selectedPortal?.key ?? selectedPortalId}</strong>
-                            </span>
-                        </div>
-                        {/* Tabs */}
+                        {/* Tabs - above Back to portals */}
                         <div className="flex flex-row border-b border-gray-200 gap-1">
                             {(Object.keys(TAB_LABELS) as BannerTab[]).map((tab) => (
                                 <button
@@ -179,6 +167,18 @@ const Banners: FC = () => {
                             ))}
                         </div>
 
+                        <div className="flex items-center gap-4">
+                            <button
+                                type="button"
+                                onClick={() => setSelectedPortalId(null)}
+                                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+                            >
+                                ← Back to portals
+                            </button>
+                            <span className="text-gray-600">
+                                Portal: <strong>{selectedPortal?.name ?? selectedPortal?.key ?? selectedPortalId}</strong>
+                            </span>
+                        </div>
                         {/* Tab content */}
                         {activeTab === 'top' && (
                             <TopBannersTab

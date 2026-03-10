@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { EventsService } from '@/app/service/EventsService';
+import { PortalService } from '@/app/service/PortalService';
 import EventFilter, { EventFilterParams } from './event_components/EventFilter';
 
 interface Event {
@@ -35,6 +36,8 @@ const IndustryEvents: FC = () => {
     dateTo: '',
     portalNames: [],
   });
+
+  const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -69,6 +72,21 @@ const IndustryEvents: FC = () => {
     };
   }, [filterParams]);
 
+  useEffect(() => {
+    PortalService.getAllPortals()
+      .then((list: any[]) => {
+        setPortals(
+          Array.isArray(list)
+            ? list.map((p) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
+            : []
+        );
+      })
+      .catch(() => setPortals([]));
+  }, []);
+
+  const setPortalFilter = (portalNames: string[]) => {
+    setFilterParams((prev) => ({ ...prev, portalNames }));
+  };
 
   const goToCurrentMonth = () => {
     const now = new Date();
@@ -164,10 +182,6 @@ const IndustryEvents: FC = () => {
   };
 
   const renderCalendar = () => {
-    const month1 = new Date(currentMonth);
-    const month2 = new Date(currentMonth);
-    month2.setMonth(month2.getMonth() + 1);
-
     const renderMonth = (month: Date) => {
       const year = month.getFullYear();
       const monthIndex = month.getMonth();
@@ -220,41 +234,40 @@ const IndustryEvents: FC = () => {
                 const dayEvents = getEventsForDate(date);
                 const hasEvents = dayEvents.length > 0;
                 const isSelected = isDateInSelectedEvent(date);
-                const eventNames = hasEvents ? dayEvents.map((e) => e.event_name) : [];
 
                 return (
                   <div
                     key={dayIndex}
                     onClick={() => handleDayClick(date)}
-                    className={`aspect-square border rounded p-1 text-xs flex flex-col relative cursor-pointer transition-all hover:shadow-md ${
+                    className={`aspect-square border rounded-lg p-1.5 text-xs flex flex-col gap-1 min-h-0 cursor-pointer transition-all hover:shadow-md ${
                       isSelected
                         ? 'bg-blue-900 border-blue-900 text-white'
                         : hasEvents
-                          ? 'bg-blue-50 border-blue-300'
+                          ? 'bg-blue-50/80 border-blue-200'
                           : 'border-gray-200'
                     }`}
                   >
-                    <div className="font-medium">{day}</div>
+                    <div className="font-semibold text-sm shrink-0">{day}</div>
                     {hasEvents && (
-                      <div className="flex-1 flex flex-col justify-start mt-1 overflow-hidden">
-                        {eventNames.slice(0, 2).map((name, idx) => (
+                      <div className="flex-1 min-h-0 overflow-y-auto space-y-1">
+                        {dayEvents.slice(0, 3).map((ev) => (
                           <div
-                            key={idx}
-                            className={`text-[8px] leading-tight truncate ${
-                              isSelected ? 'text-blue-200' : 'text-blue-600'
+                            key={ev.id_fair}
+                            className={`rounded-md px-1.5 py-1 text-sm font-medium leading-tight line-clamp-2 ${
+                              isSelected ? 'bg-blue-800/80 text-white' : 'bg-white border border-blue-200 text-blue-900 shadow-sm'
                             }`}
-                            title={name}
+                            title={ev.event_name}
                           >
-                            {name}
+                            {ev.event_name}
                           </div>
                         ))}
-                        {eventNames.length > 2 && (
+                        {dayEvents.length > 3 && (
                           <div
-                            className={`text-[8px] ${
+                            className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium ${
                               isSelected ? 'text-blue-200' : 'text-blue-600'
                             }`}
                           >
-                            +{eventNames.length - 2} more
+                            +{dayEvents.length - 3} more
                           </div>
                         )}
                       </div>
@@ -268,44 +281,54 @@ const IndustryEvents: FC = () => {
       );
     };
 
+    const month1 = new Date(currentMonth);
+    const month2 = new Date(currentMonth);
+    month2.setMonth(month2.getMonth() + 1);
+
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December'
+    ];
+    const name1 = monthNames[month1.getMonth()];
+    const name2 = monthNames[month2.getMonth()];
+    const year1 = month1.getFullYear();
+    const year2 = month2.getFullYear();
+    const yearStr = year1 === year2 ? String(year1) : `${year1} & ${year2}`;
+    const calendarTitle = `Events for months ${name1} and ${name2}, ${yearStr}`;
+
     return (
-      <div className="flex gap-4">
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-2">
-            <button
-              onClick={() => navigateMonth('prev')}
-              className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
-            >
-              ←
-            </button>
-            <button
-              onClick={goToCurrentMonth}
-              className="px-3 py-1 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded text-sm"
-            >
-              Current month
-            </button>
-            <span className="text-sm text-gray-600">Move Left</span>
-          </div>
-          {renderMonth(month1)}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between mb-2">
+          <button
+            onClick={() => navigateMonth('prev')}
+            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+          >
+            ←
+          </button>
+          <span className="text-2xl font-bold text-gray-900">
+            {calendarTitle}
+          </span>
+          <button
+            onClick={() => navigateMonth('next')}
+            className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
+          >
+            →
+          </button>
         </div>
-        <div className="flex-1">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm text-gray-600">Move Right</span>
-            <button
-              onClick={() => navigateMonth('next')}
-              className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm"
-            >
-              →
-            </button>
+        <div className="flex gap-4">
+          <div className="flex-1">
+            {renderMonth(month1)}
           </div>
-          {renderMonth(month2)}
+          <div className="flex-1">
+            {renderMonth(month2)}
+          </div>
         </div>
       </div>
     );
   };
 
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
+    { label: "Contents" },
     { label: "Events" },
   ];
 
@@ -345,6 +368,36 @@ const IndustryEvents: FC = () => {
 
           <div className="lg:w-1/3">
             <h2 className="text-2xl font-bold text-gray-900 mb-4">Upcoming Events</h2>
+            <div className="flex flex-wrap gap-2 mb-4">
+              <button
+                type="button"
+                onClick={() => setPortalFilter([])}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  filterParams.portalNames.length === 0
+                    ? 'bg-blue-950 text-white'
+                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                }`}
+              >
+                All Portals
+              </button>
+              {portals.map((p) => {
+                const isSelected = filterParams.portalNames.length === 1 && filterParams.portalNames[0] === p.name;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setPortalFilter([p.name])}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      isSelected
+                        ? 'bg-blue-950 text-white'
+                        : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                    }`}
+                  >
+                    {p.name}
+                  </button>
+                );
+              })}
+            </div>
             <div className="space-y-4">
               {events.length === 0 ? (
                 <p className="text-gray-500">No events available</p>

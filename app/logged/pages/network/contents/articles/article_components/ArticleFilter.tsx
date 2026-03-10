@@ -1,188 +1,139 @@
 "use client";
 
-import React, { FC, useState, useEffect } from "react";
+import React, { FC, useState } from "react";
 import Link from "next/link";
-import { PortalService } from "@/app/service/PortalService";
 
-interface ArticleFilterProps {
-  selectedPortalNames?: string[];
+type FilterType = "date" | "title" | "company";
+
+const FILTER_LABELS: Record<FilterType, string> = {
+  date: "By date",
+  title: "By title",
+  company: "By company",
+};
+
+/** Validates dd/mm/yy format and returns true if valid */
+function isValidDdMmYy(value: string): boolean {
+  const match = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (!match) return false;
+  const [, d, m, y] = match;
+  const day = parseInt(d!, 10);
+  const month = parseInt(m!, 10);
+  const year = 2000 + parseInt(y!, 10);
+  if (month < 1 || month > 12) return false;
+  const lastDay = new Date(year, month, 0).getDate();
+  return day >= 1 && day <= lastDay;
 }
 
-type FilterType = "date" | "title" | "company" | "portal";
-
-const ArticleFilter: FC<ArticleFilterProps> = ({ selectedPortalNames = [] }) => {
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
+const ArticleFilter: FC = () => {
   const [selectedFilter, setSelectedFilter] = useState<FilterType>("date");
   const [filterValue, setFilterValue] = useState("");
-  const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
-  const [portalChecklist, setPortalChecklist] = useState<string[]>([]);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
 
-  useEffect(() => {
-    PortalService.getAllPortals().then((list: any[]) => {
-      setPortals(Array.isArray(list) ? list.map((p) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) })) : []);
-    }).catch(() => setPortals([]));
-  }, []);
-
-  useEffect(() => {
-    setPortalChecklist(selectedPortalNames);
-  }, [selectedPortalNames.join(",")]);
-
-  const toggleFilter = () => {
-    setIsFilterOpen((prev) => !prev);
-  };
-
-  const handleSelectFilter = (filter: FilterType) => {
-    setSelectedFilter(filter);
-    setFilterValue("");
-    if (filter === "portal") setPortalChecklist(selectedPortalNames);
-  };
-
-  const togglePortal = (name: string) => {
-    setPortalChecklist((prev) =>
-      prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]
-    );
-  };
+  const isDateRangeValid =
+    dateFrom.trim() !== "" &&
+    dateTo.trim() !== "" &&
+    isValidDdMmYy(dateFrom) &&
+    isValidDdMmYy(dateTo);
 
   const isFilterButtonEnabled =
-    selectedFilter === "portal"
-      ? portalChecklist.length > 0
+    selectedFilter === "date"
+      ? isDateRangeValid
       : filterValue.trim() !== "";
 
-  const getFilterHref = () => {
-    if (selectedFilter === "portal") {
-      if (portalChecklist.length === 0) return "#";
-      return `/logged/pages/account-management/contents/articles?portalNames=${encodeURIComponent(portalChecklist.join(","))}`;
+  const getFilterHref = (): string => {
+    if (selectedFilter === "date") {
+      if (!isFilterButtonEnabled) return "#";
+      return `/logged/pages/network/contents/articles/search/${encodeURIComponent(`dateRange__${dateFrom.trim()}__${dateTo.trim()}`)}`;
     }
     if (!isFilterButtonEnabled) return "#";
-    const searchParam = `${selectedFilter}__${filterValue.trim()}`;
-    return `/logged/pages/account-management/contents/articles/search/${encodeURIComponent(searchParam)}`;
+    return `/logged/pages/network/contents/articles/search/${encodeURIComponent(`${selectedFilter}__${filterValue.trim()}`)}`;
   };
 
   return (
-    <div className="px-36 mx-7">
-      <div
-        className="flex flex-col border border-gray-100 shadow-xl text-center py-2 text-xs cursor-pointer hover:bg-gray-100/80"
-        onClick={toggleFilter}
-      >
-        <p>{isFilterOpen ? "Click to close filter" : "Click to open filter"}</p>
-      </div>
-      {isFilterOpen && (
-        <div className="min-h-56 bg-white mb-12 shadow-xl border border-gray-100">
-          <div className="flex flex-row p-5 w-full justify-between px-24 flex-wrap gap-2">
+    <div className="mb-4">
+      <div className="p-4 bg-gray-50 border border-gray-200 rounded-lg shadow-sm">
+        <p className="text-sm font-medium text-gray-700 mb-3">Filter</p>
+        <div className="flex flex-wrap gap-2 mb-4">
+          {(["date", "title", "company"] as FilterType[]).map((filter) => (
             <button
-              onClick={() => handleSelectFilter("date")}
-              className={`px-4 py-2 text-xs rounded-lg shadow-sm ${
-                selectedFilter === "date"
-                  ? "bg-blue-950 text-white"
-                  : "bg-gray-100 hover:bg-gray-100/50 text-gray-700 cursor-pointer"
+              key={filter}
+              type="button"
+              onClick={() => {
+                setSelectedFilter(filter);
+                setFilterValue("");
+                setDateFrom("");
+                setDateTo("");
+              }}
+              className={`px-3 py-1.5 text-xs rounded-md border transition-colors ${
+                selectedFilter === filter
+                  ? "bg-blue-950 text-white border-blue-950"
+                  : "bg-white text-gray-600 border-gray-300 hover:bg-gray-100"
               }`}
             >
-              Filter by date
+              {FILTER_LABELS[filter]}
             </button>
-            <button
-              onClick={() => handleSelectFilter("title")}
-              className={`px-4 py-2 text-xs rounded-lg shadow-sm ${
-                selectedFilter === "title"
-                  ? "bg-blue-950 text-white"
-                  : "bg-gray-100 hover:bg-gray-100/50 text-gray-700 cursor-pointer"
-              }`}
-            >
-              Filter by title
-            </button>
-            <button
-              onClick={() => handleSelectFilter("company")}
-              className={`px-4 py-2 text-xs rounded-lg shadow-sm ${
-                selectedFilter === "company"
-                  ? "bg-blue-950 text-white"
-                  : "bg-gray-100 hover:bg-gray-100/50 text-gray-700 cursor-pointer"
-              }`}
-            >
-              Filter by company
-            </button>
-            <button
-              onClick={() => handleSelectFilter("portal")}
-              className={`px-4 py-2 text-xs rounded-lg shadow-sm ${
-                selectedFilter === "portal"
-                  ? "bg-blue-950 text-white"
-                  : "bg-gray-100 hover:bg-gray-100/50 text-gray-700 cursor-pointer"
-              }`}
-            >
-              Filter by portal
-            </button>
-          </div>
-
-          <div className="px-24 pb-5">
-            <div className="flex flex-row items-center gap-4 bg-white border border-gray-100 shadow-xl rounded-lg px-4 py-3 flex-wrap">
-              {selectedFilter === "date" && (
-                <input
-                  type="date"
-                  value={filterValue}
-                  onChange={(e) => setFilterValue(e.target.value)}
-                  className="bg-white border-none outline-none text-sm w-full placeholder:text-gray-200"
-                  placeholder="Select a date to filter"
-                />
-              )}
-              {selectedFilter === "title" && (
-                <input
-                  type="text"
-                  value={filterValue}
-                  onChange={(e) => setFilterValue(e.target.value)}
-                  className="bg-white border-none outline-none text-sm w-full placeholder:text-gray-200"
-                  placeholder="Type a title to filter"
-                />
-              )}
-              {selectedFilter === "company" && (
-                <input
-                  type="text"
-                  value={filterValue}
-                  onChange={(e) => setFilterValue(e.target.value)}
-                  className="bg-white border-none outline-none text-sm w-full placeholder:text-gray-200"
-                  placeholder="Type a company to filter"
-                />
-              )}
-              {selectedFilter === "portal" && (
-                <div className="flex flex-col gap-2 w-full">
-                  <p className="text-xs text-gray-600">Select one or more portals (by name):</p>
-                  <div className="flex flex-wrap gap-3">
-                    {portals.map((p) => (
-                      <label
-                        key={p.id}
-                        className="flex items-center gap-2 cursor-pointer text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={portalChecklist.includes(p.name)}
-                          onChange={() => togglePortal(p.name)}
-                          className="rounded border-gray-300"
-                        />
-                        <span>{p.name}</span>
-                      </label>
-                    ))}
-                    {portals.length === 0 && (
-                      <span className="text-gray-400 text-xs">Loading portals...</span>
-                    )}
-                  </div>
-                </div>
-              )}
-              {isFilterButtonEnabled ? (
-                <Link
-                  href={getFilterHref()}
-                  className="px-3 py-1 text-xs cursor-pointer rounded-lg shadow-xl bg-blue-950 text-white inline-block"
-                >
-                  Filter
-                </Link>
-              ) : (
-                <button
-                  disabled
-                  className="px-3 py-1 text-xs rounded-lg bg-gray-200 text-gray-400 cursor-not-allowed"
-                >
-                  Filter
-                </button>
-              )}
-            </div>
-          </div>
+          ))}
         </div>
-      )}
+
+        <div className="flex flex-row items-center gap-4 flex-wrap">
+          {selectedFilter === "date" && (
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                placeholder="dd/mm/yy"
+                maxLength={8}
+                className="w-24 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-950/20 focus:border-blue-950/40 placeholder:text-gray-400"
+              />
+              <span className="text-gray-500 text-sm">to</span>
+              <input
+                type="text"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                placeholder="dd/mm/yy"
+                maxLength={8}
+                className="w-24 px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-950/20 focus:border-blue-950/40 placeholder:text-gray-400"
+              />
+            </div>
+          )}
+          {selectedFilter === "title" && (
+            <input
+              type="text"
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              className="flex-1 min-w-[180px] px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-950/20 focus:border-blue-950/40 placeholder:text-gray-400"
+              placeholder="Type a title to filter"
+            />
+          )}
+          {selectedFilter === "company" && (
+            <input
+              type="text"
+              value={filterValue}
+              onChange={(e) => setFilterValue(e.target.value)}
+              className="flex-1 min-w-[180px] px-3 py-2 text-sm border border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-950/20 focus:border-blue-950/40 placeholder:text-gray-400"
+              placeholder="Type a company to filter"
+            />
+          )}
+          {isFilterButtonEnabled ? (
+            <Link
+              href={getFilterHref()}
+              className="px-3 py-2 text-xs font-medium rounded-lg bg-blue-950 text-white hover:bg-blue-950/90 transition-colors inline-flex items-center"
+            >
+              Apply filter
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              className="px-3 py-2 text-xs rounded-lg bg-gray-200 text-gray-400 cursor-not-allowed"
+            >
+              Apply filter
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 };

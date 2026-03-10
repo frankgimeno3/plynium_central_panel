@@ -116,7 +116,7 @@ const PublicationSearchResultsContent: FC = () => {
   }, [searchParams]);
 
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
+    { label: "Contents" },
     { label: "Publications", href: "/logged/pages/network/contents/publications" },
     { label: "Search results" },
   ];
@@ -124,14 +124,14 @@ const PublicationSearchResultsContent: FC = () => {
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     setPageMeta({
-      pageTitle: loading ? "Cargando..." : buildPublicationSearchHeading(filters),
+      pageTitle: loading ? "Loading..." : buildPublicationSearchHeading(filters),
       breadcrumbs,
     });
   }, [loading, filters, setPageMeta]);
 
   if (loading) {
     return (
-      <PageContentSection><p className="text-gray-500">Cargando...</p></PageContentSection>
+      <PageContentSection><p className="text-gray-500">Loading...</p></PageContentSection>
     );
   }
 
@@ -165,14 +165,14 @@ interface PageProps {
 const PublicationSearchFallback: FC = () => {
   const { setPageMeta } = usePageContent();
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/publications" },
+    { label: "Contents" },
     { label: "Publications", href: "/logged/pages/network/contents/publications" },
     { label: "Search results" },
   ];
   useEffect(() => {
-    setPageMeta({ pageTitle: "Cargando...", breadcrumbs });
+    setPageMeta({ pageTitle: "Loading...", breadcrumbs });
   }, [setPageMeta]);
-  return <PageContentSection><p className="text-gray-500">Cargando...</p></PageContentSection>;
+  return <PageContentSection><p className="text-gray-500">Loading...</p></PageContentSection>;
 };
 
 const PublicationSearchResults: FC<PageProps> = ({ }) => {

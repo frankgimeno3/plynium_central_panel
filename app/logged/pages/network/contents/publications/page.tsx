@@ -37,7 +37,7 @@ const Publications: FC<PublicationsProps> = ({}) => {
   }, []);
 
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
+    { label: "Contents" },
     { label: "Publications" },
   ];
 
@@ -61,7 +61,7 @@ const Publications: FC<PublicationsProps> = ({}) => {
       <div className="flex flex-wrap py-5 gap-12 justify-center">
         {loading ? (
           <div className="text-center py-10">
-            <p className="text-gray-500">Cargando publicaciones...</p>
+            <p className="text-gray-500">Loading publications...</p>
           </div>
         ) : allPublications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 w-full">

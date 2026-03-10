@@ -28,7 +28,7 @@ export default function PageContentLayout({ children }: PageContentLayoutProps) 
                   key={index}
                   type="button"
                   onClick={btn.onClick}
-                  className="bg-blue-950 text-white text-xs px-4 py-2 rounded-xl shadow hover:bg-blue-950/80 inline-block transition-colors"
+                  className="bg-blue-950 text-white text-base font-medium px-4 py-2 rounded-xl shadow hover:bg-blue-950/80 inline-block transition-colors"
                 >
                   {btn.label}
                 </button>
@@ -36,7 +36,7 @@ export default function PageContentLayout({ children }: PageContentLayoutProps) 
                 <Link
                   key={index}
                   href={btn.href}
-                  className="bg-blue-950 text-white text-xs px-4 py-2 rounded-xl shadow hover:bg-blue-950/80 inline-block transition-colors"
+                  className="bg-blue-950 text-white text-base font-medium px-4 py-2 rounded-xl shadow hover:bg-blue-950/80 inline-block transition-colors"
                 >
                   {btn.label}
                 </Link>

@@ -76,20 +76,18 @@ export default function IdArticlePage() {
       setPageMeta({
         pageTitle: articleData.articleTitle ?? "Article",
         breadcrumbs: [
-          { label: "Contents", href: "/logged/pages/network/contents/articles" },
+          { label: "Contents" },
           { label: "Articles", href: "/logged/pages/network/contents/articles" },
           { label: articleData.articleTitle ?? "Article" },
         ],
-        buttons: [{ label: "Back to articles", href: "/logged/pages/network/contents/articles" }],
       });
     } else {
       setPageMeta({
         pageTitle: "Article",
         breadcrumbs: [
-          { label: "Contents", href: "/logged/pages/network/contents/articles" },
+          { label: "Contents" },
           { label: "Articles", href: "/logged/pages/network/contents/articles" },
         ],
-        buttons: [{ label: "Back to articles", href: "/logged/pages/network/contents/articles" }],
       });
     }
   }, [setPageMeta, articleData]);
@@ -114,7 +112,7 @@ export default function IdArticlePage() {
           onClick={() => router.push("/logged/pages/network/contents/articles")}
           className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl"
         >
-          Back to articles
+          Go to articles
         </button>
       </main>
     );
@@ -128,14 +126,14 @@ export default function IdArticlePage() {
           onClick={() => router.push("/logged/pages/network/contents/articles")}
           className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl"
         >
-          Back to articles
+          Go to articles
         </button>
       </main>
     );
   }
 
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
+    { label: "Contents" },
     { label: "Articles", href: "/logged/pages/network/contents/articles" },
     { label: articleData.articleTitle ?? "Article" },
   ];

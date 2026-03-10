@@ -272,7 +272,7 @@ export default function IdPubblicationPage() {
   if (loading) {
     return (
       <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600 w-full">
-        <p className="text-lg">Cargando publicación...</p>
+        <p className="text-lg">Loading publication...</p>
       </main>
     );
   }
@@ -295,7 +295,7 @@ export default function IdPubblicationPage() {
 
   const pageTitle = publicationData ? `${publicationData.revista} - ${publicationData.número}` : "Publication";
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
+    { label: "Contents" },
     { label: "Publications", href: "/logged/pages/network/contents/publications" },
     { label: pageTitle },
   ];
@@ -305,7 +305,7 @@ export default function IdPubblicationPage() {
     setPageMeta({
       pageTitle,
       breadcrumbs,
-      buttons: [{ label: "Volver a publicaciones", href: "/logged/pages/network/contents/publications" }],
+      buttons: [{ label: "Back to publications", href: "/logged/pages/network/contents/publications" }],
     });
   }, [setPageMeta, pageTitle, breadcrumbs]);
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { FC, Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
 import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
@@ -96,7 +97,7 @@ const ArticlesContent: FC<ArticlesContentProps> = ({}) => {
   const filteredArticles = allArticles;
 
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
+    { label: "Contents" },
     { label: "Articles" },
   ];
 
@@ -111,9 +112,6 @@ const ArticlesContent: FC<ArticlesContentProps> = ({}) => {
 
   return (
     <>
-      <PageContentSection>
-        <ArticleFilter selectedPortalNames={portalNames} />
-      </PageContentSection>
       <PageContentSection>
         <h2 className="text-lg font-semibold text-gray-800 mb-4">Main Article Management</h2>
         {portals.length === 0 ? (
@@ -233,7 +231,29 @@ const ArticlesContent: FC<ArticlesContentProps> = ({}) => {
       )}
 
       <PageContentSection>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">All Articles</h2>
+        <h2 className="text-lg font-semibold text-gray-800 mb-4">Articles directory</h2>
+        <div className="flex flex-wrap gap-2 mb-4 border-b border-gray-200 pb-2">
+          <Link
+            href="/logged/pages/network/contents/articles"
+            className={`px-4 py-2 text-sm rounded-lg ${
+              portalNames.length === 0 ? "bg-blue-950 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            All Articles
+          </Link>
+          {portals.map((p) => (
+            <Link
+              key={p.id}
+              href={`/logged/pages/network/contents/articles?portalNames=${encodeURIComponent(p.name)}`}
+              className={`px-4 py-2 text-sm rounded-lg ${
+                portalNames.length === 1 && portalNames[0] === p.name ? "bg-blue-950 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+            >
+              {p.name}
+            </Link>
+          ))}
+        </div>
+        <ArticleFilter />
         <div className="flex flex-wrap py-5 gap-12 justify-center">
           {loading ? (
             <div className="text-center py-10 w-full">

@@ -201,7 +201,7 @@ const CreatePublication: FC = () => {
     (portals.length === 0 || selectedPortalIds.length >= 1);
 
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
+    { label: "Contents" },
     { label: "Publications", href: "/logged/pages/network/contents/publications" },
     { label: "Create publication" },
   ];
@@ -291,7 +291,7 @@ const CreatePublication: FC = () => {
               </p>
               <div className="flex flex-wrap gap-3">
                 {portals.length === 0 ? (
-                  <p className="text-sm text-gray-500">Cargando portales...</p>
+                  <p className="text-sm text-gray-500">Loading portals...</p>
                 ) : (
                   portals.map((p) => (
                     <label

@@ -1,11 +1,13 @@
 'use client';
 
 import React, { FC, useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { EventsService } from '@/app/service/EventsService';
 import { PortalService } from '@/app/service/PortalService';
+import { ArticleService } from '@/app/service/ArticleService';
 
 const REGIONS = [
   'EUROPE',
@@ -168,6 +170,7 @@ function ImagePlaceholderSvg() {
 const IdEvent: FC = () => {
   const params = useParams();
   const router = useRouter();
+  const { setPageMeta } = usePageContent();
   const eventId = params?.id_event as string;
 
   const [event, setEvent] = useState<Event | null>(null);
@@ -194,6 +197,19 @@ const IdEvent: FC = () => {
   const [eventPortals, setEventPortals] = useState<{ portalId: number; portalName: string; slug: string; status: string }[]>([]);
   const [allPortals, setAllPortals] = useState<{ id: number; name: string }[]>([]);
   const [portalActionLoading, setPortalActionLoading] = useState(false);
+  const [eventArticles, setEventArticles] = useState<{ id_article: string; articleTitle: string; date?: string }[]>([]);
+
+  /** Snapshot of form values when event was loaded (or after save). Used to show floating Save only when there are changes. */
+  const [initialFormSnapshot, setInitialFormSnapshot] = useState<{
+    eventName: string;
+    country: string;
+    location: string;
+    mainDescription: string;
+    region: string;
+    startDate: string;
+    endDate: string;
+    eventMainImage: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!eventId) {
@@ -227,6 +243,20 @@ const IdEvent: FC = () => {
           );
           setEventPortals(Array.isArray(eventPortalsList) ? eventPortalsList : []);
         }
+        if (!cancelled) {
+          const start = normalizeDateForInput(data.start_date);
+          const end = normalizeDateForInput(data.end_date);
+          setInitialFormSnapshot({
+            eventName: data.event_name,
+            country: data.country ?? '',
+            location: data.location ?? '',
+            mainDescription: data.main_description ?? '',
+            region: normalizeRegion(data.region ?? ''),
+            startDate: start,
+            endDate: end,
+            eventMainImage: data.event_main_image ?? '',
+          });
+        }
       } catch (err) {
         console.error('Error loading event:', err);
         if (!cancelled) setEvent(null);
@@ -252,6 +282,49 @@ const IdEvent: FC = () => {
     setEndMonth(s.month);
     setEndYear(s.year);
   }, [endDate]);
+
+  useEffect(() => {
+    if (!event) return;
+    setPageMeta({
+      pageTitle: event.event_name ?? 'Edit Event',
+      breadcrumbs: [
+        { label: 'Contents' },
+        { label: 'Events', href: '/logged/pages/network/contents/events' },
+        { label: event.event_name ?? 'Event' },
+      ],
+      buttons: [],
+    });
+  }, [event, setPageMeta]);
+
+  useEffect(() => {
+    if (!eventId || !event) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const all = await ArticleService.getAllArticles();
+        const raw = Array.isArray(all) ? all : [];
+        const list = raw
+          .filter((a: { event_id?: string; eventId?: string }) => {
+            const eid = (a.event_id ?? a.eventId ?? '').toString().trim();
+            return eid === eventId;
+          })
+          .map((a: { id_article: string; articleTitle?: string; article_title?: string; date?: string }) => ({
+            id_article: a.id_article,
+            articleTitle: (a.articleTitle ?? a.article_title ?? '') || '',
+            date: a.date,
+          }))
+          .sort((a, b) => {
+            const dA = a.date ? new Date(a.date).getTime() : 0;
+            const dB = b.date ? new Date(b.date).getTime() : 0;
+            return dB - dA;
+          });
+        if (!cancelled) setEventArticles(list);
+      } catch {
+        if (!cancelled) setEventArticles([]);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [eventId, event]);
 
   const handleStartDateChange = (day: string, month: string, year: string) => {
     setStartDay(day);
@@ -341,6 +414,16 @@ const IdEvent: FC = () => {
       setShowSaveModal(false);
       setImageLoadError(false);
       router.refresh();
+      setInitialFormSnapshot({
+        eventName: eventName,
+        country: country,
+        location: location,
+        mainDescription: mainDescription,
+        region: region,
+        startDate: startDate,
+        endDate: endDate,
+        eventMainImage: eventMainImage.trim(),
+      });
     } catch (err) {
       console.error('Error saving event:', err);
       const msg =
@@ -391,25 +474,46 @@ const IdEvent: FC = () => {
   const showImagePreview = eventMainImage.trim() && isValidUrl(eventMainImage) && !imageLoadError;
   const urlInvalid = eventMainImage.trim() !== '' && !isValidUrl(eventMainImage);
 
-  const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
-    { label: "Events", href: "/logged/pages/network/contents/events" },
-    { label: event.event_name ?? "Event" },
-  ];
-
-  const { setPageMeta } = usePageContent();
-  useEffect(() => {
-    setPageMeta({
-      pageTitle: event.event_name ?? "Edit Event",
-      breadcrumbs,
-      buttons: [{ label: "Back to Events", href: "/logged/pages/network/contents/events" }],
-    });
-  }, [setPageMeta, event.event_name, breadcrumbs]);
+  const hasChanges = initialFormSnapshot != null && (
+    eventName !== initialFormSnapshot.eventName ||
+    country !== initialFormSnapshot.country ||
+    location !== initialFormSnapshot.location ||
+    mainDescription !== initialFormSnapshot.mainDescription ||
+    region !== initialFormSnapshot.region ||
+    startDate !== initialFormSnapshot.startDate ||
+    endDate !== initialFormSnapshot.endDate ||
+    eventMainImage.trim() !== initialFormSnapshot.eventMainImage
+  );
 
   return (
     <>
       <PageContentSection>
       <div className="w-full">
+        <Link
+          href="/logged/pages/network/contents/events"
+          className="inline-block text-sm text-gray-600 hover:text-gray-900 mb-4"
+        >
+          ← Back to Events
+        </Link>
+
+        {/* Event name (editable) + Delete event - same row */}
+        <div className="flex flex-row items-center gap-4 mb-8 pb-6 border-b border-gray-200">
+          <input
+            type="text"
+            value={eventName}
+            onChange={(e) => setEventName(e.target.value)}
+            placeholder="Event name"
+            className="flex-1 min-w-0 text-2xl font-bold text-gray-900 px-4 py-3 border-2 border-gray-300 rounded-xl bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 placeholder:text-gray-400"
+          />
+          <button
+            type="button"
+            onClick={handleDeleteClick}
+            className="shrink-0 px-5 py-2.5 border-2 border-red-600 text-red-600 rounded-xl hover:bg-red-50 font-semibold"
+          >
+            Delete event
+          </button>
+        </div>
+
         {/* Main image - value from DB, updates on Save changes */}
         <div className="w-full mb-6">
           <label className="block text-sm font-semibold text-gray-500 uppercase mb-2">
@@ -453,17 +557,6 @@ const IdEvent: FC = () => {
               <p className="text-lg text-gray-700 bg-gray-200 px-3 py-2 rounded">{event.id_fair}</p>
             </div>
             <div className="md:col-span-2" />
-            <div>
-              <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
-                Event Name
-              </label>
-              <input
-                type="text"
-                value={eventName}
-                onChange={(e) => setEventName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
             <div>
               <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
                 Location
@@ -626,22 +719,46 @@ const IdEvent: FC = () => {
           />
         </div>
 
-        <div className="flex flex-wrap justify-end gap-3">
+        <div className="mb-6">
+          <h2 className="block text-xl font-bold text-gray-900 mb-3">Event articles</h2>
+          {eventArticles.length > 0 ? (
+            <ul className="list-none divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white">
+              {eventArticles.map((art) => (
+                <li key={art.id_article}>
+                  <Link
+                    href={`/logged/pages/network/contents/articles/${encodeURIComponent(art.id_article)}`}
+                    className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50 text-gray-900 no-underline"
+                  >
+                    <span className="font-medium">{art.articleTitle || art.id_article}</span>
+                    {art.date && (
+                      <span className="text-sm text-gray-500 shrink-0">
+                        {normalizeDateForInput(art.date) || art.date}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-500 text-sm py-3">No articles linked to this event.</p>
+          )}
+        </div>
+
+      </div>
+      </PageContentSection>
+
+      {/* Floating Save changes - bottom right, only when there are changes */}
+      {hasChanges && (
+        <div className="fixed bottom-6 right-6 z-40">
           <button
-            onClick={handleDeleteClick}
-            className="px-6 py-2 border border-red-600 text-red-600 rounded-xl hover:bg-red-50"
-          >
-            Delete event
-          </button>
-          <button
+            type="button"
             onClick={handleSaveClick}
-            className="px-6 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-900"
+            className="px-6 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-lg font-bold text-base"
           >
             Save changes
           </button>
         </div>
-      </div>
-      </PageContentSection>
+      )}
 
       {/* Save changes modal */}
       {showSaveModal && (

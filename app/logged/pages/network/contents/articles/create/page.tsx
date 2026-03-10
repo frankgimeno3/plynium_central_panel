@@ -309,7 +309,7 @@ export default function CreateArticlePage() {
   };
 
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
+    { label: "Contents" },
     { label: "Articles", href: "/logged/pages/network/contents/articles" },
     { label: "Create article" },
   ];
@@ -319,7 +319,6 @@ export default function CreateArticlePage() {
     setPageMeta({
       pageTitle: `Create New Article · Phase ${currentPhase} of 3`,
       breadcrumbs,
-      buttons: [{ label: "Back to articles", href: "/logged/pages/network/contents/articles" }],
     });
   }, [setPageMeta, breadcrumbs, currentPhase]);
 

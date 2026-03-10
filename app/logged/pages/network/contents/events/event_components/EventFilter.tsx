@@ -1,7 +1,6 @@
 'use client';
 
-import React, { FC, useState, useEffect } from 'react';
-import { PortalService } from '@/app/service/PortalService';
+import React, { FC, useState } from 'react';
 import DatePicker from '@/app/logged/logged_components/DatePicker';
 
 const REGIONS = [
@@ -29,37 +28,10 @@ interface EventFilterProps {
 }
 
 const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => {
-  const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [name, setName] = useState(initialParams.name ?? '');
   const [region, setRegion] = useState(initialParams.region ?? '');
   const [dateFrom, setDateFrom] = useState(initialParams.dateFrom ?? '');
   const [dateTo, setDateTo] = useState(initialParams.dateTo ?? '');
-  const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
-  const [portalChecklist, setPortalChecklist] = useState<string[]>(
-    initialParams.portalNames ?? []
-  );
-
-  useEffect(() => {
-    PortalService.getAllPortals()
-      .then((list: any[]) => {
-        setPortals(
-          Array.isArray(list)
-            ? list.map((p) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
-            : []
-        );
-      })
-      .catch(() => setPortals([]));
-  }, []);
-
-  const toggleFilter = () => setIsFilterOpen((prev) => !prev);
-
-  const togglePortal = (portalName: string) => {
-    setPortalChecklist((prev) =>
-      prev.includes(portalName)
-        ? prev.filter((n) => n !== portalName)
-        : [...prev, portalName]
-    );
-  };
 
   const isDateRangeValid = () => {
     const hasFrom = !!dateFrom;
@@ -74,7 +46,7 @@ const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => 
       region: region.trim(),
       dateFrom: dateFrom.trim(),
       dateTo: dateTo.trim(),
-      portalNames: [...portalChecklist],
+      portalNames: initialParams.portalNames ?? [],
     });
   };
 
@@ -83,7 +55,6 @@ const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => 
     setRegion('');
     setDateFrom('');
     setDateTo('');
-    setPortalChecklist([]);
     onFilter({
       name: '',
       region: '',
@@ -97,19 +68,11 @@ const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => 
   const canApply = dateRangeValid;
 
   return (
-    <div className="px-0 mb-6">
-      <div
-        className="flex flex-col border border-gray-100 shadow-xl text-center py-2 text-xs cursor-pointer hover:bg-gray-100/80 rounded-lg"
-        onClick={toggleFilter}
-      >
-        <p>{isFilterOpen ? 'Click to close filter' : 'Click to open filter'}</p>
-      </div>
-      {isFilterOpen && (
-        <div className="bg-white mt-2 mb-4 shadow-xl border border-gray-100 rounded-lg p-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">
-                Name (partial match)
+              <label className="block text-base font-medium text-gray-700 mb-2">
+                Event Name (partial match)
               </label>
               <input
                 type="text"
@@ -121,8 +84,8 @@ const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => 
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">
-                Region
+              <label className="block text-base font-medium text-gray-700 mb-2">
+                Event Region
               </label>
               <select
                 value={region}
@@ -139,8 +102,8 @@ const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => 
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">
-                Date range - From
+              <label className="block text-base font-medium text-gray-700 mb-2">
+                Event Date range - From
               </label>
               <DatePicker
                 value={dateFrom}
@@ -152,8 +115,8 @@ const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => 
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-2">
-                Date range - To
+              <label className="block text-base font-medium text-gray-700 mb-2">
+                Event Date range - To
               </label>
               <DatePicker
                 value={dateTo}
@@ -164,60 +127,33 @@ const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => 
               />
             </div>
 
-            <div className="lg:col-span-4">
-              <label className="block text-xs font-medium text-gray-700 mb-2">
-                Portal (by name)
-              </label>
-              <div className="flex flex-wrap gap-3">
-                {portals.length === 0 ? (
-                  <span className="text-gray-400 text-xs">Loading portals...</span>
-                ) : (
-                  portals.map((p) => (
-                    <label
-                      key={p.id}
-                      className="flex items-center gap-2 cursor-pointer text-sm"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={portalChecklist.includes(p.name)}
-                        onChange={() => togglePortal(p.name)}
-                        className="rounded border-gray-300"
-                      />
-                      <span>{p.name}</span>
-                    </label>
-                  ))
-                )}
-              </div>
-            </div>
           </div>
 
-          {!dateRangeValid && (dateFrom || dateTo) && (
-            <div className="mt-2 text-xs text-red-600">
-              Please fill both From and To dates for the date range, or leave both empty.
-            </div>
-          )}
-
-          <div className="flex justify-end gap-2 mt-4">
-            <button
-              onClick={handleClear}
-              className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700"
-            >
-              Clear
-            </button>
-            <button
-              onClick={handleApply}
-              disabled={!canApply}
-              className={`px-4 py-2 text-sm rounded-lg ${
-                canApply
-                  ? 'bg-blue-950 text-white hover:bg-blue-900 cursor-pointer'
-                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              }`}
-            >
-              Apply filter
-            </button>
-          </div>
+      {!dateRangeValid && (dateFrom || dateTo) && (
+        <div className="mt-2 text-xs text-red-600">
+          Please fill both From and To dates for the date range, or leave both empty.
         </div>
       )}
+
+      <div className="flex justify-end gap-2 mt-4">
+        <button
+          onClick={handleClear}
+          className="px-4 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 text-gray-700"
+        >
+          Clear
+        </button>
+        <button
+          onClick={handleApply}
+          disabled={!canApply}
+          className={`px-4 py-2 text-sm rounded-lg ${
+            canApply
+              ? 'bg-blue-950 text-white hover:bg-blue-900 cursor-pointer'
+              : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+          }`}
+        >
+          Apply filter
+        </button>
+      </div>
     </div>
   );
 };

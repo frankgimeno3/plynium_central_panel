@@ -317,7 +317,7 @@ const CreateEvent: FC = () => {
   };
 
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
+    { label: "Contents" },
     { label: "Events", href: "/logged/pages/network/contents/events" },
     { label: "Create event" },
   ];

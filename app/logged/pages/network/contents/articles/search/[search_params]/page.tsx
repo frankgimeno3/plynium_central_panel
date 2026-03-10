@@ -24,6 +24,17 @@ const formatDateForDisplay = (raw: string): string => {
   return raw;
 };
 
+/** Parse dd/mm/yy to YYYY-MM-DD for comparison with article date */
+function ddMmYyToIso(value: string): string {
+  const match = value.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+  if (!match) return '';
+  const [, d, m, y] = match;
+  const day = d!.padStart(2, '0');
+  const month = m!.padStart(2, '0');
+  const year = parseInt(y!, 10) >= 50 ? `19${y}` : `20${y}`;
+  return `${year}-${month}-${day}`;
+}
+
 interface Article {
   id_article: string;
   articleTitle: string;
@@ -56,11 +67,15 @@ const ArticleSearchResultsContent: FC = () => {
       try {
         setLoading(true);
         
-        // Parse search params
+        // Parse search params (supports dateRange__dd/mm/yy__dd/mm/yy or type__value)
         const decoded = decodeURIComponent(searchParams ?? '');
-        const [rawType, ...rest] = decoded.split('__');
-        const filterType: FilterType | null = isFilterType(rawType) ? rawType : null;
-        const filterValue = rest.join('__');
+        const parts = decoded.split('__');
+        const rawType = parts[0];
+        const isDateRange = rawType === 'dateRange';
+        const filterType: FilterType | null = isDateRange ? 'date' : (isFilterType(rawType) ? rawType : null);
+        const filterValue = isDateRange ? decoded : parts.slice(1).join('__');
+        const dateFrom = isDateRange && parts.length >= 2 ? parts[1] : '';
+        const dateTo = isDateRange && parts.length >= 3 ? parts[2] : '';
 
         setType(filterType);
         setValue(filterValue);
@@ -68,7 +83,9 @@ const ArticleSearchResultsContent: FC = () => {
         // Build heading
         let headingText = 'Results';
         if (filterType === 'date') {
-          headingText = `Articles for date ${formatDateForDisplay(filterValue)}`;
+          headingText = isDateRange
+            ? `Articles from ${dateFrom} to ${dateTo}`
+            : `Articles for date ${formatDateForDisplay(filterValue)}`;
         } else if (filterType === 'title') {
           headingText = `Articles matching "${filterValue}"`;
         } else if (filterType === 'company') {
@@ -85,9 +102,15 @@ const ArticleSearchResultsContent: FC = () => {
         // Filter articles based on search params
         const filtered = allArticles.filter((a: Article) => {
           if (!filterType) return true;
-          if (!filterValue) return true;
+          if (!filterValue && !isDateRange) return true;
 
           if (filterType === 'date') {
+            if (isDateRange && dateFrom && dateTo) {
+              const fromIso = ddMmYyToIso(dateFrom);
+              const toIso = ddMmYyToIso(dateTo);
+              const articleDate = (a.date || '').slice(0, 10);
+              return articleDate >= fromIso && articleDate <= toIso;
+            }
             return a.date === filterValue;
           }
 
@@ -119,7 +142,7 @@ const ArticleSearchResultsContent: FC = () => {
   }, [searchParams]);
 
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
+    { label: "Contents" },
     { label: "Articles", href: "/logged/pages/network/contents/articles" },
     { label: "Search results" },
   ];
@@ -175,7 +198,7 @@ const ArticleSearchResultsContent: FC = () => {
 const ArticleSearchFallback: FC = () => {
   const { setPageMeta } = usePageContent();
   const breadcrumbs = [
-    { label: "Contents", href: "/logged/pages/network/contents/articles" },
+    { label: "Contents" },
     { label: "Articles", href: "/logged/pages/network/contents/articles" },
     { label: "Search results" },
   ];
