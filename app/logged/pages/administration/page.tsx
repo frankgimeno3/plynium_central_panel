@@ -1,8 +1,8 @@
 "use client";
 
-import React, { FC, useMemo, useState } from "react";
+import React, { FC, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import issuedInvoicesData from "@/app/contents/issued_invoices.json";
 import type { AdministrationContract, OrderRow } from "@/app/contents/interfaces";
@@ -68,8 +68,13 @@ const AdministrationPage: FC = () => {
     { label: "Orders" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Administration — Orders", breadcrumbs });
+  }, [setPageMeta]);
+
   return (
-    <PageContentLayout pageTitle="Administration — Orders" breadcrumbs={breadcrumbs}>
+    <>
       <PageContentSection>
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -224,7 +229,7 @@ const AdministrationPage: FC = () => {
           </p>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

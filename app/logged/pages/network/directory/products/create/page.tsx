@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { ProductService } from '@/app/service/ProductService';
 import { CompanyService } from '@/app/service/CompanyService';
@@ -121,12 +121,13 @@ const CreateProduct: FC = () => {
     { label: "Create product" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Create Product", breadcrumbs, buttons: [{ label: "Back to Products", href: "/logged/pages/network/directory/products" }] });
+  }, [setPageMeta, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle="Create Product"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Products", href: "/logged/pages/network/directory/products" }]}
-    >
+    <>
       <PageContentSection>
         <form onSubmit={handleSubmit} className="flex flex-col gap-6 max-w-5xl">
           <div className="bg-gray-50 rounded-lg p-6">
@@ -266,7 +267,7 @@ const CreateProduct: FC = () => {
           </div>
         </form>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

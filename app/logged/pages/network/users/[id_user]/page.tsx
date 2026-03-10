@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import EditUserModal from '@/app/logged/logged_components/modals/EditUserModal';
 import UserService from '@/app/service/UserSerivce.js';
@@ -35,6 +35,7 @@ const UserDetailPage: FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
+  const { setPageMeta } = usePageContent();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -53,6 +54,25 @@ const UserDetailPage: FC = () => {
     };
     loadUser();
   }, [id_user]);
+
+  useEffect(() => {
+    if (user) {
+      setPageMeta({
+        pageTitle: "Detalle del usuario",
+        breadcrumbs: [
+          { label: "Users", href: "/logged/pages/network/users" },
+          { label: user.user_full_name ?? user.id_user },
+        ],
+        buttons: [{ label: "Volver a Usuarios", href: "/logged/pages/network/users" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Detalle del usuario",
+        breadcrumbs: [{ label: "Users", href: "/logged/pages/network/users" }],
+        buttons: [{ label: "Volver a Usuarios", href: "/logged/pages/network/users" }],
+      });
+    }
+  }, [setPageMeta, user]);
 
   const handleEditClick = () => {
     if (!user) return;
@@ -125,11 +145,7 @@ const UserDetailPage: FC = () => {
   ];
 
   return (
-    <PageContentLayout
-      pageTitle="Detalle del usuario"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Volver a Usuarios", href: "/logged/pages/network/users" }]}
-    >
+    <>
       <PageContentSection>
         <div className="flex justify-end mb-6">
           <button
@@ -210,7 +226,7 @@ const UserDetailPage: FC = () => {
           saveError={saveError}
         />
       )}
-    </PageContentLayout>
+    </>
   );
 };
 

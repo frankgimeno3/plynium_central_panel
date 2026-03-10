@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, use } from "react";
+import React, { FC, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import plannedPublicationsData from "@/app/contents/planned_publications.json";
 
@@ -42,21 +42,38 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
   const router = useRouter();
   const { id_planned_publication } = use(params);
   const publication = (plannedPublicationsData as PlannedPublication[]).find((p) => p.id_planned_publication === id_planned_publication);
+  const { setPageMeta } = usePageContent();
+
+  useEffect(() => {
+    if (publication) {
+      setPageMeta({
+        pageTitle: publication.edition_name,
+        breadcrumbs: [
+          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Planned Publications", href: "/logged/pages/production/publications_management" },
+          { label: publication.edition_name },
+        ],
+        buttons: [{ label: "Back to Planned Publications", href: "/logged/pages/production/publications_management" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Publication not found",
+        breadcrumbs: [
+          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Planned Publications", href: "/logged/pages/production/publications_management" },
+        ],
+        buttons: [{ label: "Back to Planned Publications", href: "/logged/pages/production/publications_management" }],
+      });
+    }
+  }, [setPageMeta, publication]);
 
   if (!publication) {
     return (
-      <PageContentLayout
-        pageTitle="Publication not found"
-        breadcrumbs={[
-          { label: "Production", href: "/logged/pages/production/projects" },
-          { label: "Planned Publications", href: "/logged/pages/production/publications_management" },
-        ]}
-        buttons={[{ label: "Back to Planned Publications", href: "/logged/pages/production/publications_management" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Publication not found.</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
@@ -111,11 +128,7 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
   ];
 
   return (
-    <PageContentLayout
-      pageTitle={publication.edition_name}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Planned Publications", href: "/logged/pages/production/publications_management" }]}
-    >
+    <>
       <PageContentSection>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
@@ -146,7 +159,7 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
           })}
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

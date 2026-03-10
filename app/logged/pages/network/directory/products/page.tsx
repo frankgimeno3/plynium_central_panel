@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { ProductService } from '@/app/service/ProductService';
 import { CompanyService } from '@/app/service/CompanyService';
@@ -99,17 +99,20 @@ const Products: FC<ProductsProps> = ({ }) => {
     return company ? company.commercialName : companyId;
   };
 
-  const breadcrumbs = [
-    { label: "Directory", href: "/logged/pages/network/directory/products" },
-    { label: "Products" },
-  ];
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Products Directory",
+      breadcrumbs: [
+        { label: "Directory", href: "/logged/pages/network/directory/products" },
+        { label: "Products" },
+      ],
+      buttons: [{ label: "Create Product", href: "/logged/pages/network/directory/products/create" }],
+    });
+  }, [setPageMeta]);
 
   return (
-    <PageContentLayout
-      pageTitle="Products Directory"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Create Product", href: "/logged/pages/network/directory/products/create" }]}
-    >
+    <>
       <PageContentSection>
           <p className="text-sm font-semibold mb-4 text-gray-700">Filter Products</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
@@ -259,7 +262,7 @@ const Products: FC<ProductsProps> = ({ }) => {
           </div>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

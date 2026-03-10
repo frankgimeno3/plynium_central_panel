@@ -3,7 +3,7 @@
 import React, { FC, use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import customersData from "@/app/contents/customers.json";
 import proposalsData from "@/app/contents/proposals.json";
@@ -86,6 +86,30 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
     : [];
   const portalProducts = customer?.portal_products ?? {};
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    if (customer) {
+      setPageMeta({
+        pageTitle: customer.name,
+        breadcrumbs: [
+          { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+          { label: "Customers DB", href: "/logged/pages/account-management/customers_db" },
+          { label: customer.name },
+        ],
+        buttons: [{ label: "Volver a Clientes", href: "/logged/pages/account-management/customers_db" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Cliente no encontrado",
+        breadcrumbs: [
+          { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+          { label: "Customers DB", href: "/logged/pages/account-management/customers_db" },
+        ],
+        buttons: [{ label: "Volver a Clientes", href: "/logged/pages/account-management/customers_db" }],
+      });
+    }
+  }, [setPageMeta, customer]);
+
   const handleAddComment = () => {
     const text = newComment.trim();
     if (!text) return;
@@ -100,15 +124,11 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
 
   if (!customer) {
     return (
-      <PageContentLayout
-        pageTitle="Cliente no encontrado"
-        breadcrumbs={[{ label: "Account management", href: "/logged/pages/account-management/customers_db" }, { label: "Customers DB", href: "/logged/pages/account-management/customers_db" }]}
-        buttons={[{ label: "Volver a Clientes", href: "/logged/pages/account-management/customers_db" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Cliente no encontrado.</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
@@ -128,11 +148,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
   ];
 
   return (
-    <PageContentLayout
-      pageTitle={customer.name}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Volver a Clientes", href: "/logged/pages/account-management/customers_db" }]}
-    >
+    <>
       <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="flex border-b border-gray-200 bg-gray-50/80">
         <div className="flex">
@@ -525,7 +541,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
         )}
       </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

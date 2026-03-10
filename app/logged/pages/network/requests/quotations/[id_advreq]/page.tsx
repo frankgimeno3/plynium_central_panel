@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { useAdvertisements, AdvertisementState } from '../../hooks/useAdvertisements';
 
@@ -21,6 +21,7 @@ export default function AdvertisementDetailPage() {
   const [newComment, setNewComment] = useState('');
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [selectedState, setSelectedState] = useState<AdvertisementState>('pending');
+  const { setPageMeta } = usePageContent();
 
   useEffect(() => {
     if (advertisementsLoading) return;
@@ -48,6 +49,29 @@ export default function AdvertisementDetailPage() {
     }
     setLoading(false);
   }, [advReqId, advertisements, advertisementsLoading]);
+
+  useEffect(() => {
+    if (advertisement) {
+      setPageMeta({
+        pageTitle: "Advertisement Request Details",
+        breadcrumbs: [
+          { label: "Requests", href: "/logged/pages/network/requests" },
+          { label: "Advertisement quotations", href: "/logged/pages/network/requests/quotations" },
+          { label: advertisement.idAdvReq },
+        ],
+        buttons: [{ label: "Back to Advertisement Quotations", href: "/logged/pages/network/requests/quotations" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Advertisement Request Details",
+        breadcrumbs: [
+          { label: "Requests", href: "/logged/pages/network/requests" },
+          { label: "Advertisement quotations", href: "/logged/pages/network/requests/quotations" },
+        ],
+        buttons: [{ label: "Back to Advertisement Quotations", href: "/logged/pages/network/requests/quotations" }],
+      });
+    }
+  }, [setPageMeta, advertisement]);
 
   const formatDate = (dateString: string): string => {
     try {
@@ -139,11 +163,7 @@ export default function AdvertisementDetailPage() {
   ];
 
   return (
-    <PageContentLayout
-      pageTitle="Advertisement Request Details"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Advertisement Quotations", href: "/logged/pages/network/requests/quotations" }]}
-    >
+    <>
       <PageContentSection>
         <div className="flex items-center gap-3 mb-6">
           <span className="text-sm text-gray-500">Current State:</span>
@@ -233,6 +253,6 @@ export default function AdvertisementDetailPage() {
           )}
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 }

@@ -35,6 +35,15 @@ const Topnav: FC<TopnavProps> = () => {
       </Link>
 
       <div className="flex items-center gap-4">
+        <Link
+          href="/logged/pages/mediateca"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
+          </svg>
+          Mediateca
+        </Link>
         <div className="relative" ref={dropdownRef}>
           <button
             type="button"

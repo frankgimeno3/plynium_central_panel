@@ -1,8 +1,8 @@
 "use client";
 
-import React, { FC } from 'react';
+import React, { FC, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { useUsers } from './hooks/useUsers';
 
@@ -17,12 +17,13 @@ const Users: FC<UsersProps> = () => {
   };
 
   const breadcrumbs = [{ label: "Users" }];
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Users", breadcrumbs });
+  }, [setPageMeta, breadcrumbs]);
 
   return (
-    <PageContentLayout
-      pageTitle="Users"
-      breadcrumbs={breadcrumbs}
-    >
+    <>
       <PageContentSection>
         <p className="text-2xl font-bold">My user</p>
         <p className="text-gray-500 mb-4">Tu name, email, role y descripcion de tu role</p>
@@ -87,7 +88,7 @@ const Users: FC<UsersProps> = () => {
           </div>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

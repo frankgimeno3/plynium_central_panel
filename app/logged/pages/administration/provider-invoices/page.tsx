@@ -1,8 +1,8 @@
 "use client";
 
-import React, { FC, useMemo, useState } from "react";
+import React, { FC, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import providerInvoicesData from "@/app/contents/provider_invoices.json";
 import type { ProviderInvoice } from "@/app/contents/interfaces";
@@ -35,8 +35,13 @@ const ProviderInvoicesPage: FC = () => {
     { label: "Provider invoices" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Provider invoices", breadcrumbs });
+  }, [setPageMeta]);
+
   return (
-    <PageContentLayout pageTitle="Provider invoices" breadcrumbs={breadcrumbs}>
+    <>
       <PageContentSection>
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -112,7 +117,7 @@ const ProviderInvoicesPage: FC = () => {
           <p className="text-sm text-gray-500 text-center py-8">No provider invoices match the filters.</p>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

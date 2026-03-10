@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { CompanyService } from '@/app/service/CompanyService';
 import { Company } from '@/app/contents/interfaces';
@@ -82,12 +82,17 @@ const Companies: FC<CompaniesProps> = ({ }) => {
     { label: "Companies" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Companies Directory",
+      breadcrumbs,
+      buttons: [{ label: "Create Company", href: "/logged/pages/network/directory/companies/create" }],
+    });
+  }, [setPageMeta, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle="Companies Directory"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Create Company", href: "/logged/pages/network/directory/companies/create" }]}
-    >
+    <>
       <PageContentSection>
           <p className="text-sm font-semibold mb-4 text-gray-700">Filter Companies</p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -229,7 +234,7 @@ const Companies: FC<CompaniesProps> = ({ }) => {
           </div>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

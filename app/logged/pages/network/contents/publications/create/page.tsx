@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import { PublicationService } from "@/app/service/PublicationService";
 import { PortalService } from "@/app/service/PortalService";
@@ -206,12 +206,17 @@ const CreatePublication: FC = () => {
     { label: "Create publication" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: `Crear Nueva Publicación · Fase ${currentPhase} de 2`,
+      breadcrumbs,
+      buttons: [{ label: "Back to publications", href: "/logged/pages/network/contents/publications" }],
+    });
+  }, [setPageMeta, breadcrumbs, currentPhase]);
+
   return (
-    <PageContentLayout
-      pageTitle={`Crear Nueva Publicación · Fase ${currentPhase} de 2`}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to publications", href: "/logged/pages/network/contents/publications" }]}
-    >
+    <>
       <PageContentSection>
       <div className="flex flex-col p-8 max-w-4xl mx-auto w-full">
         {/* FASE 1: Datos de la Publicación */}
@@ -383,7 +388,7 @@ const CreatePublication: FC = () => {
         )}
       </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

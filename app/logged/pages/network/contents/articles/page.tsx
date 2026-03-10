@@ -3,7 +3,7 @@
 import { FC, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import ArticleMiniature from "./article_components/ArticleMiniature";
 import ArticleFilter from "./article_components/ArticleFilter";
@@ -100,12 +100,17 @@ const ArticlesContent: FC<ArticlesContentProps> = ({}) => {
     { label: "Articles" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Article Management",
+      breadcrumbs,
+      buttons: [{ label: "Create article", href: "/logged/pages/network/contents/articles/create" }],
+    });
+  }, [setPageMeta, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle="Article Management"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Create article", href: "/logged/pages/network/contents/articles/create" }]}
-    >
+    <>
       <PageContentSection>
         <ArticleFilter selectedPortalNames={portalNames} />
       </PageContentSection>
@@ -255,7 +260,7 @@ const ArticlesContent: FC<ArticlesContentProps> = ({}) => {
           )}
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

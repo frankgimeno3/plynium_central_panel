@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, useState } from "react";
+import React, { FC, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 
 const CreateContactPage: FC = () => {
@@ -35,12 +35,17 @@ const CreateContactPage: FC = () => {
     { label: "Nuevo contacto" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Nuevo contacto",
+      breadcrumbs,
+      buttons: [{ label: "← Volver", href: "/logged/pages/account-management/contacts_db" }],
+    });
+  }, [setPageMeta, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle="Nuevo contacto"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "← Volver", href: "/logged/pages/account-management/contacts_db" }]}
-    >
+    <>
       <PageContentSection>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -137,7 +142,7 @@ const CreateContactPage: FC = () => {
           </div>
         </form>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import { ArticleService } from "@/app/service/ArticleService";
 import { ContentService } from "@/app/service/ContentService";
@@ -314,12 +314,17 @@ export default function CreateArticlePage() {
     { label: "Create article" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: `Create New Article · Phase ${currentPhase} of 3`,
+      breadcrumbs,
+      buttons: [{ label: "Back to articles", href: "/logged/pages/network/contents/articles" }],
+    });
+  }, [setPageMeta, breadcrumbs, currentPhase]);
+
   return (
-    <PageContentLayout
-      pageTitle={`Create New Article · Phase ${currentPhase} of 3`}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to articles", href: "/logged/pages/network/contents/articles" }]}
-    >
+    <>
       <PageContentSection>
       <div className="flex flex-col max-w-4xl mx-auto w-full">
         {currentPhase === 1 && (
@@ -394,6 +399,6 @@ export default function CreateArticlePage() {
         )}
       </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 }

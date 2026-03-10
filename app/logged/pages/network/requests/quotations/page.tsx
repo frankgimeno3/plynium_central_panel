@@ -1,7 +1,7 @@
 "use client";
 
-import React, { FC } from 'react';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import React, { FC, useEffect } from 'react';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import AdvertisementTable from '../advertisement_components/AdvertisementTable';
 
@@ -13,15 +13,17 @@ const Quotations: FC<QuotationsProps> = () => {
     { label: "Advertisement quotations" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Advertisement Quotations", breadcrumbs });
+  }, [setPageMeta, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle="Advertisement Quotations"
-      breadcrumbs={breadcrumbs}
-    >
+    <>
       <PageContentSection>
         <AdvertisementTable />
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

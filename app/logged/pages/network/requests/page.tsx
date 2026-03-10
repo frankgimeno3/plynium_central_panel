@@ -1,20 +1,21 @@
 "use client";
 
-import React, { FC } from 'react';
+import React, { FC, useEffect } from 'react';
 import Link from 'next/link';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 
 interface AdvertisementProps {}
 
 const Advertisement: FC<AdvertisementProps> = () => {
   const breadcrumbs = [{ label: "Requests" }];
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Requests", breadcrumbs });
+  }, [setPageMeta, breadcrumbs]);
 
   return (
-    <PageContentLayout
-      pageTitle="Requests"
-      breadcrumbs={breadcrumbs}
-    >
+    <>
       <PageContentSection>
         <p className="text-sm text-gray-500 mb-6">Select a request type to manage</p>
         <div className="flex flex-col gap-4">
@@ -41,7 +42,7 @@ const Advertisement: FC<AdvertisementProps> = () => {
           </Link>
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

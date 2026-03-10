@@ -2,7 +2,7 @@
 
 import { FC, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { useCompanyRequests, RequestState } from '../../hooks/useCompanyRequests';
 
@@ -32,6 +32,7 @@ const CompanyRequestDetailPage: FC = () => {
   const { getById, updateState } = useCompanyRequests();
   const [request, setRequest] = useState<ReturnType<typeof getById>>(undefined);
   const [loading, setLoading] = useState(true);
+  const { setPageMeta } = usePageContent();
 
   useEffect(() => {
     const decodedId = decodeURIComponent(id).trim();
@@ -39,6 +40,29 @@ const CompanyRequestDetailPage: FC = () => {
     setRequest(found ?? undefined);
     setLoading(false);
   }, [id, getById]);
+
+  useEffect(() => {
+    if (request) {
+      setPageMeta({
+        pageTitle: "Company Request Details",
+        breadcrumbs: [
+          { label: "Requests", href: "/logged/pages/network/requests" },
+          { label: "Company requests", href: "/logged/pages/network/requests/company" },
+          { label: request.companyRequestId },
+        ],
+        buttons: [{ label: "Back to Company Requests", href: "/logged/pages/network/requests/company" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Company Request Details",
+        breadcrumbs: [
+          { label: "Requests", href: "/logged/pages/network/requests" },
+          { label: "Company requests", href: "/logged/pages/network/requests/company" },
+        ],
+        buttons: [{ label: "Back to Company Requests", href: "/logged/pages/network/requests/company" }],
+      });
+    }
+  }, [setPageMeta, request]);
 
   const handleStateChange = (newState: RequestState) => {
     if (!request) return;
@@ -77,11 +101,7 @@ const CompanyRequestDetailPage: FC = () => {
   ];
 
   return (
-    <PageContentLayout
-      pageTitle="Company Request Details"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Company Requests", href: "/logged/pages/network/requests/company" }]}
-    >
+    <>
       <PageContentSection>
         <div className="flex flex-col w-full text-gray-600">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
@@ -143,7 +163,7 @@ const CompanyRequestDetailPage: FC = () => {
           </div>
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

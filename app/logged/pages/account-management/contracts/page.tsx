@@ -1,8 +1,8 @@
 "use client";
 
-import React, { FC, useState, useMemo } from "react";
+import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import contractsData from "@/app/contents/contracts.json";
 import customersData from "@/app/contents/customers.json";
@@ -49,8 +49,13 @@ const ContractsPage: FC = () => {
     { label: "Contracts" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Contracts", breadcrumbs });
+  }, [setPageMeta]);
+
   return (
-    <PageContentLayout pageTitle="Contracts" breadcrumbs={breadcrumbs}>
+    <>
       <PageContentSection>
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -158,7 +163,7 @@ const ContractsPage: FC = () => {
           </div>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

@@ -1,8 +1,8 @@
 "use client";
 
-import React, { FC, useState, useMemo } from "react";
+import React, { FC, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import contactsData from "@/app/contents/contactsContents.json";
 
@@ -106,12 +106,17 @@ const ExportContactsPage: FC = () => {
     { label: "Export" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Exportar contactos",
+      breadcrumbs,
+      buttons: [{ label: "Volver a Contactos", href: backUrl }],
+    });
+  }, [setPageMeta, breadcrumbs, backUrl]);
+
   return (
-    <PageContentLayout
-      pageTitle="Exportar contactos"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Volver a Contactos", href: backUrl }]}
-    >
+    <>
       <PageContentSection>
       <div className="max-w-2xl">
         {phase === "config" && (
@@ -228,7 +233,7 @@ const ExportContactsPage: FC = () => {
         )}
       </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

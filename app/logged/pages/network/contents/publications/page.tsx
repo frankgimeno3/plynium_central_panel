@@ -3,7 +3,7 @@
 import { FC, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import PublicationFilter from "./publication_components/PublicationFilter";
 import { PublicationService } from "@/app/service/PublicationService";
@@ -41,12 +41,17 @@ const Publications: FC<PublicationsProps> = ({}) => {
     { label: "Publications" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "All publications",
+      breadcrumbs,
+      buttons: [{ label: "Create publication", href: "/logged/pages/network/contents/publications/create" }],
+    });
+  }, [setPageMeta, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle="All publications"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Create publication", href: "/logged/pages/network/contents/publications/create" }]}
-    >
+    <>
       <PageContentSection>
         <Suspense fallback={<div className="py-2 text-xs text-gray-500">Loading filter...</div>}>
           <PublicationFilter />
@@ -103,7 +108,7 @@ const Publications: FC<PublicationsProps> = ({}) => {
         )}
       </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

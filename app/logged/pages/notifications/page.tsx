@@ -3,7 +3,7 @@
 import { FC, useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import notificationsData from '@/app/contents/notifications.json';
 import otherRequestsData from '@/app/contents/otherRequests.json';
@@ -89,8 +89,13 @@ const NotificationsPage: FC = () => {
 
   const breadcrumbs = [{ label: 'Notifications' }];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: 'Notifications', breadcrumbs });
+  }, [setPageMeta]);
+
   return (
-    <PageContentLayout pageTitle="Notifications" breadcrumbs={breadcrumbs}>
+    <>
       <PageContentSection className="p-0 overflow-hidden">
         <div className="flex border-b border-gray-200">
           {tabs.map((tab) => (
@@ -205,7 +210,7 @@ const NotificationsPage: FC = () => {
           )}
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

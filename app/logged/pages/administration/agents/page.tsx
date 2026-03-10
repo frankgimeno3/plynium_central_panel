@@ -1,8 +1,8 @@
 "use client";
 
-import React, { FC, useMemo, useState } from "react";
+import React, { FC, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import agentsData from "@/app/contents/agentsContents.json";
 import customersData from "@/app/contents/customers.json";
@@ -49,8 +49,13 @@ const AgentsPage: FC = () => {
     { label: "Agents" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Agents", breadcrumbs });
+  }, [setPageMeta]);
+
   return (
-    <PageContentLayout pageTitle="Agents" breadcrumbs={breadcrumbs}>
+    <>
       <PageContentSection>
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -138,7 +143,7 @@ const AgentsPage: FC = () => {
           </p>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

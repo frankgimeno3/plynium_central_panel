@@ -1,8 +1,8 @@
 "use client";
 
-import React, { FC, useState, useCallback } from "react";
+import React, { FC, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import * as XLSX from "xlsx";
 
@@ -163,12 +163,17 @@ const ImportCustomersPage: FC = () => {
     { label: "Import" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Importar cuentas (Companies)",
+      breadcrumbs,
+      buttons: [{ label: "Volver a Customers", href: backUrl }],
+    });
+  }, [setPageMeta, breadcrumbs, backUrl]);
+
   return (
-    <PageContentLayout
-      pageTitle="Importar cuentas (Companies)"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Volver a Customers", href: backUrl }]}
-    >
+    <>
       <PageContentSection>
       <div className="max-w-2xl">
         {phase === "upload" && (
@@ -246,7 +251,7 @@ const ImportCustomersPage: FC = () => {
         )}
       </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

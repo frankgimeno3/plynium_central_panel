@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, use } from "react";
+import React, { FC, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import plannedNewslettersData from "@/app/contents/planned_newsletters.json";
 
@@ -42,21 +42,38 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
   const router = useRouter();
   const { id_newsletter } = use(params);
   const newsletter = (plannedNewslettersData as PlannedNewsletter[]).find((n) => n.id_newsletter === id_newsletter);
+  const { setPageMeta } = usePageContent();
+
+  useEffect(() => {
+    if (newsletter) {
+      setPageMeta({
+        pageTitle: newsletter.edition_name,
+        breadcrumbs: [
+          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Planned Newsletters", href: "/logged/pages/production/newsletter_management" },
+          { label: newsletter.edition_name },
+        ],
+        buttons: [{ label: "Back to Planned Newsletters", href: "/logged/pages/production/newsletter_management" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Newsletter not found",
+        breadcrumbs: [
+          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Planned Newsletters", href: "/logged/pages/production/newsletter_management" },
+        ],
+        buttons: [{ label: "Back to Planned Newsletters", href: "/logged/pages/production/newsletter_management" }],
+      });
+    }
+  }, [setPageMeta, newsletter]);
 
   if (!newsletter) {
     return (
-      <PageContentLayout
-        pageTitle="Newsletter not found"
-        breadcrumbs={[
-          { label: "Production", href: "/logged/pages/production/projects" },
-          { label: "Planned Newsletters", href: "/logged/pages/production/newsletter_management" },
-        ]}
-        buttons={[{ label: "Back to Planned Newsletters", href: "/logged/pages/production/newsletter_management" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Newsletter not found.</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
@@ -67,11 +84,7 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
   ];
 
   return (
-    <PageContentLayout
-      pageTitle={newsletter.edition_name}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Planned Newsletters", href: "/logged/pages/production/newsletter_management" }]}
-    >
+    <>
       <PageContentSection>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
@@ -166,7 +179,7 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
           </div>
         </PageContentSection>
       )}
-    </PageContentLayout>
+    </>
   );
 };
 

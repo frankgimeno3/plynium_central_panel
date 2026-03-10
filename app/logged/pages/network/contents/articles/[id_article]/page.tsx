@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import EditContentsModal from "@/app/logged/logged_components/modals/EditContentsModal";
 import AddTagModal from "@/app/logged/logged_components/modals/AddTagModal";
@@ -70,6 +70,30 @@ export default function IdArticlePage() {
     handleRemoveArticleFromPortal,
   } = useArticlePage(id_article);
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    if (articleData) {
+      setPageMeta({
+        pageTitle: articleData.articleTitle ?? "Article",
+        breadcrumbs: [
+          { label: "Contents", href: "/logged/pages/network/contents/articles" },
+          { label: "Articles", href: "/logged/pages/network/contents/articles" },
+          { label: articleData.articleTitle ?? "Article" },
+        ],
+        buttons: [{ label: "Back to articles", href: "/logged/pages/network/contents/articles" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Article",
+        breadcrumbs: [
+          { label: "Contents", href: "/logged/pages/network/contents/articles" },
+          { label: "Articles", href: "/logged/pages/network/contents/articles" },
+        ],
+        buttons: [{ label: "Back to articles", href: "/logged/pages/network/contents/articles" }],
+      });
+    }
+  }, [setPageMeta, articleData]);
+
   useEffect(() => {
     setEventIdInput(articleData?.event_id ?? "");
   }, [articleData?.event_id]);
@@ -117,11 +141,7 @@ export default function IdArticlePage() {
   ];
 
   return (
-    <PageContentLayout
-      pageTitle={articleData.articleTitle ?? "Article"}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to articles", href: "/logged/pages/network/contents/articles" }]}
-    >
+    <>
       <PageContentSection>
       <main className="flex flex-col gap-6 text-gray-600 w-full">
         <div className="flex justify-end mb-4">
@@ -334,6 +354,6 @@ export default function IdArticlePage() {
         onFormDataChange={handleFormDataChange}
         onConfirm={handleContentConfirm}
       />
-    </PageContentLayout>
+    </>
   );
 }

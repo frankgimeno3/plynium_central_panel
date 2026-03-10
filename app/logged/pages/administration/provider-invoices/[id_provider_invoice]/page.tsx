@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, useMemo } from "react";
+import React, { FC, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import providerInvoicesData from "@/app/contents/provider_invoices.json";
 import type { ProviderInvoice } from "@/app/contents/interfaces";
@@ -17,6 +17,40 @@ const ProviderInvoiceDetailPage: FC = () => {
     return (providerInvoicesData as ProviderInvoice[]).find((r) => r.id === id) ?? null;
   }, [id]);
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    if (invoice) {
+      setPageMeta({
+        pageTitle: `Provider invoice — ${invoice.id}`,
+        breadcrumbs: [
+          { label: "Administration", href: "/logged/pages/administration" },
+          { label: "Provider invoices", href: "/logged/pages/administration/provider-invoices" },
+          { label: invoice.id },
+        ],
+        buttons: [{ label: "Back to Provider invoices", href: "/logged/pages/administration/provider-invoices" }],
+      });
+    } else if (id) {
+      setPageMeta({
+        pageTitle: "Provider invoice not found",
+        breadcrumbs: [
+          { label: "Administration", href: "/logged/pages/administration" },
+          { label: "Provider invoices", href: "/logged/pages/administration/provider-invoices" },
+          { label: id },
+        ],
+        buttons: [{ label: "Back to Provider invoices", href: "/logged/pages/administration/provider-invoices" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Invalid provider invoice",
+        breadcrumbs: [
+          { label: "Administration", href: "/logged/pages/administration" },
+          { label: "Provider invoices", href: "/logged/pages/administration/provider-invoices" },
+        ],
+        buttons: [{ label: "Back to Provider invoices", href: "/logged/pages/administration/provider-invoices" }],
+      });
+    }
+  }, [setPageMeta, invoice, id]);
+
   const breadcrumbs = [
     { label: "Administration", href: "/logged/pages/administration" },
     { label: "Provider invoices", href: "/logged/pages/administration/provider-invoices" },
@@ -25,38 +59,26 @@ const ProviderInvoiceDetailPage: FC = () => {
 
   if (!id) {
     return (
-      <PageContentLayout
-        pageTitle="Invalid provider invoice"
-        breadcrumbs={[{ label: "Administration", href: "/logged/pages/administration" }, { label: "Provider invoices", href: "/logged/pages/administration/provider-invoices" }]}
-        buttons={[{ label: "Back to Provider invoices", href: "/logged/pages/administration/provider-invoices" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Invalid provider invoice.</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
   if (!invoice) {
     return (
-      <PageContentLayout
-        pageTitle="Provider invoice not found"
-        breadcrumbs={[{ label: "Administration", href: "/logged/pages/administration" }, { label: "Provider invoices", href: "/logged/pages/administration/provider-invoices" }, { label: id }]}
-        buttons={[{ label: "Back to Provider invoices", href: "/logged/pages/administration/provider-invoices" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Provider invoice not found: {id}</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
   return (
-    <PageContentLayout
-      pageTitle={`Provider invoice — ${invoice.id}`}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Provider invoices", href: "/logged/pages/administration/provider-invoices" }]}
-    >
+    <>
       <PageContentSection>
         <div className="overflow-hidden max-w-2xl">
           <table className="min-w-full divide-y divide-gray-200">
@@ -85,7 +107,7 @@ const ProviderInvoiceDetailPage: FC = () => {
           </table>
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

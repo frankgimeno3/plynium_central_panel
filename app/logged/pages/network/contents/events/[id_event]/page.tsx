@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { EventsService } from '@/app/service/EventsService';
 import { PortalService } from '@/app/service/PortalService';
@@ -397,12 +397,17 @@ const IdEvent: FC = () => {
     { label: event.event_name ?? "Event" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: event.event_name ?? "Edit Event",
+      breadcrumbs,
+      buttons: [{ label: "Back to Events", href: "/logged/pages/network/contents/events" }],
+    });
+  }, [setPageMeta, event.event_name, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle={event.event_name ?? "Edit Event"}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Events", href: "/logged/pages/network/contents/events" }]}
-    >
+    <>
       <PageContentSection>
       <div className="w-full">
         {/* Main image - value from DB, updates on Save changes */}
@@ -693,7 +698,7 @@ const IdEvent: FC = () => {
           </div>
         </div>
       )}
-    </PageContentLayout>
+    </>
   );
 };
 

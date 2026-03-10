@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, use } from "react";
+import React, { FC, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import proposalsData from "@/app/contents/proposals.json";
 import customersData from "@/app/contents/customers.json";
@@ -35,18 +35,38 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
   const customer = proposal
     ? (customersData as Customer[]).find((c) => c.id_customer === proposal.id_customer)
     : null;
+  const { setPageMeta } = usePageContent();
+
+  useEffect(() => {
+    if (proposal) {
+      setPageMeta({
+        pageTitle: `Proposal: ${proposal.title}`,
+        breadcrumbs: [
+          { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+          { label: "Proposals", href: "/logged/pages/account-management/proposals" },
+          { label: proposal.title },
+        ],
+        buttons: [{ label: "Back to Proposals", href: "/logged/pages/account-management/proposals" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Proposal not found",
+        breadcrumbs: [
+          { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+          { label: "Proposals", href: "/logged/pages/account-management/proposals" },
+        ],
+        buttons: [{ label: "Back to Proposals", href: "/logged/pages/account-management/proposals" }],
+      });
+    }
+  }, [setPageMeta, proposal]);
 
   if (!proposal) {
     return (
-      <PageContentLayout
-        pageTitle="Proposal not found"
-        breadcrumbs={[{ label: "Account management", href: "/logged/pages/account-management/customers_db" }, { label: "Proposals", href: "/logged/pages/account-management/proposals" }]}
-        buttons={[{ label: "Back to Proposals", href: "/logged/pages/account-management/proposals" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Proposal not found.</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
@@ -57,11 +77,7 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
   ];
 
   return (
-    <PageContentLayout
-      pageTitle={`Proposal: ${proposal.title}`}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Proposals", href: "/logged/pages/account-management/proposals" }]}
-    >
+    <>
       <PageContentSection>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -119,7 +135,7 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
           </div>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

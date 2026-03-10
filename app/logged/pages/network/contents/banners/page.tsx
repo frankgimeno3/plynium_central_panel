@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FC, useState, useEffect } from 'react';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import AdSectionModal from './banner_components/AdSectionModal';
 import DeleteSectionModal from './banner_components/DeleteSectionModal';
@@ -109,11 +109,13 @@ const Banners: FC = () => {
         { label: "Banners" },
     ];
 
+    const { setPageMeta } = usePageContent();
+    useEffect(() => {
+        setPageMeta({ pageTitle: "Banner management", breadcrumbs });
+    }, [setPageMeta, breadcrumbs]);
+
     return (
-        <PageContentLayout
-            pageTitle="Banner management"
-            breadcrumbs={breadcrumbs}
-        >
+        <>
             <PageContentSection>
             <div className="flex flex-col w-full gap-4">
                 {selectedPortalId == null ? (
@@ -264,7 +266,7 @@ const Banners: FC = () => {
                 )}
             </div>
             </PageContentSection>
-        </PageContentLayout>
+        </>
     );
 };
 

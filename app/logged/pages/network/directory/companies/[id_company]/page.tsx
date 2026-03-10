@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { CompanyService } from '@/app/service/CompanyService';
 import { PortalService } from '@/app/service/PortalService';
@@ -29,6 +29,7 @@ const IdCompany: FC<IdCompanyProps> = ({ }) => {
   const [companyProducts, setCompanyProducts] = useState<
     { productId: string; productName: string; price: number; mainImageSrc?: string; productCategoriesArray?: string[] }[]
   >([]);
+  const { setPageMeta } = usePageContent();
 
   useEffect(() => {
     let cancelled = false;
@@ -64,6 +65,29 @@ const IdCompany: FC<IdCompanyProps> = ({ }) => {
     load();
     return () => { cancelled = true; };
   }, [companyId]);
+
+  useEffect(() => {
+    if (company && formData) {
+      setPageMeta({
+        pageTitle: "Company Details",
+        breadcrumbs: [
+          { label: "Directory", href: "/logged/pages/network/directory/companies" },
+          { label: "Companies", href: "/logged/pages/network/directory/companies" },
+          { label: formData.commercialName ?? companyId ?? "Company" },
+        ],
+        buttons: [{ label: "Back to Companies", href: "/logged/pages/network/directory/companies" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Company Details",
+        breadcrumbs: [
+          { label: "Directory", href: "/logged/pages/network/directory/companies" },
+          { label: "Companies", href: "/logged/pages/network/directory/companies" },
+        ],
+        buttons: [{ label: "Back to Companies", href: "/logged/pages/network/directory/companies" }],
+      });
+    }
+  }, [setPageMeta, company, formData, companyId]);
 
   const handleInputChange = (field: keyof Company, value: string | string[]) => {
     if (!formData) return;
@@ -133,11 +157,7 @@ const IdCompany: FC<IdCompanyProps> = ({ }) => {
   ];
 
   return (
-    <PageContentLayout
-      pageTitle="Company Details"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Companies", href: "/logged/pages/network/directory/companies" }]}
-    >
+    <>
       <PageContentSection>
         <div className="p-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -466,7 +486,7 @@ const IdCompany: FC<IdCompanyProps> = ({ }) => {
           {saving ? 'Saving...' : 'Save changes'}
         </button>
       )}
-    </PageContentLayout>
+    </>
   );
 };
 

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { FC, useState, useMemo } from "react";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import React, { FC, useState, useMemo, useEffect } from "react";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import issuedInvoicesData from "@/app/contents/issued_invoices.json";
 import providerInvoicesData from "@/app/contents/provider_invoices.json";
@@ -71,8 +71,13 @@ const BanksPage: FC = () => {
     { label: "Banks — Cash flow forecast" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Banks — Cash flow forecast", breadcrumbs });
+  }, [setPageMeta]);
+
   return (
-    <PageContentLayout pageTitle="Banks — Cash flow forecast" breadcrumbs={breadcrumbs}>
+    <>
       <PageContentSection>
         <p className="text-gray-600 mb-2">
           Previsión de cobros (issued invoices, orders pending) y pagos (provider invoices). Based on current issued and provider invoice data.
@@ -141,7 +146,7 @@ const BanksPage: FC = () => {
           <p className="text-sm text-gray-500 text-center py-8">No forecast items in this view.</p>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

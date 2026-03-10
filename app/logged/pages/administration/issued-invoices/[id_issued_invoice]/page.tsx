@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, useMemo } from "react";
+import React, { FC, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import issuedInvoicesData from "@/app/contents/issued_invoices.json";
 import type { AdministrationContract, IssuedInvoice, Order } from "@/app/contents/interfaces";
@@ -49,6 +49,40 @@ const IssuedInvoiceDetailPage: FC = () => {
     return findInvoiceById(issuedInvoicesData as AdministrationContract[], id);
   }, [id]);
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    if (invoice) {
+      setPageMeta({
+        pageTitle: `Issued invoice — ${invoice.invoice_id}`,
+        breadcrumbs: [
+          { label: "Administration", href: "/logged/pages/administration" },
+          { label: "Issued invoices", href: "/logged/pages/administration/issued-invoices" },
+          { label: invoice.invoice_id },
+        ],
+        buttons: [{ label: "Back to Issued invoices", href: "/logged/pages/administration/issued-invoices" }],
+      });
+    } else if (id) {
+      setPageMeta({
+        pageTitle: "Issued invoice not found",
+        breadcrumbs: [
+          { label: "Administration", href: "/logged/pages/administration" },
+          { label: "Issued invoices", href: "/logged/pages/administration/issued-invoices" },
+          { label: id },
+        ],
+        buttons: [{ label: "Back to Issued invoices", href: "/logged/pages/administration/issued-invoices" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Invalid issued invoice",
+        breadcrumbs: [
+          { label: "Administration", href: "/logged/pages/administration" },
+          { label: "Issued invoices", href: "/logged/pages/administration/issued-invoices" },
+        ],
+        buttons: [{ label: "Back to Issued invoices", href: "/logged/pages/administration/issued-invoices" }],
+      });
+    }
+  }, [setPageMeta, invoice, id]);
+
   const breadcrumbs = [
     { label: "Administration", href: "/logged/pages/administration" },
     { label: "Issued invoices", href: "/logged/pages/administration/issued-invoices" },
@@ -57,38 +91,26 @@ const IssuedInvoiceDetailPage: FC = () => {
 
   if (!id) {
     return (
-      <PageContentLayout
-        pageTitle="Invalid issued invoice"
-        breadcrumbs={[{ label: "Administration", href: "/logged/pages/administration" }, { label: "Issued invoices", href: "/logged/pages/administration/issued-invoices" }]}
-        buttons={[{ label: "Back to Issued invoices", href: "/logged/pages/administration/issued-invoices" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Invalid issued invoice.</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
   if (!invoice) {
     return (
-      <PageContentLayout
-        pageTitle="Issued invoice not found"
-        breadcrumbs={[{ label: "Administration", href: "/logged/pages/administration" }, { label: "Issued invoices", href: "/logged/pages/administration/issued-invoices" }, { label: id }]}
-        buttons={[{ label: "Back to Issued invoices", href: "/logged/pages/administration/issued-invoices" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Issued invoice not found: {id}</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
   return (
-    <PageContentLayout
-      pageTitle={`Issued invoice — ${invoice.invoice_id}`}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Issued invoices", href: "/logged/pages/administration/issued-invoices" }]}
-    >
+    <>
       <PageContentSection>
         <div className="overflow-hidden max-w-2xl">
           <table className="min-w-full divide-y divide-gray-200">
@@ -151,7 +173,7 @@ const IssuedInvoiceDetailPage: FC = () => {
             ))}
           </ul>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

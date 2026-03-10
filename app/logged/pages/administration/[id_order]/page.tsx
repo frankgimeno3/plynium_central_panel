@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, useMemo } from "react";
+import React, { FC, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import issuedInvoicesData from "@/app/contents/issued_invoices.json";
 import contractsData from "@/app/contents/contracts.json";
@@ -50,46 +50,53 @@ const OrderDetailPage: FC = () => {
     return findOrderByCode(issuedInvoicesData as AdministrationContract[], idOrder);
   }, [idOrder]);
 
+  const { setPageMeta } = usePageContent();
+  const backBtn = [{ label: "Back to Orders", href: "/logged/pages/administration" }];
+
+  useEffect(() => {
+    if (!idOrder) {
+      setPageMeta({
+        pageTitle: "Invalid order",
+        breadcrumbs: [{ label: "Administration", href: "/logged/pages/administration" }, { label: "Orders", href: "/logged/pages/administration" }],
+        buttons: backBtn,
+      });
+    } else if (!order) {
+      setPageMeta({
+        pageTitle: "Order not found",
+        breadcrumbs: [{ label: "Administration", href: "/logged/pages/administration" }, { label: "Orders", href: "/logged/pages/administration" }, { label: idOrder }],
+        buttons: backBtn,
+      });
+    } else {
+      setPageMeta({
+        pageTitle: `Order — ${order.order_code}`,
+        breadcrumbs: [
+          { label: "Administration", href: "/logged/pages/administration" },
+          { label: "Orders", href: "/logged/pages/administration" },
+          { label: order.order_code },
+        ],
+        buttons: backBtn,
+      });
+    }
+  }, [idOrder, order, setPageMeta]);
+
   if (!idOrder) {
     return (
-      <PageContentLayout
-        pageTitle="Invalid order"
-        breadcrumbs={[{ label: "Administration", href: "/logged/pages/administration" }, { label: "Orders", href: "/logged/pages/administration" }]}
-        buttons={[{ label: "Back to Orders", href: "/logged/pages/administration" }]}
-      >
-        <PageContentSection>
-          <p className="text-gray-500">Invalid order.</p>
-        </PageContentSection>
-      </PageContentLayout>
+      <PageContentSection>
+        <p className="text-gray-500">Invalid order.</p>
+      </PageContentSection>
     );
   }
 
   if (!order) {
     return (
-      <PageContentLayout
-        pageTitle="Order not found"
-        breadcrumbs={[{ label: "Administration", href: "/logged/pages/administration" }, { label: "Orders", href: "/logged/pages/administration" }, { label: idOrder }]}
-        buttons={[{ label: "Back to Orders", href: "/logged/pages/administration" }]}
-      >
-        <PageContentSection>
-          <p className="text-gray-500">Order not found: {idOrder}</p>
-        </PageContentSection>
-      </PageContentLayout>
+      <PageContentSection>
+        <p className="text-gray-500">Order not found: {idOrder}</p>
+      </PageContentSection>
     );
   }
 
-  const breadcrumbs = [
-    { label: "Administration", href: "/logged/pages/administration" },
-    { label: "Orders", href: "/logged/pages/administration" },
-    { label: order.order_code },
-  ];
-
   return (
-    <PageContentLayout
-      pageTitle={`Order — ${order.order_code}`}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Orders", href: "/logged/pages/administration" }]}
-    >
+    <>
       <PageContentSection>
         <div className="overflow-hidden max-w-2xl">
           <table className="min-w-full divide-y divide-gray-200">
@@ -192,7 +199,7 @@ const OrderDetailPage: FC = () => {
           </table>
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

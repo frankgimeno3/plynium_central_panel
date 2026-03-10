@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, use } from "react";
+import React, { FC, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import projectsData from "@/app/contents/projects.json";
 import contractsData from "@/app/contents/contracts.json";
@@ -62,20 +62,37 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
     ? (pmEventsData as PmEvent[]).filter((e) => project.pm_events_array!.includes(e.id_event))
     : [];
 
-  if (!project) {
-    return (
-      <PageContentLayout
-        pageTitle="Project not found"
-        breadcrumbs={[
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    if (project) {
+      setPageMeta({
+        pageTitle: `Project: ${project.title}`,
+        breadcrumbs: [
           { label: "Production", href: "/logged/pages/production/projects" },
           { label: "Projects", href: "/logged/pages/production/projects" },
-        ]}
-        buttons={[{ label: "Back to Projects", href: "/logged/pages/production/projects" }]}
-      >
+          { label: project.title },
+        ],
+        buttons: [{ label: "Back to Projects", href: "/logged/pages/production/projects" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Project not found",
+        breadcrumbs: [
+          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Projects", href: "/logged/pages/production/projects" },
+        ],
+        buttons: [{ label: "Back to Projects", href: "/logged/pages/production/projects" }],
+      });
+    }
+  }, [setPageMeta, project]);
+
+  if (!project) {
+    return (
+      <>
         <PageContentSection>
           <p className="text-gray-500">Project not found.</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
@@ -99,11 +116,7 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
   ];
 
   return (
-    <PageContentLayout
-      pageTitle={`Project: ${project.title}`}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Projects", href: "/logged/pages/production/projects" }]}
-    >
+    <>
       <PageContentSection>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -180,7 +193,7 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
           </div>
         </PageContentSection>
       )}
-    </PageContentLayout>
+    </>
   );
 };
 

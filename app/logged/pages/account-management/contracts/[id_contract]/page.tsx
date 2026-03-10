@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, use } from "react";
+import React, { FC, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import contractsData from "@/app/contents/contracts.json";
 import customersData from "@/app/contents/customers.json";
@@ -49,18 +49,38 @@ const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ 
     : [];
   const services = servicesData as Service[];
   const getServiceName = (id: string) => services.find((s) => s.id_service === id)?.name?.replace(/_/g, " ") ?? id;
+  const { setPageMeta } = usePageContent();
+
+  useEffect(() => {
+    if (contract) {
+      setPageMeta({
+        pageTitle: `Contract: ${contract.title}`,
+        breadcrumbs: [
+          { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+          { label: "Contracts", href: "/logged/pages/account-management/contracts" },
+          { label: contract.title },
+        ],
+        buttons: [{ label: "Back to Contracts", href: "/logged/pages/account-management/contracts" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Contract not found",
+        breadcrumbs: [
+          { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+          { label: "Contracts", href: "/logged/pages/account-management/contracts" },
+        ],
+        buttons: [{ label: "Back to Contracts", href: "/logged/pages/account-management/contracts" }],
+      });
+    }
+  }, [setPageMeta, contract]);
 
   if (!contract) {
     return (
-      <PageContentLayout
-        pageTitle="Contract not found"
-        breadcrumbs={[{ label: "Account management", href: "/logged/pages/account-management/customers_db" }, { label: "Contracts", href: "/logged/pages/account-management/contracts" }]}
-        buttons={[{ label: "Back to Contracts", href: "/logged/pages/account-management/contracts" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Contract not found.</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
@@ -71,11 +91,7 @@ const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ 
   ];
 
   return (
-    <PageContentLayout
-      pageTitle={`Contract: ${contract.title}`}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Contracts", href: "/logged/pages/account-management/contracts" }]}
-    >
+    <>
       <PageContentSection>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
@@ -130,7 +146,7 @@ const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ 
             ))}
           </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

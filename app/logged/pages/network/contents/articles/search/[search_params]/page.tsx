@@ -2,7 +2,7 @@
 
 import { FC, useEffect, useState, Suspense } from 'react';
 import { useParams } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import ArticleMiniature from '../../article_components/ArticleMiniature';
 import ArticleFilter from '../../article_components/ArticleFilter';
@@ -124,19 +124,24 @@ const ArticleSearchResultsContent: FC = () => {
     { label: "Search results" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: loading ? "Loading..." : heading,
+      breadcrumbs,
+    });
+  }, [setPageMeta, loading, heading, breadcrumbs]);
+
   if (loading) {
     return (
-      <PageContentLayout pageTitle="Loading..." breadcrumbs={breadcrumbs}>
+      <>
         <PageContentSection><p className="text-gray-500">Loading...</p></PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
   return (
-    <PageContentLayout
-      pageTitle={heading}
-      breadcrumbs={breadcrumbs}
-    >
+    <>
       <PageContentSection>
         <ArticleFilter />
       </PageContentSection>
@@ -163,22 +168,28 @@ const ArticleSearchResultsContent: FC = () => {
         </div>
       </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 
-const ArticleSearchResults: FC<PageProps> = ({ }) => {
+const ArticleSearchFallback: FC = () => {
+  const { setPageMeta } = usePageContent();
   const breadcrumbs = [
     { label: "Contents", href: "/logged/pages/network/contents/articles" },
     { label: "Articles", href: "/logged/pages/network/contents/articles" },
     { label: "Search results" },
   ];
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Loading...", breadcrumbs });
+  }, [setPageMeta, breadcrumbs]);
   return (
-    <Suspense fallback={
-      <PageContentLayout pageTitle="Loading..." breadcrumbs={breadcrumbs}>
-        <PageContentSection><p className="text-gray-500">Loading...</p></PageContentSection>
-      </PageContentLayout>
-    }>
+    <PageContentSection><p className="text-gray-500">Loading...</p></PageContentSection>
+  );
+}
+
+const ArticleSearchResults: FC<PageProps> = ({ }) => {
+  return (
+    <Suspense fallback={<ArticleSearchFallback />}>
       <ArticleSearchResultsContent />
     </Suspense>
   );

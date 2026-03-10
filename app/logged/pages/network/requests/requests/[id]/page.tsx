@@ -2,7 +2,7 @@
 
 import { FC, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { useOtherRequests, RequestState } from '../../hooks/useOtherRequests';
 
@@ -17,6 +17,7 @@ const OtherRequestDetailPage: FC = () => {
   const { getById, updateState } = useOtherRequests();
   const [request, setRequest] = useState<ReturnType<typeof getById>>(undefined);
   const [loading, setLoading] = useState(true);
+  const { setPageMeta } = usePageContent();
 
   useEffect(() => {
     const decodedId = decodeURIComponent(id).trim();
@@ -24,6 +25,29 @@ const OtherRequestDetailPage: FC = () => {
     setRequest(found ?? undefined);
     setLoading(false);
   }, [id, getById]);
+
+  useEffect(() => {
+    if (request) {
+      setPageMeta({
+        pageTitle: "Request Details",
+        breadcrumbs: [
+          { label: "Requests", href: "/logged/pages/network/requests" },
+          { label: "Other requests", href: "/logged/pages/network/requests/requests" },
+          { label: request.id },
+        ],
+        buttons: [{ label: "Back to Other Requests", href: "/logged/pages/network/requests/requests" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Request Details",
+        breadcrumbs: [
+          { label: "Requests", href: "/logged/pages/network/requests" },
+          { label: "Other requests", href: "/logged/pages/network/requests/requests" },
+        ],
+        buttons: [{ label: "Back to Other Requests", href: "/logged/pages/network/requests/requests" }],
+      });
+    }
+  }, [setPageMeta, request]);
 
   const handleStateChange = (newState: RequestState) => {
     if (!request) return;
@@ -60,11 +84,7 @@ const OtherRequestDetailPage: FC = () => {
   ];
 
   return (
-    <PageContentLayout
-      pageTitle="Request Details"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Other Requests", href: "/logged/pages/network/requests/requests" }]}
-    >
+    <>
       <PageContentSection>
         <div className="space-y-4 text-gray-600">
           <div>
@@ -93,7 +113,7 @@ const OtherRequestDetailPage: FC = () => {
           </div>
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

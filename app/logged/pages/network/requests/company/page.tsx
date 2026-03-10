@@ -1,8 +1,8 @@
 "use client";
 
-import { FC, useState, useMemo } from 'react';
+import { FC, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { useCompanyRequests, RequestState } from '../hooks/useCompanyRequests';
 
@@ -63,11 +63,13 @@ const CompanyRequestsPage: FC = () => {
     { label: "Company requests" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Create a Company Requests", breadcrumbs });
+  }, [setPageMeta, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle="Create a Company Requests"
-      breadcrumbs={breadcrumbs}
-    >
+    <>
       <PageContentSection>
         <p className="text-sm text-gray-500 mb-4">Requests from users to add a company profile to the directory</p>
         <div className="flex flex-col w-full">
@@ -166,7 +168,7 @@ const CompanyRequestsPage: FC = () => {
           )}
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

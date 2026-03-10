@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, useState, useMemo } from "react";
+import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import customersData from "@/app/contents/customers.json";
 import contactsData from "@/app/contents/contactsContents.json";
@@ -94,12 +94,17 @@ const CreateProposalPage: FC = () => {
     { label: "Nueva propuesta" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Nueva propuesta",
+      breadcrumbs,
+      buttons: [{ label: "Volver", href: backUrl }],
+    });
+  }, [setPageMeta, breadcrumbs, backUrl]);
+
   return (
-    <PageContentLayout
-      pageTitle="Nueva propuesta"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Volver", href: backUrl }]}
-    >
+    <>
       <PageContentSection className="p-0">
       <div className="p-6 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-4">
@@ -408,7 +413,7 @@ const CreateProposalPage: FC = () => {
         )}
       </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

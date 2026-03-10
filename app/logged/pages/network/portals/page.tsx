@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FC, useState, useEffect } from "react";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import { PortalService } from "@/app/service/PortalService";
 
@@ -49,12 +49,13 @@ const PortalsPage: FC = () => {
   };
 
   const breadcrumbs = [{ label: "Portals" }];
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Portals", breadcrumbs });
+  }, [setPageMeta, breadcrumbs]);
 
   return (
-    <PageContentLayout
-      pageTitle="Portals"
-      breadcrumbs={breadcrumbs}
-    >
+    <>
       <PageContentSection>
         {loading ? (
           <div className="text-center py-10">
@@ -127,7 +128,7 @@ const PortalsPage: FC = () => {
           </div>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { CompanyService } from '@/app/service/CompanyService';
 import { PortalService } from '@/app/service/PortalService';
@@ -131,12 +131,17 @@ const CreateCompanyProfile: FC = () => {
     { label: "Create company" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Create Company",
+      breadcrumbs,
+      buttons: [{ label: "Back to Companies", href: "/logged/pages/network/directory/companies" }],
+    });
+  }, [setPageMeta, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle="Create Company"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Companies", href: "/logged/pages/network/directory/companies" }]}
-    >
+    <>
       <PageContentSection>
         <form onSubmit={handleSubmit} className="flex flex-col gap-6 max-w-5xl">
           <div className="bg-gray-50 rounded-lg p-6">
@@ -334,7 +339,7 @@ const CreateCompanyProfile: FC = () => {
           </div>
         </form>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

@@ -1,9 +1,8 @@
 "use client";
 
-import React, { FC, useState, useMemo } from "react";
+import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import contactsData from "@/app/contents/contactsContents.json";
 
@@ -45,8 +44,13 @@ const ContactsDbPage: FC = () => {
     { label: "Export", href: "/logged/pages/account-management/contacts_db/mass-ops/export" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Contacts DB", breadcrumbs, buttons });
+  }, [setPageMeta, breadcrumbs, buttons]);
+
   return (
-    <PageContentLayout pageTitle="Contacts DB" breadcrumbs={breadcrumbs} buttons={buttons}>
+    <>
       <PageContentSection>
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 w-full">
@@ -125,7 +129,7 @@ const ContactsDbPage: FC = () => {
           </table>
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

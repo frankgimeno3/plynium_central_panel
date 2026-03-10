@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, useState, useMemo } from "react";
+import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import proposalsData from "@/app/contents/proposals.json";
 import customersData from "@/app/contents/customers.json";
@@ -54,12 +54,17 @@ const ProposalsPage: FC = () => {
     { label: "Proposals" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Proposals",
+      breadcrumbs,
+      buttons: [{ label: "Crear", href: "/logged/pages/account-management/proposals/create" }],
+    });
+  }, [setPageMeta, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle="Proposals"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Crear", href: "/logged/pages/account-management/proposals/create" }]}
-    >
+    <>
       <PageContentSection>
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -176,7 +181,7 @@ const ProposalsPage: FC = () => {
           </div>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

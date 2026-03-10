@@ -1,0 +1,58 @@
+[
+  {
+    "id": "med-001",
+    "name": "Product Catalogue 2024.pdf",
+    "folderPath": "marketing/2024",
+    "type": "pdf",
+    "publishedAt": "2024-01-15",
+    "usedIn": ["Publication #12", "Newsletter Q1"],
+    "thumbnailUrl": null,
+    "url": "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf"
+  },
+  {
+    "id": "med-002",
+    "name": "Brand Guidelines.pdf",
+    "folderPath": "marketing",
+    "type": "pdf",
+    "publishedAt": "2023-11-20",
+    "usedIn": ["Banner campaign"],
+    "thumbnailUrl": null
+  },
+  {
+    "id": "med-003",
+    "name": "Hero Banner.png",
+    "folderPath": "marketing",
+    "type": "image",
+    "publishedAt": "2024-02-01",
+    "usedIn": ["Homepage", "Publication #15"],
+    "thumbnailUrl": "/placeholder-thumb.png",
+    "url": "https://picsum.photos/800/600"
+  },
+  {
+    "id": "med-004",
+    "name": "Brochure Glass Types.jpg",
+    "folderPath": "marketing/brochures",
+    "type": "image",
+    "publishedAt": "2024-01-08",
+    "usedIn": [],
+    "thumbnailUrl": null
+  },
+  {
+    "id": "med-005",
+    "name": "Terms and Conditions.pdf",
+    "folderPath": "legal",
+    "type": "pdf",
+    "publishedAt": "2023-06-01",
+    "usedIn": ["Contract template", "Quote #101"],
+    "thumbnailUrl": null
+  },
+  {
+    "id": "med-006",
+    "name": "Invoice Template.pdf",
+    "folderPath": "templates",
+    "type": "pdf",
+    "publishedAt": "2023-09-10",
+    "usedIn": [],
+    "thumbnailUrl": null
+  }
+]

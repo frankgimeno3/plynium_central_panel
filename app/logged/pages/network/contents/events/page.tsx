@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { EventsService } from '@/app/service/EventsService';
 import EventFilter, { EventFilterParams } from './event_components/EventFilter';
@@ -309,20 +309,25 @@ const IndustryEvents: FC = () => {
     { label: "Events" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Industry Events",
+      breadcrumbs,
+      buttons: [{ label: "Create event", href: "/logged/pages/network/contents/events/create" }],
+    });
+  }, [setPageMeta, breadcrumbs]);
+
   if (loading) {
     return (
-      <PageContentLayout pageTitle="Industry Events" breadcrumbs={breadcrumbs}>
+      <>
         <p className="text-gray-500">Loading events...</p>
-      </PageContentLayout>
+      </>
     );
   }
 
   return (
-    <PageContentLayout
-      pageTitle="Industry Events"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Create event", href: "/logged/pages/network/contents/events/create" }]}
-    >
+    <>
       <PageContentSection>
         <EventFilter
           onFilter={setFilterParams}
@@ -503,7 +508,7 @@ const IndustryEvents: FC = () => {
         </div>
       )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

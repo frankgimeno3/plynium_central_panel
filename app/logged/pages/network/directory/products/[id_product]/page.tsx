@@ -3,7 +3,7 @@
 import React, { FC, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { ProductService } from '@/app/service/ProductService';
 import { CompanyService } from '@/app/service/CompanyService';
@@ -31,6 +31,7 @@ const IdProduct: FC<IdProductProps> = ({ }) => {
   const [deleting, setDeleting] = useState(false);
   const [companyData, setCompanyData] = useState<{ commercialName: string } | null>(null);
   const [tagInput, setTagInput] = useState('');
+  const { setPageMeta } = usePageContent();
 
   useEffect(() => {
     let cancelled = false;
@@ -80,6 +81,29 @@ const IdProduct: FC<IdProductProps> = ({ }) => {
       .then((list: any[]) => setCompanyPortals(Array.isArray(list) ? list : []))
       .catch(() => setCompanyPortals([]));
   }, [formData?.company]);
+
+  useEffect(() => {
+    if (product && formData) {
+      setPageMeta({
+        pageTitle: "Product Details",
+        breadcrumbs: [
+          { label: "Directory", href: "/logged/pages/network/directory/products" },
+          { label: "Products", href: "/logged/pages/network/directory/products" },
+          { label: formData.productName ?? productId ?? "Product" },
+        ],
+        buttons: [{ label: "Back to Products", href: "/logged/pages/network/directory/products" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Product Details",
+        breadcrumbs: [
+          { label: "Directory", href: "/logged/pages/network/directory/products" },
+          { label: "Products", href: "/logged/pages/network/directory/products" },
+        ],
+        buttons: [{ label: "Back to Products", href: "/logged/pages/network/directory/products" }],
+      });
+    }
+  }, [setPageMeta, product, formData, productId]);
 
   const addTag = (tag: string) => {
     const t = tag.trim();
@@ -191,11 +215,7 @@ const IdProduct: FC<IdProductProps> = ({ }) => {
   ];
 
   return (
-    <PageContentLayout
-      pageTitle="Product Details"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Products", href: "/logged/pages/network/directory/products" }]}
-    >
+    <>
       <PageContentSection>
         <div className="p-0">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -458,7 +478,7 @@ const IdProduct: FC<IdProductProps> = ({ }) => {
           {deleting ? 'Deleting...' : 'Delete product'}
         </button>
       </div>
-    </PageContentLayout>
+    </>
   );
 };
 

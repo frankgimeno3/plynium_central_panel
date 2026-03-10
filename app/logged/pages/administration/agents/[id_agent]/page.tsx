@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, useMemo } from "react";
+import React, { FC, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import agentsData from "@/app/contents/agentsContents.json";
 import customersData from "@/app/contents/customers.json";
@@ -54,31 +54,57 @@ const AgentDetailPage: FC = () => {
     );
   }, [agent?.name]);
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    if (agent) {
+      setPageMeta({
+        pageTitle: `Agent — ${agent.name}`,
+        breadcrumbs: [
+          { label: "Administration", href: "/logged/pages/administration" },
+          { label: "Agents", href: "/logged/pages/administration/agents" },
+          { label: agent.name },
+        ],
+        buttons: [{ label: "Back to Agents", href: "/logged/pages/administration/agents" }],
+      });
+    } else if (idAgent) {
+      setPageMeta({
+        pageTitle: "Agent not found",
+        breadcrumbs: [
+          { label: "Administration", href: "/logged/pages/administration" },
+          { label: "Agents", href: "/logged/pages/administration/agents" },
+          { label: idAgent },
+        ],
+        buttons: [{ label: "Back to Agents", href: "/logged/pages/administration/agents" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Invalid agent",
+        breadcrumbs: [
+          { label: "Administration", href: "/logged/pages/administration" },
+          { label: "Agents", href: "/logged/pages/administration/agents" },
+        ],
+        buttons: [{ label: "Back to Agents", href: "/logged/pages/administration/agents" }],
+      });
+    }
+  }, [setPageMeta, agent, idAgent]);
+
   if (!idAgent) {
     return (
-      <PageContentLayout
-        pageTitle="Invalid agent"
-        breadcrumbs={[{ label: "Administration", href: "/logged/pages/administration" }, { label: "Agents", href: "/logged/pages/administration/agents" }]}
-        buttons={[{ label: "Back to Agents", href: "/logged/pages/administration/agents" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Invalid agent.</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
   if (!agent) {
     return (
-      <PageContentLayout
-        pageTitle="Agent not found"
-        breadcrumbs={[{ label: "Administration", href: "/logged/pages/administration" }, { label: "Agents", href: "/logged/pages/administration/agents" }, { label: idAgent }]}
-        buttons={[{ label: "Back to Agents", href: "/logged/pages/administration/agents" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Agent not found: {idAgent}</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
@@ -89,11 +115,7 @@ const AgentDetailPage: FC = () => {
   ];
 
   return (
-    <PageContentLayout
-      pageTitle={`Agent — ${agent.name}`}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Agents", href: "/logged/pages/administration/agents" }]}
-    >
+    <>
       <PageContentSection>
         <div className="overflow-hidden max-w-2xl">
           <table className="min-w-full divide-y divide-gray-200">
@@ -282,7 +304,7 @@ const AgentDetailPage: FC = () => {
             </div>
           )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import { publicationInterface } from "@/app/contents/interfaces";
 import { PublicationService } from "@/app/service/PublicationService";
@@ -300,12 +300,17 @@ export default function IdPubblicationPage() {
     { label: pageTitle },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle,
+      breadcrumbs,
+      buttons: [{ label: "Volver a publicaciones", href: "/logged/pages/network/contents/publications" }],
+    });
+  }, [setPageMeta, pageTitle, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle={pageTitle}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Volver a publicaciones", href: "/logged/pages/network/contents/publications" }]}
-    >
+    <>
       <PageContentSection>
       <main className="flex flex-col gap-6 text-gray-600 w-full">
         <div className="flex justify-end mb-4">
@@ -458,6 +463,6 @@ export default function IdPubblicationPage() {
         onConfirm={handleDeletePublication}
         onCancel={closeDeleteModal}
       />
-    </PageContentLayout>
+    </>
   );
 }

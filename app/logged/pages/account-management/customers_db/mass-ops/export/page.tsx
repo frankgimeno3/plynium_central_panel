@@ -1,8 +1,8 @@
 "use client";
 
-import React, { FC, useState, useMemo } from "react";
+import React, { FC, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import customersData from "@/app/contents/customers.json";
 
@@ -177,12 +177,17 @@ const ExportCustomersPage: FC = () => {
     { label: "Export" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Exportar cuentas (Companies)",
+      breadcrumbs,
+      buttons: [{ label: "Volver a Customers", href: backUrl }],
+    });
+  }, [setPageMeta, breadcrumbs, backUrl]);
+
   return (
-    <PageContentLayout
-      pageTitle="Exportar cuentas (Companies)"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Volver a Customers", href: backUrl }]}
-    >
+    <>
       <PageContentSection>
       <div className="max-w-2xl">
         {phase === "config" && (
@@ -315,7 +320,7 @@ const ExportCustomersPage: FC = () => {
         )}
       </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

@@ -3,7 +3,7 @@
 import { FC, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import notificationsData from '@/app/contents/notifications.json';
 
@@ -87,36 +87,43 @@ const NotificationDetailPage: FC = () => {
     { label: notification?.notification_brief_description ?? notificationId ?? 'Detail' },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    if (!notification && notifications.length > 0) {
+      setPageMeta({
+        pageTitle: 'Notification not found',
+        breadcrumbs: [{ label: 'Notifications', href: '/logged/pages/notifications' }, { label: 'Not found' }],
+        buttons: [{ label: 'Back to Notifications', href: '/logged/pages/notifications' }],
+      });
+    } else if (!notification) {
+      setPageMeta({ pageTitle: 'Notification', breadcrumbs: [{ label: 'Notifications', href: '/logged/pages/notifications' }] });
+    } else {
+      setPageMeta({
+        pageTitle: 'Notification Details',
+        breadcrumbs: breadcrumbsList,
+        buttons: [{ label: 'Back to Notifications', href: '/logged/pages/notifications' }],
+      });
+    }
+  }, [notification, notifications.length, notificationId, setPageMeta]);
+
   if (!notification && notifications.length > 0) {
     return (
-      <PageContentLayout
-        pageTitle="Notification not found"
-        breadcrumbs={[{ label: 'Notifications', href: '/logged/pages/notifications' }, { label: 'Not found' }]}
-        buttons={[{ label: 'Back to Notifications', href: '/logged/pages/notifications' }]}
-      >
-        <PageContentSection>
-          <p className='text-red-500 text-lg'>Notification not found.</p>
-        </PageContentSection>
-      </PageContentLayout>
+      <PageContentSection>
+        <p className='text-red-500 text-lg'>Notification not found.</p>
+      </PageContentSection>
     );
   }
 
   if (!notification) {
     return (
-      <PageContentLayout pageTitle="Notification" breadcrumbs={[{ label: 'Notifications', href: '/logged/pages/notifications' }]}>
-        <PageContentSection>
-          <p className='text-gray-600'>Loading...</p>
-        </PageContentSection>
-      </PageContentLayout>
+      <PageContentSection>
+        <p className='text-gray-600'>Loading...</p>
+      </PageContentSection>
     );
   }
 
   return (
-    <PageContentLayout
-      pageTitle="Notification Details"
-      breadcrumbs={breadcrumbsList}
-      buttons={[{ label: 'Back to Notifications', href: '/logged/pages/notifications' }]}
-    >
+    <>
       <PageContentSection>
         <div className='space-y-4 mb-6'>
             <div>
@@ -150,7 +157,7 @@ const NotificationDetailPage: FC = () => {
             <p className='text-base text-gray-900 mt-1 whitespace-pre-wrap'>{notification.notification_description}</p>
           </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

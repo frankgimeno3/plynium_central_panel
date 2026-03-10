@@ -1,8 +1,8 @@
 "use client";
 
-import { FC, useState, useMemo } from 'react';
+import { FC, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { useOtherRequests, RequestState } from '../hooks/useOtherRequests';
 
@@ -48,11 +48,13 @@ const OtherRequestsPage: FC = () => {
     { label: "Other requests" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Other Requests", breadcrumbs });
+  }, [setPageMeta, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle="Other Requests"
-      breadcrumbs={breadcrumbs}
-    >
+    <>
       <PageContentSection>
         <p className="text-sm text-gray-500 mb-4">General contact and inquiry requests</p>
         <div className="flex flex-col w-full">
@@ -145,7 +147,7 @@ const OtherRequestsPage: FC = () => {
           )}
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

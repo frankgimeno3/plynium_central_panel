@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { useState, useEffect } from "react";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import ga4Data from "@/app/contents/ga4.json";
 
@@ -35,13 +35,17 @@ export default function GA4Page() {
   const detailedRows = detail?.topPagesDetail ?? tableRows.map((r) => ({ ...r, entrances: 0, exits: 0 }));
 
   const breadcrumbs = [{ label: "GA4" }];
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Google Analytics 4",
+      breadcrumbs,
+      buttons: [{ label: "Back to dashboard", href: "/logged" }],
+    });
+  }, [setPageMeta, breadcrumbs]);
 
   return (
-    <PageContentLayout
-      pageTitle="Google Analytics 4"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to dashboard", href: "/logged" }]}
-    >
+    <>
       <PageContentSection className="p-0 overflow-hidden">
         <div className="flex border-b border-gray-200">
           {portals.map((p, i) => (
@@ -171,7 +175,7 @@ export default function GA4Page() {
           </PageContentSection>
         </>
       ) : null}
-    </PageContentLayout>
+    </>
   );
 }
 

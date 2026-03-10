@@ -2,10 +2,11 @@
 
 import { FC, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import { PublicationService } from "@/app/service/PublicationService";
 import PublicationSearchClient from "./PublicationSearchClient";
+import { buildPublicationSearchHeading } from "./PublicationSearchClient";
 
 const PublicationSearchResultsContent: FC = () => {
   const searchParams = useSearchParams();
@@ -120,11 +121,17 @@ const PublicationSearchResultsContent: FC = () => {
     { label: "Search results" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: loading ? "Cargando..." : buildPublicationSearchHeading(filters),
+      breadcrumbs,
+    });
+  }, [loading, filters, setPageMeta]);
+
   if (loading) {
     return (
-      <PageContentLayout pageTitle="Cargando..." breadcrumbs={breadcrumbs}>
-        <PageContentSection><p className="text-gray-500">Cargando...</p></PageContentSection>
-      </PageContentLayout>
+      <PageContentSection><p className="text-gray-500">Cargando...</p></PageContentSection>
     );
   }
 
@@ -132,18 +139,15 @@ const PublicationSearchResultsContent: FC = () => {
     <PublicationSearchClient
       filteredPublications={filteredPublications}
       filters={filters}
-      renderLayout={(heading, filterNode, contentNode) => (
-        <PageContentLayout
-          pageTitle={heading}
-          breadcrumbs={breadcrumbs}
-        >
+      renderLayout={(_heading, filterNode, contentNode) => (
+        <>
           <PageContentSection>
             {filterNode}
           </PageContentSection>
           <PageContentSection>
             {contentNode}
           </PageContentSection>
-        </PageContentLayout>
+        </>
       )}
     />
   );
@@ -158,18 +162,22 @@ interface PageProps {
   }>;
 }
 
-const PublicationSearchResults: FC<PageProps> = ({ }) => {
+const PublicationSearchFallback: FC = () => {
+  const { setPageMeta } = usePageContent();
   const breadcrumbs = [
     { label: "Contents", href: "/logged/pages/network/contents/publications" },
     { label: "Publications", href: "/logged/pages/network/contents/publications" },
     { label: "Search results" },
   ];
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Cargando...", breadcrumbs });
+  }, [setPageMeta]);
+  return <PageContentSection><p className="text-gray-500">Cargando...</p></PageContentSection>;
+};
+
+const PublicationSearchResults: FC<PageProps> = ({ }) => {
   return (
-    <Suspense fallback={
-      <PageContentLayout pageTitle="Cargando..." breadcrumbs={breadcrumbs}>
-        <PageContentSection><p className="text-gray-500">Cargando...</p></PageContentSection>
-      </PageContentLayout>
-    }>
+    <Suspense fallback={<PublicationSearchFallback />}>
       <PublicationSearchResultsContent />
     </Suspense>
   );

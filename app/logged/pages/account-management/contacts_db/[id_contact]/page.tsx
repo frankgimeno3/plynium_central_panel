@@ -3,7 +3,7 @@
 import React, { FC, use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import contactsData from "@/app/contents/contactsContents.json";
 
@@ -48,17 +48,32 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
     setNewComment("");
   };
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    if (!contact) {
+      setPageMeta({
+        pageTitle: "Contacto no encontrado",
+        breadcrumbs: [{ label: "Account management", href: "/logged/pages/account-management/customers_db" }, { label: "Contacts DB", href: "/logged/pages/account-management/contacts_db" }],
+        buttons: [{ label: "Volver a Contactos", href: "/logged/pages/account-management/contacts_db" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: contact.name,
+        breadcrumbs: [
+          { label: "Account management", href: "/logged/pages/account-management/customers_db" },
+          { label: "Contacts DB", href: "/logged/pages/account-management/contacts_db" },
+          { label: contact.name },
+        ],
+        buttons: [{ label: "Volver a Contactos", href: "/logged/pages/account-management/contacts_db" }],
+      });
+    }
+  }, [contact, setPageMeta]);
+
   if (!contact) {
     return (
-      <PageContentLayout
-        pageTitle="Contacto no encontrado"
-        breadcrumbs={[{ label: "Account management", href: "/logged/pages/account-management/customers_db" }, { label: "Contacts DB", href: "/logged/pages/account-management/contacts_db" }]}
-        buttons={[{ label: "Volver a Contactos", href: "/logged/pages/account-management/contacts_db" }]}
-      >
-        <PageContentSection>
-          <p className="text-gray-500">Contacto no encontrado.</p>
-        </PageContentSection>
-      </PageContentLayout>
+      <PageContentSection>
+        <p className="text-gray-500">Contacto no encontrado.</p>
+      </PageContentSection>
     );
   }
 
@@ -67,18 +82,8 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
     { key: "comentarios", label: "Comentarios" },
   ];
 
-  const breadcrumbs = [
-    { label: "Account management", href: "/logged/pages/account-management/customers_db" },
-    { label: "Contacts DB", href: "/logged/pages/account-management/contacts_db" },
-    { label: contact.name },
-  ];
-
   return (
-    <PageContentLayout
-      pageTitle={contact.name}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Volver a Contactos", href: "/logged/pages/account-management/contacts_db" }]}
-    >
+    <>
       <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="flex border-b border-gray-200 bg-gray-50/80">
         <div className="flex w-full">
@@ -177,7 +182,7 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
         )}
       </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

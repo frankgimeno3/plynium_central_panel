@@ -1,7 +1,7 @@
 "use client";
 
-import React, { FC, useMemo, useState } from "react";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import React, { FC, useMemo, useState, useEffect } from "react";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import providersData from "@/app/contents/providers.json";
 import type { Provider } from "@/app/contents/interfaces";
@@ -28,8 +28,13 @@ const ProvidersPage: FC = () => {
     { label: "Providers" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Providers", breadcrumbs });
+  }, [setPageMeta]);
+
   return (
-    <PageContentLayout pageTitle="Providers" breadcrumbs={breadcrumbs}>
+    <>
       <PageContentSection>
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -84,7 +89,7 @@ const ProvidersPage: FC = () => {
           <p className="text-sm text-gray-500 text-center py-8">No providers match the filters.</p>
         )}
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

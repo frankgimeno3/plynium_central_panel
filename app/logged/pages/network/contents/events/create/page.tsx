@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import PageContentLayout from '@/app/logged/logged_components/PageContentLayout';
+import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
 import { EventsService } from '@/app/service/EventsService';
 import { PortalService } from '@/app/service/PortalService';
@@ -322,12 +322,17 @@ const CreateEvent: FC = () => {
     { label: "Create event" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({
+      pageTitle: "Create event",
+      breadcrumbs,
+      buttons: [{ label: "Back to Events", href: "/logged/pages/network/contents/events" }],
+    });
+  }, [setPageMeta, breadcrumbs]);
+
   return (
-    <PageContentLayout
-      pageTitle="Create event"
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Events", href: "/logged/pages/network/contents/events" }]}
-    >
+    <>
       <PageContentSection>
       <div className="max-w-4xl mx-auto w-full">
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
@@ -553,7 +558,7 @@ const CreateEvent: FC = () => {
         </form>
       </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

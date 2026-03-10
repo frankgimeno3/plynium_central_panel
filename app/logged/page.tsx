@@ -2,6 +2,7 @@
 
 import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
+import { usePageContent } from './logged_components/PageContentContext';
 import notificationsData from '@/app/contents/notifications.json';
 import otherRequestsData from '@/app/contents/otherRequests.json';
 import companyRequestData from '@/app/contents/companyRequest.json';
@@ -39,10 +40,15 @@ interface LoggedProps {
 }
 
 const Logged: FC<LoggedProps> = ({ }) => {
+  const { setPageMeta } = usePageContent();
   const [activeTab, setActiveTab] = useState<'notifications' | 'other'>('notifications');
   const [ga4PortalTab, setGa4PortalTab] = useState(0);
   const [userName, setUserName] = useState<string>('User');
   const [notifications, setNotifications] = useState<Notification[]>([]);
+
+  useEffect(() => {
+    setPageMeta({ pageTitle: 'Dashboard', breadcrumbs: [] });
+  }, [setPageMeta]);
 
   useEffect(() => {
     fetch('/api/me')

@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, useState, useMemo } from "react";
+import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import customersData from "@/app/contents/customers.json";
 
@@ -51,8 +51,13 @@ const CustomersDbPage: FC = () => {
     { label: "Export", href: "/logged/pages/account-management/customers_db/mass-ops/export" },
   ];
 
+  const { setPageMeta } = usePageContent();
+  useEffect(() => {
+    setPageMeta({ pageTitle: "Customers DB", breadcrumbs, buttons });
+  }, [setPageMeta]);
+
   return (
-    <PageContentLayout pageTitle="Customers DB" breadcrumbs={breadcrumbs} buttons={buttons}>
+    <>
       <PageContentSection>
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -135,7 +140,7 @@ const CustomersDbPage: FC = () => {
         </table>
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 

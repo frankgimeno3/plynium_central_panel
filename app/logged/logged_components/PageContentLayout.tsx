@@ -1,27 +1,20 @@
 "use client";
 
-import { FC, ReactNode } from "react";
+import { type ReactNode } from "react";
 import Link from "next/link";
-import MiddleNav, { BreadcrumbItem } from "./MiddleNav";
+import MiddleNav from "./MiddleNav";
+import { usePageContent } from "./PageContentContext";
 
-export interface PageButton {
-  label: string;
-  href: string;
-}
+export type { PageButton } from "./PageContentContext";
 
 interface PageContentLayoutProps {
-  pageTitle: string;
-  breadcrumbs: BreadcrumbItem[];
-  buttons?: PageButton[];
   children: ReactNode;
 }
 
-const PageContentLayout: FC<PageContentLayoutProps> = ({
-  pageTitle,
-  breadcrumbs,
-  buttons,
-  children,
-}) => {
+export default function PageContentLayout({ children }: PageContentLayoutProps) {
+  const { meta } = usePageContent();
+  const { pageTitle, breadcrumbs, buttons } = meta;
+
   return (
     <div className="flex flex-col w-full min-h-full bg-white">
       <MiddleNav pageTitle={pageTitle} breadcrumbs={breadcrumbs} />
@@ -29,15 +22,26 @@ const PageContentLayout: FC<PageContentLayoutProps> = ({
       <div className="flex-1 p-6 bg-gray-100">
         {buttons && buttons.length > 0 && (
           <div className="mb-4 flex flex-wrap gap-2 justify-end">
-            {buttons.map((btn, index) => (
-              <Link
-                key={index}
-                href={btn.href}
-                className="bg-blue-950 text-white text-xs px-4 py-2 rounded-xl shadow hover:bg-blue-950/80 inline-block transition-colors"
-              >
-                {btn.label}
-              </Link>
-            ))}
+            {buttons.map((btn, index) =>
+              btn.onClick ? (
+                <button
+                  key={index}
+                  type="button"
+                  onClick={btn.onClick}
+                  className="bg-blue-950 text-white text-xs px-4 py-2 rounded-xl shadow hover:bg-blue-950/80 inline-block transition-colors"
+                >
+                  {btn.label}
+                </button>
+              ) : (
+                <Link
+                  key={index}
+                  href={btn.href}
+                  className="bg-blue-950 text-white text-xs px-4 py-2 rounded-xl shadow hover:bg-blue-950/80 inline-block transition-colors"
+                >
+                  {btn.label}
+                </Link>
+              )
+            )}
           </div>
         )}
 
@@ -47,6 +51,4 @@ const PageContentLayout: FC<PageContentLayoutProps> = ({
       </div>
     </div>
   );
-};
-
-export default PageContentLayout;
+}

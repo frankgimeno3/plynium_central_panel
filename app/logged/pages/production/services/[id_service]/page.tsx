@@ -1,9 +1,9 @@
 "use client";
 
-import React, { FC, use } from "react";
+import React, { FC, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import PageContentLayout from "@/app/logged/logged_components/PageContentLayout";
+import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import servicesData from "@/app/contents/services.json";
 
@@ -18,21 +18,38 @@ const ServiceDetailPage: FC<{ params: Promise<{ id_service: string }> }> = ({ pa
   const router = useRouter();
   const { id_service } = use(params);
   const service = (servicesData as Service[]).find((s) => s.id_service === id_service);
+  const { setPageMeta } = usePageContent();
+
+  useEffect(() => {
+    if (service) {
+      setPageMeta({
+        pageTitle: `Service: ${service.name?.replace(/_/g, " ") ?? id_service}`,
+        breadcrumbs: [
+          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Services", href: "/logged/pages/production/services" },
+          { label: service.name?.replace(/_/g, " ") ?? id_service },
+        ],
+        buttons: [{ label: "Back to Services", href: "/logged/pages/production/services" }],
+      });
+    } else {
+      setPageMeta({
+        pageTitle: "Service not found",
+        breadcrumbs: [
+          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Services", href: "/logged/pages/production/services" },
+        ],
+        buttons: [{ label: "Back to Services", href: "/logged/pages/production/services" }],
+      });
+    }
+  }, [setPageMeta, service, id_service]);
 
   if (!service) {
     return (
-      <PageContentLayout
-        pageTitle="Service not found"
-        breadcrumbs={[
-          { label: "Production", href: "/logged/pages/production/projects" },
-          { label: "Services", href: "/logged/pages/production/services" },
-        ]}
-        buttons={[{ label: "Back to Services", href: "/logged/pages/production/services" }]}
-      >
+      <>
         <PageContentSection>
           <p className="text-gray-500">Service not found.</p>
         </PageContentSection>
-      </PageContentLayout>
+      </>
     );
   }
 
@@ -43,11 +60,7 @@ const ServiceDetailPage: FC<{ params: Promise<{ id_service: string }> }> = ({ pa
   ];
 
   return (
-    <PageContentLayout
-      pageTitle={`Service: ${service.name?.replace(/_/g, " ") ?? id_service}`}
-      breadcrumbs={breadcrumbs}
-      buttons={[{ label: "Back to Services", href: "/logged/pages/production/services" }]}
-    >
+    <>
       <PageContentSection>
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -70,7 +83,7 @@ const ServiceDetailPage: FC<{ params: Promise<{ id_service: string }> }> = ({ pa
           )}
         </div>
       </PageContentSection>
-    </PageContentLayout>
+    </>
   );
 };
 
