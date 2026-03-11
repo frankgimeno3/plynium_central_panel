@@ -16,10 +16,12 @@ export type MediatecaContent = {
   name: string;
   folderPath: string;
   type: "pdf" | "image";
+  content_type: "json" | "image";
   publishedAt: string;
   usedIn: string[];
   thumbnailUrl: string | null;
   url?: string | null;
+  src: string;
 };
 
 const folders = foldersData as MediatecaFolder[];
@@ -168,9 +170,9 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
                   <tr key={c.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4">
                       <div className="w-10 h-10 rounded border border-gray-200 bg-gray-100 flex items-center justify-center overflow-hidden">
-                        {c.type === "image" && c.thumbnailUrl ? (
-                          <img src={c.thumbnailUrl} alt="" className="w-full h-full object-cover" />
-                        ) : c.type === "pdf" ? (
+                        {c.content_type === "image" && c.src ? (
+                          <img src={c.src} alt="" className="w-full h-full object-cover" />
+                        ) : c.content_type === "json" || c.type === "pdf" ? (
                           <span className="text-red-600 text-xs font-bold">PDF</span>
                         ) : (
                           <span className="text-gray-400 text-xs">img</span>
@@ -195,8 +197,8 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
                         </a>
                         <span className="text-gray-300">|</span>
                         <a
-                          href={c.url ?? `/logged/pages/mediateca/asset/${c.id}`}
-                          download={!c.url ? undefined : c.name}
+                          href={c.src ?? `/logged/pages/mediateca/asset/${c.id}`}
+                          download={c.src ? c.name : undefined}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-600 hover:underline font-medium"

@@ -44,13 +44,12 @@ const OtherRequestsPage: FC = () => {
   };
 
   const breadcrumbs = [
-    { label: "Requests", href: "/logged/pages/network/requests" },
     { label: "Other requests" },
   ];
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
-    setPageMeta({ pageTitle: "Other Requests", breadcrumbs });
+    setPageMeta({ pageTitle: "Other Requests", breadcrumbs, buttons: [] });
   }, [setPageMeta, breadcrumbs]);
 
   return (

@@ -8,7 +8,7 @@ import PageContentSection from '@/app/logged/logged_components/PageContentSectio
 interface AdvertisementProps {}
 
 const Advertisement: FC<AdvertisementProps> = () => {
-  const breadcrumbs = [{ label: "Requests" }];
+  const breadcrumbs: { label: string; href?: string }[] = [];
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     setPageMeta({ pageTitle: "Requests", breadcrumbs });

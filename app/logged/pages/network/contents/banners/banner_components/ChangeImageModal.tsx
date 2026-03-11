@@ -1,6 +1,7 @@
 "use client";
 
 import React, { FC, useEffect, useState } from "react";
+import MediatecaModal from "@/app/logged/logged_components/MediatecaModal";
 
 interface ChangeImageModalProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ const ChangeImageModal: FC<ChangeImageModalProps> = ({
 }) => {
   const [newSrc, setNewSrc] = useState<string>("");
   const [srcError, setSrcError] = useState<string>("");
+  const [mediatecaOpen, setMediatecaOpen] = useState(false);
 
   const validateSrc = (src: string): string => {
     const trimmedSrc = src.trim();
@@ -54,6 +56,15 @@ const ChangeImageModal: FC<ChangeImageModalProps> = ({
     }
   };
 
+  const handleSelectImageFromMediateca = (imageUrl: string) => {
+    const url = (imageUrl || "").trim();
+    if (url) {
+      setNewSrc(url);
+      setSrcError("");
+    }
+    setMediatecaOpen(false);
+  };
+
   const canUpdate = newSrc.trim() !== "" && newSrc.trim() !== currentSrc && srcError === "";
 
   // Reset form when modal opens
@@ -61,6 +72,8 @@ const ChangeImageModal: FC<ChangeImageModalProps> = ({
     if (isOpen) {
       setNewSrc("");
       setSrcError("");
+    } else {
+      setMediatecaOpen(false);
     }
   }, [isOpen]);
 
@@ -109,69 +122,74 @@ const ChangeImageModal: FC<ChangeImageModalProps> = ({
     event.stopPropagation();
   };
 
-  const handleSrcChange = (value: string) => {
-    setNewSrc(value);
-    const error = validateSrc(value);
-    setSrcError(error);
-  };
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-      onClick={handleOverlayClick}
-    >
+    <>
       <div
-        className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
-        onClick={handleModalClick}
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+        onClick={handleOverlayClick}
       >
-        {/* Botón de cerrar (X) */}
-        <button
-          type="button"
-          className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 text-2xl"
-          onClick={onCancel}
-          aria-label="Cerrar modal"
+        <div
+          className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
+          onClick={handleModalClick}
         >
-          ×
-        </button>
+          <button
+            type="button"
+            className="absolute right-4 top-4 text-gray-500 hover:text-gray-700 text-2xl"
+            onClick={onCancel}
+            aria-label="Cerrar"
+          >
+            ×
+          </button>
 
-        <h2 className="mb-4 text-xl font-semibold text-gray-800">
-          Change Image
-        </h2>
+          <h2 className="mb-4 text-xl font-semibold text-gray-800">
+            Change Image
+          </h2>
 
-        <div className="mb-4">
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            Current Image src:
-          </label>
-          <input
-            type="text"
-            className="w-full rounded-md border border-gray-300 bg-gray-100 p-2 text-sm text-gray-600 cursor-not-allowed"
-            value={currentSrc}
-            readOnly
-            disabled
-          />
-        </div>
+          <div className="mb-4">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              Current Image src:
+            </label>
+            <input
+              type="text"
+              className="w-full rounded-md border border-gray-300 bg-gray-100 p-2 text-sm text-gray-600 cursor-not-allowed"
+              value={currentSrc}
+              readOnly
+              disabled
+            />
+          </div>
 
-        <div className="mb-6">
-          <label className="mb-2 block text-sm font-medium text-gray-700">
-            New Src:
-          </label>
-          <input
-            type="text"
-            className={`w-full rounded-md border p-2 text-sm text-gray-700 focus:outline-none focus:ring-1 ${
-              srcError
-                ? "border-red-500 focus:border-red-500 focus:ring-red-500"
-                : "border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-            }`}
-            value={newSrc}
-            onChange={(event) => handleSrcChange(event.target.value)}
-            placeholder="Enter new image URL"
-          />
-          {srcError && (
-            <p className="mt-1 text-xs text-red-500">{srcError}</p>
-          )}
-        </div>
+          <div className="mb-6">
+            <label className="mb-2 block text-sm font-medium text-gray-700">
+              New image
+            </label>
+            <button
+              type="button"
+              onClick={() => setMediatecaOpen(true)}
+              className="w-full rounded-md border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+            >
+              Select or Add image
+            </button>
+            {newSrc && (
+              <div className="mt-3 flex items-center gap-2">
+                <img
+                  src={newSrc}
+                  alt="Selected"
+                  className="h-14 w-14 rounded border border-gray-200 object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
+                />
+                <span className="text-xs text-gray-500 truncate flex-1" title={newSrc}>
+                  Image selected
+                </span>
+              </div>
+            )}
+            {srcError && (
+              <p className="mt-1 text-xs text-red-500">{srcError}</p>
+            )}
+          </div>
 
-        <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-3">
           <button
             type="button"
             className="rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300 cursor-pointer"
@@ -192,9 +210,16 @@ const ChangeImageModal: FC<ChangeImageModalProps> = ({
           >
             Update
           </button>
+          </div>
         </div>
       </div>
-    </div>
+
+      <MediatecaModal
+        open={mediatecaOpen}
+        onClose={() => setMediatecaOpen(false)}
+        onSelectImage={handleSelectImageFromMediateca}
+      />
+    </>
   );
 };
 

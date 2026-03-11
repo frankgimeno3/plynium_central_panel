@@ -30,7 +30,7 @@ const ArticleMiniature: FC<ArticleMiniatureProps> = ({
   const showPlaceholder = !imageUrl?.trim() || imgError;
 
   return (
-    <Link href={`/logged/pages/account-management/contents/articles/${id_article}`} className="flex flex-col shadow-xl cursor-pointer w-80 p-2 border-t border-gray-100 bg-gray-100/50 hover:bg-white h-96">
+    <Link href={`/logged/pages/network/contents/articles/${id_article}`} className="flex flex-col shadow-xl cursor-pointer w-80 p-2 border-t border-gray-100 bg-gray-100/50 hover:bg-white h-96">
       <div className="h-56 overflow-hidden">
         {showPlaceholder ? (
           <ArticleImagePlaceholder className="w-full h-full" />

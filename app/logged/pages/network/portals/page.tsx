@@ -51,7 +51,7 @@ const PortalsPage: FC = () => {
   const breadcrumbs = [{ label: "Portals" }];
   const { setPageMeta } = usePageContent();
   useEffect(() => {
-    setPageMeta({ pageTitle: "Portals", breadcrumbs });
+    setPageMeta({ pageTitle: "Portals", breadcrumbs, buttons: [] });
   }, [setPageMeta, breadcrumbs]);
 
   return (

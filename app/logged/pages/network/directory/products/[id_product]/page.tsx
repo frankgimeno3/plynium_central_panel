@@ -87,7 +87,6 @@ const IdProduct: FC<IdProductProps> = ({ }) => {
       setPageMeta({
         pageTitle: "Product Details",
         breadcrumbs: [
-          { label: "Directory", href: "/logged/pages/network/directory/products" },
           { label: "Products", href: "/logged/pages/network/directory/products" },
           { label: formData.productName ?? productId ?? "Product" },
         ],
@@ -97,7 +96,6 @@ const IdProduct: FC<IdProductProps> = ({ }) => {
       setPageMeta({
         pageTitle: "Product Details",
         breadcrumbs: [
-          { label: "Directory", href: "/logged/pages/network/directory/products" },
           { label: "Products", href: "/logged/pages/network/directory/products" },
         ],
         buttons: [{ label: "Back to Products", href: "/logged/pages/network/directory/products" }],
@@ -209,7 +207,6 @@ const IdProduct: FC<IdProductProps> = ({ }) => {
   }
 
   const breadcrumbs = [
-    { label: "Directory", href: "/logged/pages/network/directory/products" },
     { label: "Products", href: "/logged/pages/network/directory/products" },
     { label: formData?.productName ?? productId ?? "Product" },
   ];

@@ -4,6 +4,7 @@ import React, { FC, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import MediatecaModal from '@/app/logged/logged_components/MediatecaModal';
 import { EventsService } from '@/app/service/EventsService';
 import { PortalService } from '@/app/service/PortalService';
 
@@ -249,6 +250,7 @@ const CreateEvent: FC = () => {
   };
 
   const [portalError, setPortalError] = useState<string | null>(null);
+  const [mediatecaModalOpen, setMediatecaModalOpen] = useState(false);
 
   const validate = (): boolean => {
     setPortalError(null);
@@ -336,38 +338,70 @@ const CreateEvent: FC = () => {
       <PageContentSection>
       <div className="max-w-4xl mx-auto w-full">
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          {/* Main image: optional URL, saved to event_main_image on create */}
-          <div className="w-full">
-            <label className="block text-sm font-semibold text-gray-500 uppercase mb-2">
-              Main image (URL)
+          {/* Event Name first */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
+              Event Name <span className="text-red-500">*</span>
             </label>
             <input
-              type="url"
-              value={form.event_main_image}
-              onChange={(e) => {
-                update('event_main_image', e.target.value);
-                setImageLoadError(false);
-              }}
-              placeholder="https://..."
+              type="text"
+              value={form.event_name}
+              onChange={(e) => update('event_name', e.target.value)}
               className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                errors.event_main_image ? 'border-red-500' : 'border-gray-300'
+                errors.event_name ? 'border-red-500' : 'border-gray-300'
               }`}
             />
+            {errors.event_name && (
+              <p className="mt-1 text-sm text-red-500">{errors.event_name}</p>
+            )}
+          </div>
+
+          {/* Main image: select from Media Library (Mediateca) */}
+          <div className="w-full">
+            <label className="block text-sm font-semibold text-gray-500 uppercase mb-2">
+              Main image
+            </label>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => setMediatecaModalOpen(true)}
+                className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-xl text-gray-700 hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium"
+              >
+                Select or Add image
+              </button>
+              {form.event_main_image && (
+                <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 shrink-0">
+                    {isValidUrl(form.event_main_image) && !imageLoadError ? (
+                      <img
+                        src={form.event_main_image}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={() => setImageLoadError(true)}
+                      />
+                    ) : (
+                      <ImagePlaceholderSvg />
+                    )}
+                  </div>
+                  <span className="text-sm text-gray-600 truncate flex-1 min-w-0" title={form.event_main_image}>
+                    {form.event_main_image}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      update('event_main_image', '');
+                      setImageLoadError(false);
+                    }}
+                    className="text-sm text-red-600 hover:text-red-800 font-medium"
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+            </div>
             {errors.event_main_image && (
               <p className="mt-1 text-sm text-red-500">{errors.event_main_image}</p>
             )}
-            <div className="mt-3 w-32 h-32 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center shrink-0">
-              {form.event_main_image.trim() && isValidUrl(form.event_main_image) && !imageLoadError ? (
-                <img
-                  src={form.event_main_image.trim()}
-                  alt=""
-                  className="w-full h-full object-contain object-center"
-                  onError={() => setImageLoadError(true)}
-                />
-              ) : (
-                <ImagePlaceholderSvg />
-              )}
-            </div>
           </div>
 
           <div className="bg-gray-50 rounded-lg p-6">
@@ -381,22 +415,6 @@ const CreateEvent: FC = () => {
                 </p>
               </div>
               <div className="md:col-span-2" />
-              <div>
-                <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
-                  Event Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  value={form.event_name}
-                  onChange={(e) => update('event_name', e.target.value)}
-                  className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.event_name ? 'border-red-500' : 'border-gray-300'
-                  }`}
-                />
-                {errors.event_name && (
-                  <p className="mt-1 text-sm text-red-500">{errors.event_name}</p>
-                )}
-              </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
                   Location <span className="text-red-500">*</span>
@@ -557,6 +575,16 @@ const CreateEvent: FC = () => {
           </div>
         </form>
       </div>
+
+      <MediatecaModal
+        open={mediatecaModalOpen}
+        onClose={() => setMediatecaModalOpen(false)}
+        onSelectImage={(imageSrc) => {
+          update('event_main_image', imageSrc);
+          setImageLoadError(false);
+          setMediatecaModalOpen(false);
+        }}
+      />
       </PageContentSection>
     </>
   );

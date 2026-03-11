@@ -8,7 +8,9 @@ type MediatecaContent = {
   id: string;
   name: string;
   type: "pdf" | "image";
+  content_type: "json" | "image";
   url?: string | null;
+  src: string;
   thumbnailUrl?: string | null;
 };
 
@@ -34,7 +36,7 @@ const MediatecaAssetPage: FC<{ params: Promise<{ id: string }> }> = ({ params })
     );
   }
 
-  const assetUrl = content.url || (content.type === "pdf" ? "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf" : "https://picsum.photos/800/600");
+  const assetUrl = content.src || (content.content_type === "json" ? "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf" : "https://picsum.photos/800/600");
 
   return (
     <div className="fixed inset-0 w-screen h-screen bg-gray-900 flex flex-col">
@@ -57,7 +59,7 @@ const MediatecaAssetPage: FC<{ params: Promise<{ id: string }> }> = ({ params })
         </div>
       </header>
       <main className="flex-1 min-h-0 w-full overflow-auto">
-        {content.type === "pdf" ? (
+        {content.content_type === "json" || content.type === "pdf" ? (
           <iframe
             src={assetUrl}
             title={content.name}

@@ -4,6 +4,7 @@ import React, { FC, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import MediatecaModal from "@/app/logged/logged_components/MediatecaModal";
 import { PublicationService } from "@/app/service/PublicationService";
 import { PortalService } from "@/app/service/PortalService";
 import { DateInputs, parseDateFields, buildDateStr } from "@/app/logged/logged_components/DateInputs";
@@ -34,6 +35,7 @@ const CreatePublication: FC = () => {
   const [isGeneratingId, setIsGeneratingId] = useState(true);
   const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
   const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
+  const [mediatecaModalOpen, setMediatecaModalOpen] = useState(false);
 
   useEffect(() => {
     PortalService.getAllPortals()
@@ -201,7 +203,6 @@ const CreatePublication: FC = () => {
     (portals.length === 0 || selectedPortalIds.length >= 1);
 
   const breadcrumbs = [
-    { label: "Contents" },
     { label: "Publications", href: "/logged/pages/network/contents/publications" },
     { label: "Create publication" },
   ];
@@ -315,14 +316,38 @@ const CreatePublication: FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="font-bold text-lg">URL de Imagen Principal</label>
-              <input
-                type="text"
-                value={publicationMainImageUrl}
-                onChange={(e) => setPublicationMainImageUrl(e.target.value)}
-                className="w-full px-4 py-2 border rounded-xl"
-                placeholder="https://example.com/image.jpg"
-              />
+              <label className="font-bold text-lg">Imagen Principal</label>
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMediatecaModalOpen(true)}
+                  className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-xl text-gray-700 hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium"
+                >
+                  Search or add image
+                </button>
+                {publicationMainImageUrl && (
+                  <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                    <img
+                      src={publicationMainImageUrl}
+                      alt="Main"
+                      className="w-16 h-16 object-cover rounded border border-gray-200"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = "none";
+                      }}
+                    />
+                    <span className="text-sm text-gray-600 truncate flex-1 min-w-0" title={publicationMainImageUrl}>
+                      {publicationMainImageUrl}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setPublicationMainImageUrl("")}
+                      className="text-sm text-red-600 hover:text-red-800 font-medium"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="flex gap-2 pt-4">
@@ -388,6 +413,15 @@ const CreatePublication: FC = () => {
         )}
       </div>
       </PageContentSection>
+
+      <MediatecaModal
+        open={mediatecaModalOpen}
+        onClose={() => setMediatecaModalOpen(false)}
+        onSelectImage={(imageSrc) => {
+          setPublicationMainImageUrl(imageSrc);
+          setMediatecaModalOpen(false);
+        }}
+      />
     </>
   );
 };

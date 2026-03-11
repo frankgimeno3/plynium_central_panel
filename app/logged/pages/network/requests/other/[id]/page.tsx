@@ -31,7 +31,6 @@ const OtherRequestDetailPage: FC = () => {
       setPageMeta({
         pageTitle: "Request Details",
         breadcrumbs: [
-          { label: "Requests", href: "/logged/pages/network/requests" },
           { label: "Other requests", href: "/logged/pages/network/requests/requests" },
           { label: request.id },
         ],
@@ -41,7 +40,6 @@ const OtherRequestDetailPage: FC = () => {
       setPageMeta({
         pageTitle: "Request Details",
         breadcrumbs: [
-          { label: "Requests", href: "/logged/pages/network/requests" },
           { label: "Other requests", href: "/logged/pages/network/requests/requests" },
         ],
         buttons: [{ label: "Back to Other Requests", href: "/logged/pages/network/requests/requests" }],
@@ -78,7 +76,6 @@ const OtherRequestDetailPage: FC = () => {
   }
 
   const breadcrumbs = [
-    { label: "Requests", href: "/logged/pages/network/requests" },
     { label: "Other requests", href: "/logged/pages/network/requests/requests" },
     { label: request.id },
   ];

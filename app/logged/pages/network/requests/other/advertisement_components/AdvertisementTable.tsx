@@ -2,7 +2,7 @@
 
 import { FC } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAdvertisements, TabFilter } from '../hooks/useAdvertisements';
+import { useAdvertisements, TabFilter } from '../../hooks/useAdvertisements';
 
 interface AdvertisementTableProps {}
 
@@ -106,7 +106,7 @@ const AdvertisementTable: FC<AdvertisementTableProps> = () => {
                 paginatedAdvertisements.map((advertisement) => (
                   <tr
                     key={advertisement.idAdvReq}
-                    onClick={() => router.push(`/logged/pages/account-management/requests/quotations/${encodeURIComponent(advertisement.idAdvReq)}`)}
+                    onClick={() => router.push(`/logged/pages/network/requests/quotations/${encodeURIComponent(advertisement.idAdvReq)}`)}
                     className="hover:bg-gray-100 cursor-pointer transition-colors"
                   >
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{advertisement.idAdvReq}</td>

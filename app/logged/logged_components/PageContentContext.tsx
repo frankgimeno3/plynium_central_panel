@@ -11,7 +11,7 @@ import type { BreadcrumbItem } from "./MiddleNav";
 
 export interface PageButton {
   label: string;
-  href: string;
+  href?: string;
   onClick?: () => void;
 }
 

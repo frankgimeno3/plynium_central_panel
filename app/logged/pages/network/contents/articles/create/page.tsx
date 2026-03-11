@@ -13,6 +13,8 @@ import ArticlePhase1 from "./ArticlePhase1";
 import ArticlePhase2 from "./ArticlePhase2";
 import ArticlePhase3 from "./ArticlePhase3";
 import ContentModal from "./ContentModal";
+import MediatecaModal from "@/app/logged/logged_components/MediatecaModal";
+import EventSelectModal from "@/app/logged/logged_components/EventSelectModal";
 import { isRichTextEmpty } from "@/app/logged/logged_components/RichTextEditor";
 
 const getTodayDate = () => {
@@ -41,6 +43,12 @@ export default function CreateArticlePage() {
 
   const [contents, setContents] = useState<Content[]>([]);
   const [showContentModal, setShowContentModal] = useState(false);
+  const [contentEditorOpen, setContentEditorOpen] = useState(false);
+  const [mediatecaModalOpen, setMediatecaModalOpen] = useState(false);
+  const [contentImageLibraryTarget, setContentImageLibraryTarget] = useState<
+    "left" | "right" | "center" | null
+  >(null);
+  const [eventSelectModalOpen, setEventSelectModalOpen] = useState(false);
   const [contentModalPosition, setContentModalPosition] = useState<number | null>(null);
   const [editingContent, setEditingContent] = useState<Content | null>(null);
   const [selectedContentType, setSelectedContentType] = useState<Content["content_type"] | "">("");
@@ -156,11 +164,13 @@ export default function CreateArticlePage() {
       setSelectedContentType("");
       setContentFormData({ left: "", right: "", center: "" });
     }
-    setShowContentModal(true);
+    setContentEditorOpen(true);
+    if (currentPhase !== 2) setShowContentModal(true);
   };
 
   const closeContentModal = useCallback(() => {
     setShowContentModal(false);
+    setContentEditorOpen(false);
     setContentModalPosition(null);
     setEditingContent(null);
     setSelectedContentType("");
@@ -243,6 +253,11 @@ export default function CreateArticlePage() {
     }
     setIsSubmitting(true);
     try {
+      if (selectedPortalIds.length === 0) {
+        alert("Please select at least one portal (Phase 1).");
+        setIsSubmitting(false);
+        return;
+      }
       // Create article first (contents require article_id)
       const articleData: ArticleData = {
         id_article: idArticle,
@@ -256,7 +271,7 @@ export default function CreateArticlePage() {
         highlited_position: highlitedPosition || undefined,
         is_article_event: isArticleEvent,
         event_id: isArticleEvent ? eventId.trim() : "",
-        portalIds: selectedPortalIds.length > 0 ? selectedPortalIds : [],
+        portalIds: selectedPortalIds,
       };
       await ArticleService.createArticle(articleData);
 
@@ -294,6 +309,8 @@ export default function CreateArticlePage() {
       console.error("Error creating article:", error);
       let errorMessage = "Error desconocido";
       if (typeof error === "string") errorMessage = error;
+      else if (typeof error?.data === "string" && error.data.trim())
+        errorMessage = error.data.trim();
       else if (error?.message) errorMessage = error.message;
       else if (error?.data?.message) errorMessage = error.data.message;
       else if (error?.status)
@@ -309,7 +326,6 @@ export default function CreateArticlePage() {
   };
 
   const breadcrumbs = [
-    { label: "Contents" },
     { label: "Articles", href: "/logged/pages/network/contents/articles" },
     { label: "Create article" },
   ];
@@ -319,6 +335,7 @@ export default function CreateArticlePage() {
     setPageMeta({
       pageTitle: `Create New Article · Phase ${currentPhase} of 3`,
       breadcrumbs,
+      buttons: [],
     });
   }, [setPageMeta, breadcrumbs, currentPhase]);
 
@@ -336,6 +353,7 @@ export default function CreateArticlePage() {
             setArticleSubtitle={setArticleSubtitle}
             articleMainImageUrl={articleMainImageUrl}
             setArticleMainImageUrl={setArticleMainImageUrl}
+            onOpenMediaLibrary={() => setMediatecaModalOpen(true)}
             company={company}
             setCompany={setCompany}
             date={date}
@@ -346,6 +364,7 @@ export default function CreateArticlePage() {
             setIsArticleEvent={setIsArticleEvent}
             eventId={eventId}
             setEventId={setEventId}
+            onOpenEventSelect={() => setEventSelectModalOpen(true)}
             tags={tags}
             setTags={setTags}
             tagsArray={tagsArray}
@@ -361,10 +380,26 @@ export default function CreateArticlePage() {
         {currentPhase === 2 && (
           <ArticlePhase2
             contents={contents}
+            articleTitle={articleTitle}
+            articleMainImageUrl={articleMainImageUrl}
             onOpenModal={openContentModal}
             onDeleteContent={handleDeleteContent}
             onBack={handlePhase2Back}
             onNext={handlePhase2Next}
+            contentEditorOpen={contentEditorOpen}
+            contentModalPosition={contentModalPosition}
+            editingContent={editingContent}
+            selectedContentType={selectedContentType}
+            contentFormData={contentFormData}
+            setContentFormData={setContentFormData}
+            onContentTypeSelect={handleContentTypeSelect}
+            onBackToTypeSelect={handleBackToTypeSelect}
+            onConfirmContent={handleContentConfirm}
+            onCancelContent={closeContentModal}
+            onOpenMediaLibraryForField={(field) => {
+              setContentImageLibraryTarget(field);
+              setMediatecaModalOpen(true);
+            }}
           />
         )}
 
@@ -384,7 +419,7 @@ export default function CreateArticlePage() {
           />
         )}
 
-        {showContentModal && (
+        {showContentModal && currentPhase !== 2 && (
           <ContentModal
             onClose={closeContentModal}
             editingContent={editingContent}
@@ -396,6 +431,35 @@ export default function CreateArticlePage() {
             onConfirm={handleContentConfirm}
           />
         )}
+
+        <MediatecaModal
+          open={mediatecaModalOpen}
+          onClose={() => {
+            setMediatecaModalOpen(false);
+            setContentImageLibraryTarget(null);
+          }}
+          onSelectImage={(imageSrc) => {
+            if (contentImageLibraryTarget !== null) {
+              setContentFormData((prev) => ({
+                ...prev,
+                [contentImageLibraryTarget]: imageSrc,
+              }));
+              setContentImageLibraryTarget(null);
+            } else {
+              setArticleMainImageUrl(imageSrc);
+            }
+            setMediatecaModalOpen(false);
+          }}
+        />
+
+        <EventSelectModal
+          open={eventSelectModalOpen}
+          onClose={() => setEventSelectModalOpen(false)}
+          onSelectEvent={(eventIdSelected) => {
+            setEventId(eventIdSelected);
+            setEventSelectModalOpen(false);
+          }}
+        />
       </div>
       </PageContentSection>
     </>

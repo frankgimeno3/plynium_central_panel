@@ -8,47 +8,28 @@ import ContentRenderer from "./ContentRenderer";
 interface ArticleContentsListProps {
   contentsIds: string[];
   contentsData: any[];
-  onEditContentField: (args: {
-    contentId: string;
-    field: "center" | "left" | "right";
-    initialValue: string;
-    modalTitle: string;
-  }) => void;
+  onSaveContentField: (contentId: string, field: "center" | "left" | "right", value: string) => void;
+  onOpenMediatecaForImage: (contentId: string, field: "center" | "left" | "right") => void;
   onAddContent: (position: number | null, content?: any) => void;
   onEditContentBlock?: (content: any) => void;
   onDeleteContent?: (contentId: string) => void;
+  isSaving?: boolean;
 }
 
 const ArticleContentsList: FC<ArticleContentsListProps> = ({
   contentsIds,
   contentsData,
-  onEditContentField,
+  onSaveContentField,
+  onOpenMediatecaForImage,
   onAddContent,
   onEditContentBlock,
   onDeleteContent,
+  isSaving = false,
 }) => {
   const findContentDataById = (contentId: string) => {
     return contentsData.find(
       (contentItem: any) => contentItem.content_id === contentId
     );
-  };
-
-  const handleEditField = (args: {
-    contentId: string;
-    field: "center" | "left" | "right";
-    value: string;
-    isImage?: boolean;
-  }) => {
-    const { contentId, field, value, isImage } = args;
-
-    const modalTitle = isImage ? "Edit image url" : "Edit contents";
-
-    onEditContentField({
-      contentId,
-      field,
-      initialValue: value ?? "",
-      modalTitle,
-    });
   };
 
   return (
@@ -124,7 +105,9 @@ const ArticleContentsList: FC<ArticleContentsListProps> = ({
                       contentId={contentId}
                       contentType={contentData.content_type}
                       contentContent={contentData.content_content}
-                      onEditField={handleEditField}
+                      onSaveContentField={onSaveContentField}
+                      onOpenMediatecaForImage={onOpenMediatecaForImage}
+                      isSaving={isSaving}
                     />
                   </div>
                 </ArticleContentCard>

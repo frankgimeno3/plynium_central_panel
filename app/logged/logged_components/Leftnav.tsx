@@ -4,6 +4,7 @@ import { usePathname } from 'next/navigation';
 import { FC, useState, useEffect } from 'react';
 import ChevronDownSvg from './svg/ChevronDownSvg';
 import ChevronUpSvg from './svg/ChevronUpSvg';
+import { PLYNIUM_NETWORK_LINKS, PLYNIUM_NETWORK_GROUPS } from './navRouteIndex';
 
 interface LeftnavProps {}
 interface LeftnavElementProps { active?: boolean }
@@ -43,7 +44,7 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
 
 
   return (
-    <div className='flex shrink-0 flex-col w-[280px] min-w-[280px] h-full bg-gray-100 pl-3'>
+    <div className='flex shrink-0 flex-col w-[280px] min-w-[280px] h-full bg-white/20 pl-3'>
       {/* Network (Plynium Network) – Contents, Requests, Directory, Portals, Users */}
       <div className={`flex flex-row mt-5 hover:bg-gray-200/50 hover:text-gray-900 cursor-pointer ${inPlyniumNetwork ? 'bg-gray-200/70 text-gray-900' : ''}`} onClick={() => setIsDirectorySelected(!isDirectorySelected)}>
         {isDirectorySelected ? (
@@ -60,68 +61,30 @@ const Leftnav: FC<LeftnavProps> = ({ }) => {
 
       {isDirectorySelected && (
         <div className='flex flex-col px-5 text-sm'>
-          <div className={`flex flex-row hover:bg-gray-200/30 cursor-pointer pl-4 py-2 ${inContents ? 'text-gray-900' : 'text-gray-600'}`} onClick={() => setIsContentsSelected(!isContentsSelected)}>
-            {isContentsSelected ? <ChevronDownSvg size={14} /> : <ChevronUpSvg size={14} />}
-            <p className='pl-2 text-sm font-medium'>Contents</p>
-          </div>
-          {isContentsSelected && (
-            <div className='flex flex-col pl-6'>
-              <Link href='/logged/pages/network/contents/articles' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/network/contents/articles') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-                <LeftNavElement active={pathname.startsWith('/logged/pages/network/contents/articles')} />
-                <p className='pl-3'>Articles</p>
-              </Link>
-              <Link href='/logged/pages/network/contents/banners' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/network/contents/banners') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-                <LeftNavElement active={pathname.startsWith('/logged/pages/network/contents/banners')} />
-                <p className='pl-3'>Banners</p>
-              </Link>
-              <Link href='/logged/pages/network/contents/events' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/network/contents/events') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-                <LeftNavElement active={pathname.startsWith('/logged/pages/network/contents/events')} />
-                <p className='pl-3'>Events</p>
-              </Link>
-              <Link href='/logged/pages/network/contents/publications' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/network/contents/publications') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-                <LeftNavElement active={pathname.startsWith('/logged/pages/network/contents/publications')} />
-                <p className='pl-3'>Publications</p>
-              </Link>
+          {PLYNIUM_NETWORK_GROUPS.map((group) => (
+            <div key={group.pathPrefix}>
+              <div className={`flex flex-row hover:bg-gray-200/30 cursor-pointer pl-4 py-2 ${pathname.startsWith(group.pathPrefix) ? 'text-gray-900' : 'text-gray-600'}`} onClick={() => (group.pathPrefix.includes('contents') ? setIsContentsSelected(!isContentsSelected) : setIsRequestsSelected(!isRequestsSelected))}>
+                {(group.pathPrefix.includes('contents') ? isContentsSelected : isRequestsSelected) ? <ChevronDownSvg size={14} /> : <ChevronUpSvg size={14} />}
+                <p className='pl-2 text-sm font-medium'>{group.label}</p>
+              </div>
+              {(group.pathPrefix.includes('contents') ? isContentsSelected : isRequestsSelected) && (
+                <div className='flex flex-col pl-6'>
+                  {PLYNIUM_NETWORK_LINKS.slice(group.linkStart, group.linkEnd).map((item) => (
+                    <Link key={item.href} href={item.href} className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith(item.href) ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+                      <LeftNavElement active={pathname.startsWith(item.href)} />
+                      <p className='pl-3'>{item.label}</p>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
-          )}
-
-          <div className={`flex flex-row hover:bg-gray-200/30 cursor-pointer pl-4 py-2 ${inRequests ? 'text-gray-900' : 'text-gray-600'}`} onClick={() => setIsRequestsSelected(!isRequestsSelected)}>
-            {isRequestsSelected ? <ChevronDownSvg size={14} /> : <ChevronUpSvg size={14} />}
-            <p className='pl-2 text-sm font-medium'>Requests</p>
-          </div>
-          {isRequestsSelected && (
-            <div className='flex flex-col pl-6'>
-              <Link href='/logged/pages/network/requests/quotations' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/network/requests/quotations') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-                <LeftNavElement active={pathname.startsWith('/logged/pages/network/requests/quotations')} />
-                <p className='pl-3'>Advertisement quotations</p>
-              </Link>
-              <Link href='/logged/pages/network/requests/company' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/network/requests/company') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-                <LeftNavElement active={pathname.startsWith('/logged/pages/network/requests/company')} />
-                <p className='pl-3'>Company creation</p>
-              </Link>
-              <Link href='/logged/pages/network/requests/requests' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/network/requests/requests') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-                <LeftNavElement active={pathname.startsWith('/logged/pages/network/requests/requests')} />
-                <p className='pl-3'>Other</p>
-              </Link>
-            </div>
-          )}
-
-          <Link href='/logged/pages/network/directory/companies' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/network/directory/companies') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-            <LeftNavElement active={pathname.startsWith('/logged/pages/network/directory/companies')} />
-            <p className='pl-3'>Published Companies</p>
-          </Link>
-          <Link href='/logged/pages/network/directory/products' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/network/directory/products') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-            <LeftNavElement active={pathname.startsWith('/logged/pages/network/directory/products')} />
-            <p className='pl-3'>Published Products</p>
-          </Link>
-          <Link href='/logged/pages/network/portals' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/network/portals') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-            <LeftNavElement active={pathname.startsWith('/logged/pages/network/portals')} />
-            <p className='pl-3'>Published Portals</p>
-          </Link>
-          <Link href='/logged/pages/network/users' className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith('/logged/pages/network/users') ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
-            <LeftNavElement active={pathname.startsWith('/logged/pages/network/users')} />
-            <p className='pl-3'>Registered Users</p>
-          </Link>
+          ))}
+          {PLYNIUM_NETWORK_LINKS.slice(PLYNIUM_NETWORK_GROUPS[PLYNIUM_NETWORK_GROUPS.length - 1].linkEnd).map((item) => (
+            <Link key={item.href} href={item.href} className={`flex flex-row items-stretch hover:bg-gray-200/50 hover:text-gray-900 pl-4 py-3 cursor-pointer ${pathname.startsWith(item.href) ? 'bg-blue-50 text-blue-700' : 'text-gray-700'}`}>
+              <LeftNavElement active={pathname.startsWith(item.href)} />
+              <p className='pl-3'>{item.label}</p>
+            </Link>
+          ))}
         </div>
       )}
 

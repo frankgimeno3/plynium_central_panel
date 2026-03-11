@@ -116,7 +116,6 @@ const CreateProduct: FC = () => {
   };
 
   const breadcrumbs = [
-    { label: "Directory", href: "/logged/pages/network/directory/products" },
     { label: "Products", href: "/logged/pages/network/directory/products" },
     { label: "Create product" },
   ];

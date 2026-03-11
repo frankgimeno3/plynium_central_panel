@@ -23,6 +23,7 @@ interface ArticlePhase1Props {
   setArticleSubtitle: (v: string) => void;
   articleMainImageUrl: string;
   setArticleMainImageUrl: (v: string) => void;
+  onOpenMediaLibrary: () => void;
   company: string;
   setCompany: (v: string) => void;
   date: string;
@@ -33,6 +34,7 @@ interface ArticlePhase1Props {
   setIsArticleEvent: (v: boolean) => void;
   eventId: string;
   setEventId: (v: string) => void;
+  onOpenEventSelect: () => void;
   tags: string;
   setTags: (v: string) => void;
   tagsArray: string[];
@@ -53,6 +55,7 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
   setArticleSubtitle,
   articleMainImageUrl,
   setArticleMainImageUrl,
+  onOpenMediaLibrary,
   company,
   setCompany,
   date,
@@ -63,6 +66,7 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
   setIsArticleEvent,
   eventId,
   setEventId,
+  onOpenEventSelect,
   tags,
   setTags,
   tagsArray,
@@ -92,7 +96,7 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
     setDate(buildDateStr(day, month, year));
   };
 
-  const canGoNext = !isGeneratingId && !!articleTitle && !!date && selectedPortalIds.length >= 1;
+  const canGoNext = !isGeneratingId && !!articleTitle?.trim() && !!date && !!company?.trim() && selectedPortalIds.length >= 1;
 
   return (
     <div className="flex flex-col gap-6">
@@ -136,14 +140,38 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
       </div>
 
       <div className="space-y-2">
-        <label className="font-bold text-lg">Main Image URL</label>
-        <input
-          type="text"
-          value={articleMainImageUrl}
-          onChange={(e) => setArticleMainImageUrl(e.target.value)}
-          className="w-full px-4 py-2 border rounded-xl"
-          placeholder="image url"
-        />
+        <label className="font-bold text-lg">Main Image</label>
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={onOpenMediaLibrary}
+            className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-xl text-gray-700 hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium"
+          >
+            Select or add image from Media Library
+          </button>
+          {articleMainImageUrl && (
+            <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+              <img
+                src={articleMainImageUrl}
+                alt="Main"
+                className="w-16 h-16 object-cover rounded border border-gray-200"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+              <span className="text-sm text-gray-600 truncate flex-1 min-w-0" title={articleMainImageUrl}>
+                {articleMainImageUrl}
+              </span>
+              <button
+                type="button"
+                onClick={() => setArticleMainImageUrl("")}
+                className="text-sm text-red-600 hover:text-red-800 font-medium"
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="space-y-2">
@@ -202,14 +230,28 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
 
       {isArticleEvent && (
         <div className="space-y-2">
-          <label className="font-bold text-lg">Event id</label>
-          <input
-            type="text"
-            value={eventId}
-            onChange={(e) => setEventId(e.target.value)}
-            className="w-full px-4 py-2 border rounded-xl"
-            placeholder="e.g. fair-26-0001"
-          />
+          <label className="font-bold text-lg">Event</label>
+          <div className="flex flex-col gap-2">
+            <button
+              type="button"
+              onClick={onOpenEventSelect}
+              className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-xl text-gray-700 hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium"
+            >
+              Select event from list
+            </button>
+            {eventId && (
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200">
+                <span className="text-sm font-mono text-gray-800">{eventId}</span>
+                <button
+                  type="button"
+                  onClick={() => setEventId("")}
+                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

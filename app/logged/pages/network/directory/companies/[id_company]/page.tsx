@@ -71,7 +71,6 @@ const IdCompany: FC<IdCompanyProps> = ({ }) => {
       setPageMeta({
         pageTitle: "Company Details",
         breadcrumbs: [
-          { label: "Directory", href: "/logged/pages/network/directory/companies" },
           { label: "Companies", href: "/logged/pages/network/directory/companies" },
           { label: formData.commercialName ?? companyId ?? "Company" },
         ],
@@ -81,7 +80,6 @@ const IdCompany: FC<IdCompanyProps> = ({ }) => {
       setPageMeta({
         pageTitle: "Company Details",
         breadcrumbs: [
-          { label: "Directory", href: "/logged/pages/network/directory/companies" },
           { label: "Companies", href: "/logged/pages/network/directory/companies" },
         ],
         buttons: [{ label: "Back to Companies", href: "/logged/pages/network/directory/companies" }],
@@ -151,7 +149,6 @@ const IdCompany: FC<IdCompanyProps> = ({ }) => {
   }
 
   const breadcrumbs = [
-    { label: "Directory", href: "/logged/pages/network/directory/companies" },
     { label: "Companies", href: "/logged/pages/network/directory/companies" },
     { label: formData?.commercialName ?? companyId ?? "Company" },
   ];

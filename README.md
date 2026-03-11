@@ -1,6 +1,7 @@
 # Plynium Central Panel
 
-Next.js app with Cognito auth and a Postgres backend. **Run:** `npm run dev` → [http://localhost:3000](http://localhost:3000).
+Next.js app with Cognito auth and a Postgres backend.
 
-- **Getting started:** [docs/GETTING-STARTED.md](docs/GETTING-STARTED.md)
-- **Agent and project map:** [AGENTS.md](AGENTS.md), [docs/MAP.md](docs/MAP.md)
+**Run:** `npm run dev` → [http://localhost:3000](http://localhost:3000).
+
+**Documentation:** [docs/OVERVIEW.md](docs/OVERVIEW.md) (map, getting started, agent rules) · [docs/REFERENCE.md](docs/REFERENCE.md) (technical contracts).

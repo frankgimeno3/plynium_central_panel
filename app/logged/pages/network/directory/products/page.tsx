@@ -104,10 +104,12 @@ const Products: FC<ProductsProps> = ({ }) => {
     setPageMeta({
       pageTitle: "Products Directory",
       breadcrumbs: [
-        { label: "Directory", href: "/logged/pages/network/directory/products" },
         { label: "Products" },
       ],
-      buttons: [{ label: "Create Product", href: "/logged/pages/network/directory/products/create" }],
+      buttons: [
+        { label: "Create Product", href: "/logged/pages/network/directory/products/create" },
+        { label: "Product Categories", href: "/logged/pages/network/directory/products/categories" },
+      ],
     });
   }, [setPageMeta]);
 

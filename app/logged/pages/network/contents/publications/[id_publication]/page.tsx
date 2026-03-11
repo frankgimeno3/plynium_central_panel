@@ -43,6 +43,8 @@ export default function IdPubblicationPage() {
   const [allPortals, setAllPortals] = useState<{ id: number; name: string }[]>([]);
   const [portalActionLoading, setPortalActionLoading] = useState<boolean>(false);
 
+  const { setPageMeta } = usePageContent();
+
   const normalizePublication = (raw: any): publicationInterface => {
     return {
       id_publication: String(raw?.id_publication ?? ""),
@@ -123,6 +125,27 @@ export default function IdPubblicationPage() {
       setPublicationData(null);
     }
   }, [id_publication]);
+
+  useEffect(() => {
+    if (loading || error || !publicationData) {
+      setPageMeta({
+        pageTitle: loading ? "Loading..." : error ? "Error" : "Publication",
+        breadcrumbs: [{ label: "Publications", href: "/logged/pages/network/contents/publications" }],
+        buttons: [{ label: "Back to publications", href: "/logged/pages/network/contents/publications" }],
+      });
+      return;
+    }
+    const pageTitle = `${publicationData.revista} - ${publicationData.número}`;
+    const breadcrumbs = [
+      { label: "Publications", href: "/logged/pages/network/contents/publications" },
+      { label: pageTitle },
+    ];
+    setPageMeta({
+      pageTitle,
+      breadcrumbs,
+      buttons: [{ label: "Back to publications", href: "/logged/pages/network/contents/publications" }],
+    });
+  }, [loading, error, publicationData, setPageMeta]);
 
   const openEditModal = (
     editTarget: EditTarget,
@@ -292,22 +315,6 @@ export default function IdPubblicationPage() {
       </main>
     );
   }
-
-  const pageTitle = publicationData ? `${publicationData.revista} - ${publicationData.número}` : "Publication";
-  const breadcrumbs = [
-    { label: "Contents" },
-    { label: "Publications", href: "/logged/pages/network/contents/publications" },
-    { label: pageTitle },
-  ];
-
-  const { setPageMeta } = usePageContent();
-  useEffect(() => {
-    setPageMeta({
-      pageTitle,
-      breadcrumbs,
-      buttons: [{ label: "Back to publications", href: "/logged/pages/network/contents/publications" }],
-    });
-  }, [setPageMeta, pageTitle, breadcrumbs]);
 
   return (
     <>

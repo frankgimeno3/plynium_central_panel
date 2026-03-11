@@ -31,6 +31,11 @@ export class CompanyService {
         return response.data;
     }
 
+    static async getCompaniesByPortal(portalId) {
+        const response = await apiClient.get(`/api/v1/portals/${portalId}/companies`);
+        return response.data;
+    }
+
     static async addCompanyToPortal(idCompany, portalId) {
         const response = await apiClient.post(`/api/v1/companies/${encodeURIComponent(idCompany)}/portals`, {
             portalId: Number(portalId),

@@ -88,11 +88,6 @@ const IndustryEvents: FC = () => {
     setFilterParams((prev) => ({ ...prev, portalNames }));
   };
 
-  const goToCurrentMonth = () => {
-    const now = new Date();
-    setCurrentMonth(new Date(now.getFullYear(), now.getMonth(), 1));
-  };
-
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentMonth((prev) => {
       const newDate = new Date(prev);
@@ -328,7 +323,6 @@ const IndustryEvents: FC = () => {
   };
 
   const breadcrumbs = [
-    { label: "Contents" },
     { label: "Events" },
   ];
 

@@ -105,13 +105,12 @@ const Banners: FC = () => {
     const selectedPortal = portals.find((p) => p.id === selectedPortalId);
 
     const breadcrumbs = [
-        { label: "Contents" },
         { label: "Banners" },
     ];
 
     const { setPageMeta } = usePageContent();
     useEffect(() => {
-        setPageMeta({ pageTitle: "Banner management", breadcrumbs });
+        setPageMeta({ pageTitle: "Banner management", breadcrumbs, buttons: [] });
     }, [setPageMeta, breadcrumbs]);
 
     return (

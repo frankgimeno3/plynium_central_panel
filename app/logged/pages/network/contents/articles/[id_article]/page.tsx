@@ -5,6 +5,9 @@ import { useParams, useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/PageContentSection";
 import EditContentsModal from "@/app/logged/logged_components/modals/EditContentsModal";
+import MediatecaModal from "@/app/logged/logged_components/MediatecaModal";
+import EventSelectModal from "@/app/logged/logged_components/EventSelectModal";
+import CompanySelectModal from "@/app/logged/logged_components/CompanySelectModal";
 import AddTagModal from "@/app/logged/logged_components/modals/AddTagModal";
 import DeleteArticleModal from "@/app/logged/logged_components/modals/DeleteArticleModal";
 import ArticleMainImage from "./id_article_components/ArticleMainImage";
@@ -19,7 +22,8 @@ export default function IdArticlePage() {
   const params = useParams();
   const router = useRouter();
   const id_article = params?.id_article as string;
-  const [eventIdInput, setEventIdInput] = useState("");
+  const [eventSelectModalOpen, setEventSelectModalOpen] = useState(false);
+  const [companySelectModalOpen, setCompanySelectModalOpen] = useState(false);
 
   const {
     articleData,
@@ -27,6 +31,8 @@ export default function IdArticlePage() {
     loading,
     error,
     isEditModalOpen,
+    isMediatecaModalOpen,
+    closeMediatecaModal,
     modalInitialValue,
     modalTitle,
     isAddTagModalOpen,
@@ -42,11 +48,12 @@ export default function IdArticlePage() {
     handleSaveNewTag,
     closeAddTagModal,
     handleRemoveTag,
-    handleEditContentField,
-    handleEditTitle,
-    handleEditSubtitle,
+    handleSaveTitleSubtitle,
     handleEditMainImage,
+    openMediatecaForContentImage,
+    handleSaveContentField,
     handleEditCompany,
+    handleSaveCompany,
     handleEditDate,
     handleEditHighlitedPosition,
     handleEditIsArticleEvent,
@@ -74,27 +81,23 @@ export default function IdArticlePage() {
   useEffect(() => {
     if (articleData) {
       setPageMeta({
-        pageTitle: articleData.articleTitle ?? "Article",
+        pageTitle: `Article: ${articleData.articleTitle ?? "Article"}`,
         breadcrumbs: [
-          { label: "Contents" },
           { label: "Articles", href: "/logged/pages/network/contents/articles" },
           { label: articleData.articleTitle ?? "Article" },
         ],
+        buttons: [],
       });
     } else {
       setPageMeta({
         pageTitle: "Article",
         breadcrumbs: [
-          { label: "Contents" },
           { label: "Articles", href: "/logged/pages/network/contents/articles" },
         ],
+        buttons: [],
       });
     }
   }, [setPageMeta, articleData]);
-
-  useEffect(() => {
-    setEventIdInput(articleData?.event_id ?? "");
-  }, [articleData?.event_id]);
 
   if (loading) {
     return (
@@ -133,7 +136,6 @@ export default function IdArticlePage() {
   }
 
   const breadcrumbs = [
-    { label: "Contents" },
     { label: "Articles", href: "/logged/pages/network/contents/articles" },
     { label: articleData.articleTitle ?? "Article" },
   ];
@@ -159,13 +161,13 @@ export default function IdArticlePage() {
         <ArticleTitleSection
           title={articleData.articleTitle}
           subtitle={articleData.articleSubtitle}
-          onEditTitle={handleEditTitle}
-          onEditSubtitle={handleEditSubtitle}
+          onSaveTitleSubtitle={handleSaveTitleSubtitle}
+          isSaving={isSaving}
         />
 
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-500">
-            Main Image URL
+          <label className="text-lg font-bold text-gray-800">
+            Main Image
           </label>
           <ArticleMainImage
             imageUrl={articleData.article_main_image_url ?? ""}
@@ -176,12 +178,12 @@ export default function IdArticlePage() {
         <ArticleCompanyDateSection
           company={articleData.company}
           date={articleData.date}
-          onEditCompany={handleEditCompany}
+          onEditCompany={() => setCompanySelectModalOpen(true)}
           onEditDate={handleEditDate}
         />
 
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-500">
+          <label className="text-lg font-bold text-gray-800">
             Highlighted position
           </label>
           <select
@@ -201,7 +203,7 @@ export default function IdArticlePage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-500">
+          <label className="text-lg font-bold text-gray-800">
             Is this article about an event-fair?
           </label>
           <select
@@ -217,24 +219,25 @@ export default function IdArticlePage() {
 
         {articleData.is_article_event && (
           <div className="flex flex-col gap-2">
-            <label className="text-sm font-medium text-gray-500">Event id</label>
-            <input
-              type="text"
-              value={eventIdInput}
-              onChange={(e) => setEventIdInput(e.target.value)}
-              onBlur={() => {
-                const v = eventIdInput.trim();
-                if (v !== (articleData.event_id ?? "")) handleEditEventId(v);
-              }}
-              disabled={isSaving}
-              placeholder="e.g. fair-26-0001"
-              className="w-full max-w-xs px-4 py-2 border rounded-xl bg-white text-gray-700 disabled:opacity-50"
-            />
+            <label className="text-lg font-bold text-gray-800">Event</label>
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-gray-700">
+                {articleData.event_id ? `Event ID: ${articleData.event_id}` : "No event selected"}
+              </span>
+              <button
+                type="button"
+                onClick={() => setEventSelectModalOpen(true)}
+                disabled={isSaving}
+                className="px-4 py-2 bg-blue-950 text-white font-medium rounded-xl hover:bg-blue-900 disabled:opacity-50"
+              >
+                Select event
+              </button>
+            </div>
           </div>
         )}
 
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-500">Published in portals</label>
+          <label className="text-lg font-bold text-gray-800">Published in portals</label>
           <div className="flex flex-col gap-2">
             {publications.length === 0 ? (
               <p className="text-sm text-gray-400">Not published in any portal yet.</p>
@@ -296,7 +299,7 @@ export default function IdArticlePage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-500">Tags</label>
+          <label className="text-lg font-bold text-gray-800">Tags</label>
           <ArticleTags
             tags={articleData.article_tags_array ?? []}
             onRemoveTag={handleRemoveTag}
@@ -305,14 +308,16 @@ export default function IdArticlePage() {
         </div>
 
         <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-gray-500">Contents</label>
+          <label className="text-lg font-bold text-gray-800">Contents</label>
           <ArticleContentsList
             contentsIds={articleData.contents_array ?? []}
             contentsData={contentsData}
-            onEditContentField={handleEditContentField}
+            onSaveContentField={handleSaveContentField}
+            onOpenMediatecaForImage={openMediatecaForContentImage}
             onAddContent={openContentModal}
             onEditContentBlock={handleEditContentBlock}
             onDeleteContent={handleDeleteContent}
+            isSaving={isSaving}
           />
         </div>
       </main>
@@ -324,6 +329,33 @@ export default function IdArticlePage() {
         title={modalTitle}
         onSave={handleSaveEditChanges}
         onCancel={closeEditModal}
+      />
+
+      <MediatecaModal
+        open={isMediatecaModalOpen}
+        onClose={closeMediatecaModal}
+        onSelectImage={(imageSrc) => {
+          handleSaveEditChanges(imageSrc);
+        }}
+      />
+
+      <EventSelectModal
+        open={eventSelectModalOpen}
+        onClose={() => setEventSelectModalOpen(false)}
+        onSelectEvent={(eventIdSelected) => {
+          handleEditEventId(eventIdSelected);
+          setEventSelectModalOpen(false);
+        }}
+      />
+
+      <CompanySelectModal
+        open={companySelectModalOpen}
+        onClose={() => setCompanySelectModalOpen(false)}
+        onSelectCompany={(commercialName) => {
+          handleSaveCompany(commercialName);
+          setCompanySelectModalOpen(false);
+        }}
+        publications={publications.map((p) => ({ portalId: p.portalId, portalName: p.portalName }))}
       />
 
       <AddTagModal

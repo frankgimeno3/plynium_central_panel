@@ -1,7 +1,7 @@
 'use client';
 
 import React, { FC, useState } from 'react';
-import DatePicker from '@/app/logged/logged_components/DatePicker';
+import DateInputDdMmYyyy from './DateInputDdMmYyyy';
 
 const REGIONS = [
   'EUROPE',
@@ -36,7 +36,9 @@ const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => 
   const isDateRangeValid = () => {
     const hasFrom = !!dateFrom;
     const hasTo = !!dateTo;
-    return !hasFrom && !hasTo ? true : hasFrom && hasTo;
+    if (!hasFrom && !hasTo) return true;
+    if (!hasFrom || !hasTo) return false;
+    return dateFrom <= dateTo;
   };
 
   const handleApply = () => {
@@ -105,11 +107,11 @@ const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => 
               <label className="block text-base font-medium text-gray-700 mb-2">
                 Event Date range - From
               </label>
-              <DatePicker
+              <DateInputDdMmYyyy
                 value={dateFrom}
                 onChange={setDateFrom}
                 className="w-full"
-                placeholder="From date"
+                placeholder="dd/mm/yyyy"
                 max={dateTo || undefined}
               />
             </div>
@@ -118,11 +120,11 @@ const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => 
               <label className="block text-base font-medium text-gray-700 mb-2">
                 Event Date range - To
               </label>
-              <DatePicker
+              <DateInputDdMmYyyy
                 value={dateTo}
                 onChange={setDateTo}
                 className="w-full"
-                placeholder="To date"
+                placeholder="dd/mm/yyyy"
                 min={dateFrom || undefined}
               />
             </div>
@@ -131,7 +133,9 @@ const EventFilter: FC<EventFilterProps> = ({ onFilter, initialParams = {} }) => 
 
       {!dateRangeValid && (dateFrom || dateTo) && (
         <div className="mt-2 text-xs text-red-600">
-          Please fill both From and To dates for the date range, or leave both empty.
+          {dateFrom && dateTo && dateFrom > dateTo
+            ? 'From date must be before or equal to To date.'
+            : 'Complete both dates in dd/mm/yyyy format to apply the date filter, or leave both empty.'}
         </div>
       )}
 

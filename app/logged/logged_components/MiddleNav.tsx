@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FC } from "react";
+import { getNavLabelForPath } from "./navRouteIndex";
 
 export interface BreadcrumbItem {
   label: string;
@@ -16,7 +17,10 @@ interface MiddleNavProps {
 const MiddleNav: FC<MiddleNavProps> = ({ pageTitle, breadcrumbs }) => {
   const withHome: BreadcrumbItem[] = [
     { label: "Home", href: "/logged" },
-    ...breadcrumbs,
+    ...breadcrumbs.map((item) => {
+      const displayLabel = item.href ? (getNavLabelForPath(item.href) ?? item.label) : item.label;
+      return { ...item, label: displayLabel };
+    }),
   ];
 
   return (

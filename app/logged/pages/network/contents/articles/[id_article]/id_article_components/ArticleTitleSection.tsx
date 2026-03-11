@@ -1,47 +1,69 @@
 "use client";
 
-import PencilSvg from "@/app/logged/logged_components/svg/PencilSvg";
-import { RichTextContent } from "@/app/logged/logged_components/RichTextEditor";
+import React, { useState, useEffect } from "react";
 
 interface ArticleTitleSectionProps {
   title: string;
   subtitle: string;
-  onEditTitle: () => void;
-  onEditSubtitle: () => void;
+  onSaveTitleSubtitle: (newTitle: string, newSubtitle: string) => void;
+  isSaving?: boolean;
 }
 
 export default function ArticleTitleSection({
   title,
   subtitle,
-  onEditTitle,
-  onEditSubtitle,
+  onSaveTitleSubtitle,
+  isSaving = false,
 }: ArticleTitleSectionProps) {
+  const [titleLocal, setTitleLocal] = useState(title ?? "");
+  const [subtitleLocal, setSubtitleLocal] = useState(subtitle ?? "");
+
+  useEffect(() => {
+    setTitleLocal(title ?? "");
+    setSubtitleLocal(subtitle ?? "");
+  }, [title, subtitle]);
+
+  const titleDirty = titleLocal !== (title ?? "");
+  const subtitleDirty = subtitleLocal !== (subtitle ?? "");
+  const isDirty = titleDirty || subtitleDirty;
+
+  const handleSave = () => {
+    if (!isDirty || isSaving) return;
+    onSaveTitleSubtitle(titleLocal, subtitleLocal);
+  };
+
   return (
     <div className="flex flex-col gap-2">
-      <label className="text-sm font-medium text-gray-500">
-        Article Title
-      </label>
+      <label className="text-lg font-bold text-gray-800">Article Title</label>
+      <input
+        type="text"
+        value={titleLocal}
+        onChange={(e) => setTitleLocal(e.target.value)}
+        disabled={isSaving}
+        className="w-full px-4 py-3 text-xl font-semibold border border-gray-300 rounded-xl bg-white text-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50"
+        placeholder="Article title"
+      />
 
-      <div className="flex flex-col gap-3">
-        <div className="flex flex-row justify-left items-start gap-2">
-          <h1 className="text-4xl font-bold flex-1 min-w-0 article-content-display">
-            <RichTextContent htmlOrPlain={title ?? ""} as="span" />
-          </h1>
-          <div className="flex-shrink-0">
-            <PencilSvg size="10" onClick={onEditTitle} />
-          </div>
-        </div>
+      <label className="text-lg font-bold text-gray-800 mt-2">Subtitle</label>
+      <textarea
+        value={subtitleLocal}
+        onChange={(e) => setSubtitleLocal(e.target.value)}
+        disabled={isSaving}
+        rows={2}
+        className="w-full px-4 py-3 text-base border border-gray-300 rounded-xl bg-white text-gray-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 disabled:opacity-50 resize-y"
+        placeholder="Article subtitle"
+      />
 
-        <div className="flex flex-row justify-left items-start gap-2">
-          <h2 className="text-xl text-gray-500 flex-1 min-w-0 article-content-display">
-            <RichTextContent htmlOrPlain={subtitle ?? ""} as="span" />
-          </h2>
-          <div className="flex-shrink-0">
-            <PencilSvg size="10" onClick={onEditSubtitle} />
-          </div>
-        </div>
-      </div>
+      {isDirty && (
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={isSaving}
+          className="mt-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {isSaving ? "Saving..." : "Save changes"}
+        </button>
+      )}
     </div>
   );
 }
-

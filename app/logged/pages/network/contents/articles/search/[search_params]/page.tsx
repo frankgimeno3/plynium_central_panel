@@ -142,7 +142,6 @@ const ArticleSearchResultsContent: FC = () => {
   }, [searchParams]);
 
   const breadcrumbs = [
-    { label: "Contents" },
     { label: "Articles", href: "/logged/pages/network/contents/articles" },
     { label: "Search results" },
   ];
@@ -198,7 +197,6 @@ const ArticleSearchResultsContent: FC = () => {
 const ArticleSearchFallback: FC = () => {
   const { setPageMeta } = usePageContent();
   const breadcrumbs = [
-    { label: "Contents" },
     { label: "Articles", href: "/logged/pages/network/contents/articles" },
     { label: "Search results" },
   ];

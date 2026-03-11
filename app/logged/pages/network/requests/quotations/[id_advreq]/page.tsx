@@ -55,7 +55,6 @@ export default function AdvertisementDetailPage() {
       setPageMeta({
         pageTitle: "Advertisement Request Details",
         breadcrumbs: [
-          { label: "Requests", href: "/logged/pages/network/requests" },
           { label: "Advertisement quotations", href: "/logged/pages/network/requests/quotations" },
           { label: advertisement.idAdvReq },
         ],
@@ -65,7 +64,6 @@ export default function AdvertisementDetailPage() {
       setPageMeta({
         pageTitle: "Advertisement Request Details",
         breadcrumbs: [
-          { label: "Requests", href: "/logged/pages/network/requests" },
           { label: "Advertisement quotations", href: "/logged/pages/network/requests/quotations" },
         ],
         buttons: [{ label: "Back to Advertisement Quotations", href: "/logged/pages/network/requests/quotations" }],
@@ -157,7 +155,6 @@ export default function AdvertisementDetailPage() {
   }
 
   const breadcrumbs = [
-    { label: "Requests", href: "/logged/pages/network/requests" },
     { label: "Advertisement quotations", href: "/logged/pages/network/requests/quotations" },
     { label: advertisement.idAdvReq },
   ];

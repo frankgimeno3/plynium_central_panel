@@ -26,12 +26,14 @@ const PublicationSearchResultsContent: FC = () => {
         const dateFromParam = searchParams.get('dateFrom');
         const dateToParam = searchParams.get('dateTo');
         const portalNamesParam = searchParams.get('portalNames');
+        const tagParam = searchParams.get('tag');
 
         if (revistaParam) currentFilters.revista = revistaParam;
         if (numeroParam) currentFilters.numero = numeroParam;
         if (dateFromParam) currentFilters.dateFrom = dateFromParam;
         if (dateToParam) currentFilters.dateTo = dateToParam;
         if (portalNamesParam) currentFilters.portalNames = portalNamesParam;
+        if (tagParam) currentFilters.tag = tagParam;
 
         setFilters(currentFilters);
 
@@ -82,22 +84,30 @@ const PublicationSearchResultsContent: FC = () => {
           if (currentFilters.dateTo) {
             const [toYear, toMonth] = currentFilters.dateTo.split('-');
             if (!toYear || !toMonth) return false;
-            
+
             try {
               const pubDate = new Date(pub.date);
               if (isNaN(pubDate.getTime())) return false;
-              
+
               const pubYear = String(pubDate.getFullYear());
               const pubMonth = String(pubDate.getMonth() + 1).padStart(2, '0');
-              
+
               // Get last day of the month for "to"
               const toDate = new Date(parseInt(toYear), parseInt(toMonth), 0);
               const pubDateObj = new Date(parseInt(pubYear), parseInt(pubMonth) - 1, pubDate.getDate());
-              
+
               if (pubDateObj > toDate) return false;
             } catch (e) {
               return false;
             }
+          }
+
+          // Filter by tag (partial match on revista or número)
+          if (currentFilters.tag && currentFilters.tag.trim()) {
+            const tagLower = currentFilters.tag.trim().toLowerCase();
+            const matchRevista = pub.revista && String(pub.revista).toLowerCase().includes(tagLower);
+            const matchNumero = pub.número !== undefined && String(pub.número).toLowerCase().includes(tagLower);
+            if (!matchRevista && !matchNumero) return false;
           }
 
           return true;
@@ -116,7 +126,6 @@ const PublicationSearchResultsContent: FC = () => {
   }, [searchParams]);
 
   const breadcrumbs = [
-    { label: "Contents" },
     { label: "Publications", href: "/logged/pages/network/contents/publications" },
     { label: "Search results" },
   ];
@@ -165,7 +174,6 @@ interface PageProps {
 const PublicationSearchFallback: FC = () => {
   const { setPageMeta } = usePageContent();
   const breadcrumbs = [
-    { label: "Contents" },
     { label: "Publications", href: "/logged/pages/network/contents/publications" },
     { label: "Search results" },
   ];

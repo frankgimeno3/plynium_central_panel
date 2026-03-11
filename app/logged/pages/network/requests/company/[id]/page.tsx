@@ -46,7 +46,6 @@ const CompanyRequestDetailPage: FC = () => {
       setPageMeta({
         pageTitle: "Company Request Details",
         breadcrumbs: [
-          { label: "Requests", href: "/logged/pages/network/requests" },
           { label: "Company requests", href: "/logged/pages/network/requests/company" },
           { label: request.companyRequestId },
         ],
@@ -56,7 +55,6 @@ const CompanyRequestDetailPage: FC = () => {
       setPageMeta({
         pageTitle: "Company Request Details",
         breadcrumbs: [
-          { label: "Requests", href: "/logged/pages/network/requests" },
           { label: "Company requests", href: "/logged/pages/network/requests/company" },
         ],
         buttons: [{ label: "Back to Company Requests", href: "/logged/pages/network/requests/company" }],

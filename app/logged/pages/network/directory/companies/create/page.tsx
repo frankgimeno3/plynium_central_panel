@@ -126,7 +126,6 @@ const CreateCompanyProfile: FC = () => {
   };
 
   const breadcrumbs = [
-    { label: "Directory", href: "/logged/pages/network/directory/companies" },
     { label: "Companies", href: "/logged/pages/network/directory/companies" },
     { label: "Create company" },
   ];

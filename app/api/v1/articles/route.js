@@ -27,7 +27,7 @@ const postSchema = Joi.object({
     articleTitle: Joi.string().required(),
     articleSubtitle: Joi.string().optional(),
     article_main_image_url: Joi.string().optional(),
-    company: Joi.string().optional(),
+    company: Joi.string().optional().allow(""),
     date: Joi.string().required(),
     article_tags_array: Joi.array().items(Joi.string()).optional(),
     contents_array: Joi.array().items(Joi.string()).optional(),

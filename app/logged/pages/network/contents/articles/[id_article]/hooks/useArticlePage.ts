@@ -35,6 +35,7 @@ export function useArticlePage(id_article: string) {
   const [isPortalActionLoading, setIsPortalActionLoading] = useState<boolean>(false);
 
   const [isEditModalOpen, setIsEditModalOpen] = useState<boolean>(false);
+  const [isMediatecaModalOpen, setIsMediatecaModalOpen] = useState<boolean>(false);
   const [modalInitialValue, setModalInitialValue] = useState<string>("");
   const [modalTitle, setModalTitle] = useState<string>("Edit contents");
   const [currentEditTarget, setCurrentEditTarget] = useState<EditTarget | null>(null);
@@ -176,7 +177,13 @@ export function useArticlePage(id_article: string) {
 
   const closeEditModal = () => {
     setIsEditModalOpen(false);
+    setIsMediatecaModalOpen(false);
     setCurrentEditTarget(null);
+  };
+
+  const closeMediatecaModal = () => {
+    setIsMediatecaModalOpen(false);
+    if (currentEditTarget?.kind === "articleMainImage") setCurrentEditTarget(null);
   };
 
   const handleSaveEditChanges = async (newValue: string) => {
@@ -352,18 +359,111 @@ export function useArticlePage(id_article: string) {
     );
   };
 
+  const handleSaveTitleSubtitle = async (newTitle: string, newSubtitle: string) => {
+    if (!articleData) return;
+    const titleChanged = (newTitle ?? "") !== (articleData.articleTitle ?? "");
+    const subtitleChanged = (newSubtitle ?? "") !== (articleData.articleSubtitle ?? "");
+    if (!titleChanged && !subtitleChanged) return;
+    setIsSaving(true);
+    try {
+      const updateData = createArticleUpdateData({
+        articleTitle: titleChanged ? newTitle : articleData.articleTitle,
+        articleSubtitle: subtitleChanged ? newSubtitle : articleData.articleSubtitle,
+      });
+      await ArticleService.updateArticle(id_article, updateData);
+      window.location.reload();
+    } catch (error: any) {
+      const errorMessage =
+        typeof error === "string"
+          ? error
+          : error?.message
+            ? error.message
+            : error?.data?.message
+              ? error.data.message
+              : "Unknown error";
+      alert(`Error saving: ${errorMessage}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const openMediatecaForContentImage = (contentId: string, field: "center" | "left" | "right") => {
+    setCurrentEditTarget({ kind: "content", contentId, field });
+    setIsMediatecaModalOpen(true);
+  };
+
+  const handleSaveContentField = async (
+    contentId: string,
+    field: "center" | "left" | "right",
+    newValue: string
+  ) => {
+    if (!articleData) return;
+    const contentToUpdate = contentsData.find((c) => c.content_id === contentId);
+    if (!contentToUpdate) return;
+    setIsSaving(true);
+    try {
+      const contentUpdateData = {
+        content_type: contentToUpdate.content_type,
+        content_content: {
+          ...contentToUpdate.content_content,
+          [field]: newValue,
+        },
+      };
+      await ContentService.updateContent(contentId, contentUpdateData);
+      const allContents = await ContentService.getAllContents();
+      const articleContents = allContents.filter((content: any) =>
+        (articleData.contents_array ?? []).includes(content.content_id)
+      );
+      setContentsData(articleContents);
+      setArticleData({ ...articleData });
+    } catch (error: any) {
+      const errorMessage =
+        typeof error === "string"
+          ? error
+          : error?.message
+            ? error.message
+            : error?.data?.message
+              ? error.data.message
+              : "Unknown error";
+      alert(`Error saving: ${errorMessage}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleEditMainImage = () => {
     if (!articleData) return;
-    openEditModal(
-      { kind: "articleMainImage" },
-      articleData.article_main_image_url ?? "",
-      "Edit main image url"
-    );
+    setCurrentEditTarget({ kind: "articleMainImage" });
+    setIsMediatecaModalOpen(true);
   };
 
   const handleEditCompany = () => {
     if (!articleData) return;
     openEditModal({ kind: "company" }, articleData.company ?? "", "Edit company");
+  };
+
+  const handleSaveCompany = async (newCompany: string) => {
+    if (!articleData) return;
+    const value = (newCompany ?? "").trim();
+    if (value === (articleData.company ?? "")) return;
+    setIsSaving(true);
+    try {
+      const updateData = createArticleUpdateData({ company: value });
+      await ArticleService.updateArticle(id_article, updateData);
+      setArticleData({ ...articleData, company: value });
+    } catch (error: any) {
+      const errorMessage =
+        typeof error === "string"
+          ? error
+          : error?.message
+            ? error.message
+            : error?.data?.message
+              ? error.data.message
+              : "Unknown error";
+      alert(`Error saving company: ${errorMessage}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleEditDate = () => {
@@ -462,7 +562,7 @@ export function useArticlePage(id_article: string) {
     setIsDeleting(true);
     try {
       await ArticleService.deleteArticle(id_article);
-      router.push("/logged/pages/account-management/contents/articles");
+      router.push("/logged/pages/network/contents/articles");
       router.refresh();
     } catch (error: any) {
       const errorMessage =
@@ -665,6 +765,8 @@ export function useArticlePage(id_article: string) {
     loading,
     error,
     isEditModalOpen,
+    isMediatecaModalOpen,
+    closeMediatecaModal,
     modalInitialValue,
     modalTitle,
     isAddTagModalOpen,
@@ -684,8 +786,12 @@ export function useArticlePage(id_article: string) {
     handleEditContentField,
     handleEditTitle,
     handleEditSubtitle,
+    handleSaveTitleSubtitle,
     handleEditMainImage,
+    openMediatecaForContentImage,
+    handleSaveContentField,
     handleEditCompany,
+    handleSaveCompany,
     handleEditDate,
     handleEditHighlitedPosition,
     handleEditIsArticleEvent,

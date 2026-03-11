@@ -78,7 +78,6 @@ const Companies: FC<CompaniesProps> = ({ }) => {
   };
 
   const breadcrumbs = [
-    { label: "Directory", href: "/logged/pages/network/directory/companies" },
     { label: "Companies" },
   ];
 
@@ -87,7 +86,10 @@ const Companies: FC<CompaniesProps> = ({ }) => {
     setPageMeta({
       pageTitle: "Companies Directory",
       breadcrumbs,
-      buttons: [{ label: "Create Company", href: "/logged/pages/network/directory/companies/create" }],
+      buttons: [
+        { label: "Create Company", href: "/logged/pages/network/directory/companies/create" },
+        { label: "Company Categories", href: "/logged/pages/network/directory/companies/categories" },
+      ],
     });
   }, [setPageMeta, breadcrumbs]);
 

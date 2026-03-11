@@ -1,6 +1,32 @@
 import Database from "../../database/database.js";
 
 /**
+ * Get companies that are visible on a given portal.
+ * @param {number} portalId - portals.id
+ * @returns {Promise<Array<{ companyId: string, commercialName: string, country: string, category: string, mainEmail: string }>>}
+ */
+export async function getCompaniesByPortalId(portalId) {
+    const db = Database.getInstance();
+    if (!db.isConfigured()) return [];
+    const sequelize = db.getSequelize();
+    const [rows] = await sequelize.query(
+        `SELECT c.company_id AS "companyId", c.commercial_name AS "commercialName", c.country, c.category, c.main_email AS "mainEmail"
+         FROM company_portals cp
+         JOIN companies c ON c.company_id = cp.company_id
+         WHERE cp.portal_id = :portalId
+         ORDER BY c.commercial_name ASC`,
+        { replacements: { portalId } }
+    );
+    return (rows || []).map((r) => ({
+        companyId: r.companyId,
+        commercialName: r.commercialName ?? "",
+        country: r.country ?? "",
+        category: r.category ?? "",
+        mainEmail: r.mainEmail ?? "",
+    }));
+}
+
+/**
  * Get portals where a company is visible.
  * @param {string} companyId - companies.company_id
  * @returns {Promise<Array<{ portalId: number, portalName: string, slug: string, status: string }>>}

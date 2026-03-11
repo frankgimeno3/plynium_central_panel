@@ -81,3 +81,9 @@ body {
 .article-content-display p:last-child {
   margin-bottom: 0;
 }
+
+/* Botones, enlaces y pestañas en el área de contenido logged/pages (selector estable para evitar hydration mismatch) */
+div.flex-1.p-6.bg-gray-100 button,
+div.flex-1.p-6.bg-gray-100 a {
+  cursor: pointer;
+}

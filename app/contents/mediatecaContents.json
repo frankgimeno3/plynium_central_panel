@@ -4,55 +4,71 @@
     "name": "Product Catalogue 2024.pdf",
     "folderPath": "marketing/2024",
     "type": "pdf",
+    "content_type": "json",
     "publishedAt": "2024-01-15",
     "usedIn": ["Publication #12", "Newsletter Q1"],
     "thumbnailUrl": null,
-    "url": "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf"
+    "url": "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf",
+    "src": "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf"
   },
   {
     "id": "med-002",
     "name": "Brand Guidelines.pdf",
     "folderPath": "marketing",
     "type": "pdf",
+    "content_type": "json",
     "publishedAt": "2023-11-20",
     "usedIn": ["Banner campaign"],
-    "thumbnailUrl": null
+    "thumbnailUrl": null,
+    "url": "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf",
+    "src": "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf"
   },
   {
     "id": "med-003",
     "name": "Hero Banner.png",
     "folderPath": "marketing",
     "type": "image",
+    "content_type": "image",
     "publishedAt": "2024-02-01",
     "usedIn": ["Homepage", "Publication #15"],
-    "thumbnailUrl": "/placeholder-thumb.png",
-    "url": "https://picsum.photos/800/600"
+    "thumbnailUrl": "https://picsum.photos/800/600",
+    "url": "https://picsum.photos/800/600",
+    "src": "https://picsum.photos/800/600"
   },
   {
     "id": "med-004",
     "name": "Brochure Glass Types.jpg",
     "folderPath": "marketing/brochures",
     "type": "image",
+    "content_type": "image",
     "publishedAt": "2024-01-08",
     "usedIn": [],
-    "thumbnailUrl": null
+    "thumbnailUrl": "https://picsum.photos/800/600",
+    "url": "https://picsum.photos/800/600",
+    "src": "https://picsum.photos/800/600"
   },
   {
     "id": "med-005",
     "name": "Terms and Conditions.pdf",
     "folderPath": "legal",
     "type": "pdf",
+    "content_type": "json",
     "publishedAt": "2023-06-01",
     "usedIn": ["Contract template", "Quote #101"],
-    "thumbnailUrl": null
+    "thumbnailUrl": null,
+    "url": "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf",
+    "src": "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf"
   },
   {
     "id": "med-006",
     "name": "Invoice Template.pdf",
     "folderPath": "templates",
     "type": "pdf",
+    "content_type": "json",
     "publishedAt": "2023-09-10",
     "usedIn": [],
-    "thumbnailUrl": null
+    "thumbnailUrl": null,
+    "url": "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf",
+    "src": "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf"
   }
 ]

@@ -59,13 +59,12 @@ const CompanyRequestsPage: FC = () => {
   };
 
   const breadcrumbs = [
-    { label: "Requests", href: "/logged/pages/network/requests" },
     { label: "Company requests" },
   ];
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
-    setPageMeta({ pageTitle: "Create a Company Requests", breadcrumbs });
+    setPageMeta({ pageTitle: "Create a Company Requests", breadcrumbs, buttons: [] });
   }, [setPageMeta, breadcrumbs]);
 
   return (
