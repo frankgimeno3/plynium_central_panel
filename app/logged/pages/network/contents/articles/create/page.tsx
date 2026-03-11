@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { ArticleService } from "@/app/service/ArticleService";
 import { ContentService } from "@/app/service/ContentService";
 import { EventsService } from "@/app/service/EventsService";
@@ -13,8 +13,8 @@ import ArticlePhase1 from "./ArticlePhase1";
 import ArticlePhase2 from "./ArticlePhase2";
 import ArticlePhase3 from "./ArticlePhase3";
 import ContentModal from "./ContentModal";
-import MediatecaModal from "@/app/logged/logged_components/MediatecaModal";
-import EventSelectModal from "@/app/logged/logged_components/EventSelectModal";
+import MediatecaModal from "@/app/logged/logged_components/modals/MediatecaModal";
+import EventSelectModal from "@/app/logged/logged_components/modals/EventSelectModal";
 import { isRichTextEmpty } from "@/app/logged/logged_components/RichTextEditor";
 
 const getTodayDate = () => {
@@ -298,7 +298,7 @@ export default function CreateArticlePage() {
                   ? contentError.data
                   : JSON.stringify(contentError.data);
             else errorMessage = JSON.stringify(contentError);
-            throw new Error(`Error al crear contenido: ${errorMessage}`);
+            throw new Error(`Error creating content: ${errorMessage}`);
           }
         }
       }

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { FC, useEffect } from 'react';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import AdvertisementTable from '../other/advertisement_components/AdvertisementTable';
 
 interface QuotationsProps {}

@@ -1,12 +1,14 @@
 "use client";
 
-import React, { FC, useState, useEffect } from 'react';
+import React, { FC, useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import Link from 'next/link';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import EditUserModal from '@/app/logged/logged_components/modals/EditUserModal';
 import UserService from '@/app/service/UserSerivce.js';
 import { useUsers, type User } from '../hooks/useUsers';
+import contactsData from '@/app/contents/contactsContents.json';
 
 interface UserDetail {
   id_user: string;
@@ -17,10 +19,13 @@ interface UserDetail {
   user_description: string;
   user_main_image_src?: string;
   user_current_company?: { id_company?: string; userPosition?: string } | null;
+  linkedin_profile?: string | null;
   experience_array?: unknown[];
   preferences?: unknown;
   enabled?: boolean;
 }
+
+type ContactFromJson = { id_contact: string; name: string; id_user?: string };
 
 const UserDetailPage: FC = () => {
   const params = useParams();
@@ -46,7 +51,7 @@ const UserDetailPage: FC = () => {
         const data = await UserService.getUserById(decodeURIComponent(id_user));
         setUser(data);
       } catch (e) {
-        setError(e instanceof Error ? e.message : 'Error al cargar usuario');
+        setError(e instanceof Error ? e.message : 'Error loading user');
         setUser(null);
       } finally {
         setLoading(false);
@@ -63,13 +68,13 @@ const UserDetailPage: FC = () => {
           { label: "Users", href: "/logged/pages/network/users" },
           { label: user.user_full_name ?? user.id_user },
         ],
-        buttons: [{ label: "Volver a Usuarios", href: "/logged/pages/network/users" }],
+        buttons: [{ label: "Back to Users", href: "/logged/pages/network/users" }],
       });
     } else {
       setPageMeta({
         pageTitle: "Detalle del usuario",
         breadcrumbs: [{ label: "Users", href: "/logged/pages/network/users" }],
-        buttons: [{ label: "Volver a Usuarios", href: "/logged/pages/network/users" }],
+        buttons: [{ label: "Back to Users", href: "/logged/pages/network/users" }],
       });
     }
   }, [setPageMeta, user]);
@@ -102,7 +107,7 @@ const UserDetailPage: FC = () => {
       setEditingUser(null);
       setUser(prev => prev ? { ...prev, ...updatedUser } : null);
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : 'Error al guardar');
+      setSaveError(e instanceof Error ? e.message : 'Error saving');
     }
   };
 
@@ -128,7 +133,7 @@ const UserDetailPage: FC = () => {
           onClick={() => router.push('/logged/pages/network/users')}
           className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-950/80"
         >
-          Volver a Usuarios
+          Back to Users
         </button>
       </main>
     );
@@ -138,6 +143,11 @@ const UserDetailPage: FC = () => {
   const companyStr = company
     ? [company.id_company, company.userPosition].filter(Boolean).join(' · ')
     : '-';
+
+  const linkedContact = useMemo(() => {
+    const list = Array.isArray(contactsData) ? (contactsData as ContactFromJson[]) : [];
+    return list.find((c) => c.id_user === user.id_user) ?? null;
+  }, [user.id_user]);
 
   const breadcrumbs = [
     { label: "Users", href: "/logged/pages/network/users" },
@@ -172,11 +182,11 @@ const UserDetailPage: FC = () => {
               <p className="text-lg text-gray-900 font-mono">{user.id_user}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Nombre completo</label>
+              <label className="text-sm font-medium text-gray-500">Full name</label>
               <p className="text-lg text-gray-900">{user.user_full_name}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Nombre</label>
+              <label className="text-sm font-medium text-gray-500">Name</label>
               <p className="text-lg text-gray-900">{user.user_name}</p>
             </div>
             <div>
@@ -188,13 +198,46 @@ const UserDetailPage: FC = () => {
               <p className="text-lg text-gray-900">{user.user_role}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Descripción</label>
+              <label className="text-sm font-medium text-gray-500">Description</label>
               <p className="text-base text-gray-900">{user.user_description || '-'}</p>
             </div>
             <div>
               <label className="text-sm font-medium text-gray-500">Empresa actual</label>
               <p className="text-base text-gray-900">{companyStr}</p>
             </div>
+            {user.linkedin_profile && (
+              <div className="md:col-span-2">
+                <label className="text-sm font-medium text-gray-500">Link to LinkedIn profile</label>
+                <p className="text-base text-gray-900 mt-0.5">
+                  <a
+                    href={user.linkedin_profile}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline break-all"
+                  >
+                    {user.linkedin_profile}
+                  </a>
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="mt-6 pt-6 border-t border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Plynium user profile vinculation</h2>
+            {linkedContact ? (
+              <>
+                <p className="text-sm text-gray-600 mb-2">This user is linked to the following contact:</p>
+                <Link
+                  href={`/logged/pages/account-management/contacts_db/${encodeURIComponent(linkedContact.id_contact)}`}
+                  className="inline-flex items-center gap-1.5 text-blue-600 hover:underline font-medium"
+                >
+                  {linkedContact.name} (Contact)
+                  <span className="text-gray-400">→</span>
+                </Link>
+              </>
+            ) : (
+              <p className="text-sm text-gray-500">No contact linked to this Plynium user.</p>
+            )}
           </div>
 
           {user.experience_array && Array.isArray(user.experience_array) && user.experience_array.length > 0 && (

@@ -2,8 +2,8 @@
 
 import React, { FC, useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { ProductCategoryService } from "@/app/service/ProductCategoryService";
 import { PortalService } from "@/app/service/PortalService";
 

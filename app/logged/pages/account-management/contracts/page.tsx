@@ -2,8 +2,8 @@
 
 import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import contractsData from "@/app/contents/contracts.json";
 import customersData from "@/app/contents/customers.json";
 

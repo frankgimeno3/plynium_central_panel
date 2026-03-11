@@ -2,8 +2,8 @@
 
 import React, { FC, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import contactsData from "@/app/contents/contactsContents.json";
 
 type Contact = {
@@ -17,11 +17,11 @@ type Contact = {
 };
 
 const EXPORT_FIELD_OPTIONS: { key: keyof Contact; label: string }[] = [
-  { key: "id_contact", label: "ID contacto" },
-  { key: "name", label: "Nombre" },
+  { key: "id_contact", label: "Contact ID" },
+  { key: "name", label: "Name" },
   { key: "role", label: "Rol" },
   { key: "email", label: "Email" },
-  { key: "phone", label: "Teléfono" },
+  { key: "phone", label: "Phone" },
   { key: "id_customer", label: "ID cliente" },
   { key: "company_name", label: "Empresa" },
 ];
@@ -75,7 +75,7 @@ const ExportContactsPage: FC = () => {
   const handleGenerate = () => {
     setPhase("loading");
     setCsvBlobUrl(null);
-    // Simular generación
+    // Simulate generation
     setTimeout(() => {
       const fields = Array.from(selectedFields);
       const header = fields.map((f) => escapeCsvCell(f)).join(",");
@@ -94,7 +94,7 @@ const ExportContactsPage: FC = () => {
     if (!csvBlobUrl) return;
     const a = document.createElement("a");
     a.href = csvBlobUrl;
-    a.download = `contactos_export_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = `contacts_export_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
   };
 
@@ -109,9 +109,9 @@ const ExportContactsPage: FC = () => {
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     setPageMeta({
-      pageTitle: "Exportar contactos",
+      pageTitle: "Export contacts",
       breadcrumbs,
-      buttons: [{ label: "Volver a Contactos", href: backUrl }],
+      buttons: [{ label: "Back to Contacts", href: backUrl }],
     });
   }, [setPageMeta, breadcrumbs, backUrl]);
 
@@ -152,7 +152,7 @@ const ExportContactsPage: FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Nombre</label>
+                  <label className="block text-xs text-gray-600 mb-1">Name</label>
                   <input
                     type="text"
                     value={restrictions.name}
@@ -183,7 +183,7 @@ const ExportContactsPage: FC = () => {
                 </div>
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Se exportarán <span className="font-medium">{filteredContacts.length}</span> contacto(s) con los
+                Will export <span className="font-medium">{filteredContacts.length}</span> contact(s) with the
                 filtros actuales.
               </p>
             </div>
@@ -194,7 +194,7 @@ const ExportContactsPage: FC = () => {
               disabled={selectedFields.size === 0}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Generar exportación
+              Generate export
             </button>
           </div>
         )}
@@ -209,9 +209,9 @@ const ExportContactsPage: FC = () => {
 
         {phase === "ready" && (
           <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-            <p className="text-sm font-semibold text-gray-700">Exportación lista</p>
+            <p className="text-sm font-semibold text-gray-700">Export ready</p>
             <p className="text-sm text-gray-600">
-              Se han exportado <span className="font-medium">{filteredContacts.length}</span> contacto(s) con los
+              Exported <span className="font-medium">{filteredContacts.length}</span> contact(s) with the
               campos seleccionados.
             </p>
             <div className="flex gap-3 pt-2">
@@ -226,7 +226,7 @@ const ExportContactsPage: FC = () => {
                 href={backUrl}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors inline-block"
               >
-                Volver a Contactos
+                Back to Contacts
               </Link>
             </div>
           </div>

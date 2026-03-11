@@ -3,8 +3,8 @@
 import React, { FC, use, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import plannedPublicationsData from "@/app/contents/planned_publications.json";
 
 type PublicationSlot = {

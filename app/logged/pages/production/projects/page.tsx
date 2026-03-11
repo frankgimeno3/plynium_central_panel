@@ -2,8 +2,8 @@
 
 import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import projectsData from "@/app/contents/projects.json";
 import contractsData from "@/app/contents/contracts.json";
 import customersData from "@/app/contents/customers.json";
@@ -26,6 +26,16 @@ type Customer = { id_customer: string; name: string };
 
 const ITEMS_PER_PAGE = 12;
 
+const TAB_CALENDARIZED = "calendarized";
+const TAB_PENDING = "pending";
+const TAB_FINISHED = "finished";
+
+const STATUS_BY_TAB: Record<string, string[]> = {
+  [TAB_CALENDARIZED]: ["calendarized"],
+  [TAB_PENDING]: ["pending_materials", "ok_production"],
+  [TAB_FINISHED]: ["published", "expired", "cancelled"],
+};
+
 const ProjectsPage: FC = () => {
   const router = useRouter();
   const all = (projectsData as Project[]).slice();
@@ -38,16 +48,18 @@ const ProjectsPage: FC = () => {
   };
   const getServiceName = (idService: string) =>
     services.find((s) => s.id_service === idService)?.name?.replace(/_/g, " ") ?? idService;
-  const [filter, setFilter] = useState({ id: "", company: "", status: "", service: "" });
+
+  const [activeTab, setActiveTab] = useState<typeof TAB_CALENDARIZED | typeof TAB_PENDING | typeof TAB_FINISHED>(TAB_PENDING);
+  const [filter, setFilter] = useState({ id: "", company: "", service: "" });
 
   const filtered = useMemo(() => {
-    let list = [...all];
+    const allowedStatuses = STATUS_BY_TAB[activeTab] ?? [];
+    let list = all.filter((p) => allowedStatuses.includes(p.status));
     if (filter.id) list = list.filter((p) => p.id_project.toLowerCase().includes(filter.id.toLowerCase()));
     if (filter.company) list = list.filter((p) => getCompanyName(p.id_contract).toLowerCase().includes(filter.company.toLowerCase()));
-    if (filter.status) list = list.filter((p) => p.status.toLowerCase().includes(filter.status.toLowerCase()));
     if (filter.service) list = list.filter((p) => p.service === filter.service);
     return list;
-  }, [all, filter]);
+  }, [all, activeTab, filter]);
 
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -70,58 +82,66 @@ const ProjectsPage: FC = () => {
     <>
       <PageContentSection>
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">ID</label>
-              <input
-                type="text"
-                value={filter.id}
-                onChange={(e) => { setFilter((f) => ({ ...f, id: e.target.value })); setPage(1); }}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search by ID"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Company</label>
-              <input
-                type="text"
-                value={filter.company}
-                onChange={(e) => { setFilter((f) => ({ ...f, company: e.target.value })); setPage(1); }}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search by company"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Status</label>
-              <select
-                value={filter.status}
-                onChange={(e) => { setFilter((f) => ({ ...f, status: e.target.value })); setPage(1); }}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All</option>
-                <option value="calendarized">calendarized</option>
-                <option value="pending_materials">pending_materials</option>
-                <option value="ok_production">ok_production</option>
-                <option value="published">published</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Service</label>
-              <select
-                value={filter.service}
-                onChange={(e) => { setFilter((f) => ({ ...f, service: e.target.value })); setPage(1); }}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">All</option>
-                {services.map((s) => (
-                  <option key={s.id_service} value={s.id_service}>{s.name?.replace(/_/g, " ")}</option>
-                ))}
-              </select>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">ID</label>
+            <input
+              type="text"
+              value={filter.id}
+              onChange={(e) => { setFilter((f) => ({ ...f, id: e.target.value })); setPage(1); }}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search by ID"
+            />
           </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Company</label>
+            <input
+              type="text"
+              value={filter.company}
+              onChange={(e) => { setFilter((f) => ({ ...f, company: e.target.value })); setPage(1); }}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Search by company"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Service</label>
+            <select
+              value={filter.service}
+              onChange={(e) => { setFilter((f) => ({ ...f, service: e.target.value })); setPage(1); }}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">All</option>
+              {services.map((s) => (
+                <option key={s.id_service} value={s.id_service}>{s.name?.replace(/_/g, " ")}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        {/* Tabs: Calendarized | Pending (default) | Finished */}
+        <div className="flex border-b border-gray-200 mb-4">
+          {([
+            { id: TAB_CALENDARIZED, label: "Calendarized", count: all.filter((p) => STATUS_BY_TAB[TAB_CALENDARIZED].includes(p.status)).length },
+            { id: TAB_PENDING, label: "Pending", count: all.filter((p) => STATUS_BY_TAB[TAB_PENDING].includes(p.status)).length },
+            { id: TAB_FINISHED, label: "Finished", count: all.filter((p) => STATUS_BY_TAB[TAB_FINISHED].includes(p.status)).length },
+          ] as const).map(({ id, label, count }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => { setActiveTab(id); setPage(1); }}
+              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                activeTab === id
+                  ? "border-blue-600 text-blue-600"
+                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}
+            >
+              {label}
+              <span className="ml-2 text-xs opacity-80">({count})</span>
+            </button>
+          ))}
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -143,8 +163,11 @@ const ProjectsPage: FC = () => {
                     <span className={`px-2 py-1 rounded text-xs font-medium ${
                       p.status === "published" ? "bg-green-100 text-green-800" :
                       p.status === "ok_production" ? "bg-blue-100 text-blue-800" :
-                      p.status === "pending_materials" ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-800"
-                    }`}>{p.status.replace("_", " ")}</span>
+                      p.status === "pending_materials" ? "bg-amber-100 text-amber-800" :
+                      p.status === "expired" ? "bg-red-100 text-red-800" :
+                      p.status === "cancelled" ? "bg-gray-200 text-gray-700" :
+                      "bg-gray-100 text-gray-800"
+                    }`}>{p.status.replace(/_/g, " ")}</span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.publication_date}</td>
                 </tr>

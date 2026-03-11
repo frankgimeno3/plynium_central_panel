@@ -2,8 +2,8 @@
 
 import React, { FC, useState, useCallback, useEffect } from "react";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import * as XLSX from "xlsx";
 
 const CUSTOMERS_IMPORT_COLUMNS = [
@@ -29,7 +29,7 @@ const CUSTOMERS_IMPORT_COLUMNS = [
 const EXPECTED_STRUCTURE = `La primera fila debe ser la cabecera con exactamente estas columnas (en cualquier orden):
 ${CUSTOMERS_IMPORT_COLUMNS.join(" | ")}
 
-Ejemplo (cuenta/empresa + contacto principal):
+Example (account/company + main contact):
 id_customer | name                    | cif        | country | address              | phone           | email              | website    | industry        | segment  | owner          | source | status  | contact_name      | contact_role           | contact_email           | contact_phone
 cust-005    | Nuevas Ventanas S.L.   | B11222333  | España  | C/ Mayor 1, Madrid   | +34 911 222 333 | info@nuevasv.es    | https://.. | Carpintería      | Empresa  | Laura Martínez | Web    | activo | Juan López        | Director Comercial     | j.lopez@nuevasv.es      | +34 600 111 222`;
 
@@ -97,7 +97,7 @@ function parseFileToRows(file: File): Promise<string[][]> {
 }
 
 function validateRows(rows: string[][]): { valid: boolean; error?: string; count?: number } {
-  if (!rows.length) return { valid: false, error: "El archivo está vacío." };
+  if (!rows.length) return { valid: false, error: "The file is empty." };
   const header = rows[0].map((c) => String(c).trim().toLowerCase());
   const normalizedExpected = CUSTOMERS_IMPORT_COLUMNS.map((c) => c.toLowerCase());
   for (const col of normalizedExpected) {
@@ -166,9 +166,9 @@ const ImportCustomersPage: FC = () => {
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     setPageMeta({
-      pageTitle: "Importar cuentas (Companies)",
+      pageTitle: "Import accounts (Companies)",
       breadcrumbs,
-      buttons: [{ label: "Volver a Customers", href: backUrl }],
+      buttons: [{ label: "Back to Customers", href: backUrl }],
     });
   }, [setPageMeta, breadcrumbs, backUrl]);
 
@@ -180,7 +180,7 @@ const ImportCustomersPage: FC = () => {
           <>
             <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
               <p className="text-sm font-semibold text-amber-800 mb-2">
-                Estructura esperada (Excel o CSV) — Cuentas / Empresas
+                Expected structure (Excel or CSV) — Accounts / Companies
               </p>
               <pre className="text-xs text-amber-900 whitespace-pre-wrap font-sans overflow-x-auto">
                 {EXPECTED_STRUCTURE}
@@ -205,7 +205,7 @@ const ImportCustomersPage: FC = () => {
               )}
               {validation?.valid && (
                 <p className="text-sm text-green-600">
-                  Archivo válido. {validation.count} fila(s) de datos.
+                  Valid file. {validation.count} row(s) of data.
                 </p>
               )}
               <button
@@ -223,16 +223,16 @@ const ImportCustomersPage: FC = () => {
         {phase === "processing" && (
           <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
             <div className="inline-block w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-gray-700">Procesando importación...</p>
+            <p className="text-gray-700">Processing import...</p>
             <p className="text-sm text-gray-500 mt-1">Espere un momento.</p>
           </div>
         )}
 
         {phase === "result" && importResult && (
           <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-            <p className="text-sm font-semibold text-gray-700">Resultado de la importación</p>
+            <p className="text-sm font-semibold text-gray-700">Import result</p>
             <p className="text-gray-600">
-              Cuentas importadas: <span className="font-medium text-green-600">{importResult.success}</span>
+              Accounts imported: <span className="font-medium text-green-600">{importResult.success}</span>
               {importResult.errors > 0 && (
                 <span className="ml-2">
                   | Errores: <span className="font-medium text-red-600">{importResult.errors}</span>
@@ -244,7 +244,7 @@ const ImportCustomersPage: FC = () => {
                 href={backUrl}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
               >
-                Volver a Customers
+                Back to Customers
               </Link>
             </div>
           </div>

@@ -2,8 +2,8 @@
 
 import { FC, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { useOtherRequests, RequestState } from '../hooks/useOtherRequests';
 
 type TabFilter = RequestState;
@@ -40,7 +40,7 @@ const OtherRequestsPage: FC = () => {
   ];
 
   const handleRowClick = (reqId: string) => {
-    router.push(`/logged/pages/network/requests/requests/${encodeURIComponent(reqId)}`);
+    router.push(`/logged/pages/network/requests/other/${encodeURIComponent(reqId)}`);
   };
 
   const breadcrumbs = [

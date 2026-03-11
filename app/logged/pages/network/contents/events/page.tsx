@@ -2,8 +2,8 @@
 
 import React, { FC, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { EventsService } from '@/app/service/EventsService';
 import { PortalService } from '@/app/service/PortalService';
 import EventFilter, { EventFilterParams } from './event_components/EventFilter';

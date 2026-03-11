@@ -13,6 +13,7 @@ function toApiEvent(event) {
     end_date: event.end_date ? new Date(event.end_date).toISOString().split("T")[0] : null,
     location: event.location ?? "",
     event_main_image: event.event_main_image ?? "",
+    id_customer: event.id_customer ?? null,
   };
 }
 
@@ -27,6 +28,7 @@ function buildCreatePayload(eventData) {
     end_date: eventData.end_date,
     location: eventData.location ?? "",
     event_main_image: eventData.event_main_image ?? "",
+    id_customer: eventData.id_customer ?? null,
   };
 }
 
@@ -83,7 +85,7 @@ export async function getAllEvents(opts = {}) {
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
       const [rows] = await EventModel.sequelize.query(
         `SELECT DISTINCT e.id_fair, e.event_name, e.country, e.main_description, e.region,
-                e.start_date, e.end_date, e.location, e.event_main_image
+                e.start_date, e.end_date, e.location, e.event_main_image, e.id_customer
          FROM events e${joinClause}
          ${whereClause}
          ORDER BY e.start_date ASC`,
@@ -102,6 +104,11 @@ export async function getAllEvents(opts = {}) {
       await ensureEventMainImageColumn();
       const events = await EventModel.findAll({ order: [["start_date", "ASC"]] });
       return events.map(toApiEvent);
+    }
+    if (isIdCustomerColumnMissingError(error)) {
+      console.warn("[EventService] Column 'id_customer' missing, adding it...");
+      await ensureIdCustomerColumn();
+      return getAllEvents(opts);
     }
     console.error("Error fetching events from database:", error);
     if (
@@ -134,6 +141,12 @@ export async function getEventById(idFair) {
       if (!event) throw new Error(`Event with id_fair ${idFair} not found`);
       return toApiEvent(event);
     }
+    if (isIdCustomerColumnMissingError(error)) {
+      await ensureIdCustomerColumn();
+      const event = await EventModel.findByPk(idFair);
+      if (!event) throw new Error(`Event with id_fair ${idFair} not found`);
+      return toApiEvent(event);
+    }
     throw error;
   }
 }
@@ -148,11 +161,24 @@ function isEventMainImageColumnMissingError(error) {
   return msg.includes("event_main_image") && msg.includes("does not exist");
 }
 
+function isIdCustomerColumnMissingError(error) {
+  const msg = (error?.message || "") + (error?.original?.message || "");
+  return msg.includes("id_customer") && msg.includes("does not exist");
+}
+
 async function ensureEventMainImageColumn() {
   if (!EventModel.sequelize) return;
   const tableName = EventModel.tableName || "events";
   await EventModel.sequelize.query(
     `ALTER TABLE "${tableName}" ADD COLUMN IF NOT EXISTS event_main_image VARCHAR(255) DEFAULT ''`
+  );
+}
+
+async function ensureIdCustomerColumn() {
+  if (!EventModel.sequelize) return;
+  const tableName = EventModel.tableName || "events";
+  await EventModel.sequelize.query(
+    `ALTER TABLE "${tableName}" ADD COLUMN IF NOT EXISTS id_customer VARCHAR(255) DEFAULT NULL`
   );
 }
 
@@ -194,6 +220,18 @@ export async function createEvent(eventData) {
       }
       return toApiEvent(event);
     }
+    if (isIdCustomerColumnMissingError(error)) {
+      console.warn("[EventService] Column 'id_customer' missing, adding it...");
+      await ensureIdCustomerColumn();
+      const event = await EventModel.create(buildCreatePayload(eventData));
+      const portalIds = Array.isArray(eventData.portalIds)
+        ? eventData.portalIds.filter((id) => Number.isInteger(Number(id))).map(Number)
+        : [];
+      if (portalIds.length > 0) {
+        await createEventPortals(event.id_fair, portalIds, eventData.event_name ?? "");
+      }
+      return toApiEvent(event);
+    }
     throw error;
   }
 }
@@ -208,6 +246,7 @@ function buildUpdatePayload(eventData) {
   if (eventData.end_date !== undefined) payload.end_date = eventData.end_date;
   if (eventData.location !== undefined) payload.location = eventData.location;
   if (eventData.event_main_image !== undefined) payload.event_main_image = eventData.event_main_image ?? "";
+  if (eventData.id_customer !== undefined) payload.id_customer = eventData.id_customer ?? null;
   return payload;
 }
 
@@ -229,6 +268,10 @@ export async function updateEvent(idFair, eventData) {
       await ensureEventMainImageColumn();
       return updateEvent(idFair, eventData);
     }
+    if (isIdCustomerColumnMissingError(error)) {
+      await ensureIdCustomerColumn();
+      return updateEvent(idFair, eventData);
+    }
     throw error;
   }
 }
@@ -244,6 +287,10 @@ export async function deleteEvent(idFair) {
   } catch (error) {
     if (isEventMainImageColumnMissingError(error)) {
       await ensureEventMainImageColumn();
+      return deleteEvent(idFair);
+    }
+    if (isIdCustomerColumnMissingError(error)) {
+      await ensureIdCustomerColumn();
       return deleteEvent(idFair);
     }
     throw error;

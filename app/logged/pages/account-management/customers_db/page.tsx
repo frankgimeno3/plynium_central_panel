@@ -3,8 +3,8 @@
 import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import customersData from "@/app/contents/customers.json";
 
 type Customer = {
@@ -46,7 +46,7 @@ const CustomersDbPage: FC = () => {
   ];
 
   const buttons = [
-    { label: "Nueva cuenta", href: "/logged/pages/account-management/customers_db/create" },
+    { label: "New account", href: "/logged/pages/account-management/customers_db/create" },
     { label: "Import", href: "/logged/pages/account-management/customers_db/mass-ops/import" },
     { label: "Export", href: "/logged/pages/account-management/customers_db/mass-ops/export" },
   ];

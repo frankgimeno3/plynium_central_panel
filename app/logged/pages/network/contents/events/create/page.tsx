@@ -2,9 +2,10 @@
 
 import React, { FC, useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
-import MediatecaModal from '@/app/logged/logged_components/MediatecaModal';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
+import MediatecaModal from '@/app/logged/logged_components/modals/MediatecaModal';
+import CustomerSelectModal, { type CustomerRow } from '@/app/logged/logged_components/modals/CustomerSelectModal';
 import { EventsService } from '@/app/service/EventsService';
 import { PortalService } from '@/app/service/PortalService';
 
@@ -183,6 +184,9 @@ const CreateEvent: FC = () => {
   const [imageLoadError, setImageLoadError] = useState(false);
   const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
   const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
+  const [relatedCustomer, setRelatedCustomer] = useState<CustomerRow | null>(null);
+  const [customerModalOpen, setCustomerModalOpen] = useState(false);
+  const [relatedCustomerError, setRelatedCustomerError] = useState<string | null>(null);
 
   const [startDay, setStartDay] = useState('');
   const [startMonth, setStartMonth] = useState('');
@@ -254,12 +258,16 @@ const CreateEvent: FC = () => {
 
   const validate = (): boolean => {
     setPortalError(null);
+    setRelatedCustomerError(null);
     const next: Partial<Record<keyof EventForm, string>> = {};
     if (!form.event_name.trim()) next.event_name = 'Event name is required';
     if (!form.country.trim()) next.country = 'Country is required';
     if (!form.location.trim()) next.location = 'Location is required';
     if (!form.start_date) next.start_date = 'Start date is required';
     if (!form.end_date) next.end_date = 'End date is required';
+    if (!relatedCustomer) {
+      setRelatedCustomerError('Related to (account) is required');
+    }
     if (selectedPortalIds.length === 0 && portals.length > 0) {
       setPortalError('Select at least one portal');
     } else {
@@ -272,8 +280,9 @@ const CreateEvent: FC = () => {
       next.event_main_image = 'Please enter a valid URL (e.g. https://example.com/logo.png)';
     }
     const portalInvalid = selectedPortalIds.length === 0 && portals.length > 0;
+    const relatedInvalid = !relatedCustomer;
     setErrors(next);
-    return Object.keys(next).length === 0 && !portalInvalid;
+    return Object.keys(next).length === 0 && !portalInvalid && !relatedInvalid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -292,6 +301,7 @@ const CreateEvent: FC = () => {
         location: form.location.trim(),
         event_main_image: form.event_main_image.trim(),
         portalIds: selectedPortalIds.length > 0 ? selectedPortalIds : [],
+        id_customer: relatedCustomer?.id_customer ?? null,
       });
       router.push('/logged/pages/network/contents/events');
       router.refresh();
@@ -303,7 +313,7 @@ const CreateEvent: FC = () => {
           : (error as { message?: string })?.message ||
             (error as { data?: { message?: string } })?.data?.message ||
             'Error creating event';
-      alert(`Error al crear el evento: ${msg}`);
+      alert(`Error creating the event: ${msg}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -338,7 +348,37 @@ const CreateEvent: FC = () => {
       <PageContentSection>
       <div className="max-w-4xl mx-auto w-full">
         <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-          {/* Event Name first */}
+          {/* Related to (account) - required */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
+              Related to <span className="text-red-500">*</span>
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setCustomerModalOpen(true)}
+                className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium text-left min-w-[200px]"
+              >
+                {relatedCustomer
+                  ? `${relatedCustomer.name || relatedCustomer.id_customer}${relatedCustomer.id_customer ? ` (${relatedCustomer.id_customer})` : ''}`
+                  : 'Select account…'}
+              </button>
+              {relatedCustomer && (
+                <button
+                  type="button"
+                  onClick={() => setRelatedCustomer(null)}
+                  className="text-sm text-red-600 hover:text-red-800 font-medium"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            {relatedCustomerError && (
+              <p className="mt-1 text-sm text-red-500">{relatedCustomerError}</p>
+            )}
+          </div>
+
+          {/* Event Name */}
           <div>
             <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
               Event Name <span className="text-red-500">*</span>
@@ -583,6 +623,15 @@ const CreateEvent: FC = () => {
           update('event_main_image', imageSrc);
           setImageLoadError(false);
           setMediatecaModalOpen(false);
+        }}
+      />
+      <CustomerSelectModal
+        open={customerModalOpen}
+        onClose={() => setCustomerModalOpen(false)}
+        onSelectCustomer={(customer) => {
+          setRelatedCustomer(customer);
+          setRelatedCustomerError(null);
+          setCustomerModalOpen(false);
         }}
       />
       </PageContentSection>

@@ -3,8 +3,8 @@
 import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import proposalsData from "@/app/contents/proposals.json";
 import customersData from "@/app/contents/customers.json";
 import servicesData from "@/app/contents/services.json";
@@ -38,7 +38,7 @@ const ProposalsPage: FC = () => {
     if (filter.id) list = list.filter((p) => p.id_proposal.toLowerCase().includes(filter.id.toLowerCase()));
     if (filter.company) list = list.filter((p) => getCompanyName(p.id_customer).toLowerCase().includes(filter.company.toLowerCase()));
     if (filter.status) list = list.filter((p) => p.status.toLowerCase().includes(filter.status.toLowerCase()));
-    if (filter.service) list = list.filter((p) => p.servicesArray?.some((s) => s.id_service === filter.service));
+    if (filter.service) list = list.filter((p) => (p as { serviceLines?: { id_service: string }[] }).serviceLines?.some((s) => s.id_service === filter.service) || p.servicesArray?.some((s) => s.id_service === filter.service));
     return list;
   }, [all, filter]);
 

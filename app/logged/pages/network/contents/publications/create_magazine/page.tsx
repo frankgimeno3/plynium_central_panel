@@ -2,8 +2,8 @@
 
 import React, { FC, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { MagazineService } from "@/app/service/MagazineService";
 import { PortalService } from "@/app/service/PortalService";
 import { PublicationService } from "@/app/service/PublicationService";

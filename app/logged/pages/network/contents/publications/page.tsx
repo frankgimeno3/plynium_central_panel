@@ -3,8 +3,8 @@
 import { FC, Suspense, useEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
 
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import PublicationFilter, {
   PublicationFilterParams,
 } from "./publication_components/PublicationFilter";

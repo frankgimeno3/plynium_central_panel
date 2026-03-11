@@ -2,8 +2,8 @@
 
 import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import contactsData from "@/app/contents/contactsContents.json";
 
 type Contact = {
@@ -14,6 +14,7 @@ type Contact = {
   phone: string;
   id_customer?: string;
   company_name?: string;
+  based_in_country?: string;
   comments?: unknown[];
 };
 
@@ -39,7 +40,7 @@ const ContactsDbPage: FC = () => {
   ];
 
   const buttons = [
-    { label: "Nuevo contacto", href: "/logged/pages/account-management/contacts_db/create" },
+    { label: "New contact", href: "/logged/pages/account-management/contacts_db/create" },
     { label: "Import", href: "/logged/pages/account-management/contacts_db/mass-ops/import" },
     { label: "Export", href: "/logged/pages/account-management/contacts_db/mass-ops/export" },
   ];
@@ -108,6 +109,7 @@ const ContactsDbPage: FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Based in (country)</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -123,6 +125,7 @@ const ContactsDbPage: FC = () => {
                   <td className="px-6 py-4 text-sm text-gray-900">{c.email}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.phone}</td>
                   <td className="px-6 py-4 text-sm text-gray-500">{c.company_name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.based_in_country ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

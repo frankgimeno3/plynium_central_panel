@@ -2,144 +2,176 @@
 
 import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
-import plannedNewslettersData from "@/app/contents/planned_newsletters.json";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
+import type { NewsletterCampaign, Newsletter } from "@/app/contents/interfaces";
+import campaignsData from "@/app/contents/newsletterCampaigns.json";
+import newslettersData from "@/app/contents/newsletters.json";
 
-type PlannedNewsletter = {
-  id_newsletter: string;
-  edition_name: string;
-  theme: string;
-  publication_date: string;
-  newsletter_banners?: unknown[];
-  newsletter_contents?: unknown[];
-};
+const BASE = "/logged/pages/production/newsletter_management";
 
-const ITEMS_PER_PAGE = 12;
+const SCHEDULED_STATUSES: string[] = ["calendarized", "pending"];
+const FINISHED_STATUSES: string[] = ["published", "cancelled"];
+
+type TabId = "campaigns" | "scheduled" | "finished";
 
 const NewsletterManagementPage: FC = () => {
   const router = useRouter();
-  const all = (plannedNewslettersData as PlannedNewsletter[]).slice();
-  const [filter, setFilter] = useState({ id: "", edition: "", theme: "" });
+  const [activeTab, setActiveTab] = useState<TabId>("campaigns");
 
-  const filtered = useMemo(() => {
-    let list = [...all];
-    if (filter.id) list = list.filter((n) => n.id_newsletter.toLowerCase().includes(filter.id.toLowerCase()));
-    if (filter.edition) list = list.filter((n) => n.edition_name?.toLowerCase().includes(filter.edition.toLowerCase()));
-    if (filter.theme) list = list.filter((n) => n.theme?.toLowerCase().includes(filter.theme.toLowerCase()));
-    return list;
-  }, [all, filter]);
+  const campaigns = (campaignsData as NewsletterCampaign[]).slice();
+  const newsletters = (newslettersData as Newsletter[]).slice();
 
-  const [page, setPage] = useState(1);
-  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
-  const start = (page - 1) * ITEMS_PER_PAGE;
-  const paginated = filtered.slice(start, start + ITEMS_PER_PAGE);
+  const scheduledNewsletters = useMemo(
+    () => newsletters.filter((n) => SCHEDULED_STATUSES.includes(n.status)),
+    [newsletters]
+  );
+  const finishedNewsletters = useMemo(
+    () => newsletters.filter((n) => FINISHED_STATUSES.includes(n.status)),
+    [newsletters]
+  );
 
   const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
 
   const breadcrumbs = [
     { label: "Production", href: "/logged/pages/production/projects" },
-    { label: "Planned Newsletters" },
+    { label: "Newsletter management" },
   ];
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
-    setPageMeta({ pageTitle: "Planned Newsletters", breadcrumbs });
+    setPageMeta({ pageTitle: "Newsletter management", breadcrumbs });
   }, [setPageMeta, breadcrumbs]);
+
+  const tabs: { id: TabId; label: string }[] = [
+    { id: "campaigns", label: "Campaigns" },
+    { id: "scheduled", label: "Scheduled newsletters" },
+    { id: "finished", label: "Finished newsletters" },
+  ];
 
   return (
     <>
       <PageContentSection>
-        <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">ID</label>
-              <input
-                type="text"
-                value={filter.id}
-                onChange={(e) => { setFilter((f) => ({ ...f, id: e.target.value })); setPage(1); }}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search by ID"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Edition</label>
-              <input
-                type="text"
-                value={filter.edition}
-                onChange={(e) => { setFilter((f) => ({ ...f, edition: e.target.value })); setPage(1); }}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search by edition"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Theme</label>
-              <input
-                type="text"
-                value={filter.theme}
-                onChange={(e) => { setFilter((f) => ({ ...f, theme: e.target.value })); setPage(1); }}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Search by theme"
-              />
-            </div>
-          </div>
-      </PageContentSection>
-
-      <PageContentSection>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edition</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Theme</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Publication date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contents</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {paginated.map((n) => (
-                <tr
-                  key={n.id_newsletter}
-                  onClick={() => router.push(`/logged/pages/production/newsletter_management/${n.id_newsletter}`)}
-                  className={rowClass}
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{n.id_newsletter}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{n.edition_name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{n.theme}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{n.publication_date}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{((n.newsletter_banners?.length || 0) + (n.newsletter_contents?.length || 0))} items</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="flex gap-1 border-b border-gray-200 mb-6">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+                activeTab === tab.id
+                  ? "bg-white border border-b-0 border-gray-200 text-blue-600 -mb-px"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {(filtered.length > ITEMS_PER_PAGE || totalPages > 1) && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Showing {start + 1}–{Math.min(start + ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                ← Previous
-              </button>
-              <span className="text-sm text-gray-600">Page {page} of {totalPages || 1}</span>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next →
-              </button>
-            </div>
+        {activeTab === "campaigns" && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Portal</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Theme</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Frequency</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Period</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {campaigns.map((c) => (
+                  <tr
+                    key={c.id}
+                    onClick={() => router.push(`${BASE}/campaigns/${c.id}`)}
+                    className={rowClass}
+                  >
+                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{c.name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{c.portalCode}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{c.contentTheme}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{c.frequency}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{c.startDate} – {c.endDate}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{c.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
+        )}
+
+        {activeTab === "scheduled" && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimated publish date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Portal</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {scheduledNewsletters.map((n) => (
+                  <tr
+                    key={n.id}
+                    onClick={() => router.push(`${BASE}/${n.id}`)}
+                    className={rowClass}
+                  >
+                    <td className="px-6 py-4 text-sm font-mono text-gray-900">{n.id}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{n.topic}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{n.estimatedPublishDate}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{n.portalCode}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{n.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === "finished" && (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimated publish date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Portal</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {finishedNewsletters.map((n) => (
+                  <tr
+                    key={n.id}
+                    onClick={() => router.push(`${BASE}/${n.id}`)}
+                    className={rowClass}
+                  >
+                    <td className="px-6 py-4 text-sm font-mono text-gray-900">{n.id}</td>
+                    <td className="px-6 py-4 text-sm text-gray-900">{n.topic}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{n.estimatedPublishDate}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{n.portalCode}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{n.status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {activeTab === "campaigns" && campaigns.length === 0 && (
+          <p className="text-sm text-gray-500 py-4">No campaigns.</p>
+        )}
+        {activeTab === "scheduled" && scheduledNewsletters.length === 0 && (
+          <p className="text-sm text-gray-500 py-4">No scheduled newsletters.</p>
+        )}
+        {activeTab === "finished" && finishedNewsletters.length === 0 && (
+          <p className="text-sm text-gray-500 py-4">No finished newsletters.</p>
         )}
       </PageContentSection>
     </>

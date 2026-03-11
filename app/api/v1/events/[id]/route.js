@@ -41,6 +41,7 @@ export const PUT = createEndpoint(
     end_date: Joi.string().optional(),
     location: Joi.string().allow("").optional(),
     event_main_image: Joi.string().allow("").optional(),
+    id_customer: Joi.string().allow("", null).optional(),
   }),
   true
 );

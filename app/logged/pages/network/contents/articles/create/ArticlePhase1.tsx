@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { DateInputs, parseDateFields, buildDateStr } from "@/app/logged/logged_components/DateInputs";
+import { DateInputs, parseDateFields, buildDateStr } from "@/app/logged/logged_components/date_components/DateInputs";
 
 const HIGHLITED_POSITION_OPTIONS = [
   { value: "", label: "(None)" },

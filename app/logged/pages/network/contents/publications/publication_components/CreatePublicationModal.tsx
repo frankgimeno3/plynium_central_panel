@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect } from "react";
 import { PublicationService } from "@/app/service/PublicationService";
-import DatePicker from "@/app/logged/logged_components/DatePicker";
+import DatePicker from "@/app/logged/logged_components/date_components/DatePicker";
 
 interface CreatePublicationModalProps {
   isOpen: boolean;
@@ -63,7 +63,7 @@ const CreatePublicationModal: FC<CreatePublicationModalProps> = ({
       }, 2000);
     } catch (e) {
       setIsCreating(false);
-      alert(`Error al crear la publicación: ${e}`);
+      alert(`Error creating the publication: ${e}`);
       setShowConfirm(false);
       setConfirmStep(1);
     }
@@ -100,11 +100,11 @@ const CreatePublicationModal: FC<CreatePublicationModalProps> = ({
     >
       <div
         className="relative flex flex-col p-6 bg-white shadow-xl rounded-xl gap-6 text-gray-700 w-full max-w-2xl"
-        onClick={(e) => e.stopPropagation()} // 👈 evita cerrar al click dentro
+        onClick={(e) => e.stopPropagation()}
       >
         {/* HEADER */}
         <div className="flex items-center justify-between pb-4 border-b">
-          <h1 className="text-2xl font-bold">Crear Nueva Publicación</h1>
+          <h1 className="text-2xl font-bold">Create New Publication</h1>
           <button
             onClick={handleReset}
             className="text-gray-500 hover:text-gray-700"
@@ -116,10 +116,10 @@ const CreatePublicationModal: FC<CreatePublicationModalProps> = ({
         {/* FORM */}
         <div className="flex flex-col gap-4">
           {[
-            ["ID de Publicación", idPublication, setIdPublication, "text"],
-            ["Enlace de Redirección", redirectionLink, setRedirectionLink, "text"],
+            ["Publication ID", idPublication, setIdPublication, "text"],
+            ["Redirect link", redirectionLink, setRedirectionLink, "text"],
             ["Revista", magazine, setMagazine, "text"],
-            ["Número", numero, setNumero, "number"],
+            ["Number", numero, setNumero, "number"],
           ].map(([label, value, setter, inputType]: any) => (
             <div key={label} className="space-y-2">
               <label className="font-bold text-lg">{label}</label>
@@ -138,7 +138,7 @@ const CreatePublicationModal: FC<CreatePublicationModalProps> = ({
               value={date}
               onChange={setDate}
               className="w-full"
-              placeholder="Seleccionar fecha"
+              placeholder="Select date"
             />
           </div>
 
@@ -147,7 +147,7 @@ const CreatePublicationModal: FC<CreatePublicationModalProps> = ({
               onClick={handleReset}
               className="w-full bg-gray-300 py-2 rounded-xl"
             >
-              Cancelar
+              Cancel
             </button>
             <button
               onClick={() => setShowConfirm(true)}
@@ -158,7 +158,7 @@ const CreatePublicationModal: FC<CreatePublicationModalProps> = ({
                   : "bg-gray-300 text-gray-500"
               }`}
             >
-              Crear publicación
+              Create publication
             </button>
           </div>
         </div>
@@ -170,32 +170,32 @@ const CreatePublicationModal: FC<CreatePublicationModalProps> = ({
               {confirmStep === 1 ? (
                 <>
                   <h2 className="text-xl font-bold mb-4">
-                    Confirmar creación
+                    Confirm creation
                   </h2>
                   <p><strong>ID:</strong> {idPublication}</p>
                   <p><strong>Revista:</strong> {magazine}</p>
-                  <p><strong>Número:</strong> {numero}</p>
+                  <p><strong>Number:</strong> {numero}</p>
 
                   <div className="flex gap-2 mt-6">
                     <button
                       onClick={() => setShowConfirm(false)}
                       className="flex-1 bg-gray-300 py-2 rounded-xl"
                     >
-                      Cancelar
+                      Cancel
                     </button>
                     <button
                       onClick={handleConfirm}
                       className="flex-1 bg-blue-950 text-white py-2 rounded-xl"
                     >
-                      Confirmar
+                      Confirm
                     </button>
                   </div>
                 </>
               ) : (
                 <p className="text-center">
                   {isCreating
-                    ? "Creando publicación..."
-                    : "¡Publicación creada!"}
+                    ? "Creating publication..."
+                    : "Publication created!"}
                 </p>
               )}
             </div>

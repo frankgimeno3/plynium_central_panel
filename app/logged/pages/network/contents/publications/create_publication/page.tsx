@@ -2,12 +2,12 @@
 
 import React, { FC, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
-import MediatecaModal from "@/app/logged/logged_components/MediatecaModal";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
+import MediatecaModal from "@/app/logged/logged_components/modals/MediatecaModal";
 import { PublicationService } from "@/app/service/PublicationService";
 import { PortalService } from "@/app/service/PortalService";
-import { DateInputs, parseDateFields, buildDateStr } from "@/app/logged/logged_components/DateInputs";
+import { DateInputs, parseDateFields, buildDateStr } from "@/app/logged/logged_components/date_components/DateInputs";
 
 interface PublicationData {
   id_publication: string;
@@ -73,25 +73,25 @@ const CreatePublication: FC = () => {
     return `${year}-${month}-${day}`;
   };
 
-  // Función para generar el ID automáticamente
+  // Function to generate the ID automatically
   const generatePublicationId = async (): Promise<string> => {
     try {
-      // Obtener todas las publicaciones existentes
+      // Get all existing publications
       const allPublications = await PublicationService.getAllPublications();
       
-      // Obtener el año actual (últimos 2 dígitos)
+      // Get current year (last 2 digits)
       const currentYear = new Date().getFullYear();
       const yearSuffix = currentYear.toString().slice(-2);
       
-      // Patrón regex para encontrar publicaciones del año actual
+      // Regex pattern to find publications from the current year
       const pattern = new RegExp(`^publication_${yearSuffix}_\\d{9}$`);
       
-      // Filtrar publicaciones que coincidan con el patrón del año actual
+      // Filter publications that match the current year pattern
       const currentYearPublications = allPublications.filter((pub: any) => 
         pattern.test(pub.id_publication)
       );
       
-      // Extraer los números ordinales y encontrar el máximo
+      // Extract ordinal numbers and find the maximum
       let maxOrdinal = 0;
       currentYearPublications.forEach((pub: any) => {
         const match = pub.id_publication.match(/^publication_\d{2}_(\d{9})$/);
@@ -119,7 +119,7 @@ const CreatePublication: FC = () => {
     }
   };
 
-  // Generar ID automáticamente al cargar el componente
+  // Generate ID automatically when the component loads
   useEffect(() => {
     const loadPublicationId = async () => {
       setIsGeneratingId(true);
@@ -138,7 +138,7 @@ const CreatePublication: FC = () => {
   }, []);
 
   const handlePhase1Next = () => {
-    // Validar campos requeridos (imageUrl es opcional). Portals: al menos uno si hay portales disponibles
+    // Validate required fields (imageUrl is optional). Portals: at least one if portals are available
     const portalsValid = portals.length === 0 || selectedPortalIds.length >= 1;
     if (idPublication && redirectionLink && date && magazine && numero && portalsValid) {
       setCurrentPhase(2);
@@ -166,13 +166,13 @@ const CreatePublication: FC = () => {
       await PublicationService.createPublication(publicationData);
       console.log("Publication created successfully");
 
-      alert("¡Publicación creada exitosamente!");
+      alert("Publication created successfully!");
       router.push("/logged/pages/network/contents/publications");
       router.refresh();
     } catch (error: any) {
       console.error("Error creating publication - full error:", error);
       // Extract error message properly
-      let errorMessage = "Error desconocido";
+      let errorMessage = "Unknown error";
       if (typeof error === "string") {
         errorMessage = error;
       } else if (error?.message) {
@@ -188,7 +188,7 @@ const CreatePublication: FC = () => {
       } else {
         errorMessage = JSON.stringify(error);
       }
-      alert(`Error al crear la publicación: ${errorMessage}`);
+      alert(`Error creating the publication: ${errorMessage}`);
     } finally {
       setIsSubmitting(false);
     }
@@ -210,7 +210,7 @@ const CreatePublication: FC = () => {
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     setPageMeta({
-      pageTitle: `Crear Nueva Publicación · Fase ${currentPhase} de 2`,
+      pageTitle: `Create New Publication · Phase ${currentPhase} of 2`,
       breadcrumbs,
       buttons: [{ label: "Back to publications", href: "/logged/pages/network/contents/publications" }],
     });
@@ -220,13 +220,13 @@ const CreatePublication: FC = () => {
     <>
       <PageContentSection>
       <div className="flex flex-col p-8 max-w-4xl mx-auto w-full">
-        {/* FASE 1: Datos de la Publicación */}
+        {/* PHASE 1: Publication data */}
         {currentPhase === 1 && (
           <div className="flex flex-col gap-6">
-            <h2 className="text-xl font-bold">Datos de la Publicación</h2>
+            <h2 className="text-xl font-bold">Publication data</h2>
 
             <div className="space-y-2">
-              <label className="font-bold text-lg">ID de Publicación *</label>
+              <label className="font-bold text-lg">Publication ID *</label>
               <input
                 type="text"
                 value={isGeneratingId ? "Generando..." : idPublication}
@@ -236,12 +236,12 @@ const CreatePublication: FC = () => {
                 placeholder="publication_25_000000001"
               />
               {isGeneratingId && (
-                <p className="text-sm text-gray-500">Generando ID automáticamente...</p>
+                <p className="text-sm text-gray-500">Generating ID automatically...</p>
               )}
             </div>
 
             <div className="space-y-2">
-              <label className="font-bold text-lg">Enlace de Redirección *</label>
+              <label className="font-bold text-lg">Redirect link *</label>
               <input
                 type="text"
                 value={redirectionLink}
@@ -252,7 +252,7 @@ const CreatePublication: FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="font-bold text-lg">Revista *</label>
+              <label className="font-bold text-lg">Magazine *</label>
               <input
                 type="text"
                 value={magazine}
@@ -263,18 +263,18 @@ const CreatePublication: FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="font-bold text-lg">Número *</label>
+              <label className="font-bold text-lg">Number *</label>
               <input
                 type="number"
                 value={numero}
                 onChange={(e) => setNumero(e.target.value)}
                 className="w-full px-4 py-2 border rounded-xl"
-                placeholder="Número de la publicación"
+                placeholder="Publication number"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="font-bold text-lg">Fecha *</label>
+              <label className="font-bold text-lg">Date *</label>
               <DateInputs
                 day={dateDay}
                 month={dateMonth}
@@ -286,9 +286,9 @@ const CreatePublication: FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label className="font-bold text-lg">Portales * (selecciona al menos uno)</label>
+              <label className="font-bold text-lg">Portals * (select at least one)</label>
               <p className="text-sm text-gray-600">
-                Elige en qué portal(es) será visible esta publicación.
+                Choose which portal(s) this publication will be visible on.
               </p>
               <div className="flex flex-wrap gap-3">
                 {portals.length === 0 ? (
@@ -355,7 +355,7 @@ const CreatePublication: FC = () => {
                 onClick={() => router.push("/logged/pages/network/contents/publications")}
                 className="flex-1 bg-gray-300 py-2 rounded-xl"
               >
-                Cancelar
+                Cancel
               </button>
               <button
                 onClick={handlePhase1Next}
@@ -372,18 +372,18 @@ const CreatePublication: FC = () => {
           </div>
         )}
 
-        {/* FASE 2: Revisión Final */}
+        {/* PHASE 2: Final review */}
         {currentPhase === 2 && (
           <div className="flex flex-col gap-6">
-            <h2 className="text-xl font-bold">Revisión Final</h2>
+            <h2 className="text-xl font-bold">Final review</h2>
 
             <div className="border border-gray-200 rounded-xl p-6 bg-gray-50">
-              <h3 className="font-bold text-lg mb-4">Datos de la Publicación</h3>
+              <h3 className="font-bold text-lg mb-4">Publication data</h3>
               <div className="space-y-2 text-sm">
                 <p><strong>ID:</strong> {idPublication}</p>
-                <p><strong>Enlace de Redirección:</strong> {redirectionLink}</p>
+                <p><strong>Redirect link:</strong> {redirectionLink}</p>
                 <p><strong>Revista:</strong> {magazine}</p>
-                <p><strong>Número:</strong> {numero}</p>
+                <p><strong>Number:</strong> {numero}</p>
                 <p><strong>Fecha:</strong> {date}</p>
                 <p><strong>URL de Imagen:</strong> {publicationMainImageUrl || "No especificada"}</p>
               </div>
@@ -395,7 +395,7 @@ const CreatePublication: FC = () => {
                 disabled={isSubmitting}
                 className="flex-1 bg-gray-300 py-2 rounded-xl"
               >
-                Atrás
+                Back
               </button>
               <button
                 onClick={handleFinalSubmit}
@@ -406,7 +406,7 @@ const CreatePublication: FC = () => {
                     : "bg-blue-950 text-white"
                 }`}
               >
-                {isSubmitting ? "Creando..." : "Finalizar y Crear Publicación"}
+                {isSubmitting ? "Creating..." : "Finish and create publication"}
               </button>
             </div>
           </div>

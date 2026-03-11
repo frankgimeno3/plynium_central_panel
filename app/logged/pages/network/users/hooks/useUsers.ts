@@ -4,9 +4,9 @@ import UserService from '@/app/service/UserSerivce.js';
 export type UserRole = 'only articles' | 'articles and publications' | 'admin';
 
 const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
-  'only articles': 'Acceso a la edición y creación de artículos',
-  'articles and publications': 'Acceso a la edición y creación de artículos y publicaciones',
-  admin: 'lo anterior más edición de roles',
+  'only articles': 'Access to edit and create articles',
+  'articles and publications': 'Access to edit and create articles and publications',
+  admin: 'All of the above plus role editing',
 };
 
 export interface User {
@@ -31,7 +31,7 @@ export function useUsers() {
       const list = Array.isArray(data) ? (data as User[]) : [];
       setUsers(list);
     } catch (e: unknown) {
-      const message = e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : 'Error al cargar usuarios';
+      const message = e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : 'Error loading users';
       setError(message);
       setUsers([]);
     } finally {
@@ -57,7 +57,7 @@ export function useUsers() {
       );
       await fetchUsers();
     } catch (e: unknown) {
-      const message = e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : 'Error al actualizar';
+      const message = e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : 'Error updating';
       throw new Error(message);
     }
   }, [fetchUsers]);

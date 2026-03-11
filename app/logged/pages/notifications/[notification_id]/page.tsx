@@ -3,9 +3,11 @@
 import { FC, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import notificationsData from '@/app/contents/notifications.json';
+import otherRequestsData from '@/app/contents/otherRequests.json';
+import customersData from '@/app/contents/customers.json';
 
 type NotificationState = 'unread' | 'read' | 'solved';
 
@@ -15,6 +17,69 @@ interface Notification {
   notification_time: string;
   notification_state: NotificationState;
   notification_description: string;
+}
+
+/** Parses notification description and returns redirection link when applicable. */
+function getRedirectionLink(description: string): { href: string; label: string } | null {
+  const d = description || '';
+  // Request ID: oreq-XXX
+  const oreqMatch = d.match(/Request ID:\s*(\S+)/i) || d.match(/\b(oreq-\d+)\b/i);
+  const creqMatch = d.match(/\b(creq-\d+)\b/i);
+  const advMatch = d.match(/\b(adv-\d+-\d+)\b/i) || d.match(/\b(adv-\d+-\d{4})\b/i);
+
+  // Company profile / Directory update with oreq → try customer by author, else other request
+  const isCompanyProfile = /\bcompany profile\b/i.test(d) && (/\bDirectory\b/i.test(d) || /\bdirectory update\b/i.test(d));
+  if (isCompanyProfile && oreqMatch) {
+    const oreqId = (oreqMatch[1] || '').trim();
+    const otherRequests = otherRequestsData as { id: string; author: string }[];
+    const req = otherRequests.find((r) => r.id === oreqId);
+    if (req) {
+      const authorName = req.author.split(/\s*[-–]\s*/)[0]?.trim() || '';
+      const customers = customersData as { id_customer: string; name: string; contact?: { name: string } }[];
+      const customer = customers.find(
+        (c) =>
+          c.name.toLowerCase().includes(authorName.toLowerCase()) ||
+          c.contact?.name?.toLowerCase().includes(authorName.toLowerCase())
+      );
+      if (customer) {
+        return {
+          href: `/logged/pages/account-management/customers_db/${encodeURIComponent(customer.id_customer)}`,
+          label: `Go to customer account: ${customer.name}`,
+        };
+      }
+    }
+    if (oreqId) {
+      return {
+        href: `/logged/pages/network/requests/other/${encodeURIComponent(oreqId)}`,
+        label: `Ver solicitud Other: ${oreqId}`,
+      };
+    }
+  }
+
+  if (creqMatch) {
+    const id = creqMatch[1].trim();
+    return {
+      href: `/logged/pages/network/requests/company/${encodeURIComponent(id)}`,
+      label: `Ver solicitud de empresa: ${id}`,
+    };
+  }
+  if (advMatch) {
+    const id = advMatch[1].trim();
+    return {
+      href: `/logged/pages/network/requests/quotations/${encodeURIComponent(id)}`,
+      label: `Ver solicitud de publicidad: ${id}`,
+    };
+  }
+  if (oreqMatch) {
+    const id = (oreqMatch[1] || '').trim();
+    if (id) {
+      return {
+        href: `/logged/pages/network/requests/other/${encodeURIComponent(id)}`,
+        label: `Ver solicitud Other: ${id}`,
+      };
+    }
+  }
+  return null;
 }
 
 const formatNotificationTime = (dateStr: string) => {
@@ -122,6 +187,8 @@ const NotificationDetailPage: FC = () => {
     );
   }
 
+  const redirectionLink = getRedirectionLink(notification.notification_description);
+
   return (
     <>
       <PageContentSection>
@@ -149,6 +216,18 @@ const NotificationDetailPage: FC = () => {
             <div>
               <label className='text-sm font-medium text-gray-500'>Brief Description</label>
               <p className='text-base text-gray-900'>{notification.notification_brief_description}</p>
+            </div>
+            <div>
+              <label className='text-sm font-medium text-gray-500'>Redirection link</label>
+              {redirectionLink ? (
+                <p className='text-base text-gray-900 mt-1'>
+                  <Link href={redirectionLink.href} className='text-blue-950 hover:underline'>
+                    {redirectionLink.label}
+                  </Link>
+                </p>
+              ) : (
+                <p className='text-base text-gray-500 mt-1'>There is no link for this notification.</p>
+              )}
             </div>
           </div>
 

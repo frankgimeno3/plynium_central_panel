@@ -2,8 +2,8 @@
 
 import { FC, useEffect, useState, Suspense } from 'react';
 import { useParams } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import ArticleMiniature from '../../article_components/ArticleMiniature';
 import ArticleFilter from '../../article_components/ArticleFilter';
 import { ArticleService } from '@/app/service/ArticleService';

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FC, useEffect, useState } from "react";
-import MediatecaModal from "@/app/logged/logged_components/MediatecaModal";
+import MediatecaModal from "@/app/logged/logged_components/modals/MediatecaModal";
 
 interface ChangeImageModalProps {
   isOpen: boolean;

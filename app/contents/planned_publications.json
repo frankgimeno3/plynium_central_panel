@@ -16,7 +16,16 @@
     "7": { "id_advertiser": "cust-003", "id_project": "proj-013", "article_id": "art-091", "state": "content ok", "content_type": "article" },
     "8": { "id_advertiser": "cust-004", "id_project": "proj-011", "image_src": "/pub001/8-advert.jpg", "state": "pending", "content_type": "advert" },
     "9": { "id_advertiser": "cust-001", "id_project": "proj-001", "article_id": "art-003", "state": "content ok", "content_type": "article" },
-    "10": { "id_advertiser": "cust-002", "id_project": "proj-021", "image_src": "/pub001/10-advert.jpg", "state": "pending", "content_type": "advert" }
+    "10": { "id_advertiser": "cust-002", "id_project": "proj-021", "image_src": "/pub001/10-advert.jpg", "state": "pending", "content_type": "advert" },
+    "single_available": { "state": "available", "offeredInProposal": [] },
+    "offeredPreferentialPages": [
+      { "pageType": "Cover page", "slotKey": "cover" },
+      { "pageType": "Preferential page", "slotKey": "inside_cover" },
+      { "pageType": "Double page", "slotKey": "2" },
+      { "pageType": "Single page", "slotKey": "1" },
+      { "pageType": "End page", "slotKey": "end" },
+      { "pageType": "Single page (disponible)", "slotKey": "single_available" }
+    ]
   },
   {
     "id_planned_publication": "pub-002",
@@ -35,7 +44,14 @@
     "7": { "id_advertiser": "cust-001", "id_project": "proj-009", "article_id": "art-062", "state": "content ok", "content_type": "article" },
     "8": { "id_advertiser": "cust-004", "id_project": "proj-022", "image_src": "/pub002/8-advert.jpg", "state": "pending", "content_type": "advert" },
     "9": { "id_advertiser": "cust-002", "id_project": "proj-018", "article_id": "art-095", "state": "pending", "content_type": "article" },
-    "10": { "id_advertiser": "cust-003", "id_project": "proj-015", "image_src": "/pub002/10-advert.jpg", "state": "content ok", "content_type": "advert" }
+    "10": { "id_advertiser": "cust-003", "id_project": "proj-015", "image_src": "/pub002/10-advert.jpg", "state": "content ok", "content_type": "advert" },
+    "offeredPreferentialPages": [
+      { "pageType": "Cover page", "slotKey": "cover" },
+      { "pageType": "Preferential page", "slotKey": "inside_cover" },
+      { "pageType": "Double page", "slotKey": "2" },
+      { "pageType": "Single page", "slotKey": "1" },
+      { "pageType": "End page", "slotKey": "end" }
+    ]
   },
   {
     "id_planned_publication": "pub-003",
@@ -54,6 +70,13 @@
     "7": { "id_advertiser": "cust-002", "id_project": "proj-006", "article_id": "art-034", "state": "content ok", "content_type": "article" },
     "8": { "id_advertiser": "cust-003", "id_project": "proj-023", "image_src": "/pub003/8-advert.jpg", "state": "content ok", "content_type": "advert" },
     "9": { "id_advertiser": "cust-004", "id_project": "proj-022", "article_id": "art-099", "state": "pending", "content_type": "article" },
-    "10": { "id_advertiser": "cust-001", "id_project": "proj-005", "image_src": "/pub003/10-advert.jpg", "state": "pending", "content_type": "advert" }
+    "10": { "id_advertiser": "cust-001", "id_project": "proj-005", "image_src": "/pub003/10-advert.jpg", "state": "pending", "content_type": "advert" },
+    "offeredPreferentialPages": [
+      { "pageType": "Cover page", "slotKey": "cover" },
+      { "pageType": "Preferential page", "slotKey": "inside_cover" },
+      { "pageType": "Double page", "slotKey": "2" },
+      { "pageType": "Single page", "slotKey": "1" },
+      { "pageType": "End page", "slotKey": "end" }
+    ]
   }
 ]

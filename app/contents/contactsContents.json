@@ -7,7 +7,11 @@
     "phone": "+34 912 345 678",
     "id_customer": "cust-001",
     "company_name": "Cristalería Mediterránea S.L.",
-    "comments": []
+    "id_user": "user_001",
+    "linkedin_profile": "https://www.linkedin.com/in/mariagarcia",
+    "based_in_country": "Spain",
+    "comments": [],
+    "userListArray": ["list_editors"]
   },
   {
     "id_contact": "cont-002",
@@ -17,7 +21,9 @@
     "phone": "+34 912 345 679",
     "id_customer": "cust-001",
     "company_name": "Cristalería Mediterránea S.L.",
-    "comments": []
+    "based_in_country": "Spain",
+    "comments": [],
+    "userListArray": []
   },
   {
     "id_contact": "cont-003",
@@ -27,7 +33,9 @@
     "phone": "+34 943 567 890",
     "id_customer": "cust-002",
     "company_name": "Vidrios del Norte S.A.",
-    "comments": []
+    "based_in_country": "Spain",
+    "comments": [],
+    "userListArray": ["list_publications"]
   },
   {
     "id_contact": "cont-004",
@@ -37,7 +45,9 @@
     "phone": "+351 21 123 4567",
     "id_customer": "cust-003",
     "company_name": "Glass Solutions Portugal Lda",
-    "comments": []
+    "based_in_country": "Portugal",
+    "comments": [],
+    "userListArray": ["list_admins"]
   },
   {
     "id_contact": "cont-005",
@@ -47,6 +57,8 @@
     "phone": "+33 1 23 45 67 89",
     "id_customer": "cust-004",
     "company_name": "Fenêtres Élégantes SARL",
-    "comments": []
+    "based_in_country": "France",
+    "comments": [],
+    "userListArray": ["list_publications"]
   }
 ]

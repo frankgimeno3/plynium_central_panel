@@ -10,6 +10,10 @@ export interface articleInterface {
   highlited_position?: string;
   is_article_event?: boolean;
   event_id?: string;
+  /** Company IDs linked in this article (redirections to company pages) */
+  article_company_redirections?: string[];
+  /** Product IDs linked in this article (redirections to product pages) */
+  article_product_redirections?: string[];
 }
 /** Miniature/card view of an article (content title, subtitle, image) */
 export interface articleMiniatureInterface {
@@ -130,4 +134,52 @@ export interface ProviderInvoice {
   provider_name: string;
   amount_eur: number;
   payment_date: string;
+}
+
+// ——— Newsletter entities ———
+
+/** Container for a set of newsletters with defined periodicity and time range. */
+export interface NewsletterCampaign {
+  id: string;
+  name: string;
+  description: string;
+  portalCode: string;
+  contentTheme: string;
+  frequency: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Newsletter status for filtering: calendarized | pending = scheduled; published | cancelled = finished. */
+export type NewsletterStatus = "calendarized" | "pending" | "published" | "cancelled";
+
+export interface Newsletter {
+  id: string;
+  campaignId: string;
+  portalCode: string;
+  estimatedPublishDate: string;
+  topic: string;
+  status: NewsletterStatus;
+  sentToLists: string[] | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Content block types for newsletter body. */
+export type NewsletterContentBlockType =
+  | "banner"
+  | "portal_article_preview"
+  | "header"
+  | "footer"
+  | "custom_content";
+
+export interface NewsletterContentBlock {
+  id: string;
+  newsletterId: string;
+  type: NewsletterContentBlockType;
+  order: number;
+  data: Record<string, unknown>;
 }

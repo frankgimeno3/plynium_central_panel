@@ -14,7 +14,7 @@ interface RichTextEditorProps {
 const RichTextEditor: FC<RichTextEditorProps> = ({
   value,
   onChange,
-  placeholder = "Escriba aquí...",
+  placeholder = "Type here...",
   className = "",
   minHeight = "100px",
 }) => {

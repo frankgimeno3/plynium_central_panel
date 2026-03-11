@@ -50,6 +50,7 @@ function mapRowToUserDetail(row) {
     user_surnames: row.user_surnames ?? "",
     user_main_image_src: row.user_main_image_src ?? "",
     user_current_company: row.user_current_company ?? null,
+    linkedin_profile: row.linkedin_profile ?? null,
     experience_array: row.experience_array ?? [],
     preferences: row.preferences ?? null,
   };

@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import companyRequest from '@/app/contents/companyRequest.json';
 
-export type RequestState = 'Pending' | 'In Process' | 'Other';
+export type RequestState = 'Pending' | 'In Process' | 'Other' | 'Done';
 
 export interface CompanyContent {
   nombre_comercial: string;

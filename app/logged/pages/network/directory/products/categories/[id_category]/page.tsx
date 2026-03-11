@@ -3,8 +3,8 @@
 import React, { FC, useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { ProductCategoryService } from "@/app/service/ProductCategoryService";
 import { ProductService } from "@/app/service/ProductService";
 import { Product } from "@/app/contents/interfaces";

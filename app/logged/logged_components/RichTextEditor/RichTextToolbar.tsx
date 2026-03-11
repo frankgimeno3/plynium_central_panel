@@ -110,7 +110,7 @@ const RichTextToolbar: FC<RichTextToolbarProps> = ({
 
       <button
         type="button"
-        title="Lista con viñetas"
+        title="Bullet list"
         onMouseDown={(e) =>
           handleMouseDown(e, () => runCommand("insertUnorderedList"))
         }

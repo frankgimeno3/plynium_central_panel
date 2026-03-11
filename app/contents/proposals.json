@@ -1,7 +1,74 @@
 [
-  { "id_proposal": "prop-001", "id_customer": "cust-001", "agent": "Laura Martínez", "status": "pending", "title": "Facade glazing installation", "amount_eur": 45000, "date_created": "2025-01-15", "servicesArray": [{ "id_service": "srv-002", "price": 650, "description": "Technical article on glass installation in ventilated facade" }] },
+  {
+    "id_proposal": "prop-001",
+    "id_customer": "cust-001",
+    "id_contact": "cont-001",
+    "additionalContactIds": ["cont-002"],
+    "agent": "Laura Martínez",
+    "status": "pending",
+    "title": "Facade glazing installation",
+    "proposal_date": "2025-01-15",
+    "date_created": "2025-01-15",
+    "expiration_date": "2025-03-15",
+    "amount_eur": 45000,
+    "general_discount_pct": 0,
+    "serviceLines": [
+      {
+        "lineId": "line-1",
+        "id_service": "srv-002",
+        "description": "Technical article on glass installation in ventilated facade",
+        "specifications": "",
+        "units": 1,
+        "discount_pct": 0,
+        "price": 650
+      }
+    ],
+    "payments": [
+      {
+        "paymentId": "pay-1",
+        "date": "2025-02-15",
+        "paymentMethod": "transferencia_bancaria",
+        "bank": "Sabadell",
+        "amount": 45000
+      }
+    ],
+    "isExchange": false,
+    "exchangeHasFinalPrice": false,
+    "exchangeFinalPrice": 0,
+    "exchangeHasBankTransfers": false,
+    "exchangePlyniumTransferDate": "",
+    "exchangeCounterpartDate": "",
+    "exchangeTransferredAmount": 0,
+    "exchangeToBeReceivedHtml": ""
+  },
   { "id_proposal": "prop-002", "id_customer": "cust-001", "agent": "Laura Martínez", "status": "pending", "title": "Office window replacement", "amount_eur": 28000, "date_created": "2025-02-01", "servicesArray": [{ "id_service": "srv-005", "price": 550, "description": "Promotional banner on portal during Q2" }] },
-  { "id_proposal": "prop-003", "id_customer": "cust-001", "agent": "Laura Martínez", "status": "accepted", "title": "Main warehouse expansion project", "amount_eur": 125000, "date_created": "2024-11-10", "servicesArray": [{ "id_service": "srv-002", "price": 650, "description": "Portal article warehouse expansion" }, { "id_service": "srv-001", "price": 450, "description": "Newsletter banner announcing project" }] },
+  {
+    "id_proposal": "prop-003",
+    "id_customer": "cust-001",
+    "id_contact": "cont-001",
+    "additionalContactIds": [],
+    "agent": "Laura Martínez",
+    "status": "accepted",
+    "title": "Main warehouse expansion project",
+    "proposal_date": "2024-11-10",
+    "date_created": "2024-11-10",
+    "expiration_date": "2025-01-10",
+    "amount_eur": 125000,
+    "general_discount_pct": 5,
+    "serviceLines": [
+      { "lineId": "line-3a", "id_service": "srv-002", "description": "Portal article warehouse expansion", "specifications": "", "units": 1, "discount_pct": 0, "price": 650 },
+      { "lineId": "line-3b", "id_service": "srv-001", "description": "Newsletter banner announcing project", "specifications": "", "units": 1, "discount_pct": 0, "price": 450, "publicationMonth": 12, "publicationYear": 2024 }
+    ],
+    "payments": [],
+    "isExchange": true,
+    "exchangeHasFinalPrice": true,
+    "exchangeFinalPrice": 125000,
+    "exchangeHasBankTransfers": true,
+    "exchangePlyniumTransferDate": "2024-12-01",
+    "exchangeCounterpartDate": "2024-12-15",
+    "exchangeTransferredAmount": 125000,
+    "exchangeToBeReceivedHtml": "<p>Advertising space in Glass Today Q1 2025</p>"
+  },
   { "id_proposal": "prop-004", "id_customer": "cust-001", "agent": "Laura Martínez", "status": "accepted", "title": "Glazed lobby cladding", "amount_eur": 67000, "date_created": "2024-12-05", "servicesArray": [{ "id_service": "srv-003", "price": 1200, "description": "Premium company profile on portal" }, { "id_service": "srv-004", "price": 850, "description": "Magazine ad Glass Today" }] },
   { "id_proposal": "prop-005", "id_customer": "cust-001", "agent": "Laura Martínez", "status": "rejected", "title": "Glazed terrace roof", "amount_eur": 32000, "date_created": "2024-09-20", "servicesArray": [{ "id_service": "srv-006", "price": 720, "description": "Magazine article on roofs" }] },
   { "id_proposal": "prop-006", "id_customer": "cust-001", "agent": "Laura Martínez", "status": "rejected", "title": "Corporate bathroom partitions", "amount_eur": 8500, "date_created": "2024-10-12", "servicesArray": [] },

@@ -18,6 +18,15 @@
     "delivery_days": 10
   },
   {
+    "id_service": "srv-005",
+    "name": "portal_banner",
+    "display_name": "Portal banner",
+    "description": "Promotional banner on homepage or portal section. Standard formats, rotation included.",
+    "tariff_price_eur": 550,
+    "unit": "banner/month",
+    "delivery_days": 5
+  },
+  {
     "id_service": "srv-003",
     "name": "portal_premium_profile",
     "display_name": "Premium portal profile",
@@ -34,15 +43,6 @@
     "tariff_price_eur": 850,
     "unit": "advert",
     "delivery_days": 15
-  },
-  {
-    "id_service": "srv-005",
-    "name": "portal_banner",
-    "display_name": "Portal banner",
-    "description": "Promotional banner on homepage or portal section. Standard formats, rotation included.",
-    "tariff_price_eur": 550,
-    "unit": "banner/month",
-    "delivery_days": 5
   },
   {
     "id_service": "srv-006",

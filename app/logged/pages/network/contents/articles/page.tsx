@@ -4,8 +4,8 @@ import { FC, Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import ArticleMiniature from "./article_components/ArticleMiniature";
 import ArticleFilter from "./article_components/ArticleFilter";
 import SelectArticleModal from "./article_components/SelectArticleModal";

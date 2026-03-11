@@ -2,8 +2,8 @@
 
 import React, { FC, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import customersData from "@/app/contents/customers.json";
 
 type Customer = {
@@ -48,23 +48,23 @@ type ExportFieldKey =
   | "contact_phone";
 
 const EXPORT_FIELD_OPTIONS: { key: ExportFieldKey; label: string }[] = [
-  { key: "id_customer", label: "ID cuenta" },
-  { key: "name", label: "Nombre / Razón social" },
+  { key: "id_customer", label: "Account ID" },
+  { key: "name", label: "Name / Company name" },
   { key: "cif", label: "CIF" },
-  { key: "country", label: "País" },
-  { key: "address", label: "Dirección" },
-  { key: "phone", label: "Teléfono" },
+  { key: "country", label: "Country" },
+  { key: "address", label: "Address" },
+  { key: "phone", label: "Phone" },
   { key: "email", label: "Email" },
   { key: "website", label: "Web" },
-  { key: "industry", label: "Industria" },
-  { key: "segment", label: "Segmento" },
-  { key: "owner", label: "Propietario" },
-  { key: "source", label: "Origen" },
-  { key: "status", label: "Estado" },
-  { key: "contact_name", label: "Nombre contacto" },
-  { key: "contact_role", label: "Rol contacto" },
-  { key: "contact_email", label: "Email contacto" },
-  { key: "contact_phone", label: "Teléfono contacto" },
+  { key: "industry", label: "Industry" },
+  { key: "segment", label: "Segment" },
+  { key: "owner", label: "Owner" },
+  { key: "source", label: "Source" },
+  { key: "status", label: "Status" },
+  { key: "contact_name", label: "Contact name" },
+  { key: "contact_role", label: "Contact role" },
+  { key: "contact_email", label: "Contact email" },
+  { key: "contact_phone", label: "Contact phone" },
 ];
 
 type ExportPhase = "config" | "loading" | "ready";
@@ -180,9 +180,9 @@ const ExportCustomersPage: FC = () => {
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     setPageMeta({
-      pageTitle: "Exportar cuentas (Companies)",
+      pageTitle: "Export accounts (Companies)",
       breadcrumbs,
-      buttons: [{ label: "Volver a Customers", href: backUrl }],
+      buttons: [{ label: "Back to Customers", href: backUrl }],
     });
   }, [setPageMeta, breadcrumbs, backUrl]);
 
@@ -213,7 +213,7 @@ const ExportCustomersPage: FC = () => {
 
             <div className="bg-white border border-gray-200 rounded-lg p-6">
               <p className="text-sm font-semibold text-gray-700 mb-3">
-                Restricciones (filtrar antes de exportar)
+                Filters (apply before exporting)
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -253,7 +253,7 @@ const ExportCustomersPage: FC = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">País</label>
+                  <label className="block text-xs text-gray-600 mb-1">Country</label>
                   <input
                     type="text"
                     value={restrictions.country}
@@ -261,14 +261,14 @@ const ExportCustomersPage: FC = () => {
                       setRestrictions((r) => ({ ...r, country: e.target.value }))
                     }
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Filtrar por país"
+                    placeholder="Filter by country"
                   />
                 </div>
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Se exportarán{" "}
+                Will export{" "}
                 <span className="font-medium">{filteredCustomers.length}</span>{" "}
-                cuenta(s) con los filtros actuales.
+                account(s) with current filters.
               </p>
             </div>
 
@@ -278,7 +278,7 @@ const ExportCustomersPage: FC = () => {
               disabled={selectedFields.size === 0}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Generar exportación
+              Generate export
             </button>
           </div>
         )}
@@ -294,12 +294,12 @@ const ExportCustomersPage: FC = () => {
         {phase === "ready" && (
           <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
             <p className="text-sm font-semibold text-gray-700">
-              Exportación lista
+              Export ready
             </p>
             <p className="text-sm text-gray-600">
               Se han exportado{" "}
               <span className="font-medium">{filteredCustomers.length}</span>{" "}
-              cuenta(s) con los campos seleccionados.
+              account(s) with selected fields.
             </p>
             <div className="flex gap-3 pt-2">
               <button
@@ -313,7 +313,7 @@ const ExportCustomersPage: FC = () => {
                 href={backUrl}
                 className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors inline-block"
               >
-                Volver a Customers
+                Back to Customers
               </Link>
             </div>
           </div>

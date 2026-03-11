@@ -2,8 +2,8 @@
 
 import React, { FC, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import providerInvoicesData from "@/app/contents/provider_invoices.json";
 import type { ProviderInvoice } from "@/app/contents/interfaces";
 

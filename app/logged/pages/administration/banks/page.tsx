@@ -1,8 +1,8 @@
 "use client";
 
 import React, { FC, useState, useMemo, useEffect } from "react";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import issuedInvoicesData from "@/app/contents/issued_invoices.json";
 import providerInvoicesData from "@/app/contents/provider_invoices.json";
 import type { AdministrationContract, ProviderInvoice } from "@/app/contents/interfaces";
@@ -80,7 +80,7 @@ const BanksPage: FC = () => {
     <>
       <PageContentSection>
         <p className="text-gray-600 mb-2">
-          Previsión de cobros (issued invoices, orders pending) y pagos (provider invoices). Based on current issued and provider invoice data.
+          Forecast of collections (issued invoices, orders pending) and payments (provider invoices). Based on current issued and provider invoice data.
         </p>
         <div className="flex gap-2 border-b border-gray-200 pb-2">
           <button

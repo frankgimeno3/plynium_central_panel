@@ -72,6 +72,12 @@ export function useArticlePage(id_article: string) {
       highlited_position: String(raw?.highlited_position ?? ""),
       is_article_event: raw?.is_article_event === true,
       event_id: String(raw?.event_id ?? ""),
+      article_company_redirections: Array.isArray(raw?.article_company_redirections)
+        ? raw.article_company_redirections
+        : [],
+      article_product_redirections: Array.isArray(raw?.article_product_redirections)
+        ? raw.article_product_redirections
+        : [],
     };
   };
 
@@ -113,9 +119,9 @@ export function useArticlePage(id_article: string) {
 
         setContentsData(articleContents);
       } catch (err: any) {
-        let errorMessage = "Error al cargar el artículo";
+        let errorMessage = "Error loading the article";
         if (err?.status === 500 || err?.status === 404) {
-          errorMessage = "El artículo que buscas no existe o ha sido eliminado.";
+          errorMessage = "The article you are looking for does not exist or has been deleted.";
         } else if (err?.message) {
           errorMessage = err.message;
         } else if (err?.data?.message) {
@@ -136,7 +142,7 @@ export function useArticlePage(id_article: string) {
       loadArticleData();
     } else {
       setLoading(false);
-      setError("ID de artículo no válido.");
+      setError("Invalid article ID.");
       setArticleData(null);
       setContentsData([]);
       setPublications([]);
@@ -250,7 +256,7 @@ export function useArticlePage(id_article: string) {
             : error?.data?.message
               ? error.data.message
               : "Unknown error";
-      alert(`Error al guardar cambios: ${errorMessage}`);
+      alert(`Error saving changes: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }

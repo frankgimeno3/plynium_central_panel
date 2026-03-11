@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import EditContentsModal from "@/app/logged/logged_components/modals/EditContentsModal";
-import MediatecaModal from "@/app/logged/logged_components/MediatecaModal";
-import EventSelectModal from "@/app/logged/logged_components/EventSelectModal";
-import CompanySelectModal from "@/app/logged/logged_components/CompanySelectModal";
+import MediatecaModal from "@/app/logged/logged_components/modals/MediatecaModal";
+import EventSelectModal from "@/app/logged/logged_components/modals/EventSelectModal";
+import CompanySelectModal from "@/app/logged/logged_components/modals/CompanySelectModal";
 import AddTagModal from "@/app/logged/logged_components/modals/AddTagModal";
 import DeleteArticleModal from "@/app/logged/logged_components/modals/DeleteArticleModal";
 import ArticleMainImage from "./id_article_components/ArticleMainImage";
@@ -319,6 +320,44 @@ export default function IdArticlePage() {
             onDeleteContent={handleDeleteContent}
             isSaving={isSaving}
           />
+        </div>
+
+        <div className="flex flex-col gap-2 pt-6 border-t border-gray-200">
+          <label className="text-lg font-bold text-gray-800">In this article</label>
+          <p className="text-sm text-gray-500 mb-2">Redirections to related companies, products and event.</p>
+          <div className="flex flex-wrap gap-3">
+            {(articleData.article_company_redirections ?? []).map((companyId) => (
+              <Link
+                key={companyId}
+                href={`/logged/pages/network/directory/companies/${encodeURIComponent(companyId)}`}
+                className="inline-flex items-center px-3 py-2 rounded-lg bg-blue-50 text-blue-900 border border-blue-200 hover:bg-blue-100 text-sm font-medium"
+              >
+                Company: {companyId}
+              </Link>
+            ))}
+            {(articleData.article_product_redirections ?? []).map((productId) => (
+              <Link
+                key={productId}
+                href={`/logged/pages/network/directory/products/${encodeURIComponent(productId)}`}
+                className="inline-flex items-center px-3 py-2 rounded-lg bg-emerald-50 text-emerald-900 border border-emerald-200 hover:bg-emerald-100 text-sm font-medium"
+              >
+                Product: {productId}
+              </Link>
+            ))}
+            {articleData.is_article_event && (articleData.event_id ?? "").trim() ? (
+              <Link
+                href={`/logged/pages/network/contents/events/${encodeURIComponent(articleData.event_id!.trim())}`}
+                className="inline-flex items-center px-3 py-2 rounded-lg bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100 text-sm font-medium"
+              >
+                Event: {articleData.event_id}
+              </Link>
+            ) : null}
+          </div>
+          {(articleData.article_company_redirections ?? []).length === 0 &&
+            (articleData.article_product_redirections ?? []).length === 0 &&
+            !(articleData.is_article_event && (articleData.event_id ?? "").trim()) ? (
+            <p className="text-sm text-gray-400">No redirections in this article.</p>
+          ) : null}
         </div>
       </main>
       </PageContentSection>

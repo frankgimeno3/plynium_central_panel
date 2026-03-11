@@ -3,51 +3,56 @@
 import React, { FC, useState, useEffect, useMemo } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
-import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { CompanyService } from "@/app/service/CompanyService";
 import { Company } from "@/app/contents/interfaces";
+import categoriesData from "@/app/contents/categoriescontents.json";
+
+interface CompanyCategory {
+  id_category: string;
+  name: string;
+  portals_array: string[];
+}
+
+const categoriesList = categoriesData as CompanyCategory[];
 
 const CategoryDetailPage: FC = () => {
   const params = useParams();
   const router = useRouter();
   const id_category = params?.id_category as string | undefined;
-  const [category, setCategory] = useState<{
-    id_category: string;
-    name: string;
-    portals_array: string[];
-  } | null>(null);
+  const category = useMemo(
+    () =>
+      id_category
+        ? categoriesList.find(
+            (c) => String(c.id_category) === String(id_category)
+          ) ?? null
+        : null,
+    [id_category]
+  );
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterNameOrId, setFilterNameOrId] = useState("");
 
   useEffect(() => {
-    if (!id_category) return;
+    if (!id_category || !category) return;
     let cancelled = false;
     (async () => {
       setLoading(true);
       try {
-        const [cat, allCompanies] = await Promise.all([
-          CompanyCategoryService.getCategoryById(id_category),
-          CompanyService.getAllCompanies(),
-        ]);
-        if (!cancelled) {
-          setCategory(cat);
+        const allCompanies = await CompanyService.getAllCompanies();
+        if (!cancelled && category) {
           const list = Array.isArray(allCompanies) ? allCompanies : [];
           setCompanies(
             list.filter(
               (c: Company) =>
                 (c.category || "").trim().toLowerCase() ===
-                (cat?.name || "").trim().toLowerCase()
+                (category.name || "").trim().toLowerCase()
             )
           );
         }
       } catch {
-        if (!cancelled) {
-          setCategory(null);
-          setCompanies([]);
-        }
+        if (!cancelled) setCompanies([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -55,7 +60,7 @@ const CategoryDetailPage: FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [id_category]);
+  }, [id_category, category]);
 
   const filteredCompanies = useMemo(() => {
     if (!filterNameOrId.trim()) return companies;

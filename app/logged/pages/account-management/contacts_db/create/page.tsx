@@ -3,8 +3,8 @@
 import React, { FC, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 
 const CreateContactPage: FC = () => {
   const router = useRouter();
@@ -25,22 +25,22 @@ const CreateContactPage: FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Sin funcionalidad real: solo navegar atrás
+    // No real action: just navigate back
     router.push("/logged/pages/account-management/contacts_db");
   };
 
   const breadcrumbs = [
     { label: "Account management", href: "/logged/pages/account-management/customers_db" },
     { label: "Contacts DB", href: "/logged/pages/account-management/contacts_db" },
-    { label: "Nuevo contacto" },
+    { label: "New contact" },
   ];
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     setPageMeta({
-      pageTitle: "Nuevo contacto",
+      pageTitle: "New contact",
       breadcrumbs,
-      buttons: [{ label: "← Volver", href: "/logged/pages/account-management/contacts_db" }],
+      buttons: [{ label: "← Back", href: "/logged/pages/account-management/contacts_db" }],
     });
   }, [setPageMeta, breadcrumbs]);
 
@@ -49,7 +49,7 @@ const CreateContactPage: FC = () => {
       <PageContentSection>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs text-gray-600 mb-1">ID contacto</label>
+            <label className="block text-xs text-gray-600 mb-1">Contact ID</label>
             <input
               type="text"
               name="id_contact"
@@ -60,14 +60,14 @@ const CreateContactPage: FC = () => {
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Nombre</label>
+            <label className="block text-xs text-gray-600 mb-1">Name</label>
             <input
               type="text"
               name="name"
               value={form.name}
               onChange={handleChange}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Nombre completo"
+              placeholder="Full name"
             />
           </div>
           <div>
@@ -93,7 +93,7 @@ const CreateContactPage: FC = () => {
             />
           </div>
           <div>
-            <label className="block text-xs text-gray-600 mb-1">Teléfono</label>
+            <label className="block text-xs text-gray-600 mb-1">Phone</label>
             <input
               type="text"
               name="phone"
@@ -122,7 +122,7 @@ const CreateContactPage: FC = () => {
               value={form.company_name}
               onChange={handleChange}
               className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Nombre de la empresa"
+              placeholder="Company name"
             />
           </div>
           <div className="flex gap-3 pt-4">
@@ -130,14 +130,14 @@ const CreateContactPage: FC = () => {
               type="submit"
               className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
             >
-              Crear contacto
+              Create contact
             </button>
             <button
               type="button"
               onClick={() => router.push("/logged/pages/account-management/contacts_db")}
               className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
             >
-              Cancelar
+              Cancel
             </button>
           </div>
         </form>

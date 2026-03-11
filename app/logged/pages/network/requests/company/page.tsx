@@ -2,8 +2,8 @@
 
 import { FC, useState, useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { useCompanyRequests, RequestState } from '../hooks/useCompanyRequests';
 
 type TabFilter = RequestState;
@@ -43,6 +43,7 @@ const CompanyRequestsPage: FC = () => {
   const counts = useMemo(() => ({
     Pending: requests.filter(r => r.request_state === 'Pending').length,
     'In Process': requests.filter(r => r.request_state === 'In Process').length,
+    Done: requests.filter(r => r.request_state === 'Done').length,
     Other: requests.filter(r => r.request_state === 'Other').length
   }), [requests]);
 
@@ -51,6 +52,7 @@ const CompanyRequestsPage: FC = () => {
   const tabs: { key: TabFilter; label: string }[] = [
     { key: 'Pending', label: 'Pending' },
     { key: 'In Process', label: 'In Process' },
+    { key: 'Done', label: 'Done' },
     { key: 'Other', label: 'Other' }
   ];
 
@@ -87,6 +89,11 @@ const CompanyRequestsPage: FC = () => {
                 {tab.key === 'Pending' && counts.Pending > 0 && (
                   <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-blue-950 rounded-full">
                     {counts.Pending}
+                  </span>
+                )}
+                {tab.key === 'Done' && counts.Done > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-green-600 rounded-full">
+                    {counts.Done}
                   </span>
                 )}
               </button>
@@ -128,6 +135,7 @@ const CompanyRequestsPage: FC = () => {
                           <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                             req.request_state === 'Pending' ? 'bg-amber-100 text-amber-800' :
                             req.request_state === 'In Process' ? 'bg-blue-100 text-blue-800' :
+                            req.request_state === 'Done' ? 'bg-green-100 text-green-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
                             {req.request_state}

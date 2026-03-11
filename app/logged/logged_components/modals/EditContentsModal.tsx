@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FC, useEffect, useState } from "react";
-import { DateInputs, parseDateFields, buildDateStr } from "@/app/logged/logged_components/DateInputs";
+import { DateInputs, parseDateFields, buildDateStr } from "@/app/logged/logged_components/date_components/DateInputs";
 import { RichTextEditor } from "@/app/logged/logged_components/RichTextEditor";
 
 interface EditContentsModalProps {
@@ -43,7 +43,7 @@ const EditContentsModal: FC<EditContentsModalProps> = ({
       if (event.key === "Escape") {
         onCancel();
       } else if (event.key === "Enter" && !event.shiftKey) {
-        // Enter guarda (Shift+Enter crea nueva línea en textarea)
+        // Enter saves (Shift+Enter creates new line in textarea)
         const hasChanged = currentValue !== initialValue;
         if (hasChanged) {
           event.preventDefault();
@@ -65,8 +65,8 @@ const EditContentsModal: FC<EditContentsModalProps> = ({
     return null;
   }
 
-  // Detectar si es un campo de fecha basándose en el título
-  const isDateField = title.toLowerCase().includes("date") || title.toLowerCase().includes("fecha");
+  // Detect if this is a date field based on the title
+  const isDateField = title.toLowerCase().includes("date");
 
   const hasChanged = currentValue !== initialValue;
 
@@ -94,12 +94,12 @@ const EditContentsModal: FC<EditContentsModalProps> = ({
         className="relative w-full max-w-lg rounded-lg bg-white p-6 shadow-xl"
         onClick={handleModalClick}
       >
-        {/* Botón de cerrar (X) */}
+        {/* Close button (X) */}
         <button
           type="button"
           className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
           onClick={onCancel}
-          aria-label="Cerrar modal"
+          aria-label="Close modal"
         >
           ×
         </button>
@@ -110,7 +110,7 @@ const EditContentsModal: FC<EditContentsModalProps> = ({
 
         {isDateField ? (
           <div className="mb-4">
-            <div className="text-sm font-semibold text-gray-700 mb-2">Fecha</div>
+            <div className="text-sm font-semibold text-gray-700 mb-2">Date</div>
             <DateInputs
               day={dateDay}
               month={dateMonth}
@@ -134,7 +134,7 @@ const EditContentsModal: FC<EditContentsModalProps> = ({
             <RichTextEditor
               value={currentValue}
               onChange={setCurrentValue}
-              placeholder="Escriba aquí..."
+              placeholder="Type here..."
               minHeight="192px"
             />
           </div>
@@ -152,7 +152,7 @@ const EditContentsModal: FC<EditContentsModalProps> = ({
             className="rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300"
             onClick={onCancel}
           >
-            Cancelar
+            Cancel
           </button>
 
           <button
@@ -166,7 +166,7 @@ const EditContentsModal: FC<EditContentsModalProps> = ({
                   : "cursor-not-allowed bg-blue-300"
               }`}
           >
-            Guardar cambios
+            Save changes
           </button>
         </div>
       </div>

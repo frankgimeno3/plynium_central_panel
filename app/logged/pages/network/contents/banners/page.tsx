@@ -1,8 +1,8 @@
 "use client";
 
 import React, { FC, useState, useEffect } from 'react';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import AdSectionModal from './banner_components/AdSectionModal';
 import DeleteSectionModal from './banner_components/DeleteSectionModal';
 import EditRouteModal from './banner_components/EditRouteModal';

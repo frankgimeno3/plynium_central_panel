@@ -1,0 +1,20 @@
+[
+  {
+    "userList_id": "list_editors",
+    "userListName": "Newsletter - Editores",
+    "userListPortal": "plynium",
+    "userListTopic": "articles"
+  },
+  {
+    "userList_id": "list_admins",
+    "userListName": "Newsletter - Administradores",
+    "userListPortal": "plynium",
+    "userListTopic": "admin"
+  },
+  {
+    "userList_id": "list_publications",
+    "userListName": "Newsletter - Publicaciones",
+    "userListPortal": "plynium",
+    "userListTopic": "publications"
+  }
+]

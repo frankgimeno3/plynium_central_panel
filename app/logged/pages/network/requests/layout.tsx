@@ -1,6 +1,5 @@
 "use client";
 
-import { CompanyRequestsProvider } from './hooks/useCompanyRequests';
 import { OtherRequestsProvider } from './hooks/useOtherRequests';
 
 export default function AdvertisementLayout({
@@ -9,10 +8,8 @@ export default function AdvertisementLayout({
   children: React.ReactNode;
 }) {
   return (
-    <CompanyRequestsProvider>
-      <OtherRequestsProvider>
-        {children}
-      </OtherRequestsProvider>
-    </CompanyRequestsProvider>
+    <OtherRequestsProvider>
+      {children}
+    </OtherRequestsProvider>
   );
 }

@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { publicationInterface } from "@/app/contents/interfaces";
 import { PublicationService } from "@/app/service/PublicationService";
 import { PortalService } from "@/app/service/PortalService";
@@ -80,7 +80,7 @@ export default function IdPubblicationPage() {
 
         if (!publicationRaw) {
           console.warn("[IdPublicationPage] No publication found for id:", id_publication);
-          setError("La publicación que buscas no existe.");
+          setError("The publication you are looking for does not exist.");
           setPublicationData(null);
           return;
         }
@@ -99,9 +99,9 @@ export default function IdPubblicationPage() {
         });
         
         // Determinar el mensaje de error apropiado
-        let errorMessage = "Error al cargar la publicación";
+        let errorMessage = "Error loading the publication";
         if (err?.status === 500 || err?.status === 404) {
-          errorMessage = "La publicación que buscas no existe o ha sido eliminada.";
+          errorMessage = "The publication you are looking for does not exist or has been deleted.";
         } else if (err?.message) {
           errorMessage = err.message;
         } else if (err?.data?.message) {
@@ -121,7 +121,7 @@ export default function IdPubblicationPage() {
     } else {
       console.warn("[IdPublicationPage] No id_publication provided");
       setLoading(false);
-      setError("ID de publicación no válido.");
+      setError("Invalid publication ID.");
       setPublicationData(null);
     }
   }, [id_publication]);
@@ -216,7 +216,7 @@ export default function IdPubblicationPage() {
           : error?.data?.message
           ? error.data.message
           : "Error desconocido";
-      alert(`Error al guardar cambios: ${errorMessage}`);
+      alert(`Error saving changes: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
@@ -254,7 +254,7 @@ export default function IdPubblicationPage() {
     openEditModal(
       { kind: "número" },
       String(publicationData.número ?? ""),
-      "Edit número"
+      "Edit issue number"
     );
   };
 
@@ -286,7 +286,7 @@ export default function IdPubblicationPage() {
           : error?.data?.message
           ? error.data.message
           : "Error desconocido";
-      alert(`Error al eliminar la publicación: ${errorMessage}`);
+      alert(`Error deleting the publication: ${errorMessage}`);
     } finally {
       setIsDeleting(false);
     }
@@ -304,13 +304,13 @@ export default function IdPubblicationPage() {
     return (
       <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600 w-full">
         <p className="text-red-500 text-lg">
-          {error || "La publicación que buscas no existe."}
+          {error || "The publication you are looking for does not exist."}
         </p>
         <button
           onClick={() => router.push("/logged/pages/network/contents/publications")}
           className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl"
         >
-          Volver a publicaciones
+          Back to publications
         </button>
       </main>
     );
@@ -330,7 +330,7 @@ export default function IdPubblicationPage() {
                 : "bg-red-600 hover:bg-red-700 cursor-pointer"
             }`}
           >
-            {isDeleting ? "Eliminando..." : "Eliminar publicación"}
+            {isDeleting ? "Deleting..." : "Delete publication"}
           </button>
         </div>
 
@@ -341,7 +341,7 @@ export default function IdPubblicationPage() {
 
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-gray-500">
-            URL de Imagen Principal
+            Main image URL
           </label>
           <PublicationMainImage
             imageUrl={publicationData.publication_main_image_url ?? ""}
@@ -360,11 +360,11 @@ export default function IdPubblicationPage() {
 
         <div className="flex flex-col gap-2">
           <label className="text-sm font-medium text-gray-500">
-            Visible en portales
+            Visible on portals
           </label>
           <div className="flex flex-col gap-2">
             {publicationPortals.length === 0 ? (
-              <p className="text-sm text-gray-400">No visible en ningún portal aún.</p>
+              <p className="text-sm text-gray-400">Not visible on any portal yet.</p>
             ) : (
               <ul className="list-none flex flex-wrap gap-2">
                 {publicationPortals.map((pp) => (
@@ -386,7 +386,7 @@ export default function IdPubblicationPage() {
                           setPublicationPortals(Array.isArray(list) ? list : []);
                         } catch (e: any) {
                           alert(
-                            e?.message || e?.data?.message || "Error al quitar del portal"
+                            e?.message || e?.data?.message || "Error removing from portal"
                           );
                         } finally {
                           setPortalActionLoading(false);
@@ -410,7 +410,7 @@ export default function IdPubblicationPage() {
                   className="px-3 py-2 border rounded-xl bg-white text-gray-700 text-sm disabled:opacity-50 max-w-xs"
                   defaultValue=""
                 >
-                  <option value="">Seleccionar portal para añadir…</option>
+                  <option value="">Select portal to add…</option>
                   {allPortals
                     .filter((p) => !publicationPortals.some((pp) => pp.portalId === p.id))
                     .map((p) => (
@@ -438,7 +438,7 @@ export default function IdPubblicationPage() {
                         sel.value = "";
                       } catch (e: any) {
                         alert(
-                          e?.message || e?.data?.message || "Error al añadir al portal"
+                          e?.message || e?.data?.message || "Error adding to portal"
                         );
                       } finally {
                         setPortalActionLoading(false);
@@ -447,7 +447,7 @@ export default function IdPubblicationPage() {
                   }}
                   className="px-3 py-2 text-xs rounded-xl bg-blue-950 text-white hover:bg-blue-950/90 disabled:opacity-50"
                 >
-                  {portalActionLoading ? "…" : "Añadir al portal"}
+                  {portalActionLoading ? "…" : "Add to portal"}
                 </button>
               </div>
             )}

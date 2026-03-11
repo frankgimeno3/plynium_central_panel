@@ -2,8 +2,8 @@
 
 import { FC, useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { useOtherRequests, RequestState } from '../../hooks/useOtherRequests';
 
 const stateOptions: RequestState[] = ['Pending', 'In Process', 'Other'];

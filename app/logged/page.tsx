@@ -2,7 +2,7 @@
 
 import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePageContent } from './logged_components/PageContentContext';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
 import notificationsData from '@/app/contents/notifications.json';
 import otherRequestsData from '@/app/contents/otherRequests.json';
 import companyRequestData from '@/app/contents/companyRequest.json';

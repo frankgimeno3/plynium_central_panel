@@ -79,12 +79,12 @@ const AddTagModal: FC<AddTagModalProps> = ({
         className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-xl"
         onClick={handleModalClick}
       >
-        {/* Botón de cerrar (X) */}
+        {/* Close button (X) */}
         <button
           type="button"
           className="absolute right-4 top-4 text-gray-500 hover:text-gray-700"
           onClick={onCancel}
-          aria-label="Cerrar modal"
+          aria-label="Close modal"
         >
           ×
         </button>
@@ -109,7 +109,7 @@ const AddTagModal: FC<AddTagModalProps> = ({
             className="rounded-md bg-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-300"
             onClick={onCancel}
           >
-            Cancelar
+            Cancel
           </button>
 
           <button
@@ -123,7 +123,7 @@ const AddTagModal: FC<AddTagModalProps> = ({
                   : "cursor-not-allowed bg-blue-300"
               }`}
           >
-            Guardar cambios
+            Save changes
           </button>
         </div>
       </div>

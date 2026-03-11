@@ -3,8 +3,8 @@
 import React, { FC, useState, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import * as XLSX from "xlsx";
 
 const CONTACTS_IMPORT_COLUMNS = [
@@ -88,7 +88,7 @@ function parseFileToRows(file: File): Promise<string[][]> {
 }
 
 function validateRows(rows: string[][]): { valid: boolean; error?: string; count?: number } {
-  if (!rows.length) return { valid: false, error: "El archivo está vacío." };
+  if (!rows.length) return { valid: false, error: "The file is empty." };
   const header = rows[0].map((c) => String(c).trim().toLowerCase());
   const normalizedExpected = CONTACTS_IMPORT_COLUMNS.map((c) => c.toLowerCase());
   for (const col of normalizedExpected) {
@@ -147,9 +147,9 @@ const ImportContactsPage: FC = () => {
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     setPageMeta({
-      pageTitle: "Importar contactos",
+      pageTitle: "Import contacts",
       breadcrumbs,
-      buttons: [{ label: "Volver a Contactos", href: backUrl }],
+      buttons: [{ label: "Back to Contacts", href: backUrl }],
     });
   }, [setPageMeta, breadcrumbs, backUrl]);
 
@@ -182,7 +182,7 @@ const ImportContactsPage: FC = () => {
               )}
               {validation?.valid && (
                 <p className="text-sm text-green-600">
-                  Archivo válido. {validation.count} fila(s) de datos.
+                  Valid file. {validation.count} row(s) of data.
                 </p>
               )}
               <button
@@ -200,16 +200,16 @@ const ImportContactsPage: FC = () => {
         {phase === "processing" && (
           <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
             <div className="inline-block w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-gray-700">Procesando importación...</p>
+            <p className="text-gray-700">Processing import...</p>
             <p className="text-sm text-gray-500 mt-1">Espere un momento.</p>
           </div>
         )}
 
         {phase === "result" && importResult && (
           <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-            <p className="text-sm font-semibold text-gray-700">Resultado de la importación</p>
+            <p className="text-sm font-semibold text-gray-700">Import result</p>
             <p className="text-gray-600">
-              Contactos importados: <span className="font-medium text-green-600">{importResult.success}</span>
+              Contacts imported: <span className="font-medium text-green-600">{importResult.success}</span>
               {importResult.errors > 0 && (
                 <span className="ml-2">
                   | Errores: <span className="font-medium text-red-600">{importResult.errors}</span>
@@ -221,7 +221,7 @@ const ImportContactsPage: FC = () => {
                 href={backUrl}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
               >
-                Volver a Contactos
+                Back to Contacts
               </Link>
             </div>
           </div>

@@ -1,8 +1,8 @@
 "use client";
 
 import React, { FC, useMemo, useState, useEffect } from "react";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import providersData from "@/app/contents/providers.json";
 import type { Provider } from "@/app/contents/interfaces";
 

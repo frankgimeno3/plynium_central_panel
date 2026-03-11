@@ -1,10 +1,9 @@
 "use client";
 
 import { FC, useState, useEffect, useMemo, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
-import Link from 'next/link';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { useSearchParams, useRouter } from 'next/navigation';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import notificationsData from '@/app/contents/notifications.json';
 import otherRequestsData from '@/app/contents/otherRequests.json';
 import companyRequestData from '@/app/contents/companyRequest.json';
@@ -39,6 +38,7 @@ const formatNotificationTime = (dateStr: string) => {
 
 const NotificationsPage: FC = () => {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialTab = (searchParams.get('tab') as TabKey) || 'unread';
   const [currentTab, setCurrentTab] = useState<TabKey>(initialTab);
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -80,6 +80,32 @@ const NotificationsPage: FC = () => {
     (advertisementRequestData as { idAdvReq: string; senderCompany: string; requestDescription: string; advReqState: string }[])
       .filter(r => r.advReqState === 'pending'), []);
 
+  type OtherRow = { type: 'other'; id: string; description: string; state: string; href: string } | { type: 'company'; id: string; description: string; state: string; href: string } | { type: 'advertisement'; id: string; description: string; state: string; href: string };
+  const otherTableRows = useMemo((): OtherRow[] => {
+    const other: OtherRow[] = pendingOtherRequests.map((r) => ({
+      type: 'other',
+      id: r.id,
+      description: r.content,
+      state: r.request_state,
+      href: `/logged/pages/network/requests/other/${encodeURIComponent(r.id)}`,
+    }));
+    const company: OtherRow[] = pendingCompanyRequests.map((r) => ({
+      type: 'company',
+      id: r.companyRequestId,
+      description: r.content.nombre_comercial + ' – Company registration request',
+      state: r.request_state,
+      href: `/logged/pages/network/requests/company/${encodeURIComponent(r.companyRequestId)}`,
+    }));
+    const adv: OtherRow[] = pendingAdvertisementRequests.map((r) => ({
+      type: 'advertisement',
+      id: r.idAdvReq,
+      description: r.requestDescription,
+      state: r.advReqState,
+      href: `/logged/pages/network/requests/quotations/${encodeURIComponent(r.idAdvReq)}`,
+    }));
+    return [...other, ...company, ...adv];
+  }, [pendingOtherRequests, pendingCompanyRequests, pendingAdvertisementRequests]);
+
   const tabs: { key: TabKey; label: string }[] = [
     { key: 'unread', label: 'Unread' },
     { key: 'read', label: 'Read' },
@@ -91,7 +117,7 @@ const NotificationsPage: FC = () => {
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
-    setPageMeta({ pageTitle: 'Notifications', breadcrumbs });
+    setPageMeta({ pageTitle: 'Notifications', breadcrumbs, buttons: [] });
   }, [setPageMeta]);
 
   return (
@@ -115,46 +141,49 @@ const NotificationsPage: FC = () => {
 
         <div className='p-6'>
           {currentTab === 'other' ? (
-            <>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                {pendingOtherRequests.map((r) => (
-                  <Link
-                    key={r.id}
-                    href={`/logged/pages/account-management/requests/requests/${encodeURIComponent(r.id)}`}
-                    className='bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 cursor-pointer'
-                  >
-                    <p className='font-medium text-gray-900'>{r.author}</p>
-                    <p className='text-sm text-gray-600 mt-1 line-clamp-2'>{r.content}</p>
-                    <span className='inline-block mt-2 px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded'>Other Request - Pending</span>
-                  </Link>
-                ))}
-                {pendingCompanyRequests.map((r) => (
-                  <Link
-                    key={r.companyRequestId}
-                    href={`/logged/pages/account-management/requests/company/${encodeURIComponent(r.companyRequestId)}`}
-                    className='bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 cursor-pointer'
-                  >
-                    <p className='font-medium text-gray-900'>{r.content.nombre_comercial}</p>
-                    <p className='text-sm text-gray-600 mt-1'>Company registration request</p>
-                    <span className='inline-block mt-2 px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded'>Company - Pending</span>
-                  </Link>
-                ))}
-                {pendingAdvertisementRequests.map((r) => (
-                  <Link
-                    key={r.idAdvReq}
-                    href={`/logged/pages/account-management/requests/quotations/${encodeURIComponent(r.idAdvReq)}`}
-                    className='bg-white p-4 rounded-lg border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-200 cursor-pointer'
-                  >
-                    <p className='font-medium text-gray-900'>{r.senderCompany}</p>
-                    <p className='text-sm text-gray-600 mt-1 line-clamp-2'>{r.requestDescription}</p>
-                    <span className='inline-block mt-2 px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded'>Advertisement - Pending</span>
-                  </Link>
-                ))}
-              </div>
-              {pendingOtherRequests.length === 0 && pendingCompanyRequests.length === 0 && pendingAdvertisementRequests.length === 0 && (
-                <p className='text-gray-500 text-center py-8'>No pending requests</p>
-              )}
-            </>
+            <div className='overflow-x-auto'>
+              <table className='min-w-full divide-y divide-gray-200'>
+                <thead className='bg-gray-50'>
+                  <tr>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Type</th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>ID</th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Description</th>
+                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>State</th>
+                  </tr>
+                </thead>
+                <tbody className='bg-white divide-y divide-gray-200'>
+                  {otherTableRows.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className='px-6 py-8 text-center text-gray-500'>
+                        No pending requests
+                      </td>
+                    </tr>
+                  ) : (
+                    otherTableRows.map((row) => (
+                      <tr
+                        key={`${row.type}-${row.id}`}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => router.push(row.href)}
+                        onKeyDown={(e) => e.key === 'Enter' && router.push(row.href)}
+                        className='hover:bg-gray-100 cursor-pointer'
+                      >
+                        <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>
+                          {row.type === 'other' ? 'Other' : row.type === 'company' ? 'Company' : 'Advertisement'}
+                        </td>
+                        <td className='px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900'>{row.id}</td>
+                        <td className='px-6 py-4 text-sm text-gray-900 line-clamp-2 max-w-md'>{row.description}</td>
+                        <td className='px-6 py-4 whitespace-nowrap'>
+                          <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800'>
+                            {row.state}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           ) : (
             <div className='overflow-x-auto'>
               <table className='min-w-full divide-y divide-gray-200'>
@@ -177,17 +206,17 @@ const NotificationsPage: FC = () => {
                     filteredNotifications.map((n) => (
                       <tr
                         key={n.notification_id}
-                        className='hover:bg-gray-100'
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => router.push(`/logged/pages/notifications/${n.notification_id}`)}
+                        onKeyDown={(e) => e.key === 'Enter' && router.push(`/logged/pages/notifications/${n.notification_id}`)}
+                        className='hover:bg-gray-100 cursor-pointer'
                       >
                         <td className='px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900'>
-                          <Link href={`/logged/pages/notifications/${n.notification_id}`} className='text-blue-950 hover:underline'>
-                            {n.notification_id}
-                          </Link>
+                          {n.notification_id}
                         </td>
                         <td className='px-6 py-4 text-sm text-gray-900'>
-                          <Link href={`/logged/pages/notifications/${n.notification_id}`} className='text-blue-950 hover:underline'>
-                            {n.notification_brief_description}
-                          </Link>
+                          {n.notification_brief_description}
                         </td>
                         <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
                           {formatNotificationTime(n.notification_time)}

@@ -3,11 +3,15 @@
 import React, { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
+import CustomerSelectModal, { type CustomerRow } from '@/app/logged/logged_components/modals/CustomerSelectModal';
+import MediatecaModal from '@/app/logged/logged_components/modals/MediatecaModal';
+import EventSelectModal from '@/app/logged/logged_components/modals/EventSelectModal';
 import { EventsService } from '@/app/service/EventsService';
 import { PortalService } from '@/app/service/PortalService';
 import { ArticleService } from '@/app/service/ArticleService';
+import customersData from '@/app/contents/customers.json';
 
 const REGIONS = [
   'EUROPE',
@@ -32,6 +36,15 @@ interface Event {
   end_date: string;
   location: string;
   event_main_image?: string;
+  id_customer?: string | null;
+}
+
+const customersList = (customersData as CustomerRow[]).filter(
+  (c) => c && typeof c.id_customer === 'string'
+);
+function getCustomerById(id: string | null | undefined): CustomerRow | null {
+  if (!id) return null;
+  return customersList.find((c) => c.id_customer === id) ?? null;
 }
 
 function normalizeDateForInput(dateStr: string): string {
@@ -198,6 +211,12 @@ const IdEvent: FC = () => {
   const [allPortals, setAllPortals] = useState<{ id: number; name: string }[]>([]);
   const [portalActionLoading, setPortalActionLoading] = useState(false);
   const [eventArticles, setEventArticles] = useState<{ id_article: string; articleTitle: string; date?: string }[]>([]);
+  const [relatedCustomer, setRelatedCustomer] = useState<CustomerRow | null>(null);
+  const [customerModalOpen, setCustomerModalOpen] = useState(false);
+  const [mediatecaOpen, setMediatecaOpen] = useState(false);
+  const [previousEditionOn, setPreviousEditionOn] = useState(false);
+  const [previousEditionEvent, setPreviousEditionEvent] = useState<Event | null>(null);
+  const [previousEditionModalOpen, setPreviousEditionModalOpen] = useState(false);
 
   /** Snapshot of form values when event was loaded (or after save). Used to show floating Save only when there are changes. */
   const [initialFormSnapshot, setInitialFormSnapshot] = useState<{
@@ -209,6 +228,7 @@ const IdEvent: FC = () => {
     startDate: string;
     endDate: string;
     eventMainImage: string;
+    idCustomer: string | null;
   } | null>(null);
 
   useEffect(() => {
@@ -242,6 +262,7 @@ const IdEvent: FC = () => {
               : []
           );
           setEventPortals(Array.isArray(eventPortalsList) ? eventPortalsList : []);
+          setRelatedCustomer(getCustomerById(data.id_customer));
         }
         if (!cancelled) {
           const start = normalizeDateForInput(data.start_date);
@@ -255,6 +276,7 @@ const IdEvent: FC = () => {
             startDate: start,
             endDate: end,
             eventMainImage: data.event_main_image ?? '',
+            idCustomer: data.id_customer ?? null,
           });
         }
       } catch (err) {
@@ -271,30 +293,39 @@ const IdEvent: FC = () => {
 
   useEffect(() => {
     const s = parseDateFields(startDate);
-    setStartDay(s.day);
-    setStartMonth(s.month);
-    setStartYear(s.year);
+    const isComplete = s.day !== '' && s.month !== '' && s.year.length >= 4 && /^\d{4}-\d{2}-\d{2}$/.test(startDate.trim());
+    if (isComplete) {
+      setStartDay(s.day);
+      setStartMonth(s.month);
+      setStartYear(s.year);
+    }
   }, [startDate]);
 
   useEffect(() => {
     const s = parseDateFields(endDate);
-    setEndDay(s.day);
-    setEndMonth(s.month);
-    setEndYear(s.year);
+    const isComplete = s.day !== '' && s.month !== '' && s.year.length >= 4 && /^\d{4}-\d{2}-\d{2}$/.test(endDate.trim());
+    if (isComplete) {
+      setEndDay(s.day);
+      setEndMonth(s.month);
+      setEndYear(s.year);
+    }
   }, [endDate]);
 
   useEffect(() => {
     if (!event) return;
+    const prevTitle = (eventName || event.event_name || '').trim();
+    const yearY = startYear || (startDate && startDate.length >= 4 ? startDate.split('-')[0] : '');
+    const definitiveTitle = yearY ? `${prevTitle} ${yearY}`.trim() : prevTitle || 'Edit Event';
     setPageMeta({
-      pageTitle: event.event_name ?? 'Edit Event',
+      pageTitle: definitiveTitle,
       breadcrumbs: [
         { label: 'Contents' },
         { label: 'Events', href: '/logged/pages/network/contents/events' },
-        { label: event.event_name ?? 'Event' },
+        { label: definitiveTitle },
       ],
       buttons: [],
     });
-  }, [event, setPageMeta]);
+  }, [event, eventName, startDate, startYear, setPageMeta]);
 
   useEffect(() => {
     if (!eventId || !event) return;
@@ -395,8 +426,9 @@ const IdEvent: FC = () => {
   };
 
   const handleSaveConfirm = async () => {
-    if (eventMainImage.trim() && !isValidUrl(eventMainImage)) {
-      alert('Please enter a valid URL for the main image.');
+    const imageUrl = eventMainImage.trim();
+    if (imageUrl && !isValidUrl(imageUrl)) {
+      alert('The main image URL is invalid. Please select an image from the mediateca again.');
       return;
     }
     setSaving(true);
@@ -410,6 +442,7 @@ const IdEvent: FC = () => {
         start_date: startDate,
         end_date: endDate,
         event_main_image: eventMainImage.trim(),
+        id_customer: relatedCustomer?.id_customer ?? null,
       });
       setShowSaveModal(false);
       setImageLoadError(false);
@@ -423,6 +456,7 @@ const IdEvent: FC = () => {
         startDate: startDate,
         endDate: endDate,
         eventMainImage: eventMainImage.trim(),
+        idCustomer: relatedCustomer?.id_customer ?? null,
       });
     } catch (err) {
       console.error('Error saving event:', err);
@@ -432,7 +466,7 @@ const IdEvent: FC = () => {
           : (err as { message?: string })?.message ||
             (err as { data?: { message?: string } })?.data?.message ||
             'Error saving event';
-      alert(`Error al guardar: ${msg}`);
+      alert(`Error saving: ${msg}`);
     } finally {
       setSaving(false);
     }
@@ -461,7 +495,7 @@ const IdEvent: FC = () => {
           : (err as { message?: string })?.message ||
             (err as { data?: { message?: string } })?.data?.message ||
             'Error deleting event';
-      alert(`Error al eliminar: ${msg}`);
+      alert(`Error deleting: ${msg}`);
     } finally {
       setDeleting(false);
     }
@@ -472,7 +506,6 @@ const IdEvent: FC = () => {
   };
 
   const showImagePreview = eventMainImage.trim() && isValidUrl(eventMainImage) && !imageLoadError;
-  const urlInvalid = eventMainImage.trim() !== '' && !isValidUrl(eventMainImage);
 
   const hasChanges = initialFormSnapshot != null && (
     eventName !== initialFormSnapshot.eventName ||
@@ -482,7 +515,8 @@ const IdEvent: FC = () => {
     region !== initialFormSnapshot.region ||
     startDate !== initialFormSnapshot.startDate ||
     endDate !== initialFormSnapshot.endDate ||
-    eventMainImage.trim() !== initialFormSnapshot.eventMainImage
+    eventMainImage.trim() !== initialFormSnapshot.eventMainImage ||
+    (relatedCustomer?.id_customer ?? null) !== initialFormSnapshot.idCustomer
   );
 
   return (
@@ -496,15 +530,23 @@ const IdEvent: FC = () => {
           ← Back to Events
         </Link>
 
-        {/* Event name (editable) + Delete event - same row */}
-        <div className="flex flex-row items-center gap-4 mb-8 pb-6 border-b border-gray-200">
-          <input
-            type="text"
-            value={eventName}
-            onChange={(e) => setEventName(e.target.value)}
-            placeholder="Event name"
-            className="flex-1 min-w-0 text-2xl font-bold text-gray-900 px-4 py-3 border-2 border-gray-300 rounded-xl bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 placeholder:text-gray-400"
-          />
+        {/* Título previo (X) + año Start Date; título definitivo en layout = X + año */}
+        <div className="flex flex-row items-center gap-4 mb-6 pb-6 border-b border-gray-200 flex-wrap">
+          <div className="flex flex-col gap-1 max-w-md">
+            <label className="block text-sm font-semibold text-gray-600">Título previo</label>
+            <input
+              type="text"
+              value={eventName}
+              onChange={(e) => setEventName(e.target.value)}
+              placeholder="Event name"
+              className="w-full text-2xl font-bold text-gray-900 px-4 py-3 border-2 border-gray-300 rounded-xl bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 placeholder:text-gray-400"
+            />
+          </div>
+          <div className="flex flex-row items-center gap-2 shrink-0">
+            <span className="text-xl font-bold text-gray-900 tabular-nums">
+              {startYear || (startDate && startDate.length >= 4 ? startDate.split('-')[0] : '—')}
+            </span>
+          </div>
           <button
             type="button"
             onClick={handleDeleteClick}
@@ -514,36 +556,77 @@ const IdEvent: FC = () => {
           </button>
         </div>
 
-        {/* Main image - value from DB, updates on Save changes */}
-        <div className="w-full mb-6">
-          <label className="block text-sm font-semibold text-gray-500 uppercase mb-2">
-            Main image (URL)
+        {/* Main image - large, with overlay to open mediateca (select or add image); no URL input */}
+        <div className="relative w-full mb-8 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+          {showImagePreview ? (
+            <img
+              src={eventMainImage.trim()}
+              alt="Event"
+              className="w-full max-h-[420px] object-contain object-center"
+              onError={() => setImageLoadError(true)}
+            />
+          ) : null}
+          <div className={`w-full min-h-[280px] flex flex-col items-center justify-center gap-2 text-gray-400 ${showImagePreview ? 'hidden' : ''}`}>
+            <ImagePlaceholderSvg />
+            <span>No image</span>
+          </div>
+          <div className="absolute bottom-3 right-3 rounded-xl shadow-lg bg-white/80 p-3 flex flex-col gap-2 min-w-[200px]">
+            <span className="text-xs font-semibold text-gray-700">Main image</span>
+            <button
+              type="button"
+              onClick={() => setMediatecaOpen(true)}
+              className="px-3 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-blue-950 hover:bg-blue-50/50 transition-colors font-medium text-sm"
+            >
+              Update image
+            </button>
+            {eventMainImage.trim() && (
+              <div className="flex items-center gap-2">
+                <img
+                  src={eventMainImage.trim()}
+                  alt=""
+                  className="w-10 h-10 object-cover rounded border border-gray-200 flex-shrink-0"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEventMainImage('');
+                    setImageLoadError(false);
+                  }}
+                  className="text-xs text-red-600 hover:text-red-800 font-medium"
+                >
+                  Clear
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Related to (account) - below image */}
+        <div className="mb-6">
+          <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
+            Related to
           </label>
-          <input
-            type="url"
-            value={eventMainImage}
-            onChange={(e) => {
-              setEventMainImage(e.target.value);
-              setImageLoadError(false);
-            }}
-            placeholder="https://..."
-            className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-              urlInvalid ? 'border-red-500' : 'border-gray-300'
-            }`}
-          />
-          {urlInvalid && (
-            <p className="mt-1 text-sm text-red-500">Please enter a valid URL (e.g. https://example.com/image.jpg)</p>
-          )}
-          <div className="mt-3 rounded-lg overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center shrink-0" style={{ width: '150px', height: '150px' }}>
-            {showImagePreview ? (
-              <img
-                src={eventMainImage.trim()}
-                alt="Event"
-                className="w-full h-full object-contain object-center"
-                onError={() => setImageLoadError(true)}
-              />
-            ) : (
-              <ImagePlaceholderSvg />
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setCustomerModalOpen(true)}
+              className="px-4 py-2 border-2 border-gray-300 rounded-lg hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium text-left min-w-[200px]"
+            >
+              {relatedCustomer
+                ? `${relatedCustomer.name || relatedCustomer.id_customer}${relatedCustomer.id_customer ? ` (${relatedCustomer.id_customer})` : ''}`
+                : 'Select account…'}
+            </button>
+            {relatedCustomer && (
+              <button
+                type="button"
+                onClick={() => setRelatedCustomer(null)}
+                className="text-sm text-red-600 hover:text-red-800 font-medium"
+              >
+                Clear
+              </button>
             )}
           </div>
         </div>
@@ -556,10 +639,83 @@ const IdEvent: FC = () => {
               </label>
               <p className="text-lg text-gray-700 bg-gray-200 px-3 py-2 rounded">{event.id_fair}</p>
             </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
+                Previous edition?
+              </label>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={previousEditionOn}
+                    onClick={() => {
+                      setPreviousEditionOn(false);
+                      setPreviousEditionEvent(null);
+                    }}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      !previousEditionOn
+                        ? 'bg-blue-950 text-white'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    No
+                  </button>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={previousEditionOn}
+                    onClick={() => setPreviousEditionOn(true)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      previousEditionOn
+                        ? 'bg-blue-950 text-white'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                  >
+                    Yes
+                  </button>
+                </div>
+                {previousEditionOn && (
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setPreviousEditionModalOpen(true)}
+                      className="w-full max-w-xs px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-blue-950 hover:bg-blue-50/50 transition-colors font-medium text-sm"
+                    >
+                      Select previous edition
+                    </button>
+                    {previousEditionEvent && (
+                      <div className="mt-2 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+                        <p className="text-xs font-semibold text-gray-500 uppercase mb-2">Previous edition</p>
+                        <p className="font-semibold text-gray-900">{previousEditionEvent.event_name}</p>
+                        <p className="text-sm text-gray-600 mt-1 font-mono">{previousEditionEvent.id_fair}</p>
+                        <p className="text-sm text-gray-500 mt-1">
+                          {normalizeDateForInput(previousEditionEvent.start_date)} – {normalizeDateForInput(previousEditionEvent.end_date)}
+                          {previousEditionEvent.region ? ` · ${previousEditionEvent.region}` : ''}
+                        </p>
+                        <Link
+                          href={`/logged/pages/network/contents/events/${encodeURIComponent(previousEditionEvent.id_fair)}`}
+                          className="inline-block mt-3 text-sm font-medium text-blue-950 hover:underline"
+                        >
+                          Open event →
+                        </Link>
+                        <button
+                          type="button"
+                          onClick={() => setPreviousEditionEvent(null)}
+                          className="block mt-2 text-sm text-red-600 hover:text-red-800 font-medium"
+                        >
+                          Clear selection
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
             <div className="md:col-span-2" />
             <div>
               <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
-                Location
+                Location (city)
               </label>
               <input
                 type="text"
@@ -787,6 +943,39 @@ const IdEvent: FC = () => {
           </div>
         </div>
       )}
+
+      <CustomerSelectModal
+        open={customerModalOpen}
+        onClose={() => setCustomerModalOpen(false)}
+        onSelectCustomer={(customer) => {
+          setRelatedCustomer(customer);
+          setCustomerModalOpen(false);
+        }}
+      />
+
+      <MediatecaModal
+        open={mediatecaOpen}
+        onClose={() => setMediatecaOpen(false)}
+        onSelectImage={(imageUrl) => {
+          setEventMainImage(imageUrl);
+          setImageLoadError(false);
+          setMediatecaOpen(false);
+        }}
+      />
+
+      <EventSelectModal
+        open={previousEditionModalOpen}
+        onClose={() => setPreviousEditionModalOpen(false)}
+        excludeEventId={event.id_fair}
+        onSelectEvent={(eventId) => {
+          EventsService.getEventById(eventId)
+            .then((ev) => {
+              setPreviousEditionEvent(ev);
+              setPreviousEditionModalOpen(false);
+            })
+            .catch(() => {});
+        }}
+      />
 
       {/* Delete event modal */}
       {showDeleteModal && (

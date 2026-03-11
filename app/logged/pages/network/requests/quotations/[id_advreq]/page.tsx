@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { useAdvertisements, AdvertisementState } from '../../hooks/useAdvertisements';
 
 export default function AdvertisementDetailPage() {
@@ -248,6 +249,15 @@ export default function AdvertisementDetailPage() {
               </div>
             ))
           )}
+        </div>
+
+        <div className="mt-8 pt-6 border-t">
+          <Link
+            href="/logged/pages/account-management/proposals/create"
+            className="inline-flex px-4 py-2 bg-blue-950 text-white font-medium rounded-lg hover:bg-blue-900 transition-colors"
+          >
+            Create proposal
+          </Link>
         </div>
       </PageContentSection>
     </>

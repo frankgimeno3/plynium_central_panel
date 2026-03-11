@@ -3,8 +3,8 @@
 import React, { FC, use, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import foldersData from "@/app/contents/mediatecaFolders.json";
 import contentsData from "@/app/contents/mediatecaContents.json";
 import CreateFolderModal from "@/app/logged/pages/mediateca/CreateFolderModal";

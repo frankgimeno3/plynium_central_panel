@@ -1,9 +1,10 @@
 "use client";
 
 import { FC, useState, useEffect } from 'react';
+import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { useCompanyRequests, RequestState } from '../../hooks/useCompanyRequests';
 
 const formatDate = (dateString: string): string => {
@@ -131,11 +132,11 @@ const CompanyRequestDetailPage: FC = () => {
 
           <div className="space-y-4 border-t pt-6">
             <div>
-              <label className="text-sm font-medium text-gray-500">Nombre comercial</label>
+              <label className="text-sm font-medium text-gray-500">Trading name</label>
               <p className="text-base text-gray-900">{content.nombre_comercial}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Nombre fiscal</label>
+              <label className="text-sm font-medium text-gray-500">Legal name</label>
               <p className="text-base text-gray-900">{content.nombre_fiscal}</p>
             </div>
             <div>
@@ -151,13 +152,22 @@ const CompanyRequestDetailPage: FC = () => {
               <p className="text-base text-gray-900">{content.web_empresa}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">País de la empresa</label>
+              <label className="text-sm font-medium text-gray-500">Company country</label>
               <p className="text-base text-gray-900">{content.pais_empresa}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-500">Descripción de la empresa</label>
+              <label className="text-sm font-medium text-gray-500">Company description</label>
               <p className="text-base text-gray-900 mt-1 whitespace-pre-wrap">{content.descripcion_empresa}</p>
             </div>
+          </div>
+
+          <div className="mt-8 pt-6 border-t">
+            <Link
+              href="/logged/pages/network/directory/companies/create"
+              className="inline-flex px-4 py-2 bg-blue-950 text-white font-medium rounded-lg hover:bg-blue-900 transition-colors"
+            >
+              Create company
+            </Link>
           </div>
         </div>
       </PageContentSection>

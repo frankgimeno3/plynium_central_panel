@@ -3,8 +3,8 @@
 import React, { FC, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import agentsData from "@/app/contents/agentsContents.json";
 import customersData from "@/app/contents/customers.json";
 import proposalsData from "@/app/contents/proposals.json";
@@ -157,7 +157,7 @@ const AgentDetailPage: FC = () => {
 
       <PageContentSection>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Cuentas que lleva ({customers.length})
+          Accounts managed ({customers.length})
         </h2>
           {customers.length === 0 ? (
             <p className="text-sm text-gray-500">No accounts assigned.</p>
@@ -218,7 +218,7 @@ const AgentDetailPage: FC = () => {
 
       <PageContentSection>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Propuestas ({proposals.length})
+          Proposals ({proposals.length})
         </h2>
           {proposals.length === 0 ? (
             <p className="text-sm text-gray-500">No proposals.</p>

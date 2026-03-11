@@ -1,8 +1,8 @@
 "use client";
 
 import React, { FC, useState, useEffect } from "react";
-import { usePageContent } from "@/app/logged/logged_components/PageContentContext";
-import PageContentSection from "@/app/logged/logged_components/PageContentSection";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { PortalService } from "@/app/service/PortalService";
 
 export interface Portal {

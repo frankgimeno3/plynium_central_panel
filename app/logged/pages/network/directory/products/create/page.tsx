@@ -1,28 +1,34 @@
 'use client';
 
 import React, { FC, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/PageContentContext';
-import PageContentSection from '@/app/logged/logged_components/PageContentSection';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { ProductService } from '@/app/service/ProductService';
 import { CompanyService } from '@/app/service/CompanyService';
+import CompanyDirectorySelectModal from '@/app/logged/logged_components/modals/CompanyDirectorySelectModal';
+import MediatecaModal from '@/app/logged/logged_components/modals/MediatecaModal';
+import CategoriesModal from '@/app/logged/logged_components/modals/CategoriesModal';
+import type { CategoryItem } from '@/app/logged/logged_components/modals/CategoriesModal';
 
 interface ProductForm {
   productName: string;
   price: string;
   company: string;
+  companyDisplayName: string;
   productDescription: string;
   mainImageSrc: string;
-  productCategoriesArray: string;
+  productCategoriesArray: string[];
 }
 
 const initialForm: ProductForm = {
   productName: '',
   price: '',
   company: '',
+  companyDisplayName: '',
   productDescription: '',
   mainImageSrc: '',
-  productCategoriesArray: '',
+  productCategoriesArray: [],
 };
 
 function generateProductId(): string {
@@ -33,11 +39,25 @@ function generateProductId(): string {
 
 const CreateProduct: FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [form, setForm] = useState<ProductForm>(initialForm);
   const [errors, setErrors] = useState<Partial<Record<keyof ProductForm, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [companyPortals, setCompanyPortals] = useState<{ portalId: number; portalName: string }[]>([]);
   const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
+  const [companySelectOpen, setCompanySelectOpen] = useState(false);
+  const [mediatecaOpen, setMediatecaOpen] = useState(false);
+  const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
+  const [confirmRemoveCategory, setConfirmRemoveCategory] = useState<string | null>(null);
+
+  useEffect(() => {
+    const companyFromQuery = searchParams.get('company');
+    if (companyFromQuery?.trim()) {
+      setForm((prev) =>
+        prev.company ? prev : { ...prev, company: companyFromQuery.trim(), companyDisplayName: companyFromQuery.trim() }
+      );
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!form.company.trim()) {
@@ -64,16 +84,16 @@ const CreateProduct: FC = () => {
     );
   };
 
-  const update = (field: keyof ProductForm, value: string) => {
+  const update = (field: keyof ProductForm, value: string | string[]) => {
     setForm((prev) => ({ ...prev, [field]: value }));
-    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+    if (errors[field as keyof ProductForm]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
   const validate = (): boolean => {
     const next: Partial<Record<keyof ProductForm, string>> = {};
     if (!form.productName.trim()) next.productName = 'Product name is required';
-    if (form.price === '') next.price = 'Price is required';
-    else {
+    if (!form.company.trim()) next.company = 'Company is required';
+    if (form.price !== '') {
       const num = parseFloat(form.price);
       if (isNaN(num) || num < 0) next.price = 'Price must be a valid non-negative number';
     }
@@ -87,13 +107,11 @@ const CreateProduct: FC = () => {
     setIsSubmitting(true);
     try {
       const productId = generateProductId();
-      const productCategoriesArray = form.productCategoriesArray
-        ? form.productCategoriesArray.split(',').map((s) => s.trim()).filter(Boolean)
-        : [];
+      const productCategoriesArray = form.productCategoriesArray ?? [];
       await ProductService.createProduct({
         productId,
         productName: form.productName.trim(),
-        price: parseFloat(form.price) || 0,
+        price: form.price.trim() ? parseFloat(form.price) : 0,
         company: form.company.trim(),
         productDescription: form.productDescription.trim(),
         mainImageSrc: form.mainImageSrc.trim(),
@@ -125,10 +143,19 @@ const CreateProduct: FC = () => {
     setPageMeta({ pageTitle: "Create Product", breadcrumbs, buttons: [{ label: "Back to Products", href: "/logged/pages/network/directory/products" }] });
   }, [setPageMeta, breadcrumbs]);
 
+  useEffect(() => {
+    if (!confirmRemoveCategory) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setConfirmRemoveCategory(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [confirmRemoveCategory]);
+
   return (
     <>
-      <PageContentSection>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-6 max-w-5xl">
+      <PageContentSection className="w-full max-w-none">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-6 w-full">
           <div className="bg-gray-50 rounded-lg p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -150,7 +177,7 @@ const CreateProduct: FC = () => {
               </div>
               <div>
                 <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
-                  Price <span className="text-red-500">*</span>
+                  Price <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <input
                   type="number"
@@ -169,15 +196,37 @@ const CreateProduct: FC = () => {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
-                  Company ID <span className="text-gray-400 font-normal">(optional — required for portal assignment)</span>
+                  Belongs to company
                 </label>
-                <input
-                  type="text"
-                  value={form.company}
-                  onChange={(e) => update('company', e.target.value)}
-                  placeholder="e.g. comp_1234567_abc123 — enter company ID to assign portals"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-950 focus:border-blue-950"
-                />
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCompanySelectOpen(true)}
+                    className={`w-full max-w-md px-4 py-2 border-2 border-dashed rounded-lg text-gray-700 hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium text-left ${
+                      errors.company ? 'border-red-500' : 'border-gray-300'
+                    }`}
+                  >
+                    Select company from directory
+                  </button>
+                  {errors.company && (
+                    <p className="text-sm text-red-500">{errors.company}</p>
+                  )}
+                  {form.company && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 max-w-2xl">
+                      <span className="text-sm font-mono text-gray-800">{form.company}</span>
+                      {form.companyDisplayName && form.companyDisplayName !== form.company && (
+                        <span className="text-sm text-gray-600">— {form.companyDisplayName}</span>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setForm((p) => ({ ...p, company: '', companyDisplayName: '' }))}
+                        className="text-sm text-red-600 hover:text-red-800 font-medium"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {form.company.trim() && (
@@ -187,7 +236,7 @@ const CreateProduct: FC = () => {
                   </label>
                   {companyPortals.length === 0 ? (
                     <p className="text-sm text-gray-500">
-                      Company not found or has no portals. Enter a valid company ID that is linked to at least one portal.
+                      Company not found or has no portals. Select a company that is linked to at least one portal.
                     </p>
                   ) : (
                     <div className="flex flex-wrap gap-3">
@@ -211,27 +260,73 @@ const CreateProduct: FC = () => {
               )}
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
-                  Main Image URL
+                  Main Image
                 </label>
-                <input
-                  type="url"
-                  value={form.mainImageSrc}
-                  onChange={(e) => update('mainImageSrc', e.target.value)}
-                  placeholder="e.g. https://images.example.com/product.jpg"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-950 focus:border-blue-950"
-                />
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setMediatecaOpen(true)}
+                    className="w-full max-w-md px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium"
+                  >
+                    Select or add image
+                  </button>
+                  {form.mainImageSrc && (
+                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 max-w-2xl">
+                      <img
+                        src={form.mainImageSrc}
+                        alt="Main"
+                        className="w-16 h-16 object-cover rounded border border-gray-200"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                      <span className="text-sm text-gray-600 truncate flex-1 min-w-0" title={form.mainImageSrc}>
+                        {form.mainImageSrc}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => update('mainImageSrc', '')}
+                        className="text-sm text-red-600 hover:text-red-800 font-medium"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
-                  Categories (comma-separated)
+                  Categories
                 </label>
-                <input
-                  type="text"
-                  value={form.productCategoriesArray}
-                  onChange={(e) => update('productCategoriesArray', e.target.value)}
-                  placeholder="e.g. Windows, Energy Efficient, Residential"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-950 focus:border-blue-950"
-                />
+                <div className="flex flex-col gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCategoriesModalOpen(true)}
+                    className="w-full max-w-md px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium"
+                  >
+                    Select categories
+                  </button>
+                  {(form.productCategoriesArray ?? []).length > 0 && (
+                    <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200 max-w-2xl">
+                      {(form.productCategoriesArray ?? []).map((name) => (
+                        <span
+                          key={name}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-900 rounded-lg text-sm font-medium"
+                        >
+                          {name}
+                          <button
+                            type="button"
+                            onClick={() => setConfirmRemoveCategory(name)}
+                            className="text-blue-700 hover:text-red-700 font-bold leading-none"
+                            aria-label={`Remove ${name}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
@@ -266,6 +361,81 @@ const CreateProduct: FC = () => {
           </div>
         </form>
       </PageContentSection>
+
+      <CompanyDirectorySelectModal
+        open={companySelectOpen}
+        onClose={() => setCompanySelectOpen(false)}
+        onSelectCompany={(companyId, commercialName) => {
+          setForm((prev) => ({
+            ...prev,
+            company: companyId,
+            companyDisplayName: commercialName ?? companyId,
+          }));
+          setCompanySelectOpen(false);
+        }}
+      />
+
+      <MediatecaModal
+        open={mediatecaOpen}
+        onClose={() => setMediatecaOpen(false)}
+        onSelectImage={(src) => {
+          update('mainImageSrc', src);
+          setMediatecaOpen(false);
+        }}
+      />
+
+      <CategoriesModal
+        open={categoriesModalOpen}
+        onClose={() => setCategoriesModalOpen(false)}
+        selectedCategoryNames={form.productCategoriesArray ?? []}
+        onSelectCategories={(categories: CategoryItem[]) => {
+          update('productCategoriesArray', categories.map((c) => c.name));
+          setCategoriesModalOpen(false);
+        }}
+      />
+
+      {confirmRemoveCategory && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-remove-category-title"
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="confirm-remove-category-title" className="text-lg font-semibold text-gray-900 mb-2">
+              Remove category
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Are you sure you want to remove the category &quot;{confirmRemoveCategory}&quot;?
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmRemoveCategory(null)}
+                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setForm((prev) => ({
+                    ...prev,
+                    productCategoriesArray: (prev.productCategoriesArray ?? []).filter((n) => n !== confirmRemoveCategory),
+                  }));
+                  setConfirmRemoveCategory(null);
+                }}
+                className="px-4 py-2 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700"
+              >
+                Yes, remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
