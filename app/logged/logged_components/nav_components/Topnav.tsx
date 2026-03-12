@@ -2,11 +2,34 @@
 
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import React, { FC, useState, useRef, useEffect } from "react";
+import React, { FC, useState, useRef, useEffect, useMemo } from "react";
 import AuthenticationService from "@/app/service/AuthenticationService";
 import NotificationsDropdown from "../NotificationsDropdown";
+import { useCompanyRequests } from "@/app/logged/pages/network/requests/hooks/useCompanyRequests";
+import { useOtherRequests } from "@/app/logged/pages/network/requests/hooks/useOtherRequests";
+import { useAdvertisements } from "@/app/logged/pages/network/requests/hooks/useAdvertisements";
 
 interface TopnavProps {}
+
+const CommunicationsBadge: FC = () => {
+  const { requests: companyRequests } = useCompanyRequests();
+  const { requests: otherRequests } = useOtherRequests();
+  const { counts: advCounts } = useAdvertisements();
+
+  const totalPending = useMemo(() => {
+    const company = companyRequests.filter((r) => r.request_state === "Pending").length;
+    const other = otherRequests.filter((r) => r.request_state === "Pending").length;
+    const adv = advCounts.pending;
+    return company + other + adv;
+  }, [companyRequests, otherRequests, advCounts.pending]);
+
+  if (totalPending === 0) return null;
+  return (
+    <span className="absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold leading-none text-white">
+      {totalPending > 99 ? "99+" : totalPending}
+    </span>
+  );
+};
 
 const Topnav: FC<TopnavProps> = () => {
   const router = useRouter();
@@ -29,17 +52,38 @@ const Topnav: FC<TopnavProps> = () => {
   };
 
   return (
-    <nav className="flex flex-row bg-blue-950 text-gray-200 justify-between items-center p-12 relative">
-      <Link href="/logged" className="text-3xl hover:text-white cursor-pointer">
+    <nav className="flex flex-row bg-gradient-to-r from-gray-950 via-gray-900 to-gray-950 text-gray-200 justify-between items-center p-12 relative ">
+      <Link href="/logged" className="text-3xl font-semibold hover:text-white cursor-pointer">
         Plynium Central Panel
       </Link>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-4 text-lg uppercase">
+        <Link
+          href="/logged/pages/communications"
+          className="relative flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors"
+          aria-label="Communications"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-8 w-8 shrink-0"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+            />
+          </svg>
+          <CommunicationsBadge />
+        </Link>
         <Link
           href="/logged/pages/mediateca"
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors"
+          className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
           </svg>
           Mediateca
@@ -48,11 +92,11 @@ const Topnav: FC<TopnavProps> = () => {
           <button
             type="button"
             onClick={() => setNotificationsOpen((o) => !o)}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors"
+            className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors uppercase"
             aria-expanded={notificationsOpen}
             aria-haspopup="true"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
             Notifications
@@ -63,8 +107,8 @@ const Topnav: FC<TopnavProps> = () => {
         </div>
 
         <button
-          className="bg-white text-blue-950 cursor-pointer hover:bg-gray-100/80 px-5 py-1 rounded-xl shadow-xl"
-          onClick={handleLogout}
+            className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors uppercase"
+            onClick={handleLogout}
         >
           Log out
         </button>

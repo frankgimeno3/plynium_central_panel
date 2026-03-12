@@ -6,6 +6,7 @@
     "estimatedPublishDate": "2025-03-15",
     "topic": "Ventilated facades and curtain wall",
     "status": "calendarized",
+    "userNewsletterListId": "list_editors",
     "sentToLists": null,
     "createdAt": "2025-02-01T10:00:00Z",
     "updatedAt": "2025-03-01T12:00:00Z"
@@ -17,6 +18,7 @@
     "estimatedPublishDate": "2025-06-01",
     "topic": "Industrial glass and safety",
     "status": "pending",
+    "userNewsletterListId": "list_publications",
     "sentToLists": null,
     "createdAt": "2025-03-10T09:00:00Z",
     "updatedAt": "2025-03-10T09:00:00Z"
@@ -28,6 +30,7 @@
     "estimatedPublishDate": "2024-12-10",
     "topic": "Skylights and roof lights",
     "status": "published",
+    "userNewsletterListId": "list_editors",
     "sentToLists": ["list_editors", "list_publications"],
     "createdAt": "2024-11-01T08:00:00Z",
     "updatedAt": "2024-12-10T14:00:00Z"
@@ -39,6 +42,7 @@
     "estimatedPublishDate": "2025-06-15",
     "topic": "Summer facades update",
     "status": "calendarized",
+    "userNewsletterListId": "list_editors",
     "sentToLists": null,
     "createdAt": "2025-03-05T11:00:00Z",
     "updatedAt": "2025-03-05T11:00:00Z"
@@ -50,6 +54,7 @@
     "estimatedPublishDate": "2025-01-15",
     "topic": "Industrial glass Q1",
     "status": "cancelled",
+    "userNewsletterListId": "list_admins",
     "sentToLists": null,
     "createdAt": "2024-12-01T10:00:00Z",
     "updatedAt": "2025-01-10T09:00:00Z"

@@ -27,10 +27,10 @@ export default function PageContentLayout({ children }: PageContentLayoutProps) 
       : breadcrumbs;
 
   return (
-    <div className="flex flex-col w-full min-h-full bg-white">
+    <div className="flex flex-col w-full min-h-full ">
       <MiddleNav pageTitle={pageTitle} breadcrumbs={filteredBreadcrumbs} />
 
-      <div className="flex-1 p-6 bg-gray-100">
+      <div className="flex-1 p-6 bg-gradient-to-r from-gray-950 to-zinc-900 content-main text-slate-200">
         {buttons && buttons.length > 0 && (
           <div className="mb-4 flex flex-wrap gap-2 justify-end">
             {buttons.map((btn, index) =>
@@ -56,7 +56,7 @@ export default function PageContentLayout({ children }: PageContentLayoutProps) 
           </div>
         )}
 
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4   ">
           {children}
         </div>
       </div>

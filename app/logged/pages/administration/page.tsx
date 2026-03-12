@@ -63,10 +63,7 @@ const AdministrationPage: FC = () => {
     return list;
   }, [allOrders, filter]);
 
-  const breadcrumbs = [
-    { label: "Administration", href: "/logged/pages/administration" },
-    { label: "Orders" },
-  ];
+  const breadcrumbs = [{ label: "Administration" }];
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {

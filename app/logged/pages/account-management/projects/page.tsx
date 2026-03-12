@@ -69,7 +69,7 @@ const ProjectsPage: FC = () => {
   const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
 
   const breadcrumbs = [
-    { label: "Production", href: "/logged/pages/production/projects" },
+    { label: "Account Management", href: "/logged/pages/account-management" },
     { label: "Projects" },
   ];
 
@@ -155,7 +155,7 @@ const ProjectsPage: FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {paginated.map((p) => (
-                <tr key={p.id_project} onClick={() => router.push(`/logged/pages/production/projects/${p.id_project}`)} className={rowClass}>
+                <tr key={p.id_project} onClick={() => router.push(`/logged/pages/account-management/projects/${p.id_project}`)} className={rowClass}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.id_project}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">{getCompanyName(p.id_contract)}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{getServiceName(p.service)}</td>

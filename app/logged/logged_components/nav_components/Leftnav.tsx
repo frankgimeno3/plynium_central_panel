@@ -21,15 +21,15 @@ const SectionTrigger: FC<{
     onClick={onClick}
     className={`flex w-full items-center gap-2 rounded-r-lg border-l-2 py-3 pl-3 pr-4 text-left transition-colors ${
       isActive
-        ? "border-blue-600 bg-blue-50/80 font-semibold text-gray-900"
-        : "border-transparent text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+        ? "border-blue-500 bg-blue-950/40 font-semibold text-gray-100"
+        : "border-transparent text-gray-300 hover:bg-gray-800 hover:text-gray-100"
     }`}
     aria-expanded={isOpen}
   >
-    <span className="flex shrink-0 text-gray-400 group-hover:text-gray-500" aria-hidden>
+    <span className="flex shrink-0 text-gray-500 group-hover:text-gray-400" aria-hidden>
       {isOpen ? <ChevronDownSvg size={18} /> : <ChevronRightSvg size={18} />}
     </span>
-    <span className="text-[15px]">{label}</span>
+    <span className="text-[15px] uppercase">{label}</span>
   </button>
 );
 
@@ -44,14 +44,14 @@ const GroupTrigger: FC<{
     type="button"
     onClick={onClick}
     className={`flex w-full items-center gap-2 rounded-md py-2 pl-2 pr-3 text-left text-sm transition-colors ${
-      isActive ? "font-medium text-gray-900" : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+      isActive ? "font-medium text-gray-100" : "text-gray-400 hover:bg-gray-800 hover:text-gray-100"
     }`}
     aria-expanded={isOpen}
   >
-    <span className="flex shrink-0 text-gray-400" aria-hidden>
+    <span className="flex shrink-0 text-gray-500" aria-hidden>
       {isOpen ? <ChevronDownSvg size={14} /> : <ChevronRightSvg size={14} />}
     </span>
-    <span>{label}</span>
+    <span className="uppercase">{label}</span>
   </button>
 );
 
@@ -63,10 +63,10 @@ const NavLink: FC<{
 }> = ({ href, label, active }) => (
   <Link
     href={href}
-    className={`flex min-h-[36px] items-center rounded-r-md border-l-2 py-2 pl-3 pr-4 text-sm transition-colors ${
+    className={`flex min-h-[36px] items-center rounded-r-md border-l-2 py-2 pl-3 pr-4 text-sm uppercase transition-colors ${
       active
-        ? "border-blue-600 bg-blue-50 font-medium text-blue-700"
-        : "border-transparent text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+        ? "border-blue-500 bg-blue-950/40 font-medium text-blue-300"
+        : "border-transparent text-gray-400 hover:bg-gray-800 hover:text-gray-100"
     }`}
   >
     {label}
@@ -79,13 +79,13 @@ const Leftnav: FC<LeftnavProps> = () => {
   const [isContentsSelected, setIsContentsSelected] = useState(false);
   const [isAccountManagementSelected, setIsAccountManagementSelected] = useState(false);
   const [isProductionSelected, setIsProductionSelected] = useState(false);
-  const [isRequestsSelected, setIsRequestsSelected] = useState(false);
+  const [isPublicationsSelected, setIsPublicationsSelected] = useState(false);
   const [isAdministrationSelected, setIsAdministrationSelected] = useState(false);
 
   const inContents = pathname.startsWith("/logged/pages/network/contents");
   const inAccountManagement = pathname.startsWith("/logged/pages/account-management");
   const inProduction = pathname.startsWith("/logged/pages/production");
-  const inRequests = pathname.startsWith("/logged/pages/network/requests");
+  const inPublications = pathname.startsWith("/logged/pages/production/publications");
   const inAdministration = pathname.startsWith("/logged/pages/administration");
   const inNetwork = pathname.startsWith("/logged/pages/network");
 
@@ -93,14 +93,14 @@ const Leftnav: FC<LeftnavProps> = () => {
     setIsContentsSelected(inContents);
     setIsAccountManagementSelected(inAccountManagement);
     setIsProductionSelected(inProduction);
-    setIsRequestsSelected(inRequests);
+    setIsPublicationsSelected(inPublications);
     setIsAdministrationSelected(inAdministration);
     setIsDirectorySelected(inNetwork);
-  }, [pathname, inContents, inAccountManagement, inProduction, inRequests, inAdministration, inNetwork]);
+  }, [pathname, inContents, inAccountManagement, inProduction, inPublications, inAdministration, inNetwork]);
 
   return (
     <nav
-      className="flex h-full min-h-screen w-[280px] min-w-[280px] shrink-0 flex-col bg-white"
+      className="flex h-full min-h-screen w-[280px] min-w-[280px] shrink-0 flex-col bg-gray-900"
       aria-label="Main navigation"
     >
       <div className="flex flex-col gap-0.5 py-4">
@@ -113,25 +113,17 @@ const Leftnav: FC<LeftnavProps> = () => {
             onClick={() => setIsDirectorySelected(!isDirectorySelected)}
           />
           {isDirectorySelected && (
-            <div className="mt-1 flex flex-col gap-0.5 border-l border-gray-200/80 bg-gray-50/50 pl-2 pr-3 pt-2 pb-3">
+            <div className="mt-1 flex flex-col gap-0.5 border-l border-gray-700 bg-gray-800/50 pl-2 pr-3 pt-2 pb-3">
               {PLYNIUM_NETWORK_GROUPS.map((group) => (
                 <div key={group.pathPrefix} className="flex flex-col gap-0.5">
                   <GroupTrigger
                     label={group.label}
-                    isOpen={
-                      group.pathPrefix.includes("contents")
-                        ? isContentsSelected
-                        : isRequestsSelected
-                    }
+                    isOpen={isContentsSelected}
                     isActive={pathname.startsWith(group.pathPrefix)}
-                    onClick={() =>
-                      group.pathPrefix.includes("contents")
-                        ? setIsContentsSelected(!isContentsSelected)
-                        : setIsRequestsSelected(!isRequestsSelected)
-                    }
+                    onClick={() => setIsContentsSelected(!isContentsSelected)}
                   />
-                  {(group.pathPrefix.includes("contents") ? isContentsSelected : isRequestsSelected) && (
-                    <div className="ml-2 flex flex-col gap-0.5 border-l border-gray-200/60 pl-2">
+                  {isContentsSelected && (
+                    <div className="ml-2 flex flex-col gap-0.5 border-l border-gray-600 pl-2">
                       {PLYNIUM_NETWORK_LINKS.slice(group.linkStart, group.linkEnd).map((item) => (
                         <NavLink
                           key={item.href}
@@ -144,8 +136,8 @@ const Leftnav: FC<LeftnavProps> = () => {
                   )}
                 </div>
               ))}
-              {/* Direct links (no sub-group): Directory, Portals, Users */}
-              <div className="mt-1 flex flex-col gap-0.5 border-t border-gray-200/60 pt-2">
+              {/* Direct links: Directory, Portals, Users */}
+              <div className="mt-1 flex flex-col gap-0.5 border-t border-gray-700 pt-2">
                 {PLYNIUM_NETWORK_LINKS.slice(
                   PLYNIUM_NETWORK_GROUPS[PLYNIUM_NETWORK_GROUPS.length - 1].linkEnd
                 ).map((item) => (
@@ -170,7 +162,7 @@ const Leftnav: FC<LeftnavProps> = () => {
             onClick={() => setIsAccountManagementSelected(!isAccountManagementSelected)}
           />
           {isAccountManagementSelected && (
-            <div className="mt-1 flex flex-col gap-0.5 border-l border-gray-200/80 bg-gray-50/50 pl-2 pr-3 pt-2 pb-3">
+            <div className="mt-1 flex flex-col gap-0.5 border-l border-gray-700 bg-gray-800/50 pl-2 pr-3 pt-2 pb-3">
               <NavLink
                 href="/logged/pages/account-management/customers_db"
                 label="Customers DB"
@@ -191,6 +183,11 @@ const Leftnav: FC<LeftnavProps> = () => {
                 label="Contracts"
                 active={pathname.startsWith("/logged/pages/account-management/contracts")}
               />
+              <NavLink
+                href="/logged/pages/account-management/projects"
+                label="Projects"
+                active={pathname.startsWith("/logged/pages/account-management/projects")}
+              />
             </div>
           )}
         </div>
@@ -204,27 +201,44 @@ const Leftnav: FC<LeftnavProps> = () => {
             onClick={() => setIsProductionSelected(!isProductionSelected)}
           />
           {isProductionSelected && (
-            <div className="mt-1 flex flex-col gap-0.5 border-l border-gray-200/80 bg-gray-50/50 pl-2 pr-3 pt-2 pb-3">
-              <NavLink
-                href="/logged/pages/production/projects"
-                label="Projects"
-                active={pathname.startsWith("/logged/pages/production/projects")}
-              />
+            <div className="mt-1 flex flex-col gap-0.5 border-l border-gray-700 bg-gray-800/50 pl-2 pr-3 pt-2 pb-3">
               <NavLink
                 href="/logged/pages/production/services"
                 label="Services"
                 active={pathname.startsWith("/logged/pages/production/services")}
               />
               <NavLink
-                href="/logged/pages/production/newsletter_management"
-                label="Newsletter Management"
-                active={pathname.startsWith("/logged/pages/production/newsletter_management")}
+                href="/logged/pages/production/newsletters"
+                label="Newsletters"
+                active={pathname.startsWith("/logged/pages/production/newsletters")}
               />
-              <NavLink
-                href="/logged/pages/production/publications_management"
-                label="Publications Management"
-                active={pathname.startsWith("/logged/pages/production/publications_management")}
-              />
+              <div className="flex flex-col gap-0.5">
+                <GroupTrigger
+                  label="Publications"
+                  isOpen={isPublicationsSelected}
+                  isActive={inPublications}
+                  onClick={() => setIsPublicationsSelected(!isPublicationsSelected)}
+                />
+                {isPublicationsSelected && (
+                  <div className="ml-2 flex flex-col gap-0.5 border-l border-gray-600 pl-2">
+                    <NavLink
+                      href="/logged/pages/production/publications/magazines"
+                      label="Magazines"
+                      active={pathname.startsWith("/logged/pages/production/publications/magazines")}
+                    />
+                    <NavLink
+                      href="/logged/pages/production/publications/flatplans"
+                      label="Flatplans"
+                      active={pathname.startsWith("/logged/pages/production/publications/flatplans")}
+                    />
+                    <NavLink
+                      href="/logged/pages/production/publications/published"
+                      label="Published Issues"
+                      active={pathname.startsWith("/logged/pages/production/publications/published")}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -238,7 +252,7 @@ const Leftnav: FC<LeftnavProps> = () => {
             onClick={() => setIsAdministrationSelected(!isAdministrationSelected)}
           />
           {isAdministrationSelected && (
-            <div className="mt-1 flex flex-col gap-0.5 border-l border-gray-200/80 bg-gray-50/50 pl-2 pr-3 pt-2 pb-3">
+            <div className="mt-1 flex flex-col gap-0.5 border-l border-gray-700 bg-gray-800/50 pl-2 pr-3 pt-2 pb-3">
               <NavLink
                 href="/logged/pages/administration"
                 label="Orders"

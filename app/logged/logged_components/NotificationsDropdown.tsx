@@ -74,18 +74,18 @@ const NotificationsDropdown: FC<NotificationsDropdownProps> = ({ onClose }) => {
   const pendingItemsFirst5 = allPendingItems.slice(0, 5);
 
   return (
-    <div className="absolute right-0 top-full mt-2 w-[380px] max-h-[420px] flex flex-col rounded-lg border border-gray-200 bg-white shadow-xl z-50">
-      <div className="flex border-b border-gray-200 bg-gray-50 rounded-t-lg">
+    <div className="absolute right-0 top-full mt-2 w-[380px] max-h-[420px] flex flex-col rounded-lg border border-gray-600 bg-gray-800 shadow-xl z-50">
+      <div className="flex border-b border-gray-600 bg-gray-800 rounded-t-lg">
         <button
           type="button"
           onClick={() => setActiveTab("unread")}
           className={`flex-1 px-4 py-3 text-sm font-medium rounded-t-lg transition-colors ${
-            activeTab === "unread" ? "bg-white text-blue-950 border-b-2 border-blue-950 shadow-sm" : "text-gray-600 hover:bg-gray-100"
+            activeTab === "unread" ? "bg-gray-700 text-blue-200 border-b-2 border-blue-400 shadow-sm" : "text-gray-400 hover:bg-gray-700"
           }`}
         >
           Unread
           {unreadNotifications.length > 0 && (
-            <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-amber-100 text-amber-800 rounded">
+            <span className="ml-1.5 px-1.5 py-0.5 text-xs bg-amber-900/50 text-amber-200 rounded">
               {unreadNotifications.length}
             </span>
           )}
@@ -94,7 +94,7 @@ const NotificationsDropdown: FC<NotificationsDropdownProps> = ({ onClose }) => {
           type="button"
           onClick={() => setActiveTab("other")}
           className={`flex-1 px-4 py-3 text-sm font-medium rounded-t-lg transition-colors ${
-            activeTab === "other" ? "bg-white text-blue-950 border-b-2 border-blue-950 shadow-sm" : "text-gray-600 hover:bg-gray-100"
+            activeTab === "other" ? "bg-gray-700 text-blue-200 border-b-2 border-blue-400 shadow-sm" : "text-gray-400 hover:bg-gray-700"
           }`}
         >
           Other
@@ -104,25 +104,25 @@ const NotificationsDropdown: FC<NotificationsDropdownProps> = ({ onClose }) => {
         {activeTab === "unread" ? (
           <>
             {displayNotifications.length === 0 ? (
-              <p className="p-4 text-sm text-gray-500 text-center">No unread notifications</p>
+              <p className="p-4 text-sm text-gray-400 text-center">No unread notifications</p>
             ) : (
               displayNotifications.map((n) => (
                 <Link
                   key={n.notification_id}
                   href={`/logged/pages/notifications/${n.notification_id}`}
                   onClick={onClose}
-                  className="flex flex-row justify-between bg-white p-4 border-b border-gray-100 hover:bg-gray-50"
+                  className="flex flex-row justify-between bg-gray-800 p-4 border-b border-gray-700 hover:bg-gray-700"
                 >
-                  <p className="text-sm text-gray-900 flex-1 line-clamp-2">{n.notification_brief_description}</p>
+                  <p className="text-sm text-gray-200 flex-1 line-clamp-2">{n.notification_brief_description}</p>
                   <span className="text-xs text-gray-500 shrink-0 ml-2">{formatNotificationTime(n.notification_time)}</span>
                 </Link>
               ))
             )}
-            <div className="p-2 border-t border-gray-100">
+            <div className="p-2 border-t border-gray-700">
               <Link
                 href="/logged/pages/notifications"
                 onClick={onClose}
-                className="block w-full text-center py-2 text-sm font-medium text-blue-950 hover:bg-blue-50 rounded"
+                className="block w-full text-center py-2 text-sm font-medium text-blue-300 hover:bg-gray-700 rounded"
               >
                 See all notifications
               </Link>
@@ -136,48 +136,48 @@ const NotificationsDropdown: FC<NotificationsDropdownProps> = ({ onClose }) => {
                   key={item.id}
                   href={`/logged/pages/account-management/requests/requests/${encodeURIComponent(item.id)}`}
                   onClick={onClose}
-                  className="flex flex-row justify-between bg-white p-4 border-b border-gray-100 hover:bg-gray-50"
+                  className="flex flex-row justify-between bg-gray-800 p-4 border-b border-gray-700 hover:bg-gray-700"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 text-sm">{item.author}</p>
-                    <p className="text-sm text-gray-600 mt-0.5 line-clamp-1">{item.content}</p>
+                    <p className="font-medium text-gray-200 text-sm">{item.author}</p>
+                    <p className="text-sm text-gray-400 mt-0.5 line-clamp-1">{item.content}</p>
                   </div>
-                  <span className="shrink-0 ml-2 px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded">Other - Pending</span>
+                  <span className="shrink-0 ml-2 px-2 py-1 text-xs bg-amber-900/50 text-amber-200 rounded">Other - Pending</span>
                 </Link>
               ) : item.type === "company" ? (
                 <Link
                   key={item.companyRequestId}
                   href={`/logged/pages/account-management/requests/company/${encodeURIComponent(item.companyRequestId)}`}
                   onClick={onClose}
-                  className="flex flex-row justify-between bg-white p-4 border-b border-gray-100 hover:bg-gray-50"
+                  className="flex flex-row justify-between bg-gray-800 p-4 border-b border-gray-700 hover:bg-gray-700"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 text-sm">{item.content.nombre_comercial}</p>
-                    <p className="text-sm text-gray-600 mt-0.5">Company registration request</p>
+                    <p className="font-medium text-gray-200 text-sm">{item.content.nombre_comercial}</p>
+                    <p className="text-sm text-gray-400 mt-0.5">Company registration request</p>
                   </div>
-                  <span className="shrink-0 ml-2 px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded">Company - Pending</span>
+                  <span className="shrink-0 ml-2 px-2 py-1 text-xs bg-amber-900/50 text-amber-200 rounded">Company - Pending</span>
                 </Link>
               ) : (
                 <Link
                   key={item.idAdvReq}
                   href={`/logged/pages/account-management/requests/quotations/${encodeURIComponent(item.idAdvReq)}`}
                   onClick={onClose}
-                  className="flex flex-row justify-between bg-white p-4 border-b border-gray-100 hover:bg-gray-50"
+                  className="flex flex-row justify-between bg-gray-800 p-4 border-b border-gray-700 hover:bg-gray-700"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-gray-900 text-sm">{item.senderCompany}</p>
-                    <p className="text-sm text-gray-600 mt-0.5 line-clamp-1">{item.requestDescription}</p>
+                    <p className="font-medium text-gray-200 text-sm">{item.senderCompany}</p>
+                    <p className="text-sm text-gray-400 mt-0.5 line-clamp-1">{item.requestDescription}</p>
                   </div>
-                  <span className="shrink-0 ml-2 px-2 py-1 text-xs bg-amber-100 text-amber-800 rounded">Advertisement - Pending</span>
+                  <span className="shrink-0 ml-2 px-2 py-1 text-xs bg-amber-900/50 text-amber-200 rounded">Advertisement - Pending</span>
                 </Link>
               )
             )}
-            {allPendingItems.length === 0 && <p className="p-4 text-sm text-gray-500 text-center">No pending requests</p>}
-            <div className="p-2 border-t border-gray-100">
+            {allPendingItems.length === 0 && <p className="p-4 text-sm text-gray-400 text-center">No pending requests</p>}
+            <div className="p-2 border-t border-gray-700">
               <Link
                 href="/logged/pages/notifications?tab=other"
                 onClick={onClose}
-                className="block w-full text-center py-2 text-sm font-medium text-blue-950 hover:bg-blue-50 rounded"
+                className="block w-full text-center py-2 text-sm font-medium text-blue-300 hover:bg-gray-700 rounded"
               >
                 See all other
               </Link>

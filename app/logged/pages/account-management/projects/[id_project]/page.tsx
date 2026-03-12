@@ -68,20 +68,20 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
       setPageMeta({
         pageTitle: `Project: ${project.title}`,
         breadcrumbs: [
-          { label: "Production", href: "/logged/pages/production/projects" },
-          { label: "Projects", href: "/logged/pages/production/projects" },
+          { label: "Account Management", href: "/logged/pages/account-management" },
+          { label: "Projects", href: "/logged/pages/account-management/projects" },
           { label: project.title },
         ],
-        buttons: [{ label: "Back to Projects", href: "/logged/pages/production/projects" }],
+        buttons: [{ label: "Back to Projects", href: "/logged/pages/account-management/projects" }],
       });
     } else {
       setPageMeta({
         pageTitle: "Project not found",
         breadcrumbs: [
-          { label: "Production", href: "/logged/pages/production/projects" },
-          { label: "Projects", href: "/logged/pages/production/projects" },
+          { label: "Account Management", href: "/logged/pages/account-management" },
+          { label: "Projects", href: "/logged/pages/account-management/projects" },
         ],
-        buttons: [{ label: "Back to Projects", href: "/logged/pages/production/projects" }],
+        buttons: [{ label: "Back to Projects", href: "/logged/pages/account-management/projects" }],
       });
     }
   }, [setPageMeta, project]);
@@ -110,8 +110,8 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
   };
 
   const breadcrumbs = [
-    { label: "Production", href: "/logged/pages/production/projects" },
-    { label: "Projects", href: "/logged/pages/production/projects" },
+    { label: "Account Management", href: "/logged/pages/account-management" },
+    { label: "Projects", href: "/logged/pages/account-management/projects" },
     { label: project.title },
   ];
 

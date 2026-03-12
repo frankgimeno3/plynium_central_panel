@@ -10,7 +10,7 @@ import contentBlocksData from "@/app/contents/newsletterContentBlocks.json";
 import NewsletterContentBlockRenderer from "../components/NewsletterContentBlockRenderer";
 import { newsletterBlocksToHtml } from "../utils/newsletterToHtml";
 
-const BASE = "/logged/pages/production/newsletter_management";
+const BASE = "/logged/pages/production/newsletters";
 
 const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> = ({ params }) => {
   const { id_newsletter } = use(params);
@@ -34,20 +34,20 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
       setPageMeta({
         pageTitle: newsletter.topic,
         breadcrumbs: [
-          { label: "Production", href: "/logged/pages/production/projects" },
-          { label: "Newsletter management", href: BASE },
+          { label: "Production", href: "/logged/pages/production/services" },
+          { label: "Newsletters", href: BASE },
           { label: newsletter.topic },
         ],
-        buttons: [{ label: "Back to Newsletter management", href: BASE }],
+        buttons: [{ label: "Back to Newsletters", href: BASE }],
       });
     } else {
       setPageMeta({
         pageTitle: "Newsletter not found",
         breadcrumbs: [
-          { label: "Production", href: "/logged/pages/production/projects" },
-          { label: "Newsletter management", href: BASE },
+          { label: "Production", href: "/logged/pages/production/services" },
+          { label: "Newsletters", href: BASE },
         ],
-        buttons: [{ label: "Back to Newsletter management", href: BASE }],
+        buttons: [{ label: "Back to Newsletters", href: BASE }],
       });
     }
   }, [setPageMeta, newsletter]);
@@ -101,6 +101,10 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
           <div>
             <p className="text-xs text-gray-500 uppercase">Portal</p>
             <p className="font-medium text-gray-900">{newsletter.portalCode}</p>
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 uppercase">User newsletter list</p>
+            <p className="font-medium text-gray-900">{newsletter.userNewsletterListId ?? "—"}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase">Status</p>

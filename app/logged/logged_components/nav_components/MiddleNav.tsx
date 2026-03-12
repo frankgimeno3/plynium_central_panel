@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { FC } from "react";
-import { getNavLabelForPath } from "./navRouteIndex";
 
 export interface BreadcrumbItem {
   label: string;
@@ -17,16 +16,14 @@ interface MiddleNavProps {
 const MiddleNav: FC<MiddleNavProps> = ({ pageTitle, breadcrumbs }) => {
   const withHome: BreadcrumbItem[] = [
     { label: "Home", href: "/logged" },
-    ...breadcrumbs.map((item) => {
-      const displayLabel = item.href ? (getNavLabelForPath(item.href) ?? item.label) : item.label;
-      return { ...item, label: displayLabel };
-    }),
+    ...breadcrumbs,
   ];
 
   return (
-    <div className="flex flex-row items-center justify-between bg-blue-950/70 px-8 py-5 text-white shrink-0">
-      <p className="text-2xl font-medium">{pageTitle}</p>
-      <nav className="flex items-center gap-0 text-sm" aria-label="Breadcrumb">
+    <div className="flex flex-row items-center justify-between bg-gradient-to-r from-zinc-700  to-gray-800 px-8 py-5 text-white  ">
+      <p className="text-xl text-zinc-100 uppercase"       aria-label="Main navigation"
+      >{pageTitle}</p>
+      <nav className="flex items-center gap-0 text-md" aria-label="Breadcrumb">
         {withHome.map((item, index) => (
           <span key={index} className="flex items-center gap-0">
             {index > 0 && <span className="text-blue-200/80 px-1">&gt;</span>}

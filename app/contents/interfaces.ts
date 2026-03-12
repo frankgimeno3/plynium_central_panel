@@ -37,6 +37,65 @@ export interface publicationInterface {
   publication_main_image_url: string;
 }
 
+/** Planned issue for a magazine in a given year. */
+export interface MagazineIssue {
+  issue_number: number;
+  is_special_edition: boolean;
+  special_topic?: string;
+}
+
+/** Magazine: container for years and issues (each issue can become a Published publication). */
+export interface Magazine {
+  id_magazine: string;
+  name: string;
+  description?: string;
+  first_year?: number;
+  last_year?: number;
+  notes?: string;
+  /** Portal this magazine is related to (display name or code). */
+  portal_name?: string;
+  /** Planned issues per year. Key = year as string (e.g. "2025"). */
+  issues_by_year?: Record<string, MagazineIssue[]>;
+}
+
+/** Flatplan: pre-publication organization of a flipbook (has Flatplan preview + Production sheet). */
+export interface FlatplanSlot {
+  id_advertiser: string;
+  id_project: string;
+  image_src?: string;
+  article_id?: string;
+  state: string;
+  content_type: string;
+}
+
+export interface Flatplan {
+  id_flatplan: string;
+  edition_name: string;
+  theme: string;
+  publication_date: string;
+  id_magazine?: string;
+  /** Year this flatplan is for (links to magazine issue). */
+  year?: number;
+  /** Issue number within that year (links to magazine issue). */
+  issue_number?: number;
+  /** Optional description for the flatplan. */
+  description?: string;
+  cover?: FlatplanSlot;
+  inside_cover?: FlatplanSlot;
+  end?: FlatplanSlot;
+  "1"?: FlatplanSlot;
+  "2"?: FlatplanSlot;
+  "3"?: FlatplanSlot;
+  "4"?: FlatplanSlot;
+  "5"?: FlatplanSlot;
+  "6"?: FlatplanSlot;
+  "7"?: FlatplanSlot;
+  "8"?: FlatplanSlot;
+  "9"?: FlatplanSlot;
+  "10"?: FlatplanSlot;
+  offeredPreferentialPages?: { pageType: string; slotKey: string }[];
+}
+
 export interface Company {
   companyId: string;
   commercialName: string;
@@ -166,6 +225,8 @@ export interface Newsletter {
   estimatedPublishDate: string;
   topic: string;
   status: NewsletterStatus;
+  /** User newsletter list id (from userLists) for scheduled/target send list. */
+  userNewsletterListId?: string | null;
   sentToLists: string[] | null;
   createdAt: string;
   updatedAt: string;

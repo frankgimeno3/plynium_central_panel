@@ -19,7 +19,7 @@ type PmEvent = {
 type Customer = { id_customer: string; name: string };
 type Project = { id_project: string; title: string };
 
-const PROJECTS_PATH = "/logged/pages/production/projects";
+const PROJECTS_PATH = "/logged/pages/account-management/projects";
 
 const WEEK_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_NAMES = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -119,7 +119,7 @@ const ManagementDashboard: FC = () => {
   const handleDayClick = (date: Date) => { setSelectedDay(date); setViewMode("day"); };
 
   const eventTypeLabel: Record<string, string> = { ask_materials: "Ask materials", send_preview: "Send preview", publication_date: "Publication date", task: "Task" };
-  const eventTypeCardColor: Record<string, string> = { ask_materials: "bg-blue-200 text-blue-900 border-blue-300", send_preview: "bg-amber-200 text-amber-900 border-amber-300", publication_date: "bg-emerald-200 text-emerald-900 border-emerald-300", task: "bg-slate-200 text-slate-900 border-slate-300" };
+  const eventTypeCardColor: Record<string, string> = { ask_materials: "bg-blue-900/70 text-blue-200 border-blue-600", send_preview: "bg-amber-900/70 text-amber-200 border-amber-600", publication_date: "bg-emerald-900/70 text-emerald-200 border-emerald-600", task: "bg-slate-600/80 text-slate-100 border-slate-500" };
 
   const eventsByDateAndType = useMemo(() => {
     const combined = [...allEvents, ...agendaEvents];
@@ -150,13 +150,15 @@ const ManagementDashboard: FC = () => {
     const daysInMonth = lastDay.getDate();
     const startingDayOfWeek = firstDay.getDay();
     const days: (number | null)[] = [...Array(startingDayOfWeek).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+    // Pad to 6 weeks (42 cells) so every month has the same grid height
+    const PAD_TO_CELLS = 6 * 7;
+    while (days.length < PAD_TO_CELLS) days.push(null);
     const weeks: (number | null)[][] = [];
-    for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
+    for (let i = 0; i < PAD_TO_CELLS; i += 7) weeks.push(days.slice(i, i + 7));
 
     return (
-      <div className="flex flex-col">
-        <div className="text-center mb-4"><h3 className="text-xl font-semibold text-gray-900">{MONTH_NAMES[monthIndex]} {year}</h3></div>
-        <div className="grid grid-cols-7 gap-1 mb-2">{WEEK_DAYS.map((day) => <div key={day} className="text-center text-sm font-medium text-gray-600 py-1">{day}</div>)}</div>
+      <div className="flex flex-col text-gray-100 ">
+        <div className="grid grid-cols-7 gap-1 mb-2">{WEEK_DAYS.map((day) => <div key={day} className="text-center text-sm font-medium text-slate-400 py-1">{day}</div>)}</div>
         {weeks.map((week, weekIndex) => (
           <div key={weekIndex} className="grid grid-cols-7 gap-1">
             {week.map((day, dayIndex) => {
@@ -166,12 +168,12 @@ const ManagementDashboard: FC = () => {
               const hasEvents = dayEvents.length > 0;
               const isToday = year === today.getFullYear() && monthIndex === today.getMonth() && day === today.getDate();
               return (
-                <div key={dayIndex} onClick={() => handleDayClick(date)} className={`aspect-square border rounded p-1 text-sm flex flex-col relative cursor-pointer transition-all hover:shadow-md ${isToday ? "ring-1 ring-blue-600" : "border-gray-200"}`}>
-                  <div className={`font-medium shrink-0 ${isToday ? "text-blue-600" : ""}`}>{day}</div>
+                <div key={dayIndex} onClick={() => handleDayClick(date)} className={`aspect-square border rounded p-1 text-sm flex flex-col relative cursor-pointer transition-all bg-slate-800/50 hover:bg-slate-700/50 border-slate-600 ${isToday ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900" : ""}`}>
+                  <div className={`font-medium shrink-0 ${isToday ? "text-blue-300" : "text-slate-200"}`}>{day}</div>
                   {hasEvents && (
                     <div className="flex-1 flex flex-col gap-0.5 mt-1 overflow-hidden overflow-y-auto">
                       {dayEvents.map((ev) => (
-                        <div key={ev.id_event} className={`px-1 py-0.5 rounded text-xs font-medium border truncate ${eventTypeCardColor[ev.event_type] ?? "bg-gray-200 text-gray-800 border-gray-300"}`} title={`${eventTypeLabel[ev.event_type] ?? ev.event_type} - ${getCustomerName(ev.id_customer)}`}>
+                        <div key={ev.id_event} className={`px-1 py-0.5 rounded text-xs font-medium border truncate ${eventTypeCardColor[ev.event_type] ?? "bg-slate-600/80 text-slate-100 border-slate-500"}`} title={`${eventTypeLabel[ev.event_type] ?? ev.event_type} - ${getCustomerName(ev.id_customer)}`}>
                           {eventTypeLabel[ev.event_type] ?? ev.event_type} - {getCustomerName(ev.id_customer)}
                         </div>
                       ))}
@@ -186,17 +188,8 @@ const ManagementDashboard: FC = () => {
     );
   };
 
-  const month1 = new Date(currentMonth);
-  const month2 = new Date(currentMonth);
-  month2.setMonth(month2.getMonth() + 1);
-  const month1Name = MONTH_NAMES[month1.getMonth()];
-  const month2Name = MONTH_NAMES[month2.getMonth()];
-  const year1 = month1.getFullYear();
-  const year2 = month2.getFullYear();
-  const agendaTitle =
-    year1 === year2
-      ? `Personal agenda for months ${month1Name} and ${month2Name}, ${year1}`
-      : `Personal agenda for months ${month1Name} ${year1} and ${month2Name} ${year2}`;
+  const displayMonth = new Date(currentMonth);
+  const agendaTitle = `${MONTH_NAMES[displayMonth.getMonth()]} ${displayMonth.getFullYear()}`;
 
   const handleAddAgendaEvent = () => {
     const dateStr = (agendaFormDate || "").trim();
@@ -219,185 +212,186 @@ const ManagementDashboard: FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8">
-      <div className="bg-white border border-gray-200 rounded-lg p-6">
-        {viewMode === "months" ? (
-          <div className="flex flex-col w-full">
-            <div className="flex items-center justify-center gap-4 mb-4 w-full">
-              <button type="button" onClick={() => navigateMonth("prev")} className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm" aria-label="Previous months">←</button>
-              <span className="text-2xl font-semibold text-gray-800">{agendaTitle}</span>
-              <button type="button" onClick={() => navigateMonth("next")} className="px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded text-sm" aria-label="Next months">→</button>
+    <div className="flex flex-col gap-8 ">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column: Tasks in agenda */}
+        <div>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-lg font-semibold text-slate-100">Tasks in agenda</h2>
+            <button
+              type="button"
+              onClick={() => setAddAgendaModalOpen(true)}
+              className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-slate-100 text-sm font-medium rounded-xl cursor-pointer transition-colors"
+            >
+              Add agenda event
+            </button>
+          </div>
+          <div className="mb-4 flex flex-wrap gap-6 items-end">
+            <div className="flex flex-col gap-1">
+              <label htmlFor="filter-type" className="text-sm font-medium text-slate-300">Type</label>
+              <select id="filter-type" value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px]">
+                <option value="">All</option>
+                <option value="task">{eventTypeLabel.task}</option>
+                <option value="ask_materials">{eventTypeLabel.ask_materials}</option>
+                <option value="send_preview">{eventTypeLabel.send_preview}</option>
+                <option value="publication_date">{eventTypeLabel.publication_date}</option>
+              </select>
             </div>
-            <div className="flex gap-4">
-              <div className="flex-1">
-                {renderMonth(month1)}
-              </div>
-              <div className="flex-1">
-                {renderMonth(month2)}
-              </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="filter-month" className="text-sm font-medium text-slate-300">Month</label>
+              <select id="filter-month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[120px]">
+                <option value="">All</option>
+                {MONTH_NAMES.map((name, i) => <option key={name} value={String(i + 1)}>{name}</option>)}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="filter-year" className="text-sm font-medium text-slate-300">Year</label>
+              <input id="filter-year" type="text" placeholder="e.g. 2026" value={filterYear} onChange={(e) => setFilterYear(e.target.value.replace(/\D/g, "").slice(0, 4))} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-24 placeholder-slate-500" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="filter-project" className="text-sm font-medium text-slate-300">Project</label>
+              <input id="filter-project" type="text" placeholder="Project name" value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[180px] placeholder-slate-500" />
+            </div>
+            <div className="flex flex-col gap-1">
+              <label htmlFor="filter-customer" className="text-sm font-medium text-slate-300">Customer</label>
+              <input id="filter-customer" type="text" placeholder="Customer name" value={filterCustomer} onChange={(e) => setFilterCustomer(e.target.value)} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[180px] placeholder-slate-500" />
             </div>
           </div>
-        ) : (
-          <div className="flex flex-col">
-            <button type="button" onClick={() => { setViewMode("months"); setSelectedDay(null); }} className="mb-4 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm self-start">← Back to Calendar</button>
-            {selectedDay && (
-              <div className="border border-gray-200 rounded-lg p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <button type="button" onClick={() => setSelectedDay(new Date(selectedDay.getTime() - 86400000))} className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">← Previous Day</button>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-gray-900" title="dd mm yyyy">{formatDateDdMmYyyyFromDate(selectedDay)}</div>
-                    <div className="text-xl text-gray-600 capitalize mt-1">{selectedDay.toLocaleDateString("en-US", { weekday: "long" })}</div>
-                  </div>
-                  <button type="button" onClick={() => setSelectedDay(new Date(selectedDay.getTime() + 86400000))} className="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm">Next Day →</button>
-                </div>
-                <div className="mt-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-4">Tasks in agenda</h3>
-                  {getPmEventsForDate(selectedDay).length === 0 ? <p className="text-gray-500">No events scheduled for this day</p> : (
-                    <div className="space-y-4">
-                      {getPmEventsForDate(selectedDay).map((ev) => (
-                        <div
-                          key={ev.id_event}
-                          onClick={() => { if (ev.id_project !== "agenda") router.push(`${PROJECTS_PATH}/${ev.id_project}`); }}
-                          className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow cursor-pointer hover:bg-blue-50/50"
-                        >
-                          <h4 className="font-semibold text-lg text-gray-900 mb-2 hover:text-blue-600">{getProjectTitle(ev.id_project)}</h4>
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            <span className={`px-2 py-0.5 rounded text-xs font-medium ${eventTypeCardColor[ev.event_type] ?? "bg-gray-200 text-gray-800"}`}>{eventTypeLabel[ev.event_type] ?? ev.event_type}</span>
-                          </div>
-                          <div className="text-sm text-gray-600">{ev.event_description}</div>
-                          <div className="text-xs text-gray-500 mt-2"><span className="font-medium">Customer: </span>{getCustomerName(ev.id_customer)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
+          <div className="flex flex-row border-b border-slate-600 gap-1 mb-4">
+            {(["pending", "done"] as EventStateTab[]).map((tab) => (
+              <button key={tab} type="button" onClick={() => setEventStateTab(tab)} className={`px-6 py-3 font-medium rounded-t-lg transition-colors capitalize ${eventStateTab === tab ? "bg-blue-600 text-white border-b-2 border-blue-500" : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-slate-100"}`}>{tab}</button>
+            ))}
           </div>
-        )}
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Tasks in agenda</h2>
-          <button
-            type="button"
-            onClick={() => setAddAgendaModalOpen(true)}
-            className="px-4 py-2 bg-blue-950 text-white text-sm font-medium rounded-xl hover:bg-blue-900"
-          >
-            Add agenda event
-          </button>
-        </div>
-        <div className="mb-4 flex flex-wrap gap-6 items-end">
-          <div className="flex flex-col gap-1">
-            <label htmlFor="filter-type" className="text-sm font-medium text-gray-700">Type</label>
-            <select id="filter-type" value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px]">
-              <option value="">All</option>
-              <option value="task">{eventTypeLabel.task}</option>
-              <option value="ask_materials">{eventTypeLabel.ask_materials}</option>
-              <option value="send_preview">{eventTypeLabel.send_preview}</option>
-              <option value="publication_date">{eventTypeLabel.publication_date}</option>
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="filter-month" className="text-sm font-medium text-gray-700">Month</label>
-            <select id="filter-month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[120px]">
-              <option value="">All</option>
-              {MONTH_NAMES.map((name, i) => <option key={name} value={String(i + 1)}>{name}</option>)}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="filter-year" className="text-sm font-medium text-gray-700">Year</label>
-            <input id="filter-year" type="text" placeholder="e.g. 2026" value={filterYear} onChange={(e) => setFilterYear(e.target.value.replace(/\D/g, "").slice(0, 4))} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-24" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="filter-project" className="text-sm font-medium text-gray-700">Project</label>
-            <input id="filter-project" type="text" placeholder="Project name" value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[180px]" />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label htmlFor="filter-customer" className="text-sm font-medium text-gray-700">Customer</label>
-            <input id="filter-customer" type="text" placeholder="Customer name" value={filterCustomer} onChange={(e) => setFilterCustomer(e.target.value)} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[180px]" />
-          </div>
-        </div>
-        <div className="flex flex-row border-b border-gray-200 gap-1 mb-4">
-          {(["pending", "done"] as EventStateTab[]).map((tab) => (
-            <button key={tab} type="button" onClick={() => setEventStateTab(tab)} className={`px-6 py-3 font-medium rounded-t-lg transition-colors capitalize ${eventStateTab === tab ? "bg-blue-500 text-white border-b-2 border-blue-500" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>{tab}</button>
-          ))}
-        </div>
-        {filteredEventsByTab.length === 0 ? (
-          <p className="py-6 text-center text-gray-500 text-sm border border-gray-200 rounded-lg bg-gray-50">No events for this state.</p>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date (dd mm yyyy)</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {paginatedEvents.map((ev) => (
-                    <tr
-                      key={ev.id_event}
-                      onClick={() => { if (ev.id_project !== "agenda") router.push(`${PROJECTS_PATH}/${ev.id_project}`); }}
-                      className="hover:bg-blue-50/80 cursor-pointer"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900" title="dd mm yyyy">{formatDateDdMmYyyy(ev.date)}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{getProjectTitle(ev.id_project)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{eventTypeLabel[ev.event_type] ?? ev.event_type}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{getCustomerName(ev.id_customer)}</td>
+          {filteredEventsByTab.length === 0 ? (
+            <p className="py-6 text-center text-slate-400 text-sm border border-slate-600 rounded-lg bg-slate-800/50">No events for this state.</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-600 border border-slate-600 rounded-lg overflow-hidden">
+                  <thead className="bg-slate-700">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Date (dd mm yyyy)</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Project</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Type</th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Customer</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex items-center justify-between mt-4 px-2">
-              <p className="text-sm text-gray-600">Viewing {paginatedEvents.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredEventsByTab.length)} of {filteredEventsByTab.length}</p>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1} className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed">← Prev</button>
-                <button type="button" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="px-3 py-1 text-sm font-medium text-gray-700 bg-gray-100 rounded hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed">Next →</button>
+                  </thead>
+                  <tbody className="bg-slate-800 divide-y divide-slate-600">
+                    {paginatedEvents.map((ev) => (
+                      <tr
+                        key={ev.id_event}
+                        onClick={() => { if (ev.id_project !== "agenda") router.push(`${PROJECTS_PATH}/${ev.id_project}`); }}
+                        className="hover:bg-slate-700/80 cursor-pointer"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-100" title="dd mm yyyy">{formatDateDdMmYyyy(ev.date)}</td>
+                        <td className="px-6 py-4 text-sm text-slate-100">{getProjectTitle(ev.id_project)}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{eventTypeLabel[ev.event_type] ?? ev.event_type}</td>
+                        <td className="px-6 py-4 text-sm text-slate-100">{getCustomerName(ev.id_customer)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center justify-between mt-4 px-2">
+                <p className="text-sm text-slate-300">Viewing {paginatedEvents.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredEventsByTab.length)} of {filteredEventsByTab.length}</p>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1} className="px-3 py-1 text-sm font-medium text-slate-200 bg-slate-700 rounded hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed">← Prev</button>
+                  <button type="button" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="px-3 py-1 text-sm font-medium text-slate-200 bg-slate-700 rounded hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed">Next →</button>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Right column: Agenda calendar */}
+        <div className="  p-6">
+          {viewMode === "months" ? (
+            <div className="flex flex-col w-full">
+              <div className="flex items-center justify-center gap-4 mb-4 w-full">
+                <button type="button" onClick={() => navigateMonth("prev")} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-full text-2xl text-slate-200" aria-label="Previous month">{'<'}</button>
+                <span className="text-2xl font-semibold text-slate-100">{agendaTitle}</span>
+                <button type="button" onClick={() => navigateMonth("next")} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-full text-2xl text-slate-200" aria-label="Next month">{'>'}</button>
+              </div>
+              <div className="flex justify-center">
+                <div className="max-w-6xl">
+                  {renderMonth(displayMonth)}
+                </div>
               </div>
             </div>
-          </>
-        )}
+          ) : (
+            <div className="flex flex-col">
+              <button type="button" onClick={() => { setViewMode("months"); setSelectedDay(null); }} className="mb-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm self-start text-slate-200">← Back to Calendar</button>
+              {selectedDay && (
+                <div className="border border-slate-600 rounded-lg p-8 bg-slate-800/50">
+                  <div className="flex items-center justify-between mb-6">
+                    <button type="button" onClick={() => setSelectedDay(new Date(selectedDay.getTime() - 86400000))} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm text-slate-200">← Previous Day</button>
+                    <div className="text-center">
+                      <div className="text-4xl font-bold text-slate-100" title="dd mm yyyy">{formatDateDdMmYyyyFromDate(selectedDay)}</div>
+                      <div className="text-xl text-slate-300 capitalize mt-1">{selectedDay.toLocaleDateString("en-US", { weekday: "long" })}</div>
+                    </div>
+                    <button type="button" onClick={() => setSelectedDay(new Date(selectedDay.getTime() + 86400000))} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm text-slate-200">Next Day →</button>
+                  </div>
+                  <div className="mt-8">
+                    <h3 className="text-2xl font-bold text-slate-100 mb-4">Tasks in agenda</h3>
+                    {getPmEventsForDate(selectedDay).length === 0 ? <p className="text-slate-400">No events scheduled for this day</p> : (
+                      <div className="space-y-4">
+                        {getPmEventsForDate(selectedDay).map((ev) => (
+                          <div
+                            key={ev.id_event}
+                            onClick={() => { if (ev.id_project !== "agenda") router.push(`${PROJECTS_PATH}/${ev.id_project}`); }}
+                            className="border border-slate-600 rounded-lg p-4 hover:bg-slate-700/50 transition-colors cursor-pointer bg-slate-800"
+                          >
+                            <h4 className="font-semibold text-lg text-slate-100 mb-2 hover:text-blue-300">{getProjectTitle(ev.id_project)}</h4>
+                            <div className="flex flex-wrap gap-2 mb-2">
+                              <span className={`px-2 py-0.5 rounded text-xs font-medium ${eventTypeCardColor[ev.event_type] ?? "bg-slate-600/80 text-slate-100"}`}>{eventTypeLabel[ev.event_type] ?? ev.event_type}</span>
+                            </div>
+                            <div className="text-sm text-slate-300">{ev.event_description}</div>
+                            <div className="text-xs text-slate-400 mt-2"><span className="font-medium">Customer: </span>{getCustomerName(ev.id_customer)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {addAgendaModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setAddAgendaModalOpen(false)}>
-          <div className="bg-white rounded-xl shadow-xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Add agenda event</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setAddAgendaModalOpen(false)}>
+          <div className="bg-slate-800 border border-slate-600 rounded-xl shadow-xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-semibold text-slate-100 mb-4">Add agenda event</h3>
             <div className="flex flex-col gap-4">
               <div>
-                <label htmlFor="agenda-date" className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+                <label htmlFor="agenda-date" className="block text-sm font-medium text-slate-300 mb-1">Date</label>
                 <input
                   id="agenda-date"
                   type="date"
                   value={agendaFormDate}
                   onChange={(e) => setAgendaFormDate(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-700 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label htmlFor="agenda-desc" className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <label htmlFor="agenda-desc" className="block text-sm font-medium text-slate-300 mb-1">Description</label>
                 <input
                   id="agenda-desc"
                   type="text"
                   value={agendaFormDescription}
                   onChange={(e) => setAgendaFormDescription(e.target.value)}
                   placeholder="e.g. Send preview to client"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-700 text-slate-100 placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
               <div>
-                <label htmlFor="agenda-type" className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+                <label htmlFor="agenda-type" className="block text-sm font-medium text-slate-300 mb-1">Type</label>
                 <select
                   id="agenda-type"
                   value={agendaFormType}
                   onChange={(e) => setAgendaFormType(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-slate-600 rounded-lg bg-slate-700 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="task">{eventTypeLabel.task}</option>
                   <option value="ask_materials">{eventTypeLabel.ask_materials}</option>
@@ -407,10 +401,10 @@ const ManagementDashboard: FC = () => {
               </div>
             </div>
             <div className="flex justify-end gap-3 mt-6">
-              <button type="button" onClick={() => setAddAgendaModalOpen(false)} className="px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 font-medium">
+              <button type="button" onClick={() => setAddAgendaModalOpen(false)} className="px-4 py-2 bg-slate-600 text-slate-100 rounded-lg hover:bg-slate-500 font-medium">
                 Cancel
               </button>
-              <button type="button" onClick={handleAddAgendaEvent} disabled={!agendaFormDate.trim() || !agendaFormDescription.trim()} className="px-4 py-2 bg-blue-950 text-white rounded-lg hover:bg-blue-900 font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+              <button type="button" onClick={handleAddAgendaEvent} disabled={!agendaFormDate.trim() || !agendaFormDescription.trim()} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 font-medium disabled:opacity-50 disabled:cursor-not-allowed">
                 Add to calendar
               </button>
             </div>

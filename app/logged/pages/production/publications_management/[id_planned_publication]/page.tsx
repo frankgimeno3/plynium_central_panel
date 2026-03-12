@@ -49,7 +49,7 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
       setPageMeta({
         pageTitle: publication.edition_name,
         breadcrumbs: [
-          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Production", href: "/logged/pages/production/services" },
           { label: "Planned Publications", href: "/logged/pages/production/publications_management" },
           { label: publication.edition_name },
         ],
@@ -59,7 +59,7 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
       setPageMeta({
         pageTitle: "Publication not found",
         breadcrumbs: [
-          { label: "Production", href: "/logged/pages/production/projects" },
+          { label: "Production", href: "/logged/pages/production/services" },
           { label: "Planned Publications", href: "/logged/pages/production/publications_management" },
         ],
         buttons: [{ label: "Back to Planned Publications", href: "/logged/pages/production/publications_management" }],
@@ -122,7 +122,7 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
   };
 
   const breadcrumbs = [
-    { label: "Production", href: "/logged/pages/production/projects" },
+    { label: "Production", href: "/logged/pages/production/services" },
     { label: "Planned Publications", href: "/logged/pages/production/publications_management" },
     { label: publication.edition_name },
   ];

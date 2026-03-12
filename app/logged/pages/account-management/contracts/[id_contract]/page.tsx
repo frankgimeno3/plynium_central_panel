@@ -316,7 +316,7 @@ const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ 
               projects.map((p) => (
                 <div
                   key={p.id_project}
-                  onClick={() => router.push(`/logged/pages/production/projects/${contract.id_contract}`)}
+                  onClick={() => router.push(`/logged/pages/account-management/projects/${contract.id_contract}`)}
                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50/80 transition-colors"
                 >
                   <div>

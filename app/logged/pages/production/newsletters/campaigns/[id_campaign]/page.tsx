@@ -1,24 +1,72 @@
 "use client";
 
-import React, { FC, use, useEffect, useMemo } from "react";
+import React, { FC, use, useEffect, useMemo, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import type { NewsletterCampaign, Newsletter } from "@/app/contents/interfaces";
 import campaignsData from "@/app/contents/newsletterCampaigns.json";
 import newslettersData from "@/app/contents/newsletters.json";
+import AddScheduledNewsletterModal, { type AddScheduledNewsletterForm } from "../../components/AddScheduledNewsletterModal";
 
-const BASE = "/logged/pages/production/newsletter_management";
+const BASE = "/logged/pages/production/newsletters";
+
+function nextNewsletterId(existing: Newsletter[]): string {
+  const nums = existing
+    .map((n) => (n.id.startsWith("nl-") ? parseInt(n.id.replace("nl-", ""), 10) : 0))
+    .filter((n) => !Number.isNaN(n));
+  const max = nums.length ? Math.max(...nums) : 0;
+  return `nl-${String(max + 1).padStart(3, "0")}`;
+}
 
 const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ params }) => {
   const router = useRouter();
   const { id_campaign } = use(params);
   const campaigns = campaignsData as NewsletterCampaign[];
-  const newsletters = newslettersData as Newsletter[];
+  const baseNewsletters = newslettersData as Newsletter[];
   const campaign = campaigns.find((c) => c.id === id_campaign);
-  const campaignNewsletters = useMemo(
-    () => newsletters.filter((n) => n.campaignId === id_campaign).sort((a, b) => a.estimatedPublishDate.localeCompare(b.estimatedPublishDate)),
-    [newsletters, id_campaign]
+
+  const baseCampaignNewsletters = useMemo(
+    () =>
+      baseNewsletters
+        .filter((n) => n.campaignId === id_campaign)
+        .sort((a, b) => a.estimatedPublishDate.localeCompare(b.estimatedPublishDate)),
+    [baseNewsletters, id_campaign]
+  );
+
+  const [addedNewsletters, setAddedNewsletters] = useState<Newsletter[]>([]);
+  const campaignNewsletters = useMemo(() => {
+    const added = addedNewsletters
+      .filter((n) => n.campaignId === id_campaign)
+      .sort((a, b) => a.estimatedPublishDate.localeCompare(b.estimatedPublishDate));
+    const byDate = [...baseCampaignNewsletters, ...added].sort((a, b) =>
+      a.estimatedPublishDate.localeCompare(b.estimatedPublishDate)
+    );
+    return byDate;
+  }, [baseCampaignNewsletters, addedNewsletters, id_campaign]);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const handleAddScheduled = useCallback(
+    (data: AddScheduledNewsletterForm) => {
+      const id = nextNewsletterId([...baseNewsletters, ...addedNewsletters]);
+      const now = new Date().toISOString();
+      setAddedNewsletters((prev) => [
+        ...prev,
+        {
+          id,
+          campaignId: id_campaign,
+          portalCode: campaign?.portalCode ?? "",
+          estimatedPublishDate: data.estimatedPublishDate,
+          topic: data.topic,
+          status: "calendarized" as const,
+          userNewsletterListId: data.userNewsletterListId,
+          sentToLists: null,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+    },
+    [id_campaign, campaign?.portalCode, baseNewsletters, addedNewsletters]
   );
 
   const { setPageMeta } = usePageContent();
@@ -28,20 +76,20 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
       setPageMeta({
         pageTitle: campaign.name,
         breadcrumbs: [
-          { label: "Production", href: "/logged/pages/production/projects" },
-          { label: "Newsletter management", href: BASE },
+          { label: "Production", href: "/logged/pages/production/services" },
+          { label: "Newsletters", href: BASE },
           { label: campaign.name },
         ],
-        buttons: [{ label: "Back to Newsletter management", href: BASE }],
+        buttons: [{ label: "Back to Newsletters", href: BASE }],
       });
     } else {
       setPageMeta({
         pageTitle: "Campaign not found",
         breadcrumbs: [
-          { label: "Production", href: "/logged/pages/production/projects" },
-          { label: "Newsletter management", href: BASE },
+          { label: "Production", href: "/logged/pages/production/services" },
+          { label: "Newsletters", href: BASE },
         ],
-        buttons: [{ label: "Back to Newsletter management", href: BASE }],
+        buttons: [{ label: "Back to Newsletters", href: BASE }],
       });
     }
   }, [setPageMeta, campaign]);
@@ -93,7 +141,16 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
       </PageContentSection>
 
       <PageContentSection>
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Related newsletters</h2>
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <h2 className="text-lg font-semibold text-gray-900">Related newsletters</h2>
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+          >
+            Add scheduled newsletter
+          </button>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -101,6 +158,7 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimated publish date</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User newsletter list</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               </tr>
             </thead>
@@ -114,6 +172,7 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
                   <td className="px-6 py-4 text-sm font-mono text-gray-900">{n.id}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">{n.topic}</td>
                   <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{n.estimatedPublishDate}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{n.userNewsletterListId ?? "—"}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{n.status}</td>
                 </tr>
               ))}
@@ -124,6 +183,12 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
           <p className="text-sm text-gray-500 py-4">No newsletters in this campaign.</p>
         )}
       </PageContentSection>
+
+      <AddScheduledNewsletterModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleAddScheduled}
+      />
     </>
   );
 };

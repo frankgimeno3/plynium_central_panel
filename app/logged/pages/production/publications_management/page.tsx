@@ -36,7 +36,7 @@ const PublicationsManagementPage: FC = () => {
   const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
 
   const breadcrumbs = [
-    { label: "Production", href: "/logged/pages/production/projects" },
+    { label: "Production", href: "/logged/pages/production/services" },
     { label: "Planned Publications" },
   ];
 

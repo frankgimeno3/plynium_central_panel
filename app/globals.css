@@ -1,34 +1,83 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Dark theme – contraste legible en todos los fondos */
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --surface: #1e293b;
+  --surface-elevated: #334155;
+  --surface-hover: #475569;
+  --border: #475569;
+  --border-light: #64748b;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+  --input-bg: #1e293b;
+  --input-border: #475569;
+  --input-focus: #3b82f6;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Área de contenido principal: inputs, selects y tablas en dark con buen contraste */
+.content-main input:not([type="checkbox"]):not([type="radio"]),
+.content-main select,
+.content-main textarea {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+  color: var(--text-primary);
+}
+.content-main input::placeholder,
+.content-main textarea::placeholder {
+  color: var(--text-muted);
+}
+.content-main input:focus,
+.content-main select:focus,
+.content-main textarea:focus {
+  outline: none;
+  border-color: var(--input-focus);
+  box-shadow: 0 0 0 2px var(--input-focus);
+}
+
+.content-main select option {
+  background: var(--input-bg);
+  color: var(--text-primary);
+}
+
+/* Tablas: cabecera y celdas legibles */
+.content-main table thead tr {
+  background-color: var(--surface-elevated);
+  border-color: var(--border);
+}
+.content-main table thead th {
+  color: var(--text-secondary);
+}
+.content-main table tbody tr {
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+.content-main table tbody tr:hover {
+  background-color: var(--surface-hover);
+}
+.content-main table tbody td {
+  color: var(--text-primary);
 }
 
 /* Rich text editor */
 .rich-text-editor-body:empty::before {
   content: attr(data-placeholder);
-  color: #9ca3af;
+  color: var(--text-muted);
 }
 .rich-text-editor-body ul,
 .rich-text-editor-body ol {
@@ -82,8 +131,8 @@ body {
   margin-bottom: 0;
 }
 
-/* Botones, enlaces y pestañas en el área de contenido logged/pages (selector estable para evitar hydration mismatch) */
-div.flex-1.p-6.bg-gray-100 button,
-div.flex-1.p-6.bg-gray-100 a {
+/* Botones y enlaces en el área de contenido */
+.content-main button,
+.content-main a {
   cursor: pointer;
 }

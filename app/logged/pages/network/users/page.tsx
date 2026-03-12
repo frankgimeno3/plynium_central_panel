@@ -198,6 +198,7 @@ const Users: FC<UsersProps> = () => {
             {selectedList && (
               <>
                 <div className="rounded-lg border border-gray-200 bg-gray-50/50 p-3">
+                  <p className="text-xs font-mono text-gray-500 mb-1">ID: {selectedList.userList_id}</p>
                   <p className="text-sm font-medium text-gray-700">
                     <span className="text-gray-500">Lista de envío:</span> {selectedList.userListName}
                   </p>

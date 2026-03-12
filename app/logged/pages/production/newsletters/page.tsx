@@ -8,7 +8,7 @@ import type { NewsletterCampaign, Newsletter } from "@/app/contents/interfaces";
 import campaignsData from "@/app/contents/newsletterCampaigns.json";
 import newslettersData from "@/app/contents/newsletters.json";
 
-const BASE = "/logged/pages/production/newsletter_management";
+const BASE = "/logged/pages/production/newsletters";
 
 const SCHEDULED_STATUSES: string[] = ["calendarized", "pending"];
 const FINISHED_STATUSES: string[] = ["published", "cancelled"];
@@ -34,13 +34,17 @@ const NewsletterManagementPage: FC = () => {
   const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
 
   const breadcrumbs = [
-    { label: "Production", href: "/logged/pages/production/projects" },
-    { label: "Newsletter management" },
+    { label: "Production", href: "/logged/pages/production/services" },
+    { label: "Newsletters" },
   ];
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
-    setPageMeta({ pageTitle: "Newsletter management", breadcrumbs });
+    setPageMeta({
+      pageTitle: "Newsletters",
+      breadcrumbs,
+      buttons: [{ label: "Create newsletter campaign", href: `${BASE}/create` }],
+    });
   }, [setPageMeta, breadcrumbs]);
 
   const tabs: { id: TabId; label: string }[] = [
@@ -110,6 +114,7 @@ const NewsletterManagementPage: FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimated publish date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User newsletter list</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Portal</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
@@ -124,6 +129,7 @@ const NewsletterManagementPage: FC = () => {
                     <td className="px-6 py-4 text-sm font-mono text-gray-900">{n.id}</td>
                     <td className="px-6 py-4 text-sm text-gray-900">{n.topic}</td>
                     <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{n.estimatedPublishDate}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{n.userNewsletterListId ?? "—"}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{n.portalCode}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{n.status}</td>
                   </tr>
@@ -141,6 +147,7 @@ const NewsletterManagementPage: FC = () => {
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimated publish date</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User newsletter list</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Portal</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                 </tr>
@@ -155,6 +162,7 @@ const NewsletterManagementPage: FC = () => {
                     <td className="px-6 py-4 text-sm font-mono text-gray-900">{n.id}</td>
                     <td className="px-6 py-4 text-sm text-gray-900">{n.topic}</td>
                     <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{n.estimatedPublishDate}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{n.userNewsletterListId ?? "—"}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{n.portalCode}</td>
                     <td className="px-6 py-4 text-sm text-gray-600">{n.status}</td>
                   </tr>

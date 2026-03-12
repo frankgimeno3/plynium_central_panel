@@ -539,7 +539,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                             <li key={proj.id_project}>
                               <button
                                 type="button"
-                                onClick={() => router.push(`/logged/pages/production/projects/${proj.id_project}`)}
+                                onClick={() => router.push(`/logged/pages/account-management/projects/${proj.id_project}`)}
                                 className="w-full px-4 py-3 text-left text-sm hover:bg-blue-50/80 transition-colors flex items-center justify-between"
                               >
                                 <span className="font-medium text-gray-900">{proj.title}</span>
@@ -724,7 +724,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                                     key={proj.id_project}
                                     onClick={(e) => {
                                       e.stopPropagation();
-                                      router.push(`/logged/pages/production/projects/${proj.id_project}`);
+                                      router.push(`/logged/pages/account-management/projects/${proj.id_project}`);
                                     }}
                                     className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50/80 transition-colors"
                                   >
@@ -782,7 +782,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                       {projects.map((proj) => (
                         <div
                           key={proj.id_project}
-                          onClick={() => router.push(`/logged/pages/production/projects/${proj.id_project}`)}
+                          onClick={() => router.push(`/logged/pages/account-management/projects/${proj.id_project}`)}
                           className="flex items-center justify-between p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50/80 transition-colors"
                         >
                           <div>

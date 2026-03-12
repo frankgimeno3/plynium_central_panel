@@ -13,11 +13,11 @@ export const NAV_ROUTE_LABELS: Record<string, string> = {
   [`${BASE}/network/contents/articles`]: "Articles",
   [`${BASE}/network/contents/banners`]: "Banners",
   [`${BASE}/network/contents/events`]: "Events",
-  [`${BASE}/network/contents/publications`]: "Publications",
-  // Plynium Network – Requests
-  [`${BASE}/network/requests/quotations`]: "Advertisement quotations",
-  [`${BASE}/network/requests/company`]: "Company creation",
-  [`${BASE}/network/requests/requests`]: "Other",
+  // Communications (Topnav)
+  [`${BASE}/communications`]: "Communications",
+  [`${BASE}/communications/company`]: "Company Creation Requests",
+  [`${BASE}/communications/quotations`]: "Advertisement quotations",
+  [`${BASE}/communications/other`]: "Other Communications",
   // Plynium Network – Directory & rest
   [`${BASE}/network/directory/companies`]: "Published Companies",
   [`${BASE}/network/directory/products`]: "Published Products",
@@ -28,11 +28,15 @@ export const NAV_ROUTE_LABELS: Record<string, string> = {
   [`${BASE}/account-management/contacts_db`]: "Contacts DB",
   [`${BASE}/account-management/proposals`]: "Proposals",
   [`${BASE}/account-management/contracts`]: "Contracts",
+  [`${BASE}/account-management/projects`]: "Projects",
   // Production
-  [`${BASE}/production/projects`]: "Projects",
   [`${BASE}/production/services`]: "Services",
-  [`${BASE}/production/newsletter_management`]: "Newsletter Management",
-  [`${BASE}/production/publications_management`]: "Publications Management",
+  [`${BASE}/production/newsletters`]: "Newsletters",
+  [`${BASE}/production/newsletters/create`]: "Create newsletter campaign",
+  [`${BASE}/production/publications`]: "Publications",
+  [`${BASE}/production/publications/magazines`]: "Magazines",
+  [`${BASE}/production/publications/flatplans`]: "Flatplans",
+  [`${BASE}/production/publications/published`]: "Published Issues",
   // Administration
   [`${BASE}/administration`]: "Orders",
   [`${BASE}/administration/banks`]: "Banks",
@@ -66,20 +70,14 @@ export const PLYNIUM_NETWORK_LINKS = [
   { href: `${BASE}/network/contents/articles`, label: "Articles" },
   { href: `${BASE}/network/contents/banners`, label: "Banners" },
   { href: `${BASE}/network/contents/events`, label: "Events" },
-  { href: `${BASE}/network/contents/publications`, label: "Publications" },
-  // Requests (expandable) – sub-items
-  { href: `${BASE}/network/requests/quotations`, label: "Advertisement quotations" },
-  { href: `${BASE}/network/requests/company`, label: "Company creation" },
-  { href: `${BASE}/network/requests/other`, label: "Other" },
-  // Directory & rest
+  // Directory & rest (no Requests – moved to Communications in Topnav)
   { href: `${BASE}/network/directory/companies`, label: "Published Companies" },
   { href: `${BASE}/network/directory/products`, label: "Published Products" },
   { href: `${BASE}/network/portals`, label: "Published Portals" },
   { href: `${BASE}/network/users`, label: "Registered Users" },
 ] as const;
 
-/** Grouping for left nav: path prefix that starts a sub-section (Contents, Requests) */
+/** Grouping for left nav: path prefix that starts a sub-section (Contents only; Requests removed) */
 export const PLYNIUM_NETWORK_GROUPS = [
-  { pathPrefix: `${BASE}/network/contents`, label: "Contents", linkStart: 0, linkEnd: 4 },
-  { pathPrefix: `${BASE}/network/requests`, label: "Requests", linkStart: 4, linkEnd: 7 },
+  { pathPrefix: `${BASE}/network/contents`, label: "Contents", linkStart: 0, linkEnd: 3 },
 ] as const;

@@ -79,7 +79,7 @@ const CreateServicePage: FC = () => {
   const backUrl = "/logged/pages/production/services";
 
   const breadcrumbs = [
-    { label: "Production", href: "/logged/pages/production/projects" },
+    { label: "Production", href: "/logged/pages/production/services" },
     { label: "Services", href: backUrl },
     { label: "Create service" },
   ];

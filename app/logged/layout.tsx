@@ -6,6 +6,8 @@ import PageContentLayout from "./logged_components/context_content/PageContentLa
 import Topnav from "./logged_components/nav_components/Topnav";
 import Leftnav from "./logged_components/nav_components/Leftnav";
 import { CompanyRequestsProvider } from "./pages/network/requests/hooks/useCompanyRequests";
+import { OtherRequestsProvider } from "./pages/network/requests/hooks/useOtherRequests";
+import { AdvertisementsProvider } from "./pages/network/requests/hooks/useAdvertisements";
 
 export const metadata: Metadata = {
   title: "Plynium Central Panel",
@@ -18,15 +20,19 @@ export default function RootLayout({
 }>) {
   return (
     <div className="flex flex-col min-h-screen">
-      <Topnav />
-      <div className="flex flex-row flex-1 bg-gray-100 min-h-screen text-gray-600 w-full">
-        <Leftnav />
-        <CompanyRequestsProvider>
-          <PageContentProvider>
-            <PageContentLayout>{children}</PageContentLayout>
-          </PageContentProvider>
-        </CompanyRequestsProvider>
-      </div>
+      <CompanyRequestsProvider>
+        <OtherRequestsProvider>
+          <AdvertisementsProvider>
+            <Topnav />
+            <div className="flex flex-row flex-1 min-h-screen text-slate-200 w-full">
+              <Leftnav />
+              <PageContentProvider>
+                <PageContentLayout>{children}</PageContentLayout>
+              </PageContentProvider>
+            </div>
+          </AdvertisementsProvider>
+        </OtherRequestsProvider>
+      </CompanyRequestsProvider>
     </div>
   );
 }
