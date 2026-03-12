@@ -10,7 +10,7 @@ interface PageContentSectionProps {
 const PageContentSection: FC<PageContentSectionProps> = ({ children, className = "" }) => {
   return (
     <div
-      className={`bg-slate-800/80 rounded-lg border border-slate-600 shadow p-6 text-slate-200 ${className}`.trim()}
+      className={`px-12 text-slate-600 ${className}`.trim()}
     >
       {children}
     </div>

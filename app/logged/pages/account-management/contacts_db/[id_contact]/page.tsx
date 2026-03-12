@@ -76,7 +76,11 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
   if (!contact) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Contacto no encontrado.</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+            <p className="text-gray-500">Contacto no encontrado.</p>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -89,29 +93,31 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
   return (
     <>
       <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
-        <div className="flex border-b border-gray-200 bg-gray-50/80">
-        <div className="flex w-full">
+        <div className="flex flex-col w-full">
+          <div className="flex border-b border-gray-200">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setCurrentTab(tab.key)}
-              className={`relative px-6 py-3 text-sm font-medium transition-colors ${
-                currentTab === tab.key
-                  ? "text-blue-950 border-b-2 border-blue-950 bg-white text-blue-950"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              }`}
+              className={`
+                relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
+                ${
+                  currentTab === tab.key
+                    ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }
+              `}
             >
               {tab.label}
               {tab.key === "comments" && comments.length > 0 && (
                 <span className="ml-1.5 text-xs text-gray-500">({comments.length})</span>
               )}
             </button>
-          )          )}
-        </div>
-      </div>
+          ))}
+          </div>
 
-      <div className="flex-1 min-h-0 overflow-auto w-full min-w-0">
+      <div className="bg-white rounded-b-lg overflow-hidden flex-1 min-h-0 overflow-auto w-full min-w-0">
         {currentTab === "main" && (
           <div className="p-6 w-full max-w-none box-border space-y-6">
             <section className="w-full bg-gray-50 rounded-xl p-6">
@@ -209,6 +215,7 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
           </div>
         )}
       </div>
+        </div>
       </PageContentSection>
     </>
   );

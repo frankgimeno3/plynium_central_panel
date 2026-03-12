@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC, useState, useMemo } from "react";
+import React, { FC, useState, useMemo, useEffect } from "react";
 import servicesData from "@/app/contents/servicesContents.json";
 import plannedPublicationsData from "@/app/contents/planned_publications.json";
 
@@ -209,6 +209,17 @@ const ServiceSelectModal: FC<ServiceSelectModalProps> = ({ open, onClose, onConf
     onClose();
   };
 
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
   const handleSelectPage = (pageType: string, slotKey: string, available: boolean) => {
     if (!available) return;
     setMagazinePageType(pageType);
@@ -221,9 +232,19 @@ const ServiceSelectModal: FC<ServiceSelectModalProps> = ({ open, onClose, onConf
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} aria-hidden />
       <div className="relative bg-white rounded-xl shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Select service</h3>
-          <p className="text-sm text-gray-500 mt-0.5">Choose a service to add to the proposal</p>
+        <div className="px-6 py-4 border-b border-gray-200 flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Select service</h3>
+            <p className="text-sm text-gray-500 mt-0.5">Choose a service to add to the proposal</p>
+          </div>
+          <button
+            type="button"
+            onClick={handleClose}
+            className="p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100"
+            aria-label="Close"
+          >
+            ×
+          </button>
         </div>
         <div className="flex-1 overflow-y-auto px-4 pt-6 pb-4">
           <ul className="space-y-2">

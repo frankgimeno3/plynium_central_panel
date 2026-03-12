@@ -20,7 +20,13 @@ const Quotations: FC<QuotationsProps> = () => {
   return (
     <>
       <PageContentSection>
-        <AdvertisementTable />
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
+              <AdvertisementTable />
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

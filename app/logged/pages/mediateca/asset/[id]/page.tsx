@@ -2,6 +2,7 @@
 
 import React, { FC, use } from "react";
 import Link from "next/link";
+import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import contentsData from "@/app/contents/mediatecaContents.json";
 
 type MediatecaContent = {
@@ -22,17 +23,19 @@ const MediatecaAssetPage: FC<{ params: Promise<{ id: string }> }> = ({ params })
 
   if (!content) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center p-6">
-        <div className="bg-white rounded-lg shadow p-6 max-w-md text-center">
-          <p className="text-gray-600 mb-4">Asset not found.</p>
-          <Link
-            href="/logged/pages/mediateca"
-            className="text-blue-600 hover:underline font-medium"
-          >
-            Back to Mediateca
-          </Link>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6 flex flex-col items-center justify-center min-h-[200px]">
+            <p className="text-gray-600 mb-4">Asset not found.</p>
+            <Link
+              href="/logged/pages/mediateca"
+              className="text-blue-600 hover:underline font-medium"
+            >
+              Back to Mediateca
+            </Link>
+          </div>
         </div>
-      </div>
+      </PageContentSection>
     );
   }
 

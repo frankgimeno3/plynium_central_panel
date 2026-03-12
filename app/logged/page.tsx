@@ -93,7 +93,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
   }, []);
 
   const mainNotifications = notifications.slice(0, 5);
-  const welcomeFull = `Welcome, ${userName}`;
+  const welcomeFull = `Hello, ${userName}. Welcome to Plynium Central Panel.`;
   const welcomeDisplay = useTypewriter(welcomeFull, true, 55);
   const welcomeComplete = welcomeDisplay.length >= welcomeFull.length;
 
@@ -117,16 +117,15 @@ const Logged: FC<LoggedProps> = ({ }) => {
     : [];
 
   return (
-    <div className='flex flex-col w-full text-slate-200 p-12 pt-24 '>
-      <p className='font-bold text-2xl min-h-[2.5rem] text-center text-slate-100'>
+    <div className='flex flex-col w-full bg-gradient-to-r from-gray-950 to-zinc-900 text-slate-200 px-24  pb-24 '>
+      <p className='font-bold text-5xl min-h-[2.5rem] text-center text-slate-100 py-24'>
         {welcomeDisplay}
         {!welcomeComplete && <span className='animate-pulse'>|</span>}
       </p>
 
-      <p className='mt-10 font-bold mb-3 text-slate-100'>Management Dashboard</p>
       <ManagementDashboard />
 
-      <p className='mt-12 font-bold mb-3 text-slate-100'>Main notifications</p>
+      <p className='my-12 text-3xl font-semibold text-slate-100'>Main notifications</p>
 
       {/* Tabs */}
       <div className='flex border-b border-slate-600 bg-slate-800/50 rounded-t-lg overflow-hidden'>
@@ -235,7 +234,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
         )}
       </div>
 
-      <p className='mt-12 font-bold mb-3 text-slate-100'>Google Analytics</p>
+      <p className='mt-12 mb-4 text-3xl font-semibold text-slate-100'>Google Analytics</p>
       <div className='flex border-b border-slate-600 bg-slate-800/50 rounded-t-lg overflow-hidden'>
         {portals.map((p, i) => (
           <button

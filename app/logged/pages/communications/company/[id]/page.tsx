@@ -75,23 +75,31 @@ const CompanyRequestDetailPage: FC = () => {
 
   if (loading) {
     return (
-      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600">
-        <p className="text-lg">Loading request...</p>
-      </main>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6 flex flex-col items-center justify-center text-gray-600 min-h-[200px]">
+            <p className="text-lg">Loading request...</p>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
   if (!request) {
     return (
-      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600">
-        <p className="text-red-500 text-lg">Request not found.</p>
-        <button
-          onClick={() => router.push(`${BASE}`)}
-          className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-950/80"
-        >
-          Back to Communications
-        </button>
-      </main>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6 flex flex-col items-center justify-center text-gray-600 min-h-[200px]">
+            <p className="text-red-500 text-lg">Request not found.</p>
+            <button
+              onClick={() => router.push(`${BASE}`)}
+              className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-950/80"
+            >
+              Back to Communications
+            </button>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
@@ -100,8 +108,9 @@ const CompanyRequestDetailPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <div className="flex flex-col w-full text-gray-600">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6 text-gray-600">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
             <div>
               <label className="text-sm font-medium text-gray-500">Request ID</label>
               <p className="text-lg text-gray-900 font-mono">{request.companyRequestId}</p>
@@ -163,13 +172,14 @@ const CompanyRequestDetailPage: FC = () => {
             </div>
           </div>
 
-          <div className="mt-8 pt-6 border-t">
+          <div className="mt-8 pt-6 border-t uppercase">
             <Link
               href="/logged/pages/network/directory/companies/create"
               className="inline-flex px-4 py-2 bg-blue-950 text-white font-medium rounded-lg hover:bg-blue-900 transition-colors"
             >
               Create company
             </Link>
+          </div>
           </div>
         </div>
       </PageContentSection>

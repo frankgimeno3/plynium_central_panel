@@ -163,6 +163,9 @@ export default function AdvertisementDetailPage() {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <div className="flex items-center gap-3 mb-6">
           <span className="text-sm text-gray-500">Current State:</span>
           <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-gray-100 text-gray-800">
@@ -216,9 +219,15 @@ export default function AdvertisementDetailPage() {
             {advertisement.requestDescription}
           </p>
         </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Comments</h2>
         <div className="mb-6">
           <label htmlFor="newComment" className="block text-sm font-medium text-gray-700 mb-2">Add Comment</label>
@@ -258,6 +267,9 @@ export default function AdvertisementDetailPage() {
           >
             Create proposal
           </Link>
+        </div>
+            </div>
+          </div>
         </div>
       </PageContentSection>
     </>

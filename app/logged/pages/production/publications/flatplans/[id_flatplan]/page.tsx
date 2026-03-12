@@ -46,14 +46,20 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
   if (!flatplan) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Flatplan not found.</p>
-        <button
-          type="button"
-          onClick={() => router.push(BASE)}
-          className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-        >
-          Back to Flatplans
-        </button>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center">
+              <p className="text-gray-500">Flatplan not found.</p>
+              <button
+                type="button"
+                onClick={() => router.push(BASE)}
+                className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              >
+                Back to Flatplans
+              </button>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -115,6 +121,9 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
             <p className="text-xs text-gray-500 uppercase">ID</p>
@@ -133,17 +142,21 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
             <p className="font-medium">{flatplan.publication_date}</p>
           </div>
         </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
-        <div className="flex gap-2 border-b border-gray-200 mb-4">
+        <div className="flex flex-col w-full">
+          <div className="flex border-b border-gray-200">
           <button
             type="button"
             onClick={() => setActiveTab("preview")}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+            className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
               activeTab === "preview"
-                ? "bg-blue-50 text-blue-700 border border-b-0 border-gray-200 -mb-px"
-                : "text-gray-600 hover:bg-gray-50"
+                ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             }`}
           >
             Flatplan preview
@@ -151,15 +164,17 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
           <button
             type="button"
             onClick={() => setActiveTab("production")}
-            className={`px-4 py-2 text-sm font-medium rounded-t-lg transition-colors ${
+            className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
               activeTab === "production"
-                ? "bg-blue-50 text-blue-700 border border-b-0 border-gray-200 -mb-px"
-                : "text-gray-600 hover:bg-gray-50"
+                ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             }`}
           >
             Production sheet
           </button>
         </div>
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
 
         {activeTab === "preview" && (
           <div className="rounded-lg border border-gray-200 bg-gray-50/50 p-6">
@@ -185,6 +200,9 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
             </div>
           </div>
         )}
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

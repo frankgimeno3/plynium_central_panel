@@ -66,6 +66,8 @@ const ProposalsPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
@@ -115,10 +117,8 @@ const ProposalsPage: FC = () => {
               </select>
             </div>
           </div>
-      </PageContentSection>
 
-      <PageContentSection>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto mt-6">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
               <tr>
@@ -155,7 +155,7 @@ const ProposalsPage: FC = () => {
         </div>
 
         {(filtered.length > ITEMS_PER_PAGE || totalPages > 1) && (
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
             <p className="text-sm text-gray-600">
               Showing {start + 1}–{Math.min(start + ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
             </p>
@@ -180,6 +180,8 @@ const ProposalsPage: FC = () => {
             </div>
           </div>
         )}
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

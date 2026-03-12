@@ -152,14 +152,20 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
   if (!magazine) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Magazine not found.</p>
-        <button
-          type="button"
-          onClick={() => router.push(BASE)}
-          className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-        >
-          Back to Magazines
-        </button>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center">
+              <p className="text-gray-500">Magazine not found.</p>
+              <button
+                type="button"
+                onClick={() => router.push(BASE)}
+                className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              >
+                Back to Magazines
+              </button>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -169,6 +175,9 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
 
   return (
     <PageContentSection>
+      <div className="flex flex-col w-full">
+        <div className="bg-white rounded-b-lg overflow-hidden">
+          <div className="p-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
         <div>
           <p className="text-xs text-gray-500 uppercase">ID</p>
@@ -203,8 +212,14 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
           </div>
         )}
       </div>
+          </div>
+        </div>
+        </div>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Planned issues by year</h2>
         <div className="mb-4 flex flex-wrap items-center gap-4">
           <label className="text-sm font-medium text-gray-700">Year</label>
@@ -296,9 +311,15 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
             Add issue
           </button>
         </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-4">Publications</h2>
         {publicationsByYear.length === 0 ? (
           <p className="text-gray-500">No publications yet for this magazine.</p>
@@ -346,6 +367,9 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
             ))}
           </div>
         )}
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     </PageContentSection>
   );

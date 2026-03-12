@@ -276,6 +276,14 @@ Todos los modals son controlados: el padre posee open/close e initial values.
 - Leftnav debe incluir un link a cada ruta bajo `/logged/pages/` que se quiera accesible desde el menú; si añades una página nueva, añades el link aquí.
 - DateInputs: parseDateFields y buildDateStr son la API pública para serialización; los inputs son solo UI para día/mes/año.
 
+### Styling rules (logged UI)
+
+- **Section titles (no card/background):** When a section header is rendered directly on the page background (no card, no panel), use `<h2 className="text-3xl font-semibold text-slate-100">…</h2>` for the title.
+- **Tabs:** Tab strips in the logged area must visually match the event-state tabs in `ManagementDashboard` (same padding, rounded top corners, and active/inactive colors). Concretely, use a horizontal row with a bottom border, and per-tab classes equivalent to the existing implementation (active = blue background with white text and a bottom blue border; inactive = slate background with slate text and hover state).
+- **Buttons:** Default primary buttons in the logged area (outside special modals) must reuse the same shape and colors as the “Add agenda event” button in `ManagementDashboard`: padding like `px-4 py-2`, background `bg-slate-600 hover:bg-slate-500`, text `text-slate-100`, `text-sm font-medium`, `rounded-xl`, and `cursor-pointer transition-colors`.
+- **Tables:** Table headers must use uppercase labels (Tailwind `uppercase` on `<th>`), and follow the same visual pattern as the agenda table in `ManagementDashboard` (background, borders, and typography).
+- **Language:** All visible UI text for these components (section titles, tab labels, button text, table headers, helper messages) must be written in **English**.
+
 ### Puntos peligrosos / gotchas (components)
 
 - **RichText:** El contenido guardado puede ser HTML o texto plano. Quien use RichTextEditor/RichTextContent debe pasar el mismo formato que almacena. EditContentsModal usa RichTextEditor cuando isRichText; bloques de artículo/contenido lo usan para el cuerpo.

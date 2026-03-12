@@ -11,6 +11,10 @@ const BASE = "/logged/pages/communications";
 
 type TabFilter = RequestState;
 
+/** Same style as Leftnav selected item: border-blue-500, bg-blue-950/40, text-blue-300 */
+const stateBadgeClass = (): string =>
+  "border-blue-500 bg-blue-950/40 font-medium text-blue-300";
+
 const OtherCommunicationsTab: FC = () => {
   const router = useRouter();
   const { requests } = useOtherRequests();
@@ -29,6 +33,11 @@ const OtherCommunicationsTab: FC = () => {
 
   const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
 
+  const pendingCount = useMemo(
+    () => requests.filter((r) => r.request_state === "Pending").length,
+    [requests]
+  );
+
   const tabs: { key: TabFilter; label: string }[] = [
     { key: "Pending", label: "Pending" },
     { key: "In Process", label: "In Process" },
@@ -40,7 +49,7 @@ const OtherCommunicationsTab: FC = () => {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-6">
       <p className="text-sm text-gray-500 mb-4">
         General contact and inquiry requests
       </p>
@@ -52,13 +61,21 @@ const OtherCommunicationsTab: FC = () => {
               setCurrentTab(tab.key);
               setCurrentPage(1);
             }}
-            className={`relative px-4 py-2 text-sm font-medium transition-colors ${
-              currentTab === tab.key
-                ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
-                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-            }`}
+            className={`
+              relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
+              ${
+                currentTab === tab.key
+                  ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }
+            `}
           >
             {tab.label}
+            {tab.key === "Pending" && pendingCount > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-blue-950 rounded-full">
+                {pendingCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -100,13 +117,7 @@ const OtherCommunicationsTab: FC = () => {
                   <td className="px-6 py-4 text-sm text-gray-900">{req.author}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
-                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        req.request_state === "Pending"
-                          ? "bg-amber-100 text-amber-800"
-                          : req.request_state === "In Process"
-                            ? "bg-blue-100 text-blue-800"
-                            : "bg-gray-100 text-gray-800"
-                      }`}
+                      className={`inline-flex rounded-r-md border-l-2 py-1.5 pl-2 pr-3 text-xs font-medium uppercase ${stateBadgeClass()}`}
                     >
                       {req.request_state}
                     </span>

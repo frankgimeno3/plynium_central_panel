@@ -66,7 +66,11 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
   if (!newsletter) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Newsletter not found.</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center text-gray-500">Newsletter not found.</div>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -76,6 +80,9 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Newsletter data</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -117,9 +124,15 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
             </div>
           )}
         </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Newsletter content</h2>
         <div className="space-y-0">
           {blocks.map((block) => (
@@ -129,9 +142,15 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
         {blocks.length === 0 && (
           <p className="text-sm text-gray-500">No content blocks.</p>
         )}
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <button
           type="button"
           onClick={handleDownloadHtml}
@@ -139,6 +158,9 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
         >
           Download as HTML
         </button>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

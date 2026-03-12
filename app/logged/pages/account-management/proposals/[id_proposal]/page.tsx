@@ -150,7 +150,11 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
   if (!proposal) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Proposal not found.</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+            <p className="text-gray-500">Proposal not found.</p>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -160,7 +164,8 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
 
   return (
     <PageContentSection>
-      <div className="space-y-6">
+      <div className="flex flex-col w-full">
+        <div className="bg-white rounded-b-lg overflow-hidden p-6 space-y-6">
         {/* Proposal title (editable) */}
         <input
           type="text"
@@ -373,6 +378,7 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
             </Link>
           </div>
         )}
+        </div>
       </div>
     </PageContentSection>
   );

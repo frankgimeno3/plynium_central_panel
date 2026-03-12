@@ -31,6 +31,10 @@ const formatState = (state: string): string => {
     .trim();
 };
 
+/** Same style as Leftnav selected item: border-blue-500, bg-blue-950/40, text-blue-300 */
+const stateBadgeClass = (): string =>
+  "border-blue-500 bg-blue-950/40 font-medium text-blue-300";
+
 const AdvertisementQuotationsTab: FC = () => {
   const router = useRouter();
   const {
@@ -39,7 +43,6 @@ const AdvertisementQuotationsTab: FC = () => {
     currentPage,
     setCurrentPage,
     paginatedAdvertisements,
-    counts,
     totalPages,
   } = useAdvertisements();
 
@@ -50,14 +53,17 @@ const AdvertisementQuotationsTab: FC = () => {
   ];
 
   return (
-    <div className="p-4">
+    <div className="p-6">
+      <p className="text-sm text-gray-500 mb-4">        
+        Requests from companies to advertise their products or services
+      </p>  
       <div className="flex border-b border-gray-200 mb-4">
         {tabs.map((tab) => (
           <button
             key={tab.key}
             onClick={() => setCurrentTab(tab.key)}
             className={`
-              relative flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors
+              relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
               ${
                 currentTab === tab.key
                   ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
@@ -66,11 +72,6 @@ const AdvertisementQuotationsTab: FC = () => {
             `}
           >
             {tab.label}
-            {tab.key === "pending" && counts.pending > 0 && (
-              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-blue-950 rounded-full">
-                {counts.pending}
-              </span>
-            )}
           </button>
         ))}
       </div>
@@ -123,7 +124,9 @@ const AdvertisementQuotationsTab: FC = () => {
                     {advertisement.senderCompany}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-gray-100 text-gray-800">
+                    <span
+                      className={`inline-flex rounded-r-md border-l-2 py-1.5 pl-2 pr-3 text-xs font-medium uppercase ${stateBadgeClass()}`}
+                    >
                       {formatState(advertisement.advReqState)}
                     </span>
                   </td>

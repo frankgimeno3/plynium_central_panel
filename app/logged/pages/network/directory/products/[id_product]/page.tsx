@@ -342,7 +342,9 @@ const IdProduct: FC<IdProductProps> = ({}) => {
   return (
     <>
       <PageContentSection>
-        <div className="p-0">
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
           {/* Main image at top - same structure as company page */}
           <div className="relative w-full mb-8 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
             {formData.mainImageSrc ? (
@@ -780,9 +782,15 @@ const IdProduct: FC<IdProductProps> = ({}) => {
             </div>
           </div>
         </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <h2 className="text-xl font-bold text-gray-900 mb-4">
           Articles about this product
         </h2>
@@ -824,6 +832,9 @@ const IdProduct: FC<IdProductProps> = ({}) => {
               </div>
             </Link>
           ))}
+        </div>
+            </div>
+          </div>
         </div>
       </PageContentSection>
 

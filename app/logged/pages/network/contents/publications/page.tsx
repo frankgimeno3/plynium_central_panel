@@ -132,28 +132,29 @@ const Publications: FC<PublicationsProps> = ({}) => {
   return (
     <>
       <PageContentSection>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Publications Filter
-        </h2>
-        <Suspense
-          fallback={
-            <div className="py-2 text-xs text-gray-500">
-              Loading filter...
-            </div>
-          }
-        >
-          <PublicationFilter
-            initialParams={filterParams}
-            onFilter={setFilterParams}
-          />
-        </Suspense>
-      </PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Publications Filter
+              </h2>
+              <Suspense
+                fallback={
+                  <div className="py-2 text-xs text-gray-500">
+                    Loading filter...
+                  </div>
+                }
+              >
+                <PublicationFilter
+                  initialParams={filterParams}
+                  onFilter={setFilterParams}
+                />
+              </Suspense>
 
-      <PageContentSection>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">
-          Publications list
-        </h2>
-        <div className="flex flex-wrap gap-2 mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 mt-8">
+                Publications list
+              </h2>
+              <div className="flex flex-wrap gap-2 mb-6">
           <button
             type="button"
             onClick={() => setSelectedRevista("")}
@@ -242,6 +243,9 @@ const Publications: FC<PublicationsProps> = ({}) => {
               </Link>
             ))
           )}
+              </div>
+            </div>
+          </div>
         </div>
       </PageContentSection>
     </>

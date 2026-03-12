@@ -67,11 +67,13 @@ const ServiceDetailPage: FC<{ params: Promise<{ id_service: string }> }> = ({ pa
 
   if (!service) {
     return (
-      <>
-        <PageContentSection>
-          <p className="text-gray-500">Service not found.</p>
-        </PageContentSection>
-      </>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center text-gray-500">Service not found.</div>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
@@ -84,7 +86,9 @@ const ServiceDetailPage: FC<{ params: Promise<{ id_service: string }> }> = ({ pa
   return (
     <>
       <PageContentSection>
-        <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-2xl">
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
           <p className="text-sm font-semibold text-gray-700 mb-4">Service details</p>
           <dl className="space-y-4 text-sm">
             <div>
@@ -116,6 +120,8 @@ const ServiceDetailPage: FC<{ params: Promise<{ id_service: string }> }> = ({ pa
               <dd className="font-medium text-gray-900">{formatPublicationDate(service.publication_date)}</dd>
             </div>
           </dl>
+            </div>
+          </div>
         </div>
       </PageContentSection>
     </>

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import pmEventsData from "@/app/contents/pm_events.json";
 import customersData from "@/app/contents/customers.json";
 import projectsData from "@/app/contents/projects.json";
+import { renderMonth } from "./CalendarMonth";
 
 type PmEvent = {
   id_event: string;
@@ -105,6 +106,20 @@ const ManagementDashboard: FC = () => {
 
   useEffect(() => { setCurrentPage(1); }, [filterType, filterMonth, filterYear, filterProject, filterCustomer, eventStateTab]);
 
+  useEffect(() => {
+    if (!addAgendaModalOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setAddAgendaModalOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [addAgendaModalOpen]);
+
   const getCustomerName = (id: string) => (id === "-" ? "—" : customers.find((c) => c.id_customer === id)?.name ?? id);
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
@@ -142,52 +157,6 @@ const ManagementDashboard: FC = () => {
     return byType ? Array.from(byType.values()).flat() : [];
   };
 
-  const renderMonth = (month: Date) => {
-    const year = month.getFullYear();
-    const monthIndex = month.getMonth();
-    const firstDay = new Date(year, monthIndex, 1);
-    const lastDay = new Date(year, monthIndex + 1, 0);
-    const daysInMonth = lastDay.getDate();
-    const startingDayOfWeek = firstDay.getDay();
-    const days: (number | null)[] = [...Array(startingDayOfWeek).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
-    // Pad to 6 weeks (42 cells) so every month has the same grid height
-    const PAD_TO_CELLS = 6 * 7;
-    while (days.length < PAD_TO_CELLS) days.push(null);
-    const weeks: (number | null)[][] = [];
-    for (let i = 0; i < PAD_TO_CELLS; i += 7) weeks.push(days.slice(i, i + 7));
-
-    return (
-      <div className="flex flex-col text-gray-100 ">
-        <div className="grid grid-cols-7 gap-1 mb-2">{WEEK_DAYS.map((day) => <div key={day} className="text-center text-sm font-medium text-slate-400 py-1">{day}</div>)}</div>
-        {weeks.map((week, weekIndex) => (
-          <div key={weekIndex} className="grid grid-cols-7 gap-1">
-            {week.map((day, dayIndex) => {
-              if (day === null) return <div key={dayIndex} className="aspect-square" />;
-              const date = new Date(year, monthIndex, day);
-              const dayEvents = getPmEventsForDate(date);
-              const hasEvents = dayEvents.length > 0;
-              const isToday = year === today.getFullYear() && monthIndex === today.getMonth() && day === today.getDate();
-              return (
-                <div key={dayIndex} onClick={() => handleDayClick(date)} className={`aspect-square border rounded p-1 text-sm flex flex-col relative cursor-pointer transition-all bg-slate-800/50 hover:bg-slate-700/50 border-slate-600 ${isToday ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900" : ""}`}>
-                  <div className={`font-medium shrink-0 ${isToday ? "text-blue-300" : "text-slate-200"}`}>{day}</div>
-                  {hasEvents && (
-                    <div className="flex-1 flex flex-col gap-0.5 mt-1 overflow-hidden overflow-y-auto">
-                      {dayEvents.map((ev) => (
-                        <div key={ev.id_event} className={`px-1 py-0.5 rounded text-xs font-medium border truncate ${eventTypeCardColor[ev.event_type] ?? "bg-slate-600/80 text-slate-100 border-slate-500"}`} title={`${eventTypeLabel[ev.event_type] ?? ev.event_type} - ${getCustomerName(ev.id_customer)}`}>
-                          {eventTypeLabel[ev.event_type] ?? ev.event_type} - {getCustomerName(ev.id_customer)}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
   const displayMonth = new Date(currentMonth);
   const agendaTitle = `${MONTH_NAMES[displayMonth.getMonth()]} ${displayMonth.getFullYear()}`;
 
@@ -213,20 +182,20 @@ const ManagementDashboard: FC = () => {
 
   return (
     <div className="flex flex-col gap-8 ">
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         {/* Left column: Tasks in agenda */}
-        <div>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-slate-100">Tasks in agenda</h2>
+        <div className="lg:col-span-2">
+          <div className="flex items-center justify-between mb-4 pt-2">
+            <h2 className="text-3xl font-semibold text-slate-100">Tasks in agenda</h2>
             <button
               type="button"
               onClick={() => setAddAgendaModalOpen(true)}
-              className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-slate-100 text-sm font-medium rounded-xl cursor-pointer transition-colors"
+              className="flex min-h-[36px] items-center rounded-md  py-2 px-3 text-sm font-medium uppercase  transition-colors cursor-pointer text-white bg-gray-600/70  hover:bg-gray-600"
             >
               Add agenda event
             </button>
           </div>
-          <div className="mb-4 flex flex-wrap gap-6 items-end">
+          <div className="my-8 flex flex-wrap gap-6 items-end">
             <div className="flex flex-col gap-1">
               <label htmlFor="filter-type" className="text-sm font-medium text-slate-300">Type</label>
               <select id="filter-type" value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px]">
@@ -257,7 +226,7 @@ const ManagementDashboard: FC = () => {
               <input id="filter-customer" type="text" placeholder="Customer name" value={filterCustomer} onChange={(e) => setFilterCustomer(e.target.value)} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[180px] placeholder-slate-500" />
             </div>
           </div>
-          <div className="flex flex-row border-b border-slate-600 gap-1 mb-4">
+          <div className="flex flex-row border-b border-slate-600 gap-1 mb-4 ">
             {(["pending", "done"] as EventStateTab[]).map((tab) => (
               <button key={tab} type="button" onClick={() => setEventStateTab(tab)} className={`px-6 py-3 font-medium rounded-t-lg transition-colors capitalize ${eventStateTab === tab ? "bg-blue-600 text-white border-b-2 border-blue-500" : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-slate-100"}`}>{tab}</button>
             ))}
@@ -266,7 +235,7 @@ const ManagementDashboard: FC = () => {
             <p className="py-6 text-center text-slate-400 text-sm border border-slate-600 rounded-lg bg-slate-800/50">No events for this state.</p>
           ) : (
             <>
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto uppercase">
                 <table className="min-w-full divide-y divide-slate-600 border border-slate-600 rounded-lg overflow-hidden">
                   <thead className="bg-slate-700">
                     <tr>
@@ -304,17 +273,26 @@ const ManagementDashboard: FC = () => {
         </div>
 
         {/* Right column: Agenda calendar */}
-        <div className="  p-6">
+        <div className="pl-6 lg:col-span-3">
           {viewMode === "months" ? (
             <div className="flex flex-col w-full">
-              <div className="flex items-center justify-center gap-4 mb-4 w-full">
+              <div className="flex items-center justify-center gap-4 mb-4 w-full max-w-7xl mx-auto">
                 <button type="button" onClick={() => navigateMonth("prev")} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-full text-2xl text-slate-200" aria-label="Previous month">{'<'}</button>
                 <span className="text-2xl font-semibold text-slate-100">{agendaTitle}</span>
                 <button type="button" onClick={() => navigateMonth("next")} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-full text-2xl text-slate-200" aria-label="Next month">{'>'}</button>
               </div>
-              <div className="flex justify-center">
-                <div className="max-w-6xl">
-                  {renderMonth(displayMonth)}
+              <div className="w-full">
+                <div className="w-full max-w-7xl mx-auto">
+                  {renderMonth({
+                    month: displayMonth,
+                    today,
+                    weekDays: WEEK_DAYS,
+                    getPmEventsForDate,
+                    handleDayClick,
+                    eventTypeLabel,
+                    eventTypeCardColor,
+                    getCustomerName,
+                  })}
                 </div>
               </div>
             </div>
@@ -362,7 +340,17 @@ const ManagementDashboard: FC = () => {
       {addAgendaModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={() => setAddAgendaModalOpen(false)}>
           <div className="bg-slate-800 border border-slate-600 rounded-xl shadow-xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-semibold text-slate-100 mb-4">Add agenda event</h3>
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-xl font-semibold text-slate-100">Add agenda event</h3>
+              <button
+                type="button"
+                onClick={() => setAddAgendaModalOpen(false)}
+                aria-label="Close"
+                className="text-slate-400 hover:text-slate-200 rounded-full p-1 hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                ×
+              </button>
+            </div>
             <div className="flex flex-col gap-4">
               <div>
                 <label htmlFor="agenda-date" className="block text-sm font-medium text-slate-300 mb-1">Date</label>

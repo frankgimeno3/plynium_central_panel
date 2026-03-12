@@ -110,6 +110,9 @@ const ProductCategoryDetailPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <div className="mb-4">
           <Link
             href="/logged/pages/network/directory/products/categories"
@@ -125,9 +128,15 @@ const ProductCategoryDetailPage: FC = () => {
             ? category.portals_array.join(", ")
             : "—"}
         </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <p className="text-sm font-semibold mb-2 text-gray-700">Filter by name or ID</p>
         <input
           type="text"
@@ -194,6 +203,9 @@ const ProductCategoryDetailPage: FC = () => {
               )}
             </tbody>
           </table>
+        </div>
+            </div>
+          </div>
         </div>
       </PageContentSection>
     </>

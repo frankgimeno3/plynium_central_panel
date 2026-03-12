@@ -90,7 +90,11 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
     return (
       <>
         <PageContentSection>
-          <p className="text-gray-500">Project not found.</p>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
+              <p className="text-gray-500">Project not found.</p>
+            </div>
+          </div>
         </PageContentSection>
       </>
     );
@@ -118,6 +122,8 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <div className="grid grid-cols-2 gap-4">
           <div>
             <p className="text-xs text-gray-500 uppercase">ID</p>
@@ -144,32 +150,44 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
             </div>
           )}
         </div>
+          </div>
+        </div>
       </PageContentSection>
 
       {contract && (
         <PageContentSection>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
           <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Contract</p>
             <Link href={`/logged/pages/account-management/contracts/${contract.id_contract}`} className="text-blue-600 hover:underline">
               {contract.title} ({contract.id_contract})
             </Link>
           </div>
+            </div>
+          </div>
         </PageContentSection>
       )}
 
       {customer && (
         <PageContentSection>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
           <div>
             <p className="text-sm font-medium text-gray-700 mb-2">Customer</p>
             <Link href={`/logged/pages/account-management/customers_db/${customer.id_customer}`} className="text-blue-600 hover:underline">
               {customer.name}
             </Link>
           </div>
+            </div>
+          </div>
         </PageContentSection>
       )}
 
       {linkedEvents.length > 0 && (
         <PageContentSection>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
           <div>
             <p className="text-sm font-medium text-gray-700 mb-4">Project Tasks</p>
             <div className="space-y-2">
@@ -190,6 +208,8 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
             <Link href="/logged" className="mt-3 inline-block text-sm text-blue-600 hover:underline">
               View in Dashboard →
             </Link>
+          </div>
+            </div>
           </div>
         </PageContentSection>
       )}

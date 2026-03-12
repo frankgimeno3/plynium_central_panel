@@ -54,14 +54,20 @@ export default function PublishedDetailPage({ params }: { params: Promise<{ id_p
   if (!publication) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Publication not found.</p>
-        <button
-          type="button"
-          onClick={() => router.push(BASE)}
-          className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-        >
-          Back to Published
-        </button>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center">
+              <p className="text-gray-500">Publication not found.</p>
+              <button
+                type="button"
+                onClick={() => router.push(BASE)}
+                className="mt-4 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              >
+                Back to Published
+              </button>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -73,6 +79,9 @@ export default function PublishedDetailPage({ params }: { params: Promise<{ id_p
 
   return (
     <PageContentSection>
+      <div className="flex flex-col w-full">
+        <div className="bg-white rounded-b-lg overflow-hidden">
+          <div className="p-6">
       <div className="flex flex-col gap-6 max-w-2xl">
         <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
           <img
@@ -117,6 +126,9 @@ export default function PublishedDetailPage({ params }: { params: Promise<{ id_p
               </a>
             </div>
           )}
+        </div>
+      </div>
+          </div>
         </div>
       </div>
     </PageContentSection>

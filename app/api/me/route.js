@@ -21,14 +21,14 @@ export async function GET(request) {
 
     // 1. Si Cognito devuelve UUID (sub), buscar por cognito_sub en la tabla users
     const dbUserBySub = await getUserByCognitoSubFromRds(cognitoUsername);
-    if (dbUserBySub?.user_full_name) {
-      return NextResponse.json({ user_name: dbUserBySub.user_full_name }, { status: 200 });
+    if (dbUserBySub?.user_name) {
+      return NextResponse.json({ user_name: dbUserBySub.user_name }, { status: 200 });
     }
 
     // 2. Si el username es id_user o user_name (email) de la tabla
     const dbUser = await getUserByIdOrUsernameFromRds(cognitoUsername);
-    if (dbUser?.user_full_name) {
-      return NextResponse.json({ user_name: dbUser.user_full_name }, { status: 200 });
+    if (dbUser?.user_name) {
+      return NextResponse.json({ user_name: dbUser.user_name }, { status: 200 });
     }
 
     // 3. Si es UUID, intentar obtener email del idToken y buscar por email
@@ -39,8 +39,8 @@ export async function GET(request) {
         const email = payload?.email;
         if (email) {
           const dbUserByEmail = await getUserByIdOrUsernameFromRds(email);
-          if (dbUserByEmail?.user_full_name) {
-            return NextResponse.json({ user_name: dbUserByEmail.user_full_name }, { status: 200 });
+          if (dbUserByEmail?.user_name) {
+            return NextResponse.json({ user_name: dbUserByEmail.user_name }, { status: 200 });
           }
         }
       } catch {

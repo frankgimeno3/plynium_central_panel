@@ -119,23 +119,35 @@ const UserDetailPage: FC = () => {
 
   if (loading) {
     return (
-      <main className="flex w-full h-full min-h-screen flex-col items-center justify-center bg-white px-6 py-10 text-gray-600">
-        <p className="text-lg">Cargando usuario...</p>
-      </main>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center text-gray-600">
+              <p className="text-lg">Cargando usuario...</p>
+            </div>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
   if (error || !user) {
     return (
-      <main className="flex w-full h-full min-h-screen flex-col items-center justify-center bg-white px-6 py-10 text-gray-600">
-        <p className="text-red-500 text-lg">{error || 'Usuario no encontrado'}</p>
-        <button
-          onClick={() => router.push('/logged/pages/network/users')}
-          className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-950/80"
-        >
-          Back to Users
-        </button>
-      </main>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center text-gray-600">
+              <p className="text-red-500 text-lg">{error || 'Usuario no encontrado'}</p>
+              <button
+                onClick={() => router.push('/logged/pages/network/users')}
+                className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-950/80"
+              >
+                Back to Users
+              </button>
+            </div>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
@@ -157,6 +169,9 @@ const UserDetailPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-gray-600">
         <div className="flex justify-end mb-6">
           <button
             onClick={handleEditClick}
@@ -165,7 +180,7 @@ const UserDetailPage: FC = () => {
             Editar
           </button>
         </div>
-        <div className="flex flex-col w-full text-gray-600">
+        <div className="flex flex-col w-full">
           {user.user_main_image_src && (
             <div className="mb-6">
               <img
@@ -257,6 +272,9 @@ const UserDetailPage: FC = () => {
               </pre>
             </div>
           )}
+        </div>
+            </div>
+          </div>
         </div>
       </PageContentSection>
 

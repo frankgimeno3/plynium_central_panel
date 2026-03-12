@@ -92,7 +92,11 @@ const AgentDetailPage: FC = () => {
     return (
       <>
         <PageContentSection>
-          <p className="text-gray-500">Invalid agent.</p>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
+              <p className="text-gray-500">Invalid agent.</p>
+            </div>
+          </div>
         </PageContentSection>
       </>
     );
@@ -102,7 +106,11 @@ const AgentDetailPage: FC = () => {
     return (
       <>
         <PageContentSection>
-          <p className="text-gray-500">Agent not found: {idAgent}</p>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
+              <p className="text-gray-500">Agent not found: {idAgent}</p>
+            </div>
+          </div>
         </PageContentSection>
       </>
     );
@@ -117,6 +125,8 @@ const AgentDetailPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <div className="overflow-hidden max-w-2xl">
           <table className="min-w-full divide-y divide-gray-200">
             <tbody className="bg-white divide-y divide-gray-200">
@@ -153,9 +163,13 @@ const AgentDetailPage: FC = () => {
             </tbody>
           </table>
         </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Accounts managed ({customers.length})
         </h2>
@@ -214,9 +228,13 @@ const AgentDetailPage: FC = () => {
               </table>
             </div>
           )}
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Proposals ({proposals.length})
         </h2>
@@ -303,6 +321,8 @@ const AgentDetailPage: FC = () => {
               </table>
             </div>
           )}
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

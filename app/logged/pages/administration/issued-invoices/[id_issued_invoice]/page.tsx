@@ -93,7 +93,11 @@ const IssuedInvoiceDetailPage: FC = () => {
     return (
       <>
         <PageContentSection>
-          <p className="text-gray-500">Invalid issued invoice.</p>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
+              <p className="text-gray-500">Invalid issued invoice.</p>
+            </div>
+          </div>
         </PageContentSection>
       </>
     );
@@ -103,7 +107,11 @@ const IssuedInvoiceDetailPage: FC = () => {
     return (
       <>
         <PageContentSection>
-          <p className="text-gray-500">Issued invoice not found: {id}</p>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
+              <p className="text-gray-500">Issued invoice not found: {id}</p>
+            </div>
+          </div>
         </PageContentSection>
       </>
     );
@@ -112,6 +120,8 @@ const IssuedInvoiceDetailPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <div className="overflow-hidden max-w-2xl">
           <table className="min-w-full divide-y divide-gray-200">
             <tbody className="bg-white divide-y divide-gray-200">
@@ -154,9 +164,13 @@ const IssuedInvoiceDetailPage: FC = () => {
             </tbody>
           </table>
         </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <p className="text-sm font-medium text-gray-700 mb-2">Orders ({invoice.orders.length})</p>
           <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
             {invoice.orders.map((o) => (
@@ -172,6 +186,8 @@ const IssuedInvoiceDetailPage: FC = () => {
               </li>
             ))}
           </ul>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

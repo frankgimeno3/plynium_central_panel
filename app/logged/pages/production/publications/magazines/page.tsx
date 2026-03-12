@@ -47,33 +47,34 @@ const MagazinesPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">ID</label>
-            <input
-              type="text"
-              value={filter.id}
-              onChange={(e) => { setFilter((f) => ({ ...f, id: e.target.value })); setPage(1); }}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search by ID"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Name</label>
-            <input
-              type="text"
-              value={filter.name}
-              onChange={(e) => { setFilter((f) => ({ ...f, name: e.target.value })); setPage(1); }}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search by name"
-            />
-          </div>
-        </div>
-      </PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
+              <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">ID</label>
+                  <input
+                    type="text"
+                    value={filter.id}
+                    onChange={(e) => { setFilter((f) => ({ ...f, id: e.target.value })); setPage(1); }}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search by ID"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Name</label>
+                  <input
+                    type="text"
+                    value={filter.name}
+                    onChange={(e) => { setFilter((f) => ({ ...f, name: e.target.value })); setPage(1); }}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    placeholder="Search by name"
+                  />
+                </div>
+              </div>
 
-      <PageContentSection>
-        <div className="overflow-x-auto">
+              <div className="overflow-x-auto mt-6">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
               <tr>
@@ -128,6 +129,10 @@ const MagazinesPage: FC = () => {
             </div>
           </div>
         )}
+              </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

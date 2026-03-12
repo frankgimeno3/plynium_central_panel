@@ -25,7 +25,7 @@ const CommunicationsBadge: FC = () => {
 
   if (totalPending === 0) return null;
   return (
-    <span className="absolute -bottom-1 -right-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-xs font-bold leading-none text-white">
+    <span className="absolute -bottom-3 -left-3 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 px-1.5 text-xl font-bold leading-none text-white py-4">
       {totalPending > 99 ? "99+" : totalPending}
     </span>
   );
@@ -60,7 +60,7 @@ const Topnav: FC<TopnavProps> = () => {
       <div className="flex items-center gap-4 text-lg uppercase">
         <Link
           href="/logged/pages/communications"
-          className="relative flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors"
+          className="cursor-pointer relative flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors"
           aria-label="Communications"
         >
           <svg
@@ -81,7 +81,7 @@ const Topnav: FC<TopnavProps> = () => {
         </Link>
         <Link
           href="/logged/pages/mediateca"
-          className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors"
+          className="cursor-pointer flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
@@ -92,7 +92,7 @@ const Topnav: FC<TopnavProps> = () => {
           <button
             type="button"
             onClick={() => setNotificationsOpen((o) => !o)}
-            className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors uppercase"
+            className="cursor-pointer flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors uppercase"
             aria-expanded={notificationsOpen}
             aria-haspopup="true"
           >
@@ -107,7 +107,7 @@ const Topnav: FC<TopnavProps> = () => {
         </div>
 
         <button
-            className="flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors uppercase"
+            className="cursor-pointer flex items-center gap-2.5 px-5 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white transition-colors uppercase"
             onClick={handleLogout}
         >
           Log out

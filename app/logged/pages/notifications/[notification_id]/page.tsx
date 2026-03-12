@@ -174,7 +174,16 @@ const NotificationDetailPage: FC = () => {
   if (!notification && notifications.length > 0) {
     return (
       <PageContentSection>
-        <p className='text-red-500 text-lg'>Notification not found.</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center">
+              <p className="text-red-500 text-lg">Notification not found.</p>
+              <Link href="/logged/pages/notifications" className="mt-4 inline-block text-blue-950 hover:underline">
+                Back to Notifications
+              </Link>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -182,7 +191,11 @@ const NotificationDetailPage: FC = () => {
   if (!notification) {
     return (
       <PageContentSection>
-        <p className='text-gray-600'>Loading...</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center text-gray-600">Loading...</div>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -192,7 +205,10 @@ const NotificationDetailPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <div className='space-y-4 mb-6'>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
+        <div className="space-y-4 mb-6">
             <div>
               <label className='text-sm font-medium text-gray-500'>Notification ID</label>
               <p className='text-lg text-gray-900 font-mono'>{notification.notification_id}</p>
@@ -231,10 +247,13 @@ const NotificationDetailPage: FC = () => {
             </div>
           </div>
 
-          <div className='border-t pt-6'>
-            <label className='text-sm font-medium text-gray-500'>Full Description</label>
-            <p className='text-base text-gray-900 mt-1 whitespace-pre-wrap'>{notification.notification_description}</p>
+          <div className="border-t pt-6">
+            <label className="text-sm font-medium text-gray-500">Full Description</label>
+            <p className="text-base text-gray-900 mt-1 whitespace-pre-wrap">{notification.notification_description}</p>
           </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

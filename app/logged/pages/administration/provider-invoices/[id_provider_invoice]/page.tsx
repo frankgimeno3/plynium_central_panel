@@ -61,7 +61,11 @@ const ProviderInvoiceDetailPage: FC = () => {
     return (
       <>
         <PageContentSection>
-          <p className="text-gray-500">Invalid provider invoice.</p>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
+              <p className="text-gray-500">Invalid provider invoice.</p>
+            </div>
+          </div>
         </PageContentSection>
       </>
     );
@@ -71,7 +75,11 @@ const ProviderInvoiceDetailPage: FC = () => {
     return (
       <>
         <PageContentSection>
-          <p className="text-gray-500">Provider invoice not found: {id}</p>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
+              <p className="text-gray-500">Provider invoice not found: {id}</p>
+            </div>
+          </div>
         </PageContentSection>
       </>
     );
@@ -80,6 +88,8 @@ const ProviderInvoiceDetailPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <div className="overflow-hidden max-w-2xl">
           <table className="min-w-full divide-y divide-gray-200">
             <tbody className="bg-white divide-y divide-gray-200">
@@ -112,6 +122,8 @@ const ProviderInvoiceDetailPage: FC = () => {
               </tr>
             </tbody>
           </table>
+        </div>
+          </div>
         </div>
       </PageContentSection>
     </>

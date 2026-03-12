@@ -97,7 +97,11 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
   if (!campaign) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Campaign not found.</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center text-gray-500">Campaign not found.</div>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -107,6 +111,9 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Campaign data</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
@@ -138,9 +145,15 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
             <p className="text-gray-700">{campaign.description}</p>
           </div>
         </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <div className="flex items-center justify-between gap-4 mb-4">
           <h2 className="text-lg font-semibold text-gray-900">Related newsletters</h2>
           <button
@@ -182,6 +195,9 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
         {campaignNewsletters.length === 0 && (
           <p className="text-sm text-gray-500 py-4">No newsletters in this campaign.</p>
         )}
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <AddScheduledNewsletterModal

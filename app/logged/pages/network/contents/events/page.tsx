@@ -337,21 +337,32 @@ const IndustryEvents: FC = () => {
 
   if (loading) {
     return (
-      <>
-        <p className="text-gray-500">Loading events...</p>
-      </>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
+              <p className="text-gray-500">Loading events...</p>
+            </div>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
   return (
     <>
       <PageContentSection>
-        <EventFilter
-          onFilter={setFilterParams}
-          initialParams={filterParams}
-        />
-      </PageContentSection>
-      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
+              <EventFilter
+                onFilter={setFilterParams}
+                initialParams={filterParams}
+              />
+            </div>
+          </div>
+          <div className="bg-white rounded-b-lg overflow-hidden mt-4">
+            <div className="p-6">
       {viewMode === 'months' ? (
         <div className="flex flex-col lg:flex-row gap-8">
           <div className="lg:w-2/3">
@@ -554,6 +565,9 @@ const IndustryEvents: FC = () => {
           )}
         </div>
       )}
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

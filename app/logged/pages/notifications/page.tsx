@@ -122,24 +122,26 @@ const NotificationsPage: FC = () => {
 
   return (
     <>
-      <PageContentSection className="p-0 overflow-hidden">
-        <div className="flex border-b border-gray-200">
-          {tabs.map((tab) => (
-            <button
-              key={tab.key}
-              onClick={() => setCurrentTab(tab.key)}
-              className={`relative px-6 py-3 text-sm font-medium transition-colors ${
-                currentTab === tab.key
-                  ? 'text-blue-950 border-b-2 border-blue-950 bg-blue-50'
-                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="flex border-b border-gray-200">
+            {tabs.map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => setCurrentTab(tab.key)}
+                className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
+                  currentTab === tab.key
+                    ? 'text-blue-950 border-b-2 border-blue-950 bg-blue-50'
+                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
 
-        <div className='p-6'>
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
           {currentTab === 'other' ? (
             <div className='overflow-x-auto'>
               <table className='min-w-full divide-y divide-gray-200'>
@@ -237,6 +239,8 @@ const NotificationsPage: FC = () => {
               </table>
             </div>
           )}
+            </div>
+          </div>
         </div>
       </PageContentSection>
     </>

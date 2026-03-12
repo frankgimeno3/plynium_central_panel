@@ -41,6 +41,8 @@ const ProvidersPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -64,10 +66,8 @@ const ProvidersPage: FC = () => {
               />
             </div>
           </div>
-      </PageContentSection>
 
-      <PageContentSection>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto mt-6">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
               <tr>
@@ -107,6 +107,8 @@ const ProvidersPage: FC = () => {
         {filtered.length === 0 && (
           <p className="text-sm text-gray-500 text-center py-8">No providers match the filters.</p>
         )}
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

@@ -52,6 +52,8 @@ const CreateProviderPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">New provider</h2>
         <form onSubmit={handleSubmit} className="max-w-2xl space-y-4">
           <div>
@@ -140,6 +142,8 @@ const CreateProviderPage: FC = () => {
             </button>
           </div>
         </form>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

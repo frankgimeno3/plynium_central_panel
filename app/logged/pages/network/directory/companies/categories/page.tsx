@@ -52,9 +52,12 @@ const CompanyCategoriesPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        {loading ? (
-          <p className="text-gray-500 text-sm">Loading company categories…</p>
-        ) : (
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
+              {loading ? (
+                <p className="text-gray-500 text-sm">Loading company categories…</p>
+              ) : (
       <div className="border border-gray-200 rounded-lg overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -97,7 +100,10 @@ const CompanyCategoriesPage: FC = () => {
           </tbody>
         </table>
       </div>
-        )}
+              )}
+            </div>
+          </div>
+        </div>
       </PageContentSection>
       <CreateCompanyCategoryModal
         open={modalOpen}

@@ -12,9 +12,9 @@ import SelectArticleModal from "./article_components/SelectArticleModal";
 import { ArticleService } from "@/app/service/ArticleService";
 import { PortalService } from "@/app/service/PortalService";
 
-interface ArticlesContentProps {}
+interface ArticlesContentProps { }
 
-const ArticlesContent: FC<ArticlesContentProps> = ({}) => {
+const ArticlesContent: FC<ArticlesContentProps> = ({ }) => {
   const searchParams = useSearchParams();
   const portalNamesParam = searchParams.get("portalNames") ?? "";
   const portalNames = portalNamesParam ? portalNamesParam.split(",").map((s) => s.trim()).filter(Boolean) : [];
@@ -47,8 +47,8 @@ const ArticlesContent: FC<ArticlesContentProps> = ({}) => {
         typeof error === "string"
           ? error
           : (error as { message?: string })?.message ||
-            (error as { data?: { message?: string } })?.data?.message ||
-            ((error as { status?: number })?.status != null ? `HTTP ${(error as { status?: number }).status}` : "Unknown error");
+          (error as { data?: { message?: string } })?.data?.message ||
+          ((error as { status?: number })?.status != null ? `HTTP ${(error as { status?: number }).status}` : "Unknown error");
       console.error("Error fetching articles:", msg, error);
       setAllArticles([]);
     } finally {
@@ -95,89 +95,92 @@ const ArticlesContent: FC<ArticlesContentProps> = ({}) => {
   }, [setPageMeta, breadcrumbs]);
 
   return (
-    <>
+    <div className="flex flex-col gap-24">
       <PageContentSection>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Main Article Management</h2>
-        {portals.length === 0 ? (
-          <p className="text-gray-500 text-sm">No portals found.</p>
-        ) : (
-          <>
-            <div className="flex flex-wrap gap-2 mb-4 border-b border-gray-200 pb-2">
-              {portals.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => setMainTab(p.id)}
-                  className={`px-4 py-2 text-sm rounded-lg ${
-                    mainTab === p.id ? "bg-blue-950 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                  }`}
-                >
-                  {p.name}
-                </button>
-              ))}
-            </div>
-            {mainTab != null && (
-              <div className="overflow-x-auto border border-gray-300 rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
-                        Highlighted position
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
-                        Article title
-                      </th>
-                      <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300" style={{ width: 80 }}>
-                        Image
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
-                        Change
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {["Main article", "Position1", "Position2", "Position3", "Position4", "Position5"].map((pos) => {
-                      const row = (highlightedByPortal[mainTab] || []).find((r: any) => r.highlightPosition === pos);
-                      return (
-                        <tr key={pos}>
-                          <td className="px-4 py-3 text-sm text-gray-900 border-b border-gray-200">{pos}</td>
-                          <td className="px-4 py-3 text-sm text-gray-900 border-b border-gray-200">
-                            {row?.articleTitle || "—"}
-                          </td>
-                          <td className="px-3 py-2 border-b border-gray-200 align-middle" style={{ width: 80, verticalAlign: "middle" }}>
-                            {row?.article_main_image_url ? (
-                              <img
-                                src={row.article_main_image_url}
-                                alt=""
-                                className="w-14 h-14 object-cover rounded border border-gray-200"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).style.display = "none";
-                                }}
-                              />
-                            ) : (
-                              <span className="text-gray-400 text-xs">—</span>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 border-b border-gray-200">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const portal = portals.find((p) => p.id === mainTab);
-                                if (portal) setEditModal({ portalId: mainTab, portalName: portal.name, highlightPosition: pos });
-                              }}
-                              className="px-3 py-1 text-xs rounded-lg bg-blue-950 text-white hover:bg-blue-950/90 cursor-pointer"
-                            >
-                              Edit
-                            </button>
-                          </td>
+        <div className="flex flex-col w-full">
+          <div className=" rounded-b-lg overflow-hidden">
+            <h2 className=" text-3xl font-semibold text-gray-600 mb-5">Main Article Management</h2>
+            {portals.length === 0 ? (
+              <p className="text-gray-500 text-sm">No portals found.</p>
+            ) : (
+              <>
+                <div className="flex border-b border-gray-200 mb-1">
+                  {portals.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => setMainTab(p.id)}
+                      className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${mainTab === p.id ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        }`}
+                    >
+                      {p.name}
+                    </button>
+                  ))}
+                </div>
+                {mainTab != null && (
+                  <div className="overflow-x-auto border border-gray-300 rounded-lg">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
+                            Highlighted position
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
+                            Article title
+                          </th>
+                          <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300" style={{ width: 80 }}>
+                            Image
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
+                            Change
+                          </th>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                      </thead>
+                      <tbody className=" divide-y divide-gray-200">
+                        {["Main article", "Position1", "Position2", "Position3", "Position4", "Position5"].map((pos) => {
+                          const row = (highlightedByPortal[mainTab] || []).find((r: any) => r.highlightPosition === pos);
+                          return (
+                            <tr key={pos}>
+                              <td className="px-4 py-3 text-sm text-gray-900 border-b border-gray-200">{pos}</td>
+                              <td className="px-4 py-3 text-sm text-gray-900 border-b border-gray-200">
+                                {row?.articleTitle || "—"}
+                              </td>
+                              <td className="px-3 py-2 border-b border-gray-200 align-middle" style={{ width: 80, verticalAlign: "middle" }}>
+                                {row?.article_main_image_url ? (
+                                  <img
+                                    src={row.article_main_image_url}
+                                    alt=""
+                                    className="w-14 h-14 object-cover rounded border border-gray-200"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).style.display = "none";
+                                    }}
+                                  />
+                                ) : (
+                                  <span className="text-gray-400 text-xs">—</span>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 border-b border-gray-200">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const portal = portals.find((p) => p.id === mainTab);
+                                    if (portal) setEditModal({ portalId: mainTab, portalName: portal.name, highlightPosition: pos });
+                                  }}
+                                  className="px-3 py-1 text-sm rounded-lg bg-blue-900/90 text-white hover:bg-blue-950/90 cursor-pointer uppercase"
+                                >
+                                  Edit
+                                </button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+        </div>
       </PageContentSection>
 
       {/* Edit: large modal to select article for position */}
@@ -193,63 +196,65 @@ const ArticlesContent: FC<ArticlesContentProps> = ({}) => {
       )}
 
       <PageContentSection>
-        <h2 className="text-lg font-semibold text-gray-800 mb-4">Articles directory</h2>
-        <div className="flex flex-wrap gap-2 mb-4 border-b border-gray-200 pb-2">
-          <Link
-            href="/logged/pages/network/contents/articles"
-            className={`px-4 py-2 text-sm rounded-lg ${
-              portalNames.length === 0 ? "bg-blue-950 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            All Articles
-          </Link>
-          {portals.map((p) => (
-            <Link
-              key={p.id}
-              href={`/logged/pages/network/contents/articles?portalNames=${encodeURIComponent(p.name)}`}
-              className={`px-4 py-2 text-sm rounded-lg ${
-                portalNames.length === 1 && portalNames[0] === p.name ? "bg-blue-950 text-white" : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {p.name}
-            </Link>
-          ))}
-        </div>
-        <ArticleFilter />
-        <div className="flex flex-wrap py-5 gap-12 justify-center">
-          {loading ? (
-            <div className="text-center py-10 w-full">
-              <p className="text-gray-500">Loading articles...</p>
+        <div className="flex flex-col w-full">
+          <div className=" rounded-b-lg overflow-hidden">
+            <h2 className=" text-3xl font-semibold text-gray-600 mb-5">Articles directory</h2>
+            <div className="flex border-b border-gray-200">
+              <Link
+                href="/logged/pages/network/contents/articles"
+                className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${portalNames.length === 0 ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                  }`}
+              >
+                All Articles
+              </Link>
+              {portals.map((p) => (
+                <Link
+                  key={p.id}
+                  href={`/logged/pages/network/contents/articles?portalNames=${encodeURIComponent(p.name)}`}
+                  className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${portalNames.length === 1 && portalNames[0] === p.name ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    }`}
+                >
+                  {p.name}
+                </Link>
+              ))}
             </div>
-          ) : filteredArticles.filter((a: any) => a && a.id_article && a.articleTitle).length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 w-full">
-              <p className="text-gray-500 text-lg">No results found for your query</p>
+            <ArticleFilter />
+            <div className="flex flex-wrap py-5 gap-12 justify-center">
+              {loading ? (
+                <div className="text-center py-10 w-full">
+                  <p className="text-gray-500">Loading articles...</p>
+                </div>
+              ) : filteredArticles.filter((a: any) => a && a.id_article && a.articleTitle).length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 w-full">
+                  <p className="text-gray-500 text-lg">No results found for your query</p>
+                </div>
+              ) : (
+                filteredArticles
+                  .filter((a: any) => a && a.id_article && a.articleTitle)
+                  .map((a: any, index: number) => (
+                    <ArticleMiniature
+                      key={a.id_article || index}
+                      id_article={a.id_article || ""}
+                      titulo={a.articleTitle || ""}
+                      company={a.company || ""}
+                      date={a.date || ""}
+                      imageUrl={a.article_main_image_url || ""}
+                      highlightByPortal={a.highlightByPortal || []}
+                    />
+                  ))
+              )}
             </div>
-          ) : (
-            filteredArticles
-              .filter((a: any) => a && a.id_article && a.articleTitle)
-              .map((a: any, index: number) => (
-                <ArticleMiniature
-                  key={a.id_article || index}
-                  id_article={a.id_article || ""}
-                  titulo={a.articleTitle || ""}
-                  company={a.company || ""}
-                  date={a.date || ""}
-                  imageUrl={a.article_main_image_url || ""}
-                  highlightByPortal={a.highlightByPortal || []}
-                />
-              ))
-          )}
+          </div>
         </div>
       </PageContentSection>
-    </>
+    </div>
   );
 };
 
 const Articles: FC = () => (
   <Suspense
     fallback={
-      <div className="flex flex-col w-full bg-white min-h-[200px] items-center justify-center">
+      <div className="flex flex-col w-full  min-h-[200px] items-center justify-center">
         <p className="text-gray-500">Loading...</p>
       </div>
     }

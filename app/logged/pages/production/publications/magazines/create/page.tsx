@@ -99,6 +99,9 @@ const CreateMagazinePage: FC = () => {
 
   return (
     <PageContentSection>
+      <div className="flex flex-col w-full">
+        <div className="bg-white rounded-b-lg overflow-hidden">
+          <div className="p-6">
       <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">ID (required)</label>
@@ -274,6 +277,9 @@ const CreateMagazinePage: FC = () => {
           </button>
         </div>
       </form>
+          </div>
+        </div>
+      </div>
     </PageContentSection>
   );
 };

@@ -118,6 +118,8 @@ const ExportContactsPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
       <div className="max-w-2xl">
         {phase === "config" && (
           <div className="space-y-6">
@@ -232,6 +234,8 @@ const ExportContactsPage: FC = () => {
           </div>
         )}
       </div>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

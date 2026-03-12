@@ -116,73 +116,74 @@ const Products: FC<ProductsProps> = ({ }) => {
   return (
     <>
       <PageContentSection>
-          <p className="text-sm font-semibold mb-4 text-gray-700">Filter Products</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Product ID</label>
-              <input
-                type="text"
-                value={filters.productId}
-                onChange={(e) => handleFilterChange('productId', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                placeholder="Search by Product ID"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Product Name</label>
-              <input
-                type="text"
-                value={filters.productName}
-                onChange={(e) => handleFilterChange('productName', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                placeholder="Search by Product Name"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Price From</label>
-              <input
-                type="number"
-                value={filters.priceFrom}
-                onChange={(e) => handleFilterChange('priceFrom', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                placeholder="Min Price"
-                min="0"
-                step="0.01"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Price To</label>
-              <input
-                type="number"
-                value={filters.priceTo}
-                onChange={(e) => handleFilterChange('priceTo', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                placeholder="Max Price"
-                min="0"
-                step="0.01"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Company</label>
-              <input
-                type="text"
-                value={filters.company}
-                onChange={(e) => handleFilterChange('company', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                placeholder="Search by Company"
-              />
-            </div>
-          </div>
-      </PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
+              <p className="text-sm font-semibold mb-4 text-gray-700">Filter Products</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Product ID</label>
+                  <input
+                    type="text"
+                    value={filters.productId}
+                    onChange={(e) => handleFilterChange('productId', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
+                    placeholder="Search by Product ID"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Product Name</label>
+                  <input
+                    type="text"
+                    value={filters.productName}
+                    onChange={(e) => handleFilterChange('productName', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
+                    placeholder="Search by Product Name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Price From</label>
+                  <input
+                    type="number"
+                    value={filters.priceFrom}
+                    onChange={(e) => handleFilterChange('priceFrom', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
+                    placeholder="Min Price"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Price To</label>
+                  <input
+                    type="number"
+                    value={filters.priceTo}
+                    onChange={(e) => handleFilterChange('priceTo', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
+                    placeholder="Max Price"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Company</label>
+                  <input
+                    type="text"
+                    value={filters.company}
+                    onChange={(e) => handleFilterChange('company', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
+                    placeholder="Search by Company"
+                  />
+                </div>
+              </div>
 
-      <PageContentSection>
-        {loading ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500">Loading products...</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 border border-gray-300" style={{ tableLayout: 'fixed' }}>
+              {loading ? (
+                <div className="text-center py-10 mt-6">
+                  <p className="text-gray-500">Loading products...</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto mt-6">
+                  <table className="min-w-full divide-y divide-gray-200 border border-gray-300" style={{ tableLayout: 'fixed' }}>
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300" style={{ width: 84, minWidth: 84 }}>
@@ -260,9 +261,12 @@ const Products: FC<ProductsProps> = ({ }) => {
                   ))
                 )}
               </tbody>
-            </table>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </PageContentSection>
     </>
   );

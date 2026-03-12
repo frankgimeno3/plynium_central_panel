@@ -117,58 +117,59 @@ const Companies: FC<CompaniesProps> = ({ }) => {
   return (
     <>
       <PageContentSection>
-          <p className="text-sm font-semibold mb-4 text-gray-700">Filter Companies</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Company ID</label>
-              <input
-                type="text"
-                value={filters.companyId}
-                onChange={(e) => handleFilterChange('companyId', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                placeholder="Search by Company ID"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Commercial Name</label>
-              <input
-                type="text"
-                value={filters.commercialName}
-                onChange={(e) => handleFilterChange('commercialName', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                placeholder="Search by Commercial Name"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Country</label>
-              <input
-                type="text"
-                value={filters.country}
-                onChange={(e) => handleFilterChange('country', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                placeholder="Search by Country"
-              />
-            </div>
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Category</label>
-              <input
-                type="text"
-                value={filters.category}
-                onChange={(e) => handleFilterChange('category', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                placeholder="Search by Category"
-              />
-            </div>
-          </div>
-      </PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
+              <p className="text-sm font-semibold mb-4 text-gray-700">Filter Companies</p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Company ID</label>
+                  <input
+                    type="text"
+                    value={filters.companyId}
+                    onChange={(e) => handleFilterChange('companyId', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
+                    placeholder="Search by Company ID"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Commercial Name</label>
+                  <input
+                    type="text"
+                    value={filters.commercialName}
+                    onChange={(e) => handleFilterChange('commercialName', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
+                    placeholder="Search by Commercial Name"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Country</label>
+                  <input
+                    type="text"
+                    value={filters.country}
+                    onChange={(e) => handleFilterChange('country', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
+                    placeholder="Search by Country"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Category</label>
+                  <input
+                    type="text"
+                    value={filters.category}
+                    onChange={(e) => handleFilterChange('category', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
+                    placeholder="Search by Category"
+                  />
+                </div>
+              </div>
 
-      <PageContentSection>
-        {loading ? (
-          <div className="text-center py-10">
-            <p className="text-gray-500">Loading companies...</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
+              {loading ? (
+                <div className="text-center py-10 mt-6">
+                  <p className="text-gray-500">Loading companies...</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto mt-6">
             <table className="min-w-full divide-y divide-gray-200 border border-gray-300" style={{ tableLayout: 'fixed' }}>
               <thead className="bg-gray-50">
                 <tr>
@@ -254,8 +255,11 @@ const Companies: FC<CompaniesProps> = ({ }) => {
                 )}
               </tbody>
             </table>
+                </div>
+              )}
+            </div>
           </div>
-        )}
+        </div>
       </PageContentSection>
       <CreateCompanyCategoryModal
         open={createCategoryModalOpen}

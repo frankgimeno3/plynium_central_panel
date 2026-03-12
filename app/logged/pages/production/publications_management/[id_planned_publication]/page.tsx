@@ -69,11 +69,13 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
 
   if (!publication) {
     return (
-      <>
-        <PageContentSection>
-          <p className="text-gray-500">Publication not found.</p>
-        </PageContentSection>
-      </>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center text-gray-500">Publication not found.</div>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
@@ -130,6 +132,9 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
           <div>
             <p className="text-xs text-gray-500 uppercase">ID</p>
@@ -148,15 +153,24 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
             <p className="font-medium">{publication.publication_date}</p>
           </div>
         </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Publication layout</h3>
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {slots.map((key) => {
             const slot = publication[key] as PublicationSlot;
             return slot ? renderSlot(key as string, slot) : null;
           })}
+        </div>
+            </div>
+          </div>
         </div>
       </PageContentSection>
     </>

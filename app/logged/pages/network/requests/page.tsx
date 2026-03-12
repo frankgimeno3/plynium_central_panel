@@ -17,6 +17,8 @@ const Advertisement: FC<AdvertisementProps> = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <p className="text-sm text-gray-500 mb-6">Select a request type to manage</p>
         <div className="flex flex-col gap-4">
           <Link
@@ -40,6 +42,8 @@ const Advertisement: FC<AdvertisementProps> = () => {
             <span className="font-semibold text-gray-900">Other requests</span>
             <span className="text-sm text-gray-500 mt-1">General contact and other inquiries</span>
           </Link>
+        </div>
+          </div>
         </div>
       </PageContentSection>
     </>

@@ -175,6 +175,8 @@ const ImportCustomersPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
       <div className="max-w-2xl">
         {phase === "upload" && (
           <>
@@ -250,6 +252,8 @@ const ImportCustomersPage: FC = () => {
           </div>
         )}
       </div>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

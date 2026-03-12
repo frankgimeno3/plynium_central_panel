@@ -82,7 +82,11 @@ const OrderDetailPage: FC = () => {
   if (!idOrder) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Invalid order.</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+            <p className="text-gray-500">Invalid order.</p>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -90,7 +94,11 @@ const OrderDetailPage: FC = () => {
   if (!order) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Order not found: {idOrder}</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+            <p className="text-gray-500">Order not found: {idOrder}</p>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -98,6 +106,8 @@ const OrderDetailPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <div className="overflow-hidden max-w-2xl">
           <table className="min-w-full divide-y divide-gray-200">
             <tbody className="bg-white divide-y divide-gray-200">
@@ -197,6 +207,8 @@ const OrderDetailPage: FC = () => {
               </tr>
             </tbody>
           </table>
+        </div>
+          </div>
         </div>
       </PageContentSection>
     </>

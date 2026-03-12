@@ -108,6 +108,10 @@ export default function AdvertisementDetailPage() {
       .trim();
   };
 
+  /** Same style as Leftnav selected item: border-blue-500, bg-blue-950/40, text-blue-300 */
+  const stateBadgeClass = (): string =>
+    "border-blue-500 bg-blue-950/40 font-medium text-blue-300";
+
   const handleStateChange = async (newState: AdvertisementState) => {
     if (!advertisement) return;
     const decodedId = decodeURIComponent(advReqId).trim();
@@ -149,34 +153,46 @@ export default function AdvertisementDetailPage() {
 
   if (loading || advertisementsLoading) {
     return (
-      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600 w-full">
-        <p className="text-lg">Loading advertisement request...</p>
-      </main>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6 flex flex-col items-center justify-center text-gray-600 min-h-[200px] w-full">
+            <p className="text-lg">Loading advertisement request...</p>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
   if (error || !advertisement) {
     return (
-      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600 w-full">
-        <p className="text-red-500 text-lg">
-          {error || "The advertisement request you are looking for does not exist."}
-        </p>
-        <button
-          onClick={() => router.push(BASE)}
-          className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-950/80"
-        >
-          Back to Communications
-        </button>
-      </main>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6 flex flex-col items-center justify-center text-gray-600 min-h-[200px] w-full">
+            <p className="text-red-500 text-lg">
+              {error || "The advertisement request you are looking for does not exist."}
+            </p>
+            <button
+              onClick={() => router.push(BASE)}
+              className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-950/80"
+            >
+              Back to Communications
+            </button>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <div className="flex items-center gap-3 mb-6">
           <span className="text-sm text-gray-500">Current State:</span>
-          <span className="inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-gray-100 text-gray-800">
+          <span
+            className={`inline-flex rounded-r-md border-l-2 py-1.5 pl-2 pr-3 text-sm font-medium uppercase ${stateBadgeClass()}`}
+          >
             {formatState(advertisement.advReqState)}
           </span>
         </div>
@@ -231,9 +247,13 @@ export default function AdvertisementDetailPage() {
             {advertisement.requestDescription}
           </p>
         </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-4">Comments</h2>
         <div className="mb-6">
           <label
@@ -285,6 +305,8 @@ export default function AdvertisementDetailPage() {
           >
             Create proposal
           </Link>
+        </div>
+          </div>
         </div>
       </PageContentSection>
     </>

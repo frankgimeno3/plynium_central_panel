@@ -47,7 +47,7 @@ const CommunicationsPage: FC = () => {
     <>
       <PageContentSection>
         <div className="flex flex-col w-full">
-          <div className="flex border-b border-gray-200 ">
+          <div className="flex border-b border-gray-200 mt-12 ">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -71,7 +71,7 @@ const CommunicationsPage: FC = () => {
             ))}
           </div>
 
-          <div className="bg-white rounded-b-lg overflow-hidden">
+          <div className="overflow-hidden">
             {activeTab === "company" && <CompanyCreationRequestsTab />}
             {activeTab === "quotations" && <AdvertisementQuotationsTab />}
             {activeTab === "other" && <OtherCommunicationsTab />}

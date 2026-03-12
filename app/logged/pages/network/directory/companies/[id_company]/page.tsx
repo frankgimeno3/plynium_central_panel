@@ -167,17 +167,25 @@ const IdCompany: FC<IdCompanyProps> = ({ }) => {
 
   if (loading) {
     return (
-      <div className="flex flex-col w-full bg-white p-8">
-        <p className="text-center text-gray-500">Loading company...</p>
-      </div>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center text-gray-500">Loading company...</div>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
   if (!company || !formData) {
     return (
-      <div className="flex flex-col w-full bg-white p-8">
-        <p className="text-center text-gray-500">Company not found</p>
-      </div>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-center text-gray-500">Company not found</div>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
@@ -191,7 +199,9 @@ const IdCompany: FC<IdCompanyProps> = ({ }) => {
   return (
     <>
       <PageContentSection>
-        <div className="p-0">
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
           {/* Main image at top - large, with Search or Add overlay bottom-right */}
           <div className="relative w-full mb-8 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
             {formData.mainImage ? (

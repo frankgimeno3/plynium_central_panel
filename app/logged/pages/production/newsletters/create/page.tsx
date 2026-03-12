@@ -78,6 +78,9 @@ const CreateNewsletterCampaignPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">New newsletter campaign</h2>
         <form onSubmit={handleSubmit} className="max-w-2xl space-y-4">
           <div>
@@ -213,6 +216,9 @@ const CreateNewsletterCampaignPage: FC = () => {
         <p className="mt-4 text-xs text-gray-500">
           New campaign ID would be: {nextCampaignId()} (no persistence in this demo).
         </p>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

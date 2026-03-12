@@ -47,6 +47,8 @@ const CreateContactPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-xs text-gray-600 mb-1">Contact ID</label>
@@ -141,6 +143,8 @@ const CreateContactPage: FC = () => {
             </button>
           </div>
         </form>
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

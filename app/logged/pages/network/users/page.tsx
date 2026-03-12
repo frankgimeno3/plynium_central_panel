@@ -85,11 +85,11 @@ const Users: FC<UsersProps> = () => {
   return (
     <>
       <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
+        <div className="flex flex-col w-full">
         <p className="text-2xl font-bold px-0 pt-0">My user</p>
         <p className="text-gray-500 mb-4">Tu name, email, role y descripcion de tu role</p>
 
-        <div className="flex border-b border-gray-200 bg-gray-50/80">
-          <div className="flex w-full">
+        <div className="flex border-b border-gray-200">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
@@ -99,20 +99,24 @@ const Users: FC<UsersProps> = () => {
                   if (tab.key === 'lists') setSelectedListId(userLists[0]?.userList_id ?? null);
                   else setSelectedListId(null);
                 }}
-                className={`relative px-6 py-3 text-sm font-medium transition-colors ${
-                  currentTab === tab.key
-                    ? 'text-blue-950 border-b-2 border-blue-950 bg-white'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
+                className={`
+                  relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
+                  ${
+                    currentTab === tab.key
+                      ? 'text-blue-950 border-b-2 border-blue-950 bg-blue-50'
+                      : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }
+                `}
               >
                 {tab.label}
               </button>
             ))}
           </div>
-        </div>
 
+        <div className="bg-white rounded-b-lg overflow-hidden flex-1 min-h-0 overflow-auto p-6">
         {error && (
-          <div className="mt-4 rounded-md bg-red-50 p-4 text-red-700">
+          <div className="p-6">
+          <div className="rounded-md bg-red-50 p-4 text-red-700">
             {error}
             <button
               type="button"
@@ -122,14 +126,15 @@ const Users: FC<UsersProps> = () => {
               Reintentar
             </button>
           </div>
+          </div>
         )}
 
-        {currentTab === 'all' && (
+        {currentTab === 'all' && !error && (
           <>
             {loading ? (
-              <p className="mt-8 text-gray-500">Loading users...</p>
+              <p className="p-6 text-gray-500">Loading users...</p>
             ) : (
-              <div className="mt-8 overflow-x-auto">
+              <div className="p-6 overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
                   <thead className="bg-gray-50">
                     <tr>
@@ -175,8 +180,8 @@ const Users: FC<UsersProps> = () => {
           </>
         )}
 
-        {currentTab === 'lists' && (
-          <div className="mt-6 flex flex-col gap-6 flex-1 min-h-0">
+        {currentTab === 'lists' && !error && (
+          <div className="p-6 flex flex-col gap-6 flex-1 min-h-0">
             <p className="text-sm text-gray-600">Listas de envío de newsletters. Selecciona una lista para ver los users y contacts asignados.</p>
             <div className="flex flex-wrap gap-2">
               {userLists.map((list) => (
@@ -278,6 +283,8 @@ const Users: FC<UsersProps> = () => {
             )}
           </div>
         )}
+        </div>
+        </div>
       </PageContentSection>
     </>
   );

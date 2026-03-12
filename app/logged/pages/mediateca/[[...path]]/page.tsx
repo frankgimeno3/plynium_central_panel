@@ -1,7 +1,6 @@
 "use client";
 
 import React, { FC, use, useState, useMemo, useEffect } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
@@ -107,8 +106,9 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
       />
 
       <PageContentSection>
-        <h2 className="text-sm font-semibold text-gray-700 mb-3">{folderName}</h2>
-        <p className="text-xs text-gray-500 mb-4">Subfolders</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+          <h2 className=" text-3xl font-semibold text-gray-600 mb-5">Subfolders</h2>
         <div className="w-full min-w-0 overflow-x-auto">
           <table className="w-full min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -125,27 +125,39 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
                   </td>
                 </tr>
               ) : (
-                subfolders.map((f) => (
-                  <tr key={f.id} className="cursor-pointer hover:bg-blue-50/80 transition-colors">
-                    <td className="px-6 py-4">
-                      <Link
-                        href={`${baseHref}/${f.path}`}
-                        className="text-sm font-medium text-blue-600 hover:underline"
-                      >
-                        {f.name}
-                      </Link>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500 font-mono">{f.path}</td>
-                  </tr>
-                ))
+                subfolders.map((f) => {
+                  const href = `${baseHref}/${f.path}`;
+                  return (
+                    <tr
+                      key={f.id}
+                      role="link"
+                      tabIndex={0}
+                      onClick={() => router.push(href)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          router.push(href);
+                        }
+                      }}
+                      className="cursor-pointer hover:bg-blue-50/80 transition-colors focus:outline-none focus:bg-blue-50/80"
+                    >
+                      <td className="px-6 py-4 text-sm font-medium uppercase text-gray-900">{f.name}</td>
+                      <td className="px-6 py-4 text-sm text-gray-500 font-mono">{f.path}</td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
-        <p className="text-xs text-gray-500 mb-4">Contents</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+          <h2 className=" text-3xl font-semibold text-gray-600 mb-5">Contents</h2>
         <div className="w-full min-w-0 overflow-x-auto">
           <table className="w-full min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -191,17 +203,17 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
                           href={`/logged/pages/mediateca/asset/${c.id}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline font-medium"
+                          className="text-blue-300 hover:underline font-medium"
                         >
                           View
-                        </a>
+                        </a>  
                         <span className="text-gray-300">|</span>
                         <a
                           href={c.src ?? `/logged/pages/mediateca/asset/${c.id}`}
                           download={c.src ? c.name : undefined}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline font-medium"
+                          className="text-blue-300 hover:underline font-medium"
                         >
                           Download
                         </a>
@@ -212,6 +224,8 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
               )}
             </tbody>
           </table>
+        </div>
+          </div>
         </div>
       </PageContentSection>
     </>

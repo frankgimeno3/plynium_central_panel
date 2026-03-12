@@ -144,6 +144,9 @@ export default function IdArticlePage() {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
       <main className="flex flex-col gap-6 text-gray-600 w-full">
         <div className="flex justify-end mb-4">
           <button
@@ -360,6 +363,9 @@ export default function IdArticlePage() {
           ) : null}
         </div>
       </main>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <EditContentsModal

@@ -116,7 +116,9 @@ const Banners: FC = () => {
     return (
         <>
             <PageContentSection>
-            <div className="flex flex-col w-full gap-4">
+            <div className="flex flex-col w-full">
+                <div className="bg-white rounded-b-lg overflow-hidden">
+                    <div className="p-6">
                 {selectedPortalId == null ? (
                     <>
                         <div className="flex items-center justify-between">
@@ -148,17 +150,17 @@ const Banners: FC = () => {
                     </>
                 ) : (
                     <>
-                        {/* Tabs - above Back to portals */}
-                        <div className="flex flex-row border-b border-gray-200 gap-1">
+                        {/* Tabs */}
+                        <div className="flex border-b border-gray-200">
                             {(Object.keys(TAB_LABELS) as BannerTab[]).map((tab) => (
                                 <button
                                     key={tab}
                                     type="button"
                                     onClick={() => setActiveTab(tab)}
-                                    className={`px-6 py-3 font-medium rounded-t-lg transition-colors ${
+                                    className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
                                         activeTab === tab
-                                            ? 'bg-blue-500 text-white border-b-2 border-blue-500'
-                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                            ? 'text-blue-950 border-b-2 border-blue-950 bg-blue-50'
+                                            : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                                     }`}
                                 >
                                     {TAB_LABELS[tab]}
@@ -263,6 +265,8 @@ const Banners: FC = () => {
                         />
                     </>
                 )}
+                    </div>
+                </div>
             </div>
             </PageContentSection>
         </>

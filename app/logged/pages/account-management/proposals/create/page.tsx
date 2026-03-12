@@ -169,7 +169,8 @@ const CreateProposalPage: FC = () => {
   return (
     <>
       <PageContentSection className="p-0">
-      <div className="p-6 border-b border-gray-200 bg-gray-50">
+      <div className="flex flex-col w-full">
+      <div className="flex border-b border-gray-200 bg-gray-50 px-6 py-4">
         <div className="flex items-center gap-4">
           {([1, 2, 3, 4] as Step[]).map((s) => (
             <React.Fragment key={s}>
@@ -194,7 +195,7 @@ const CreateProposalPage: FC = () => {
         </div>
       </div>
 
-      <div className="p-12 w-full">
+      <div className="bg-white rounded-b-lg overflow-hidden p-12 w-full">
         {/* Step 1: Account + contact */}
         {step === 1 && (
           <div className="space-y-6">
@@ -1047,6 +1048,7 @@ const CreateProposalPage: FC = () => {
             </div>
           </div>
         )}
+      </div>
       </div>
       </PageContentSection>
 

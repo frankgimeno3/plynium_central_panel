@@ -79,37 +79,42 @@ const BanksPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <p className="text-gray-600 mb-2">
           Forecast of collections (issued invoices, orders pending) and payments (provider invoices). Based on current issued and provider invoice data.
         </p>
-        <div className="flex gap-2 border-b border-gray-200 pb-2">
+        <div className="flex border-b border-gray-200 mb-4">
           <button
             onClick={() => setActiveTab("all")}
-            className={`px-4 py-2 rounded-t text-sm font-medium transition-colors ${
-              activeTab === "all" ? "bg-blue-100 text-blue-800" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
+            className={`
+              relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
+              ${activeTab === "all" ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}
+            `}
           >
             All
           </button>
           <button
             onClick={() => setActiveTab("revenues")}
-            className={`px-4 py-2 rounded-t text-sm font-medium transition-colors ${
-              activeTab === "revenues" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
+            className={`
+              relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
+              ${activeTab === "revenues" ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}
+            `}
           >
             Forecasted revenues
           </button>
           <button
             onClick={() => setActiveTab("payments")}
-            className={`px-4 py-2 rounded-t text-sm font-medium transition-colors ${
-              activeTab === "payments" ? "bg-amber-100 text-amber-800" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            }`}
+            className={`
+              relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
+              ${activeTab === "payments" ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50" : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"}
+            `}
           >
             Forecasted payments
           </button>
         </div>
 
-        <div className="overflow-x-auto mt-4">
+        <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
               <tr>
@@ -145,6 +150,8 @@ const BanksPage: FC = () => {
         {displayList.length === 0 && (
           <p className="text-sm text-gray-500 text-center py-8">No forecast items in this view.</p>
         )}
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

@@ -46,33 +46,33 @@ export default function GA4Page() {
 
   return (
     <>
-      <PageContentSection className="p-0 overflow-hidden">
-        <div className="flex border-b border-gray-200">
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="flex border-b border-gray-200">
           {portals.map((p, i) => (
             <button
               key={p.id}
               onClick={() => setActivePortalIdx(i)}
-              className={`px-6 py-3 text-sm font-medium transition-colors ${
-                activePortalIdx === i
-                  ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-              }`}
+              className={`
+                relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
+                ${
+                  activePortalIdx === i
+                    ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }
+              `}
             >
               {p.name}
             </button>
           ))}
-        </div>
+          </div>
         {!currentPortal ? (
-          <div className="p-6">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
             <p className="text-gray-500">No portal selected</p>
           </div>
-        ) : null}
-      </PageContentSection>
-
-      {currentPortal ? (
-        <>
-          <PageContentSection>
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        ) : (
+          <div className="bg-white rounded-b-lg overflow-hidden">
+        <div className="p-6 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
             {summary && (
               <>
                 <MetricCard label="Users" value={summary.users.toLocaleString()} />
@@ -85,9 +85,16 @@ export default function GA4Page() {
               </>
             )}
             </div>
-          </PageContentSection>
+          </div>
+        )}
+        </div>
+      </PageContentSection>
 
+      {currentPortal ? (
+        <>
           <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Top pages (detailed)</h2>
             <div className="overflow-x-auto rounded-lg border border-gray-200 shadow-sm">
               <table className="w-full text-sm">
@@ -123,9 +130,13 @@ export default function GA4Page() {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
           </PageContentSection>
 
           <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <div>
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Traffic source</h2>
@@ -165,13 +176,19 @@ export default function GA4Page() {
               </div>
             </div>
             </div>
+          </div>
+        </div>
           </PageContentSection>
 
           <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Engagement over time</h2>
             <div className="h-48 flex items-center justify-center bg-gray-50 rounded-lg border border-dashed border-gray-200">
               <p className="text-gray-400 text-sm">Chart placeholder (mock data)</p>
             </div>
+          </div>
+        </div>
           </PageContentSection>
         </>
       ) : null}

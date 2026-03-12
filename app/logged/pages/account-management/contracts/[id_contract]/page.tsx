@@ -150,7 +150,11 @@ const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ 
   if (!contract) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Contract not found.</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+            <p className="text-gray-500">Contract not found.</p>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -162,7 +166,8 @@ const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ 
 
   return (
     <PageContentSection>
-      <div className="space-y-6">
+      <div className="flex flex-col w-full">
+        <div className="bg-white rounded-b-lg overflow-hidden p-6 space-y-6">
         {/* Contract title (from accepted proposal) */}
         <input
           type="text"
@@ -382,6 +387,7 @@ const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ 
             </Link>
           </div>
         )}
+        </div>
       </div>
     </PageContentSection>
   );

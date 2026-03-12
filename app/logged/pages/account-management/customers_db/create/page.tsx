@@ -231,7 +231,8 @@ const CreateCustomerPage: FC = () => {
   return (
     <>
       <PageContentSection className="p-0">
-        <div className="p-6 border-b border-gray-200 bg-gray-50">
+        <div className="flex flex-col w-full">
+        <div className="flex border-b border-gray-200 bg-gray-50 px-6 py-4">
           <div className="flex items-center gap-4">
             {([1, 2, 3, 4, 5] as Step[]).map((s) => (
               <React.Fragment key={s}>
@@ -255,7 +256,7 @@ const CreateCustomerPage: FC = () => {
           </div>
         </div>
 
-        <div className="p-8 md:p-12 w-full max-w-full">
+        <div className="bg-white rounded-b-lg overflow-hidden p-8 md:p-12 w-full max-w-full">
           {/* Step 1: Account type + related to existing */}
           {step === 1 && (
             <div className="space-y-6">
@@ -770,6 +771,7 @@ const CreateCustomerPage: FC = () => {
               </div>
             </form>
           )}
+        </div>
         </div>
       </PageContentSection>
 

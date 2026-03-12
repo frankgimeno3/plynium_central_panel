@@ -522,6 +522,9 @@ const IdEvent: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
       <div className="w-full">
         <Link
           href="/logged/pages/network/contents/events"
@@ -901,6 +904,9 @@ const IdEvent: FC = () => {
         </div>
 
       </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       {/* Floating Save changes - bottom right, only when there are changes */}

@@ -106,8 +106,10 @@ const CreateFlatplanPage: FC = () => {
 
   return (
     <>
-      <PageContentSection className="p-0">
-        <div className="p-6 border-b border-gray-200 bg-gray-50">
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="flex border-b border-gray-200 bg-gray-50">
+        <div className="p-6 flex-1">
           <div className="flex items-center gap-4">
             {([1, 2, 3] as Step[]).map((s) => (
               <React.Fragment key={s}>
@@ -130,8 +132,10 @@ const CreateFlatplanPage: FC = () => {
             </span>
           </div>
         </div>
+          </div>
 
-        <div className="p-12 w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+        <div className="p-6 w-full">
           {step === 1 && (
             <div className="space-y-6 max-w-xl">
               <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -314,6 +318,8 @@ const CreateFlatplanPage: FC = () => {
               </div>
             </div>
           )}
+        </div>
+          </div>
         </div>
       </PageContentSection>
 

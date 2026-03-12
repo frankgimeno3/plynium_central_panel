@@ -59,30 +59,39 @@ const OtherRequestDetailPage: FC = () => {
 
   if (loading) {
     return (
-      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600">
-        <p className="text-lg">Loading request...</p>
-      </main>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6 flex flex-col items-center justify-center text-gray-600 min-h-[200px]">
+            <p className="text-lg">Loading request...</p>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
   if (!request) {
     return (
-      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600">
-        <p className="text-red-500 text-lg">Request not found.</p>
-        <button
-          onClick={() => router.push(BASE)}
-          className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-950/80"
-        >
-          Back to Communications
-        </button>
-      </main>
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6 flex flex-col items-center justify-center text-gray-600 min-h-[200px]">
+            <p className="text-red-500 text-lg">Request not found.</p>
+            <button
+              onClick={() => router.push(BASE)}
+              className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-950/80"
+            >
+              Back to Communications
+            </button>
+          </div>
+        </div>
+      </PageContentSection>
     );
   }
 
   return (
     <>
       <PageContentSection>
-        <div className="space-y-4 text-gray-600">
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6 space-y-4 text-gray-600">
           <div>
             <label className="text-sm font-medium text-gray-500">ID</label>
             <p className="text-lg text-gray-900 font-mono">{request.id}</p>
@@ -108,6 +117,7 @@ const OtherRequestDetailPage: FC = () => {
           <div>
             <label className="text-sm font-medium text-gray-500">Content</label>
             <p className="text-base text-gray-900 mt-1 whitespace-pre-wrap">{request.content}</p>
+          </div>
           </div>
         </div>
       </PageContentSection>

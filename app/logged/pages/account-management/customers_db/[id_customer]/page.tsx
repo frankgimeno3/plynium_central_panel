@@ -208,7 +208,11 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
   if (customerLoading) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Loading…</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+            <p className="text-gray-500">Loading…</p>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -217,7 +221,11 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
     return (
       <>
         <PageContentSection>
-          <p className="text-gray-500">Customer not found.</p>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
+              <p className="text-gray-500">Customer not found.</p>
+            </div>
+          </div>
         </PageContentSection>
       </>
     );
@@ -241,18 +249,21 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
   return (
     <>
       <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
-        <div className="flex border-b border-gray-200 bg-gray-50/80">
-        <div className="flex">
+        <div className="flex flex-col w-full">
+          <div className="flex border-b border-gray-200">
           {tabs.map((tab) => (
             <button
               key={tab.key}
               type="button"
               onClick={() => setCurrentTab(tab.key)}
-              className={`relative px-6 py-3 text-sm font-medium transition-colors ${
-                currentTab === tab.key
-                  ? "text-blue-950 border-b-2 border-blue-950 bg-white text-blue-950"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              }`}
+              className={`
+                relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
+                ${
+                  currentTab === tab.key
+                    ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }
+              `}
             >
               {tab.label}
               {tab.key === "comentarios" && comments.length > 0 && (
@@ -269,11 +280,10 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
               )}
             </button>
           ))}
-        </div>
-      </div>
+          </div>
 
       {/* Tab content */}
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div className="bg-white rounded-b-lg overflow-hidden flex-1 min-h-0 overflow-auto">
         {currentTab === "principal" && (
           <div className="p-6 max-w-5xl mx-auto space-y-6">
             {/* Account type */}
@@ -582,11 +592,14 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                       key={status}
                       type="button"
                       onClick={() => setProposalStatusTab(status)}
-                      className={`capitalize px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                        proposalStatusTab === status
-                          ? "text-blue-950 border-blue-950"
-                          : "text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-300"
-                      }`}
+                      className={`
+                        relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors capitalize
+                        ${
+                          proposalStatusTab === status
+                            ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        }
+                      `}
                     >
                       {status}
                       <span className="ml-1.5 text-gray-500">({proposalsByStatus[status].length})</span>
@@ -643,11 +656,14 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                       key={tab}
                       type="button"
                       onClick={() => setContractListTab(tab)}
-                      className={`capitalize px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px ${
-                        contractListTab === tab
-                          ? "text-blue-950 border-blue-950"
-                          : "text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-300"
-                      }`}
+                      className={`
+                        relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors capitalize
+                        ${
+                          contractListTab === tab
+                            ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                            : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                        }
+                      `}
                     >
                       {tab === "active" ? "Active" : "Historical"}
                       <span className="ml-1.5 text-gray-500">({contractsByListTab[tab].length})</span>
@@ -758,11 +774,14 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                   key={key}
                   type="button"
                   onClick={() => setPublishedTab(key)}
-                  className={`px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px whitespace-nowrap ${
-                    publishedTab === key
-                      ? "text-blue-950 border-blue-950"
-                      : "text-gray-600 border-transparent hover:text-gray-900 hover:border-gray-300"
-                  }`}
+                  className={`
+                    relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors whitespace-nowrap
+                    ${
+                      publishedTab === key
+                        ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    }
+                  `}
                 >
                   {label}
                   <span className="ml-1.5 text-gray-500">
@@ -901,6 +920,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
           </div>
         )}
       </div>
+        </div>
       </PageContentSection>
     </>
   );

@@ -298,6 +298,9 @@ const CategoryDetailPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <Link
             href="/logged/pages/network/directory/companies/categories"
@@ -323,17 +326,21 @@ const CategoryDetailPage: FC = () => {
             ? category.portals_array.join(", ")
             : "—"}
         </div>
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
-        <div className="flex border-b border-gray-200 mb-4">
+        <div className="flex flex-col w-full">
+          <div className="flex border-b border-gray-200">
           <button
             type="button"
             onClick={() => setActiveTab("companies")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
               activeTab === "companies"
-                ? "border-blue-950 text-blue-950"
-                : "border-transparent text-gray-600 hover:text-gray-900"
+                ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             }`}
           >
             Related Companies
@@ -341,16 +348,18 @@ const CategoryDetailPage: FC = () => {
           <button
             type="button"
             onClick={() => setActiveTab("customers")}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${
+            className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
               activeTab === "customers"
-                ? "border-blue-950 text-blue-950"
-                : "border-transparent text-gray-600 hover:text-gray-900"
+                ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
             }`}
           >
             Related Customers
           </button>
         </div>
 
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
         {activeTab === "companies" && (
           <>
             <p className="text-sm font-semibold mb-2 text-gray-700">
@@ -546,6 +555,9 @@ const CategoryDetailPage: FC = () => {
             </div>
           </>
         )}
+            </div>
+          </div>
+        </div>
       </PageContentSection>
 
       {/* Delete category confirm - reuse modal with different copy */}

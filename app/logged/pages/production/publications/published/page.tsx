@@ -91,46 +91,47 @@ const PublishedPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Publications filter</h2>
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap gap-4 items-end">
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Date from (YYYY-MM)</label>
-              <input
-                type="text"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                placeholder="e.g. 2024-01"
-                className="w-full max-w-[140px] rounded-md border border-gray-300 p-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Date to (YYYY-MM)</label>
-              <input
-                type="text"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                placeholder="e.g. 2025-12"
-                className="w-full max-w-[140px] rounded-md border border-gray-300 p-2 text-sm"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-gray-600 mb-1">Tag</label>
-              <input
-                type="text"
-                value={tag}
-                onChange={(e) => setTag(e.target.value)}
-                placeholder="Type a tag…"
-                className="w-full max-w-xs rounded-md border border-gray-300 p-2 text-sm"
-              />
-            </div>
-          </div>
-        </div>
-      </PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Publications filter</h2>
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-wrap gap-4 items-end">
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Date from (YYYY-MM)</label>
+                    <input
+                      type="text"
+                      value={dateFrom}
+                      onChange={(e) => setDateFrom(e.target.value)}
+                      placeholder="e.g. 2024-01"
+                      className="w-full max-w-[140px] rounded-md border border-gray-300 p-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Date to (YYYY-MM)</label>
+                    <input
+                      type="text"
+                      value={dateTo}
+                      onChange={(e) => setDateTo(e.target.value)}
+                      placeholder="e.g. 2025-12"
+                      className="w-full max-w-[140px] rounded-md border border-gray-300 p-2 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm text-gray-600 mb-1">Tag</label>
+                    <input
+                      type="text"
+                      value={tag}
+                      onChange={(e) => setTag(e.target.value)}
+                      placeholder="Type a tag…"
+                      className="w-full max-w-xs rounded-md border border-gray-300 p-2 text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
 
-      <PageContentSection>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Published issues</h2>
-        <div className="flex flex-wrap gap-2 mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 mt-8">Published issues</h2>
+              <div className="flex flex-wrap gap-2 mb-6">
           <button
             type="button"
             onClick={() => setSelectedRevista("")}
@@ -195,6 +196,9 @@ const PublishedPage: FC = () => {
               </Link>
             ))
           )}
+        </div>
+            </div>
+          </div>
         </div>
       </PageContentSection>
     </>

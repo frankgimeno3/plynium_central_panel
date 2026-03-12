@@ -30,33 +30,31 @@ export default function PageContentLayout({ children }: PageContentLayoutProps) 
     <div className="flex flex-col w-full min-h-full ">
       <MiddleNav pageTitle={pageTitle} breadcrumbs={filteredBreadcrumbs} />
 
-      <div className="flex-1 p-6 bg-gradient-to-r from-gray-950 to-zinc-900 content-main text-slate-200">
+      <div className="flex-1 bg-white text-black content-main ">
         {buttons && buttons.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-2 justify-end">
-            {buttons.map((btn, index) =>
-              btn.onClick ? (
+          <div className="flex flex-wrap gap-2 justify-end pr-12 pt-12">
+            {buttons.map((btn, index) => {
+              const linkStyles =
+                "flex min-h-[36px] items-center rounded-md  py-2 px-3 text-sm font-medium uppercase  transition-colors cursor-pointer text-white bg-blue-950/90  hover:bg-blue-900 ";
+              return btn.onClick ? (
                 <button
                   key={index}
                   type="button"
                   onClick={btn.onClick}
-                  className="bg-blue-950 text-white text-base font-medium px-4 py-2 rounded-xl shadow hover:bg-blue-950/80 inline-block transition-colors cursor-pointer"
+                  className={linkStyles}
                 >
                   {btn.label}
                 </button>
               ) : btn.href ? (
-                <Link
-                  key={index}
-                  href={btn.href}
-                  className="bg-blue-950 text-white text-base font-medium px-4 py-2 rounded-xl shadow hover:bg-blue-950/80 inline-block transition-colors cursor-pointer"
-                >
+                <Link key={index} href={btn.href} className={linkStyles}>
                   {btn.label}
                 </Link>
-              ) : null
-            )}
+              ) : null;
+            })}
           </div>
         )}
 
-        <div className="flex flex-col gap-4   ">
+        <div className="flex flex-col   ">
           {children}
         </div>
       </div>

@@ -68,7 +68,11 @@ const ProviderDetailPage: FC = () => {
   if (!idProvider) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Invalid provider.</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+            <p className="text-gray-500">Invalid provider.</p>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -76,7 +80,11 @@ const ProviderDetailPage: FC = () => {
   if (!provider) {
     return (
       <PageContentSection>
-        <p className="text-gray-500">Provider not found: {idProvider}</p>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+            <p className="text-gray-500">Provider not found: {idProvider}</p>
+          </div>
+        </div>
       </PageContentSection>
     );
   }
@@ -84,6 +92,8 @@ const ProviderDetailPage: FC = () => {
   return (
     <>
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Provider details</h2>
         <div className="overflow-hidden max-w-2xl">
           <table className="min-w-full divide-y divide-gray-200">
@@ -119,9 +129,13 @@ const ProviderDetailPage: FC = () => {
             </tbody>
           </table>
         </div>
+          </div>
+        </div>
       </PageContentSection>
 
       <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Provider invoices ({invoices.length})</h2>
         {invoices.length === 0 ? (
           <p className="text-sm text-gray-500">No invoices for this provider.</p>
@@ -154,6 +168,8 @@ const ProviderDetailPage: FC = () => {
             </table>
           </div>
         )}
+          </div>
+        </div>
       </PageContentSection>
     </>
   );

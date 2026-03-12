@@ -55,14 +55,13 @@ const OtherRequestsPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <p className="text-sm text-gray-500 mb-4">General contact and inquiry requests</p>
         <div className="flex flex-col w-full">
           <div className="flex border-b border-gray-200">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => { setCurrentTab(tab.key); setCurrentPage(1); }}
-                className={`relative px-6 py-3 text-sm font-medium transition-colors ${
+                className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
                   currentTab === tab.key
                     ? 'text-blue-950 border-b-2 border-blue-950 bg-blue-50'
                     : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
@@ -78,7 +77,9 @@ const OtherRequestsPage: FC = () => {
             ))}
           </div>
 
-          <div className="bg-white shadow-sm rounded-b-lg overflow-hidden">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6">
+              <p className="text-sm text-gray-500 mb-4">General contact and inquiry requests</p>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -144,6 +145,8 @@ const OtherRequestsPage: FC = () => {
               </div>
             </div>
           )}
+            </div>
+          </div>
         </div>
       </PageContentSection>
     </>

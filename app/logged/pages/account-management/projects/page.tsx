@@ -81,127 +81,131 @@ const ProjectsPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">ID</label>
-            <input
-              type="text"
-              value={filter.id}
-              onChange={(e) => { setFilter((f) => ({ ...f, id: e.target.value })); setPage(1); }}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search by ID"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Company</label>
-            <input
-              type="text"
-              value={filter.company}
-              onChange={(e) => { setFilter((f) => ({ ...f, company: e.target.value })); setPage(1); }}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Search by company"
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-600 mb-1">Service</label>
-            <select
-              value={filter.service}
-              onChange={(e) => { setFilter((f) => ({ ...f, service: e.target.value })); setPage(1); }}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="">All</option>
-              {services.map((s) => (
-                <option key={s.id_service} value={s.id_service}>{s.name?.replace(/_/g, " ")}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      </PageContentSection>
-
-      <PageContentSection>
-        {/* Tabs: Calendarized | Pending (default) | Finished */}
-        <div className="flex border-b border-gray-200 mb-4">
-          {([
-            { id: TAB_CALENDARIZED, label: "Calendarized", count: all.filter((p) => STATUS_BY_TAB[TAB_CALENDARIZED].includes(p.status)).length },
-            { id: TAB_PENDING, label: "Pending", count: all.filter((p) => STATUS_BY_TAB[TAB_PENDING].includes(p.status)).length },
-            { id: TAB_FINISHED, label: "Finished", count: all.filter((p) => STATUS_BY_TAB[TAB_FINISHED].includes(p.status)).length },
-          ] as const).map(({ id, label, count }) => (
-            <button
-              key={id}
-              type="button"
-              onClick={() => { setActiveTab(id); setPage(1); }}
-              className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
-                activeTab === id
-                  ? "border-blue-600 text-blue-600"
-                  : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-              }`}
-            >
-              {label}
-              <span className="ml-2 text-xs opacity-80">({count})</span>
-            </button>
-          ))}
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Publication date</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {paginated.map((p) => (
-                <tr key={p.id_project} onClick={() => router.push(`/logged/pages/account-management/projects/${p.id_project}`)} className={rowClass}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.id_project}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{getCompanyName(p.id_contract)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{getServiceName(p.service)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      p.status === "published" ? "bg-green-100 text-green-800" :
-                      p.status === "ok_production" ? "bg-blue-100 text-blue-800" :
-                      p.status === "pending_materials" ? "bg-amber-100 text-amber-800" :
-                      p.status === "expired" ? "bg-red-100 text-red-800" :
-                      p.status === "cancelled" ? "bg-gray-200 text-gray-700" :
-                      "bg-gray-100 text-gray-800"
-                    }`}>{p.status.replace(/_/g, " ")}</span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.publication_date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {(filtered.length > ITEMS_PER_PAGE || totalPages > 1) && (
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-600">
-              Showing {start + 1}–{Math.min(start + ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
-            </p>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                ← Previous
-              </button>
-              <span className="text-sm text-gray-600">Page {page} of {totalPages || 1}</span>
-              <button
-                type="button"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next →
-              </button>
+        <div className="flex flex-col w-full">
+            <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">ID</label>
+                <input
+                  type="text"
+                  value={filter.id}
+                  onChange={(e) => { setFilter((f) => ({ ...f, id: e.target.value })); setPage(1); }}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Search by ID"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Company</label>
+                <input
+                  type="text"
+                  value={filter.company}
+                  onChange={(e) => { setFilter((f) => ({ ...f, company: e.target.value })); setPage(1); }}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Search by company"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Service</label>
+                <select
+                  value={filter.service}
+                  onChange={(e) => { setFilter((f) => ({ ...f, service: e.target.value })); setPage(1); }}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All</option>
+                  {services.map((s) => (
+                    <option key={s.id_service} value={s.id_service}>{s.name?.replace(/_/g, " ")}</option>
+                  ))}
+                </select>
+              </div>
             </div>
+            </div>
+                </PageContentSection>
+                <PageContentSection>
+            {/* Tabs: Calendarized | Pending (default) | Finished */}
+            <div className="flex flex-col w-full">
+            <div className="flex border-b border-gray-200 mt-6 mb-4">
+              {([
+                { id: TAB_CALENDARIZED, label: "Calendarized", count: all.filter((p) => STATUS_BY_TAB[TAB_CALENDARIZED].includes(p.status)).length },
+                { id: TAB_PENDING, label: "Pending", count: all.filter((p) => STATUS_BY_TAB[TAB_PENDING].includes(p.status)).length },
+                { id: TAB_FINISHED, label: "Finished", count: all.filter((p) => STATUS_BY_TAB[TAB_FINISHED].includes(p.status)).length },
+              ] as const).map(({ id, label, count }) => (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => { setActiveTab(id); setPage(1); }}
+                  className={`
+                relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
+                ${activeTab === id
+                      ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                      : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    }
+              `}
+                >
+                  {label}
+                  <span className="text-xs opacity-80">({count})</span>
+                </button>
+              ))}
+            </div>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Publication date</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginated.map((p) => (
+                    <tr key={p.id_project} onClick={() => router.push(`/logged/pages/account-management/projects/${p.id_project}`)} className={rowClass}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.id_project}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900">{getCompanyName(p.id_contract)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{getServiceName(p.service)}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={`px-2 py-1 rounded text-xs font-medium ${p.status === "published" ? "bg-green-100 text-green-800" :
+                            p.status === "ok_production" ? "bg-blue-100 text-blue-800" :
+                              p.status === "pending_materials" ? "bg-amber-100 text-amber-800" :
+                                p.status === "expired" ? "bg-red-100 text-red-800" :
+                                  p.status === "cancelled" ? "bg-gray-200 text-gray-700" :
+                                    "bg-gray-100 text-gray-800"
+                          }`}>{p.status.replace(/_/g, " ")}</span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.publication_date}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {(filtered.length > ITEMS_PER_PAGE || totalPages > 1) && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                <p className="text-sm text-gray-600">
+                  Showing {start + 1}–{Math.min(start + ITEMS_PER_PAGE, filtered.length)} of {filtered.length}
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={page <= 1}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    ← Previous
+                  </button>
+                  <span className="text-sm text-gray-600">Page {page} of {totalPages || 1}</span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={page >= totalPages}
+                    className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
-        )}
       </PageContentSection>
     </>
   );
