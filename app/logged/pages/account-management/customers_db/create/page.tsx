@@ -7,6 +7,7 @@ import PageContentSection from "@/app/logged/logged_components/context_content/P
 import CustomerSelectModal, { type CustomerRow } from "@/app/logged/logged_components/modals/CustomerSelectModal";
 import customersData from "@/app/contents/customers.json";
 import agentsData from "@/app/contents/agentsContents.json";
+import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
 
 const COUNTRY_OPTIONS = [
   "Spain",
@@ -102,6 +103,7 @@ type FormState = {
   origin: string;
   email: string;
   phone: string;
+  company_categories_array: string[];
 };
 
 const initialForm: FormState = {
@@ -120,6 +122,7 @@ const initialForm: FormState = {
   origin: "",
   email: "",
   phone: "",
+  company_categories_array: [],
 };
 
 const CreateCustomerPage: FC = () => {
@@ -127,6 +130,7 @@ const CreateCustomerPage: FC = () => {
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormState>(initialForm);
   const [linkAccountModalOpen, setLinkAccountModalOpen] = useState(false);
+  const [companyCategories, setCompanyCategories] = useState<{ id_category: string; name: string }[]>([]);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const [countryFilter, setCountryFilter] = useState("");
@@ -148,6 +152,14 @@ const CreateCustomerPage: FC = () => {
     document.addEventListener("mousedown", onMouseDown);
     return () => document.removeEventListener("mousedown", onMouseDown);
   }, [countryDropdownOpen]);
+
+  useEffect(() => {
+    CompanyCategoryService.getAllCategories()
+      .then((list: { id_category: string; name: string }[]) => {
+        setCompanyCategories(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setCompanyCategories([]));
+  }, []);
 
   const showRelatedBlock = form.accountType && TYPES_REQUIRING_RELATED.has(form.accountType as AccountTypeValue);
   const mustLinkAccount = showRelatedBlock && form.relatedToExisting;
@@ -531,6 +543,58 @@ const CreateCustomerPage: FC = () => {
                     placeholder="Web, Trade fair, Referral..."
                   />
                 </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Company categories</label>
+                  <p className="text-xs text-gray-500 mb-2">Select one or more company categories. They will appear as tags.</p>
+                  <select
+                    value=""
+                    onChange={(e) => {
+                      const id = e.target.value;
+                      if (id && !form.company_categories_array.includes(id)) {
+                        setForm((f) => ({ ...f, company_categories_array: [...f.company_categories_array, id] }));
+                      }
+                      e.target.value = "";
+                    }}
+                    className="w-full max-w-xs px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="">Add a category...</option>
+                    {companyCategories
+                      .filter((c) => !form.company_categories_array.includes(c.id_category))
+                      .map((c) => (
+                        <option key={c.id_category} value={c.id_category}>
+                          {c.name}
+                        </option>
+                      ))}
+                  </select>
+                  {form.company_categories_array.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {form.company_categories_array.map((id) => {
+                        const cat = companyCategories.find((c) => c.id_category === id);
+                        return (
+                          <span
+                            key={id}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 rounded-md text-sm font-medium"
+                          >
+                            {cat?.name ?? id}
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setForm((f) => ({
+                                  ...f,
+                                  company_categories_array: f.company_categories_array.filter((x) => x !== id),
+                                }))
+                              }
+                              className="text-blue-600 hover:text-blue-800 p-0.5 rounded"
+                              aria-label="Remove"
+                            >
+                              <span className="sr-only">Remove</span>×
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="flex gap-3">
                 <button
@@ -669,6 +733,24 @@ const CreateCustomerPage: FC = () => {
                     <dt className="text-gray-500">Company generic phone</dt>
                     <dd className="font-medium text-gray-900">{form.phone || "—"}</dd>
                   </div>
+                  {form.company_categories_array.length > 0 && (
+                    <div>
+                      <dt className="text-gray-500">Company categories</dt>
+                      <dd className="flex flex-wrap gap-2 mt-1">
+                        {form.company_categories_array.map((id) => {
+                          const cat = companyCategories.find((c) => c.id_category === id);
+                          return (
+                            <span
+                              key={id}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 rounded-md text-sm font-medium"
+                            >
+                              {cat?.name ?? id}
+                            </span>
+                          );
+                        })}
+                      </dd>
+                    </div>
+                  )}
                 </dl>
               </div>
               <div className="flex gap-3">

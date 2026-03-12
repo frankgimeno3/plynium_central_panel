@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC, use, useState, useEffect } from "react";
+import React, { FC, use, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
@@ -10,6 +10,8 @@ import proposalsData from "@/app/contents/proposals.json";
 import contractsData from "@/app/contents/contracts.json";
 import projectsData from "@/app/contents/projects.json";
 import ga4Data from "@/app/contents/ga4.json";
+import { CustomerService } from "@/app/service/CustomerService";
+import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
 
 type ContactItem = { name: string; role: string; email: string; phone: string };
 type CommentItem = { id?: string; text: string; date?: string; author?: string };
@@ -62,6 +64,8 @@ type Customer = {
   event_ids?: string[];
   /** For distributor_only: IDs of companies this distributor represents */
   represented_companies?: string[];
+  /** Company category IDs (company categories this customer belongs to) */
+  company_categories_array?: string[];
 }
 
 type Proposal = { id_proposal: string; title: string; status: string; amount_eur: number };
@@ -85,7 +89,26 @@ type PublishedTabKey = (typeof PUBLISHED_TABS)[number]["key"];
 const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ params }) => {
   const router = useRouter();
   const { id_customer } = use(params);
-  const customer = (customersData as Customer[]).find((c) => c.id_customer === id_customer);
+  const staticCustomers = customersData as Customer[];
+  const [customer, setCustomer] = useState<Customer | undefined>(
+    () => staticCustomers.find((c) => c.id_customer === id_customer)
+  );
+  const [customerLoading, setCustomerLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    CustomerService.getCustomerById(id_customer)
+      .then((data) => {
+        if (!cancelled) setCustomer({ ...data, comments: data.comments ?? [] } as Customer);
+      })
+      .catch(() => {
+        if (!cancelled) setCustomer(staticCustomers.find((c) => c.id_customer === id_customer));
+      })
+      .finally(() => {
+        if (!cancelled) setCustomerLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [id_customer]);
 
   const [currentTab, setCurrentTab] = useState<TabKey>("principal");
   const [proposalStatusTab, setProposalStatusTab] = useState<ProposalStatusTab>("pending");
@@ -94,6 +117,16 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [newComment, setNewComment] = useState("");
   const [expandedContractId, setExpandedContractId] = useState<string | null>(null);
+  const [companyCategoriesList, setCompanyCategoriesList] = useState<{ id_category: string; name: string }[]>([]);
+  const [categoriesUpdating, setCategoriesUpdating] = useState(false);
+
+  useEffect(() => {
+    CompanyCategoryService.getAllCategories()
+      .then((list: { id_category: string; name: string }[]) => {
+        setCompanyCategoriesList(Array.isArray(list) ? list : []);
+      })
+      .catch(() => setCompanyCategoriesList([]));
+  }, []);
 
   useEffect(() => {
     if (customer?.comments) setComments([...customer.comments]);
@@ -171,6 +204,14 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
     setComments((prev) => [comment, ...prev]);
     setNewComment("");
   };
+
+  if (customerLoading) {
+    return (
+      <PageContentSection>
+        <p className="text-gray-500">Loading…</p>
+      </PageContentSection>
+    );
+  }
 
   if (!customer) {
     return (
@@ -288,6 +329,77 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                     ))}
                   </div>
                 </div>
+              )}
+            </section>
+
+            {/* Company categories */}
+            <section className="bg-gray-50 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Company categories</h2>
+              <p className="text-sm text-gray-600 mb-3">Company categories linked to this customer. Add or remove with the controls below.</p>
+              <select
+                value=""
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (!id || !customer) return;
+                  const current = customer.company_categories_array || [];
+                  if (current.includes(id)) {
+                    e.target.value = "";
+                    return;
+                  }
+                  const next = [...current, id];
+                  setCategoriesUpdating(true);
+                  CustomerService.updateCustomer(id_customer, { company_categories_array: next })
+                    .then((updated) => {
+                      setCustomer({ ...customer, ...updated } as Customer);
+                    })
+                    .finally(() => setCategoriesUpdating(false));
+                  e.target.value = "";
+                }}
+                disabled={categoriesUpdating}
+                className="max-w-xs px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:opacity-50"
+              >
+                <option value="">Add a category...</option>
+                {(companyCategoriesList || [])
+                  .filter((c) => !(customer.company_categories_array || []).includes(c.id_category))
+                  .map((c) => (
+                    <option key={c.id_category} value={c.id_category}>
+                      {c.name}
+                    </option>
+                  ))}
+              </select>
+              {(customer.company_categories_array || []).length > 0 ? (
+                <div className="flex flex-wrap gap-2 mt-3">
+                  {(customer.company_categories_array || []).map((id) => {
+                    const cat = companyCategoriesList.find((c) => c.id_category === id);
+                    return (
+                      <span
+                        key={id}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-100 text-blue-800 rounded-md text-sm font-medium"
+                      >
+                        {cat?.name ?? id}
+                        <button
+                          type="button"
+                          disabled={categoriesUpdating}
+                          onClick={() => {
+                            const next = (customer.company_categories_array || []).filter((x) => x !== id);
+                            setCategoriesUpdating(true);
+                            CustomerService.updateCustomer(id_customer, { company_categories_array: next })
+                              .then((updated) => {
+                                setCustomer({ ...customer, ...updated } as Customer);
+                              })
+                              .finally(() => setCategoriesUpdating(false));
+                          }}
+                          className="text-blue-600 hover:text-blue-800 p-0.5 rounded disabled:opacity-50"
+                          aria-label="Remove category"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-gray-500 text-sm mt-2">No company categories linked.</p>
               )}
             </section>
 

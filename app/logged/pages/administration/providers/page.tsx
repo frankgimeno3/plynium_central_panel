@@ -1,6 +1,7 @@
 "use client";
 
 import React, { FC, useMemo, useState, useEffect } from "react";
+import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import providersData from "@/app/contents/providers.json";
@@ -28,9 +29,13 @@ const ProvidersPage: FC = () => {
     { label: "Providers" },
   ];
 
+  const buttons = [
+    { label: "Create provider", href: "/logged/pages/administration/providers/create" },
+  ];
+
   const { setPageMeta } = usePageContent();
   useEffect(() => {
-    setPageMeta({ pageTitle: "Providers", breadcrumbs });
+    setPageMeta({ pageTitle: "Providers", breadcrumbs, buttons });
   }, [setPageMeta]);
 
   return (
@@ -75,8 +80,22 @@ const ProvidersPage: FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filtered.map((p) => (
                 <tr key={p.id_provider} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{p.id_provider}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <Link
+                      href={`/logged/pages/administration/providers/${encodeURIComponent(p.id_provider)}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {p.id_provider}
+                    </Link>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <Link
+                      href={`/logged/pages/administration/providers/${encodeURIComponent(p.id_provider)}`}
+                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                    >
+                      {p.name}
+                    </Link>
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{p.contact_email ?? "—"}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{p.contact_phone ?? "—"}</td>
                 </tr>

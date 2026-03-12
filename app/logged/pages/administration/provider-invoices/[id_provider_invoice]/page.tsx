@@ -89,7 +89,14 @@ const ProviderInvoiceDetailPage: FC = () => {
               </tr>
               <tr>
                 <td className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</td>
-                <td className="px-6 py-3 text-sm text-gray-900">{invoice.provider_name}</td>
+                <td className="px-6 py-3 text-sm text-gray-900">
+                  <Link
+                    href={`/logged/pages/administration/providers/${encodeURIComponent(invoice.id_provider)}`}
+                    className="text-blue-600 hover:text-blue-800 hover:underline"
+                  >
+                    {invoice.provider_name}
+                  </Link>
+                </td>
               </tr>
               <tr>
                 <td className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Provider ID</td>

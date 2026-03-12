@@ -6,6 +6,14 @@ import { usePageContent } from '@/app/logged/logged_components/context_content/P
 import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { CompanyService } from '@/app/service/CompanyService';
 import { Company } from '@/app/contents/interfaces';
+import CreateCompanyCategoryModal from '@/app/logged/logged_components/modals/CreateCompanyCategoryModal';
+import { CompanyCategoryService } from '@/app/service/CompanyCategoryService';
+
+interface CompanyCategory {
+  id_category: string;
+  name: string;
+  portals_array: string[];
+}
 
 interface CompaniesProps {}
 
@@ -14,6 +22,8 @@ const Companies: FC<CompaniesProps> = ({ }) => {
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createCategoryModalOpen, setCreateCategoryModalOpen] = useState(false);
+  const [companyCategoryNames, setCompanyCategoryNames] = useState<string[]>([]);
   const [filters, setFilters] = useState({
     companyId: '',
     commercialName: '',
@@ -77,6 +87,16 @@ const Companies: FC<CompaniesProps> = ({ }) => {
     }));
   };
 
+  useEffect(() => {
+    if (createCategoryModalOpen) {
+      CompanyCategoryService.getAllCategories()
+        .then((list: CompanyCategory[]) => {
+          setCompanyCategoryNames(Array.isArray(list) ? list.map((c) => c.name) : []);
+        })
+        .catch(() => setCompanyCategoryNames([]));
+    }
+  }, [createCategoryModalOpen]);
+
   const breadcrumbs = [
     { label: "Companies" },
   ];
@@ -89,6 +109,7 @@ const Companies: FC<CompaniesProps> = ({ }) => {
       buttons: [
         { label: "Create Company", href: "/logged/pages/network/directory/companies/create" },
         { label: "Company Categories", href: "/logged/pages/network/directory/companies/categories" },
+        { label: "Create Category", onClick: () => setCreateCategoryModalOpen(true) },
       ],
     });
   }, [setPageMeta, breadcrumbs]);
@@ -236,6 +257,18 @@ const Companies: FC<CompaniesProps> = ({ }) => {
           </div>
         )}
       </PageContentSection>
+      <CreateCompanyCategoryModal
+        open={createCategoryModalOpen}
+        onClose={() => setCreateCategoryModalOpen(false)}
+        existingNames={companyCategoryNames}
+        onCreated={() => {
+          CompanyCategoryService.getAllCategories()
+            .then((list: CompanyCategory[]) => {
+              setCompanyCategoryNames(Array.isArray(list) ? list.map((c) => c.name) : []);
+            })
+            .catch(() => {});
+        }}
+      />
     </>
   );
 };

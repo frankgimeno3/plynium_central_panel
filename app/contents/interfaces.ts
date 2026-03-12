@@ -118,6 +118,9 @@ export interface Provider {
   name: string;
   contact_email?: string;
   contact_phone?: string;
+  address?: string;
+  tax_id?: string;
+  notes?: string;
 }
 
 /** Agent assigned to accounts (customers) and proposals. */

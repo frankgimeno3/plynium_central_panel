@@ -43,7 +43,11 @@ const ServicesPage: FC = () => {
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
-    setPageMeta({ pageTitle: "Services", breadcrumbs });
+    setPageMeta({
+      pageTitle: "Services",
+      breadcrumbs,
+      buttons: [{ label: "Create Service", href: "/logged/pages/production/services/create" }],
+    });
   }, [setPageMeta, breadcrumbs]);
 
   return (

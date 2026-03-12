@@ -17,4 +17,11 @@ export class CompanyCategoryService {
     const response = await apiClient.post("/api/v1/company-categories", data);
     return response.data;
   }
+
+  static async deleteCategory(idCategory) {
+    const response = await apiClient.delete(
+      `/api/v1/company-categories/${encodeURIComponent(idCategory)}`
+    );
+    return response.data;
+  }
 }

@@ -1,22 +1,38 @@
 "use client";
 
-import React, { FC, useEffect } from "react";
+import React, { FC, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import categoriesData from "@/app/contents/categoriescontents.json";
+import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
+import CreateCompanyCategoryModal from "@/app/logged/logged_components/modals/CreateCompanyCategoryModal";
 
 interface CompanyCategory {
   id_category: string;
   name: string;
+  description?: string;
   portals_array: string[];
 }
 
-const categories = (categoriesData as CompanyCategory[]).filter(
-  (c) => c && typeof c.id_category === "string"
-);
-
 const CompanyCategoriesPage: FC = () => {
+  const [categories, setCategories] = useState<CompanyCategory[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  const loadCategories = useCallback(async () => {
+    try {
+      const list = await CompanyCategoryService.getAllCategories();
+      setCategories(Array.isArray(list) ? list : []);
+    } catch {
+      setCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
   const breadcrumbs = [
     { label: "Companies", href: "/logged/pages/network/directory/companies" },
     { label: "Company Categories" },
@@ -27,12 +43,18 @@ const CompanyCategoriesPage: FC = () => {
     setPageMeta({
       pageTitle: "Company Categories",
       breadcrumbs,
-      buttons: [],
+      buttons: [
+        { label: "Create Category", onClick: () => setModalOpen(true) },
+      ],
     });
   }, [setPageMeta]);
 
   return (
-    <PageContentSection>
+    <>
+      <PageContentSection>
+        {loading ? (
+          <p className="text-gray-500 text-sm">Loading company categories…</p>
+        ) : (
       <div className="border border-gray-200 rounded-lg overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -52,7 +74,7 @@ const CompanyCategoriesPage: FC = () => {
                   colSpan={2}
                   className="px-4 py-6 text-center text-gray-500 text-sm"
                 >
-                  No categories in categoriescontents.json.
+                  No company categories yet. Create one with the button above.
                 </td>
               </tr>
             ) : (
@@ -75,7 +97,15 @@ const CompanyCategoriesPage: FC = () => {
           </tbody>
         </table>
       </div>
-    </PageContentSection>
+        )}
+      </PageContentSection>
+      <CreateCompanyCategoryModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        existingNames={categories.map((c) => c.name)}
+        onCreated={loadCategories}
+      />
+    </>
   );
 };
 
