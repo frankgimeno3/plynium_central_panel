@@ -129,7 +129,6 @@ const MagazinesPage: FC = () => {
             </div>
           </div>
         )}
-              </div>
             </div>
           </div>
         </div>

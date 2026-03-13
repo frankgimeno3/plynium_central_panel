@@ -18,9 +18,7 @@ const MOCK_ARTICLES_ABOUT_COMPANY = [
   { id_article: 'article_25_000000004', articleTitle: 'Industry trends and this company', articleSubtitle: 'Market analysis', article_main_image_url: '' },
 ];
 
-interface IdCompanyProps {}
-
-const IdCompany: FC<IdCompanyProps> = ({ }) => {
+const IdCompany: FC = () => {
   const params = useParams();
   const router = useRouter();
   const companyId = params.id_company as string;
@@ -560,7 +558,9 @@ const IdCompany: FC<IdCompanyProps> = ({ }) => {
               )}
             </div>
 
+            </div>
           </div>
+        </div>
         </div>
       </PageContentSection>
 
@@ -748,4 +748,8 @@ const IdCompany: FC<IdCompanyProps> = ({ }) => {
   );
 };
 
-export default IdCompany;
+type IdCompanyPageParams = { id_company: string };
+/** Default page component: satisfies AppRouter page signature (params as Promise). */
+export default function IdCompanyPage(_props: { params: Promise<IdCompanyPageParams> }) {
+  return <IdCompany />;
+}

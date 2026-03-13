@@ -17,12 +17,15 @@ const CONTACTS_IMPORT_COLUMNS = [
   "company_name",
 ] as const;
 
-const EXPECTED_STRUCTURE = `La primera fila debe ser la cabecera con exactamente estas columnas (en cualquier orden):
-${CONTACTS_IMPORT_COLUMNS.join(" | ")}
-
-Ejemplo:
-id_contact | name              | role                 | email                    | phone           | id_customer | company_name
-cont-006   | Juan Pérez García | Responsable Compras  | juan.perez@empresa.com   | +34 600 111 222 | cust-001    | Mi Empresa S.L.`;
+const EXAMPLE_ROW: Record<string, string> = {
+  id_contact: "cont-006",
+  name: "Juan Pérez García",
+  role: "Responsable Compras",
+  email: "juan.perez@empresa.com",
+  phone: "+34 600 111 222",
+  id_customer: "cust-001",
+  company_name: "Mi Empresa S.L.",
+};
 
 type ImportPhase = "upload" | "processing" | "result";
 
@@ -156,14 +159,80 @@ const ImportContactsPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <div className="flex flex-col w-full">
-          <div className="bg-white rounded-b-lg overflow-hidden p-6">
-      <div className="max-w-2xl">
+        <div className="flex flex-col w-full min-w-0">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6 min-w-0">
+      <div className="w-full min-w-0 max-w-full overflow-x-hidden">
         {phase === "upload" && (
           <>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-              <p className="text-sm font-semibold text-amber-800 mb-2">Estructura esperada (Excel o CSV)</p>
-              <pre className="text-xs text-amber-900 whitespace-pre-wrap font-sans">{EXPECTED_STRUCTURE}</pre>
+            <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200/60 px-5 py-4">
+                <h3 className="text-sm font-semibold text-amber-900">
+                  Estructura esperada (Excel o CSV) — Contactos
+                </h3>
+                <p className="text-xs text-amber-800/90 mt-1">
+                  La primera fila debe ser la cabecera con exactamente estas columnas (en cualquier orden).
+                </p>
+              </div>
+              <div className="p-5 space-y-5">
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                    Columnas requeridas
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {CONTACTS_IMPORT_COLUMNS.map((col) => (
+                      <code
+                        key={col}
+                        className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 text-xs font-mono border border-gray-200"
+                      >
+                        {col}
+                      </code>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                    Ejemplo
+                  </p>
+                  <div className="rounded-lg border border-gray-200 overflow-x-auto">
+                    <table className="w-full min-w-[600px] text-left text-sm table-fixed">
+                      <colgroup>
+                        {CONTACTS_IMPORT_COLUMNS.map((col) => (
+                          <col
+                            key={col}
+                            style={{ width: `${Math.max(8, col.length + 1)}ch` }}
+                          />
+                        ))}
+                      </colgroup>
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          {CONTACTS_IMPORT_COLUMNS.map((col) => (
+                            <th
+                              key={col}
+                              className="px-3 py-2.5 font-semibold text-gray-700 truncate"
+                              title={col}
+                            >
+                              {col}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
+                          {CONTACTS_IMPORT_COLUMNS.map((col) => (
+                            <td
+                              key={col}
+                              className="px-3 py-2.5 text-gray-600 truncate"
+                              title={EXAMPLE_ROW[col] ?? ""}
+                            >
+                              {EXAMPLE_ROW[col] ?? "—"}
+                            </td>
+                          ))}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
@@ -172,7 +241,7 @@ const ImportContactsPage: FC = () => {
                 type="file"
                 accept=".csv,.xlsx,.xls"
                 onChange={onFileChange}
-                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
+                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 p-3 rounded-md"
               />
               {file && (
                 <p className="text-xs text-gray-500">

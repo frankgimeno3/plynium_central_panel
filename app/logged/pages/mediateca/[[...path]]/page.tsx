@@ -107,8 +107,8 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
 
       <PageContentSection>
         <div className="flex flex-col w-full">
-          <div className="bg-white rounded-b-lg overflow-hidden p-6">
-          <h2 className=" text-3xl font-semibold text-gray-600 mb-5">Subfolders</h2>
+          <div className="bg-white rounded-b-lg overflow-hidden px-6">
+          <h2 className=" text-xl text-gray-600 mb-1 uppercase">Subfolders</h2>
         <div className="w-full min-w-0 overflow-x-auto">
           <table className="w-full min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -155,9 +155,9 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
       </PageContentSection>
 
       <PageContentSection>
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full mt-18">
           <div className="bg-white rounded-b-lg overflow-hidden p-6">
-          <h2 className=" text-3xl font-semibold text-gray-600 mb-5">Contents</h2>
+          <h2 className=" text-xl text-gray-600 mb-1 uppercase">Contents</h2>
         <div className="w-full min-w-0 overflow-x-auto">
           <table className="w-full min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">

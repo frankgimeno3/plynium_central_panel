@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FC, useEffect, useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { useUsers } from './hooks/useUsers';
@@ -42,15 +42,20 @@ const contactsContents = contactsContentsData as ContactContent[];
 
 interface UsersProps {}
 
+const USERS_BASE = '/logged/pages/network/users';
+
 const Users: FC<UsersProps> = () => {
-  const router = useRouter();
   const { users, loading, error, refetch } = useUsers();
   const [currentTab, setCurrentTab] = useState<UsersTabKey>('all');
   const [selectedListId, setSelectedListId] = useState<string | null>(null);
+  const [currentUser, setCurrentUser] = useState<{ user_name: string } | null>(null);
 
-  const handleRowClick = (id_user: string) => {
-    router.push(`/logged/pages/network/users/${encodeURIComponent(id_user)}`);
-  };
+  useEffect(() => {
+    fetch('/api/me')
+      .then((res) => res.json())
+      .then((data) => setCurrentUser({ user_name: data.user_name ?? 'User' }))
+      .catch(() => setCurrentUser({ user_name: 'User' }));
+  }, []);
 
   const breadcrumbs = [{ label: "Users" }];
   const { setPageMeta } = usePageContent();
@@ -85,9 +90,8 @@ const Users: FC<UsersProps> = () => {
   return (
     <>
       <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
-        <div className="flex flex-col w-full">
-        <p className="text-2xl font-bold px-0 pt-0">My user</p>
-        <p className="text-gray-500 mb-4">Tu name, email, role y descripcion de tu role</p>
+        <div className="mt-12 flex flex-col w-full">
+        <p className="text-2xl font-bold pb-5">My user: <span>{currentUser?.user_name ?? '…'}</span></p>
 
         <div className="flex border-b border-gray-200">
             {tabs.map((tab) => (
@@ -115,7 +119,6 @@ const Users: FC<UsersProps> = () => {
 
         <div className="bg-white rounded-b-lg overflow-hidden flex-1 min-h-0 overflow-auto p-6">
         {error && (
-          <div className="p-6">
           <div className="rounded-md bg-red-50 p-4 text-red-700">
             {error}
             <button
@@ -125,7 +128,6 @@ const Users: FC<UsersProps> = () => {
             >
               Reintentar
             </button>
-          </div>
           </div>
         )}
 
@@ -154,22 +156,18 @@ const Users: FC<UsersProps> = () => {
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
                     {users.map((user) => (
-                      <tr
-                        key={user.id_user}
-                        onClick={() => handleRowClick(user.id_user)}
-                        className="hover:bg-gray-100 cursor-pointer transition-colors"
-                      >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-gray-200">
-                          {user.id_user}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-gray-200">
-                          {user.user_full_name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-gray-200">
-                          {user.user_role}
-                        </td>
-                        <td className="px-6 py-4 text-sm text-gray-900 border-b border-gray-200">
-                          {user.user_description}
+                      <tr key={user.id_user} className="hover:bg-gray-100 transition-colors">
+                        <td colSpan={4} className="p-0 border-b border-gray-200">
+                          <Link
+                            href={`${USERS_BASE}/${encodeURIComponent(user.id_user)}`}
+                            className="grid grid-cols-[1fr_1fr_1fr_2fr] gap-4 px-6 py-4 text-sm text-gray-900 cursor-pointer items-center"
+                            aria-label={`Ver usuario ${user.user_full_name}`}
+                          >
+                            <span className="whitespace-nowrap">{user.id_user}</span>
+                            <span className="whitespace-nowrap">{user.user_full_name}</span>
+                            <span className="whitespace-nowrap">{user.user_role}</span>
+                            <span>{user.user_description}</span>
+                          </Link>
                         </td>
                       </tr>
                     ))}
@@ -231,14 +229,18 @@ const Users: FC<UsersProps> = () => {
                         </tr>
                       ) : (
                         usersInList.map((u) => (
-                          <tr
-                            key={u.id_user}
-                            onClick={() => handleRowClick(u.id_user)}
-                            className="hover:bg-gray-100 cursor-pointer"
-                          >
-                            <td className="px-4 py-2 text-sm text-gray-900">{u.id_user}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900">{u.user_full_name}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900">{u.user_role}</td>
+                          <tr key={u.id_user} className="hover:bg-gray-100 transition-colors">
+                            <td colSpan={3} className="p-0">
+                              <Link
+                                href={`${USERS_BASE}/${encodeURIComponent(u.id_user)}`}
+                                className="grid grid-cols-3 gap-2 px-4 py-2 text-sm text-gray-900 cursor-pointer items-center"
+                                aria-label={`Ver usuario ${u.user_full_name}`}
+                              >
+                                <span>{u.id_user}</span>
+                                <span>{u.user_full_name}</span>
+                                <span>{u.user_role}</span>
+                              </Link>
+                            </td>
                           </tr>
                         ))
                       )}

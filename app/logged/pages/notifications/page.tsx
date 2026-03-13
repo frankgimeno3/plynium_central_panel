@@ -53,12 +53,12 @@ const NotificationsPage: FC = () => {
   useEffect(() => {
     const loaded = Array.isArray(notificationsData)
       ? (notificationsData as Notification[]).map((n: Notification) => ({
-          notification_id: n.notification_id,
-          notification_brief_description: n.notification_brief_description,
-          notification_time: n.notification_time,
-          notification_state: n.notification_state as NotificationState,
-          notification_description: n.notification_description
-        }))
+        notification_id: n.notification_id,
+        notification_brief_description: n.notification_brief_description,
+        notification_time: n.notification_time,
+        notification_state: n.notification_state as NotificationState,
+        notification_description: n.notification_description
+      }))
       : [];
     setNotifications(loaded);
   }, []);
@@ -123,124 +123,114 @@ const NotificationsPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full mt-12">
           <div className="flex border-b border-gray-200">
             {tabs.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setCurrentTab(tab.key)}
-                className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${
-                  currentTab === tab.key
-                    ? 'text-blue-950 border-b-2 border-blue-950 bg-blue-50'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
-                }`}
+                className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${currentTab === tab.key
+                  ? 'text-blue-950 border-b-2 border-blue-950 bg-blue-50'
+                  : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                  }`}
               >
                 {tab.label}
               </button>
             ))}
           </div>
 
-          <div className="bg-white rounded-b-lg overflow-hidden">
-            <div className="p-6">
-          {currentTab === 'other' ? (
-            <div className='overflow-x-auto'>
-              <table className='min-w-full divide-y divide-gray-200'>
-                <thead className='bg-gray-50'>
-                  <tr>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Type</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>ID</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Description</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>State</th>
-                  </tr>
-                </thead>
-                <tbody className='bg-white divide-y divide-gray-200'>
-                  {otherTableRows.length === 0 ? (
+            {currentTab === 'other' ? (
+                <table className='min-w-full divide-y divide-gray-200'>
+                  <thead className='bg-gray-50'>
                     <tr>
-                      <td colSpan={4} className='px-6 py-8 text-center text-gray-500'>
-                        No pending requests
-                      </td>
+                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Type</th>
+                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>ID</th>
+                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Description</th>
+                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>State</th>
                     </tr>
-                  ) : (
-                    otherTableRows.map((row) => (
-                      <tr
-                        key={`${row.type}-${row.id}`}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => router.push(row.href)}
-                        onKeyDown={(e) => e.key === 'Enter' && router.push(row.href)}
-                        className='hover:bg-gray-100 cursor-pointer'
-                      >
-                        <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>
-                          {row.type === 'other' ? 'Other' : row.type === 'company' ? 'Company' : 'Advertisement'}
-                        </td>
-                        <td className='px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900'>{row.id}</td>
-                        <td className='px-6 py-4 text-sm text-gray-900 line-clamp-2 max-w-md'>{row.description}</td>
-                        <td className='px-6 py-4 whitespace-nowrap'>
-                          <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800'>
-                            {row.state}
-                          </span>
+                  </thead>
+                  <tbody className='bg-white divide-y divide-gray-200'>
+                    {otherTableRows.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className='px-6 py-8 text-center text-gray-500'>
+                          No pending requests
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className='overflow-x-auto'>
-              <table className='min-w-full divide-y divide-gray-200'>
-                <thead className='bg-gray-50'>
-                  <tr>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>ID</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Description</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Time</th>
-                    <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>State</th>
-                  </tr>
-                </thead>
-                <tbody className='bg-white divide-y divide-gray-200'>
-                  {filteredNotifications.length === 0 ? (
+                    ) : (
+                      otherTableRows.map((row) => (
+                        <tr
+                          key={`${row.type}-${row.id}`}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => router.push(row.href)}
+                          onKeyDown={(e) => e.key === 'Enter' && router.push(row.href)}
+                          className='hover:bg-gray-100 cursor-pointer'
+                        >
+                          <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>
+                            {row.type === 'other' ? 'Other' : row.type === 'company' ? 'Company' : 'Advertisement'}
+                          </td>
+                          <td className='px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900'>{row.id}</td>
+                          <td className='px-6 py-4 text-sm text-gray-900 line-clamp-2 max-w-md'>{row.description}</td>
+                          <td className='px-6 py-4 whitespace-nowrap'>
+                            <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800'>
+                              {row.state}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+            ) : (
+                <table className='min-w-full divide-y divide-gray-200'>
+                  <thead className='bg-gray-50'>
                     <tr>
-                      <td colSpan={4} className='px-6 py-8 text-center text-gray-500'>
-                        No notifications in this category.
-                      </td>
+                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>ID</th>
+                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Description</th>
+                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Time</th>
+                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>State</th>
                     </tr>
-                  ) : (
-                    filteredNotifications.map((n) => (
-                      <tr
-                        key={n.notification_id}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => router.push(`/logged/pages/notifications/${n.notification_id}`)}
-                        onKeyDown={(e) => e.key === 'Enter' && router.push(`/logged/pages/notifications/${n.notification_id}`)}
-                        className='hover:bg-gray-100 cursor-pointer'
-                      >
-                        <td className='px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900'>
-                          {n.notification_id}
-                        </td>
-                        <td className='px-6 py-4 text-sm text-gray-900'>
-                          {n.notification_brief_description}
-                        </td>
-                        <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
-                          {formatNotificationTime(n.notification_time)}
-                        </td>
-                        <td className='px-6 py-4 whitespace-nowrap'>
-                          <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                            n.notification_state === 'unread' ? 'bg-amber-100 text-amber-800' :
-                            n.notification_state === 'read' ? 'bg-blue-100 text-blue-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {n.notification_state}
-                          </span>
+                  </thead>
+                  <tbody className='bg-white divide-y divide-gray-200'>
+                    {filteredNotifications.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className='px-6 py-8 text-center text-gray-500'>
+                          No notifications in this category.
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          )}
-            </div>
-          </div>
+                    ) : (
+                      filteredNotifications.map((n) => (
+                        <tr
+                          key={n.notification_id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => router.push(`/logged/pages/notifications/${n.notification_id}`)}
+                          onKeyDown={(e) => e.key === 'Enter' && router.push(`/logged/pages/notifications/${n.notification_id}`)}
+                          className='hover:bg-gray-100 cursor-pointer'
+                        >
+                          <td className='px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900'>
+                            {n.notification_id}
+                          </td>
+                          <td className='px-6 py-4 text-sm text-gray-900'>
+                            {n.notification_brief_description}
+                          </td>
+                          <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-500'>
+                            {formatNotificationTime(n.notification_time)}
+                          </td>
+                          <td className='px-6 py-4 whitespace-nowrap'>
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${n.notification_state === 'unread' ? 'bg-amber-100 text-amber-800' :
+                              n.notification_state === 'read' ? 'bg-blue-100 text-blue-800' :
+                                'bg-green-100 text-green-800'
+                              }`}>
+                              {n.notification_state}
+                            </span>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+            )}
         </div>
       </PageContentSection>
     </>

@@ -81,7 +81,7 @@ const ProjectsPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full mt-12">
             <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>

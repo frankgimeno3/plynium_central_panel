@@ -20,6 +20,49 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
 
   const magazine = magazineFromData;
 
+  // Editable fields for name, description, notes
+  const [editableName, setEditableName] = useState("");
+  const [editableDescription, setEditableDescription] = useState("");
+  const [editableNotes, setEditableNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (magazine) {
+      setEditableName(magazine.name ?? "");
+      setEditableDescription(magazine.description ?? "");
+      setEditableNotes(magazine.notes ?? "");
+    }
+  }, [magazine?.id_magazine, magazine?.name, magazine?.description, magazine?.notes]);
+
+  const hasChanges =
+    magazine &&
+    (editableName !== (magazine.name ?? "") ||
+      editableDescription !== (magazine.description ?? "") ||
+      editableNotes !== (magazine.notes ?? ""));
+
+  const handleSaveChanges = async () => {
+    if (!magazine || !hasChanges || saving) return;
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/v1/magazines/${encodeURIComponent(magazine.id_magazine)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editableName.trim(),
+          description: editableDescription.trim(),
+          notes: editableNotes.trim(),
+        }),
+      });
+      if (!res.ok) throw new Error("Failed to save");
+      // Optionally refresh or update local magazine reference; for static import, reload to see persisted data
+      window.location.reload();
+    } catch {
+      // Could add toast/alert
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Initialize editable issues from magazine
   useEffect(() => {
     if (magazine?.issues_by_year) {
@@ -185,7 +228,12 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
         </div>
         <div>
           <p className="text-xs text-gray-500 uppercase">Name</p>
-          <p className="font-medium text-gray-900">{magazine.name}</p>
+          <input
+            type="text"
+            value={editableName}
+            onChange={(e) => setEditableName(e.target.value)}
+            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-medium"
+          />
         </div>
         {magazine.portal_name && (
           <div className="md:col-span-2">
@@ -195,7 +243,12 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
         )}
         <div className="md:col-span-2">
           <p className="text-xs text-gray-500 uppercase">Description</p>
-          <p className="text-gray-700">{magazine.description ?? "—"}</p>
+          <textarea
+            value={editableDescription}
+            onChange={(e) => setEditableDescription(e.target.value)}
+            rows={3}
+            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+          />
         </div>
         <div>
           <p className="text-xs text-gray-500 uppercase">First year</p>
@@ -205,13 +258,29 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
           <p className="text-xs text-gray-500 uppercase">Last year</p>
           <p className="text-gray-900">{magazine.last_year ?? "—"}</p>
         </div>
-        {magazine.notes && (
-          <div className="md:col-span-2">
-            <p className="text-xs text-gray-500 uppercase">Notes</p>
-            <p className="text-gray-700">{magazine.notes}</p>
-          </div>
-        )}
+        <div className="md:col-span-2">
+          <p className="text-xs text-gray-500 uppercase">Notes</p>
+          <textarea
+            value={editableNotes}
+            onChange={(e) => setEditableNotes(e.target.value)}
+            rows={2}
+            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+            placeholder="—"
+          />
+        </div>
       </div>
+            {hasChanges && (
+              <div className="fixed bottom-6 right-6 z-10">
+                <button
+                  type="button"
+                  onClick={handleSaveChanges}
+                  disabled={saving}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                >
+                  {saving ? "Saving…" : "Save changes"}
+                </button>
+              </div>
+            )}
           </div>
         </div>
         </div>

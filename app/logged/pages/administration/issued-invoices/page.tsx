@@ -39,6 +39,8 @@ function toInvoiceRows(contracts: AdministrationContract[]): InvoiceRow[] {
   return rows;
 }
 
+const ISSUED_INVOICES_BASE = "/logged/pages/administration/issued-invoices";
+
 const IssuedInvoicesPage: FC = () => {
   const all = useMemo(
     () => toInvoiceRows(issuedInvoicesData as AdministrationContract[]),
@@ -136,24 +138,25 @@ const IssuedInvoicesPage: FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filtered.map((r) => (
-                <tr key={r.invoice_id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{r.contract_code}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.client_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                <tr key={r.invoice_id} className="hover:bg-gray-100 transition-colors">
+                  <td colSpan={6} className="p-0">
                     <Link
-                      href={`/logged/pages/administration/issued-invoices/${encodeURIComponent(r.invoice_id)}`}
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                      href={`${ISSUED_INVOICES_BASE}/${encodeURIComponent(r.invoice_id)}`}
+                      className="grid grid-cols-6 gap-4 px-6 py-4 text-sm text-gray-900 cursor-pointer items-center"
+                      aria-label={`Ver factura emitida ${r.invoice_id}`}
                     >
-                      {r.invoice_id}
+                      <span className="whitespace-nowrap font-medium text-gray-900">{r.contract_code}</span>
+                      <span className="whitespace-nowrap text-gray-900">{r.client_name}</span>
+                      <span className="whitespace-nowrap text-gray-600">{r.invoice_id}</span>
+                      <span className="whitespace-nowrap text-gray-900">{r.issue_date}</span>
+                      <span className="whitespace-nowrap text-right text-gray-900">{r.amount_eur.toLocaleString()}</span>
+                      <span className="whitespace-nowrap text-center">
+                        <span className="text-green-600">{r.paid_count} paid</span>
+                        {r.pending_count > 0 && (
+                          <span className="text-amber-600 ml-2">{r.pending_count} pending</span>
+                        )}
+                      </span>
                     </Link>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.issue_date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{r.amount_eur.toLocaleString()}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                    <span className="text-green-600">{r.paid_count} paid</span>
-                    {r.pending_count > 0 && (
-                      <span className="text-amber-600 ml-2">{r.pending_count} pending</span>
-                    )}
                   </td>
                 </tr>
               ))}

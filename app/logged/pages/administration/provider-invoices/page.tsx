@@ -7,6 +7,8 @@ import PageContentSection from "@/app/logged/logged_components/context_content/P
 import providerInvoicesData from "@/app/contents/provider_invoices.json";
 import type { ProviderInvoice } from "@/app/contents/interfaces";
 
+const PROVIDER_INVOICES_BASE = "/logged/pages/administration/provider-invoices";
+
 const ProviderInvoicesPage: FC = () => {
   const all = (providerInvoicesData as ProviderInvoice[]).slice();
   const [filter, setFilter] = useState({
@@ -87,26 +89,27 @@ const ProviderInvoicesPage: FC = () => {
           <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment date</th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Amount (€)</th>
+                <th className="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider">ID</th>
+                <th className="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider">Provider</th>
+                <th className="px-6 py-3 text-left text-xs font-medium  uppercase tracking-wider">Payment date</th>
+                <th className="px-6 py-3 text-right text-xs font-medium  uppercase tracking-wider">Amount (€)</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filtered.map((r) => (
-                <tr key={r.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                <tr key={r.id} className="hover:bg-gray-100 transition-colors">
+                  <td colSpan={4} className="p-0">
                     <Link
-                      href={`/logged/pages/administration/provider-invoices/${encodeURIComponent(r.id)}`}
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
+                      href={`${PROVIDER_INVOICES_BASE}/${encodeURIComponent(r.id)}`}
+                      className="grid grid-cols-4 gap-4 px-6 py-4 text-sm text-gray-300 cursor-pointer items-center"
+                      aria-label={`Ver factura proveedor ${r.id}`}
                     >
-                      {r.id}
+                      <span className="whitespace-nowrap ">{r.id}</span>
+                      <span className="whitespace-nowrap font-medium ">{r.provider_name}</span>
+                      <span className="whitespace-nowrap ">{r.payment_date}</span>
+                      <span className="whitespace-nowrap text-right ">{r.amount_eur.toLocaleString()}</span>
                     </Link>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{r.provider_name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{r.payment_date}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{r.amount_eur.toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

@@ -254,9 +254,9 @@ const Leftnav: FC<LeftnavProps> = () => {
           {isAdministrationSelected && (
             <div className="mt-1 flex flex-col gap-0.5 border-l border-gray-700 bg-gray-800/50 pl-2 pr-3 pt-2 pb-3">
               <NavLink
-                href="/logged/pages/administration"
+                href="/logged/pages/administration/orders"
                 label="Orders"
-                active={pathname === "/logged/pages/administration"}
+                active={pathname.startsWith("/logged/pages/administration/orders")}
               />
               <NavLink
                 href="/logged/pages/administration/banks"

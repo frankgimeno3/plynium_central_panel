@@ -121,7 +121,7 @@ const Banners: FC = () => {
                     <div className="p-6">
                 {selectedPortalId == null ? (
                     <>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between my-12">
                             <p className="text-lg text-gray-700">Select a portal to manage its banners</p>
                         </div>
                         {portalsLoading ? (
@@ -150,6 +150,20 @@ const Banners: FC = () => {
                     </>
                 ) : (
                     <>
+                    <div className="flex flex-row justify-between items-center ">
+                            <span className="text-gray-600 pb-5">
+                                Portal: <strong>{selectedPortal?.name ?? selectedPortal?.key ?? selectedPortalId}</strong>
+                            </span>
+
+                            <button
+                                type="button"
+                                onClick={() => setSelectedPortalId(null)}
+                                className="flex min-h-[36px] items-center rounded-md  py-2 px-3 text-sm font-medium uppercase  transition-colors cursor-pointer text-white bg-blue-950/90  hover:bg-blue-900"
+                            >
+                                Back to portals
+                            </button>
+                        </div>
+
                         {/* Tabs */}
                         <div className="flex border-b border-gray-200">
                             {(Object.keys(TAB_LABELS) as BannerTab[]).map((tab) => (
@@ -168,18 +182,7 @@ const Banners: FC = () => {
                             ))}
                         </div>
 
-                        <div className="flex items-center gap-4">
-                            <button
-                                type="button"
-                                onClick={() => setSelectedPortalId(null)}
-                                className="text-sm font-medium text-blue-600 hover:text-blue-800"
-                            >
-                                ← Back to portals
-                            </button>
-                            <span className="text-gray-600">
-                                Portal: <strong>{selectedPortal?.name ?? selectedPortal?.key ?? selectedPortalId}</strong>
-                            </span>
-                        </div>
+                        
                         {/* Tab content */}
                         {activeTab === 'top' && (
                             <TopBannersTab

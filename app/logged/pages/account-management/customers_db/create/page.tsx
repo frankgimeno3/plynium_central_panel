@@ -231,7 +231,7 @@ const CreateCustomerPage: FC = () => {
   return (
     <>
       <PageContentSection className="p-0">
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full mt-12">
         <div className="flex border-b border-gray-200 bg-gray-50 px-6 py-4">
           <div className="flex items-center gap-4">
             {([1, 2, 3, 4, 5] as Step[]).map((s) => (

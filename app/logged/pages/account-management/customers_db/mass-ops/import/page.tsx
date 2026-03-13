@@ -26,12 +26,25 @@ const CUSTOMERS_IMPORT_COLUMNS = [
   "contact_phone",
 ] as const;
 
-const EXPECTED_STRUCTURE = `La primera fila debe ser la cabecera con exactamente estas columnas (en cualquier orden):
-${CUSTOMERS_IMPORT_COLUMNS.join(" | ")}
-
-Example (account/company + main contact):
-id_customer | name                    | cif        | country | address              | phone           | email              | website    | industry        | segment  | owner          | source | status  | contact_name      | contact_role           | contact_email           | contact_phone
-cust-005    | Nuevas Ventanas S.L.   | B11222333  | España  | C/ Mayor 1, Madrid   | +34 911 222 333 | info@nuevasv.es    | https://.. | Carpintería      | Empresa  | Laura Martínez | Web    | activo | Juan López        | Director Comercial     | j.lopez@nuevasv.es      | +34 600 111 222`;
+const EXAMPLE_ROW: Record<string, string> = {
+  id_customer: "cust-005",
+  name: "Nuevas Ventanas S.L.",
+  cif: "B11222333",
+  country: "España",
+  address: "C/ Mayor 1, Madrid",
+  phone: "+34 911 222 333",
+  email: "info@nuevasv.es",
+  website: "https://..",
+  industry: "Carpintería",
+  segment: "Empresa",
+  owner: "Laura Martínez",
+  source: "Web",
+  status: "activo",
+  contact_name: "Juan López",
+  contact_role: "Director Comercial",
+  contact_email: "j.lopez@nuevasv.es",
+  contact_phone: "+34 600 111 222",
+};
 
 type ImportPhase = "upload" | "processing" | "result";
 
@@ -175,83 +188,145 @@ const ImportCustomersPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <div className="flex flex-col w-full">
-          <div className="bg-white rounded-b-lg overflow-hidden p-6">
-      <div className="max-w-2xl">
-        {phase === "upload" && (
-          <>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6">
-              <p className="text-sm font-semibold text-amber-800 mb-2">
-                Expected structure (Excel or CSV) — Accounts / Companies
-              </p>
-              <pre className="text-xs text-amber-900 whitespace-pre-wrap font-sans overflow-x-auto">
-                {EXPECTED_STRUCTURE}
-              </pre>
-            </div>
+        <div className="flex flex-col w-full  max-w-full ">
+          <div className="bg-white rounded-b-lg  p-6 ">
+            <div className="w-full  overflow-x-hidden">
+              {phase === "upload" && (
+                <>
+                  <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
+                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200/60 px-5 py-4">
+                      <h3 className="text-sm font-semibold text-amber-900">
+                        Estructura esperada (Excel o CSV) — Cuentas / Empresas
+                      </h3>
+                      <p className="text-xs text-amber-800/90 mt-1">
+                        La primera fila debe ser la cabecera con exactamente estas columnas (en cualquier orden).
+                      </p>
+                    </div>
+                    <div className="p-5 space-y-5">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                          Columnas requeridas
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {CUSTOMERS_IMPORT_COLUMNS.map((col) => (
+                            <code
+                              key={col}
+                              className="inline-flex items-center px-2.5 py-1 rounded-md bg-gray-100 text-gray-700 text-xs font-mono border border-gray-200"
+                            >
+                              {col}
+                            </code>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                          Ejemplo (cuenta/empresa + contacto principal)
+                        </p>
+                        <div className="rounded-lg border border-gray-200 overflow-x-auto">
+                          <table className="w-full min-w-[800px] text-left text-sm table-fixed">
+                            <colgroup>
+                              {CUSTOMERS_IMPORT_COLUMNS.map((col) => (
+                                <col
+                                  key={col}
+                                  style={{ width: `${Math.max(8, col.length + 1)}ch` }}
+                                />
+                              ))}
+                            </colgroup>
+                            <thead>
+                              <tr className="bg-gray-50 border-b border-gray-200">
+                                {CUSTOMERS_IMPORT_COLUMNS.map((col) => (
+                                  <th
+                                    key={col}
+                                    className="px-3 py-2.5 font-semibold text-gray-700 truncate"
+                                    title={col}
+                                  >
+                                    {col}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              <tr className="border-b border-gray-100 last:border-0 hover:bg-gray-50/50">
+                                {CUSTOMERS_IMPORT_COLUMNS.map((col) => (
+                                  <td
+                                    key={col}
+                                    className="px-3 py-2.5 text-gray-600 truncate"
+                                    title={EXAMPLE_ROW[col] ?? ""}
+                                  >
+                                    {EXAMPLE_ROW[col] ?? "—"}
+                                  </td>
+                                ))}
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
-            <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-              <p className="text-sm font-semibold text-gray-700">Subir archivo</p>
-              <input
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                onChange={onFileChange}
-                className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200"
-              />
-              {file && (
-                <p className="text-xs text-gray-500">
-                  Archivo: <span className="font-medium">{file.name}</span>
-                </p>
+                  <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+                    <p className="text-sm font-semibold text-gray-700">Subir archivo</p>
+                    <input
+                      type="file"
+                      accept=".csv,.xlsx,.xls"
+                      onChange={onFileChange}
+                      className="block w-full text-sm text-gray-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 p-3 rounded-md"
+                    />
+                    {file && (
+                      <p className="text-xs text-gray-500">
+                        Archivo: <span className="font-medium">{file.name}</span>
+                      </p>
+                    )}
+                    {validation && !validation.valid && (
+                      <p className="text-sm text-red-600">{validation.error}</p>
+                    )}
+                    {validation?.valid && (
+                      <p className="text-sm text-green-600">
+                        Valid file. {validation.count} row(s) of data.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleContinue}
+                      disabled={!validation?.valid}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Continuar
+                    </button>
+                  </div>
+                </>
               )}
-              {validation && !validation.valid && (
-                <p className="text-sm text-red-600">{validation.error}</p>
-              )}
-              {validation?.valid && (
-                <p className="text-sm text-green-600">
-                  Valid file. {validation.count} row(s) of data.
-                </p>
-              )}
-              <button
-                type="button"
-                onClick={handleContinue}
-                disabled={!validation?.valid}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continuar
-              </button>
-            </div>
-          </>
-        )}
 
-        {phase === "processing" && (
-          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
-            <div className="inline-block w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-gray-700">Processing import...</p>
-            <p className="text-sm text-gray-500 mt-1">Espere un momento.</p>
-          </div>
-        )}
-
-        {phase === "result" && importResult && (
-          <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-            <p className="text-sm font-semibold text-gray-700">Import result</p>
-            <p className="text-gray-600">
-              Accounts imported: <span className="font-medium text-green-600">{importResult.success}</span>
-              {importResult.errors > 0 && (
-                <span className="ml-2">
-                  | Errores: <span className="font-medium text-red-600">{importResult.errors}</span>
-                </span>
+              {phase === "processing" && (
+                <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+                  <div className="inline-block w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
+                  <p className="text-gray-700">Processing import...</p>
+                  <p className="text-sm text-gray-500 mt-1">Espere un momento.</p>
+                </div>
               )}
-            </p>
-            <div className="flex gap-3 pt-4">
-              <Link
-                href={backUrl}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                Back to Customers
-              </Link>
+
+              {phase === "result" && importResult && (
+                <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+                  <p className="text-sm font-semibold text-gray-700">Import result</p>
+                  <p className="text-gray-600">
+                    Accounts imported: <span className="font-medium text-green-600">{importResult.success}</span>
+                    {importResult.errors > 0 && (
+                      <span className="ml-2">
+                        | Errores: <span className="font-medium text-red-600">{importResult.errors}</span>
+                      </span>
+                    )}
+                  </p>
+                  <div className="flex gap-3 pt-4">
+                    <Link
+                      href={backUrl}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                    >
+                      Back to Customers
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
-          </div>
-        )}
-      </div>
           </div>
         </div>
       </PageContentSection>

@@ -51,27 +51,28 @@ const OrderDetailPage: FC = () => {
   }, [idOrder]);
 
   const { setPageMeta } = usePageContent();
-  const backBtn = [{ label: "Back to Orders", href: "/logged/pages/administration" }];
+  const ordersHref = "/logged/pages/administration/orders";
+  const backBtn = [{ label: "Back to Orders", href: ordersHref }];
 
   useEffect(() => {
     if (!idOrder) {
       setPageMeta({
         pageTitle: "Invalid order",
-        breadcrumbs: [{ label: "Administration", href: "/logged/pages/administration" }, { label: "Orders", href: "/logged/pages/administration" }],
+        breadcrumbs: [{ label: "Administration", href: ordersHref }, { label: "Orders", href: ordersHref }],
         buttons: backBtn,
       });
     } else if (!order) {
       setPageMeta({
         pageTitle: "Order not found",
-        breadcrumbs: [{ label: "Administration", href: "/logged/pages/administration" }, { label: "Orders", href: "/logged/pages/administration" }, { label: idOrder }],
+        breadcrumbs: [{ label: "Administration", href: ordersHref }, { label: "Orders", href: ordersHref }, { label: idOrder }],
         buttons: backBtn,
       });
     } else {
       setPageMeta({
         pageTitle: `Order — ${order.order_code}`,
         breadcrumbs: [
-          { label: "Administration", href: "/logged/pages/administration" },
-          { label: "Orders", href: "/logged/pages/administration" },
+          { label: "Administration", href: ordersHref },
+          { label: "Orders", href: ordersHref },
           { label: order.order_code },
         ],
         buttons: backBtn,

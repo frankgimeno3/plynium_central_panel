@@ -137,7 +137,7 @@ const CreateFlatplanPage: FC = () => {
           <div className="bg-white rounded-b-lg overflow-hidden">
         <div className="p-6 w-full">
           {step === 1 && (
-            <div className="space-y-6 max-w-xl">
+            <div className="space-y-6 w-full">
               <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <p className="text-sm font-semibold text-gray-700 mb-3">1) Select magazine</p>
                 <button
@@ -218,15 +218,13 @@ const CreateFlatplanPage: FC = () => {
           )}
 
           {step === 2 && (
-            <div className="space-y-6 max-w-xl">
+            <div className="space-y-6 w-full">
               <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-                <p className="text-sm font-semibold text-gray-700">Flatplan ID (read-only)</p>
-                <input
-                  type="text"
-                  value={idFlatplan}
-                  readOnly
-                  className="w-full px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700 font-mono"
-                />
+                <div>
+                  <p className="text-sm font-semibold text-gray-700 mb-1">Flatplan ID</p>
+                  <p className="text-base font-mono font-medium text-gray-900">{idFlatplan || "—"}</p>
+                  <p className="text-xs text-gray-500 mt-1">This ID will be assigned to the new flatplan.</p>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Planned publication date</label>
                   <input
@@ -273,7 +271,7 @@ const CreateFlatplanPage: FC = () => {
           )}
 
           {step === 3 && (
-            <div className="space-y-6 max-w-xl">
+            <div className="space-y-6 w-full">
               <div className="bg-white border border-gray-200 rounded-lg p-6">
                 <p className="text-sm font-semibold text-gray-700 mb-4">Preview – confirm and create</p>
                 <dl className="space-y-2 text-sm">

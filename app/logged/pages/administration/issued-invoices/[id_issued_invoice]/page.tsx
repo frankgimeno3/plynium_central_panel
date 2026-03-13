@@ -176,7 +176,7 @@ const IssuedInvoiceDetailPage: FC = () => {
             {invoice.orders.map((o) => (
               <li key={o.order_code}>
                 <Link
-                  href={`/logged/pages/administration/${encodeURIComponent(o.order_code)}`}
+                  href={`/logged/pages/administration/orders/${encodeURIComponent(o.order_code)}`}
                   className="text-blue-600 hover:underline"
                 >
                   {o.order_code}

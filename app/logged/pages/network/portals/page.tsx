@@ -57,7 +57,7 @@ const PortalsPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <div className="flex flex-col w-full">
+        <div className="flex flex-col w-full mt-12">
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6">
               {loading ? (
