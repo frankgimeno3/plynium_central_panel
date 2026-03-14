@@ -1,8 +1,7 @@
 "use client";
 
-import React, { FC, useState, useMemo, useEffect } from "react";
-import foldersData from "@/app/contents/mediatecaFolders.json";
-import contentsData from "@/app/contents/mediatecaContents.json";
+import React, { FC, useState, useMemo, useEffect, useCallback } from "react";
+import { getFolders, getMedia } from "@/app/service/mediatecaService";
 import CreateFolderModal from "@/app/logged/pages/mediateca/CreateFolderModal";
 import AddFileModal from "@/app/logged/pages/mediateca/AddFileModal";
 
@@ -20,18 +19,27 @@ export type MediatecaContent = {
   src: string;
 };
 
-const folders = foldersData as MediatecaFolder[];
-const contents = contentsData as MediatecaContent[];
+type ApiMediaItem = { id: string; name: string; s3Key: string; url?: string; folderPath: string };
 
-function getSubfolders(currentPath: string): MediatecaFolder[] {
-  const prefix = currentPath ? `${currentPath}/` : "";
-  return folders.filter(
-    (f) => f.path.startsWith(prefix) && !f.path.slice(prefix.length).includes("/")
-  );
-}
-
-function getContentsInFolder(currentPath: string): MediatecaContent[] {
-  return contents.filter((c) => c.folderPath === currentPath);
+function mapMediaToContent(item: ApiMediaItem): MediatecaContent {
+  const isPdf = item.name.toLowerCase().endsWith(".pdf");
+  const type = isPdf ? "pdf" : "image";
+  const content_type = isPdf ? "json" : "image";
+  const cloudFront = process.env.NEXT_PUBLIC_CLOUDFRONT_URL;
+  const baseUrl = cloudFront ? `https://${String(cloudFront).replace(/^https?:\/\//, "")}` : "";
+  const src = item.url || (baseUrl ? `${baseUrl}/${item.s3Key}` : item.s3Key);
+  return {
+    id: item.id,
+    name: item.name,
+    folderPath: item.folderPath,
+    type,
+    content_type,
+    publishedAt: "",
+    usedIn: [],
+    thumbnailUrl: content_type === "image" ? (item.url || (baseUrl ? `${baseUrl}/${item.s3Key}` : null)) : null,
+    url: item.url ?? null,
+    src,
+  };
 }
 
 function getCurrentFolderName(pathSegments: string[]): string {
@@ -54,29 +62,55 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [addFileOpen, setAddFileOpen] = useState(false);
+  const [subfolders, setSubfolders] = useState<MediatecaFolder[]>([]);
+  const [folderContents, setFolderContents] = useState<MediatecaContent[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const currentPath = pathSegments.join("/");
-  const subfolders = useMemo(() => getSubfolders(currentPath), [currentPath]);
-  const folderContents = useMemo(() => getContentsInFolder(currentPath), [
-    currentPath,
-  ]);
   const folderName = useMemo(
     () => getCurrentFolderName(pathSegments),
     [pathSegments]
   );
   const selectedContent =
     selectedContentId != null
-      ? contents.find((c) => c.id === selectedContentId)
+      ? folderContents.find((c) => c.id === selectedContentId) ?? null
       : null;
   const canUseImage =
     selectedContent != null && selectedContent.content_type === "image";
+
+  const loadData = useCallback(async (path: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [foldersRes, mediaRes] = await Promise.all([
+        getFolders(path),
+        getMedia({ folderPath: path }),
+      ]);
+      setSubfolders(Array.isArray(foldersRes) ? foldersRes : []);
+      setFolderContents(
+        Array.isArray(mediaRes) ? mediaRes.map(mapMediaToContent) : []
+      );
+    } catch (err: unknown) {
+      const message = err && typeof err === "object" && "message" in err
+        ? String((err as { message: unknown }).message)
+        : "Failed to load data.";
+      setError(message);
+      setSubfolders([]);
+      setFolderContents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) {
       setPathSegments([]);
       setSelectedContentId(null);
+      return;
     }
-  }, [open]);
+    loadData(currentPath);
+  }, [open, currentPath, loadData]);
 
   useEffect(() => {
     if (!open) return;
@@ -89,17 +123,18 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
 
   const handleUseImage = () => {
     if (!selectedContent || selectedContent.content_type !== "image") return;
-    // Pass the image src (same value as the old "Main Image URL" input)
     onSelectImage(selectedContent.src);
     onClose();
   };
 
   const handleCreateFolderSuccess = () => {
     setCreateFolderOpen(false);
+    loadData(currentPath);
   };
 
   const handleAddFileSuccess = () => {
     setAddFileOpen(false);
+    loadData(currentPath);
   };
 
   if (!open) return null;
@@ -147,6 +182,11 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
           </div>
 
           <div className="p-6 overflow-auto flex-1 min-h-0">
+            {error && (
+              <p className="mb-4 text-sm text-red-600" role="alert">
+                {error}
+              </p>
+            )}
             {/* Breadcrumb */}
             <nav className="flex flex-wrap items-center gap-1 text-sm text-gray-600 mb-4">
               <button
@@ -192,6 +232,9 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
             <h3 className="text-sm font-semibold text-gray-700 mb-2">
               {folderName} — Subfolders
             </h3>
+            {loading ? (
+              <p className="text-sm text-gray-500 mb-6">Loading…</p>
+            ) : (
             <div className="w-full min-w-0 overflow-x-auto mb-6">
               <table className="w-full min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
                 <thead className="bg-gray-50">
@@ -235,11 +278,15 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
                 </tbody>
               </table>
             </div>
+            )}
 
             {/* Contents */}
             <h3 className="text-sm font-semibold text-gray-700 mb-2">
               Contents
             </h3>
+            {loading ? (
+              <p className="text-sm text-gray-500">Loading…</p>
+            ) : (
             <div className="w-full min-w-0 overflow-x-auto">
               <table className="w-full min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
                 <thead className="bg-gray-50">
@@ -339,6 +386,7 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
                 </tbody>
               </table>
             </div>
+            )}
 
             {/* Hint when another image is selected */}
             {selectedContentId != null && (

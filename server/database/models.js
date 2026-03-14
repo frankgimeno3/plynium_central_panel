@@ -7,6 +7,8 @@ import EventModel from "../features/event/EventModel.js";
 import CompanyModel from "../features/company/CompanyModel.js";
 import ProductModel from "../features/product/ProductModel.js";
 import BannerModel from "../features/banner/BannerModel.js";
+import FolderModel from "../features/folder/FolderModel.js";
+import MediaModel from "../features/media/MediaModel.js";
 import {defineAssociations} from "./associations.js";
 
 const database = Database.getInstance();
@@ -354,7 +356,91 @@ EventModel.init({
     ]
 });
 
+FolderModel.init({
+    id: {
+        type: DataTypes.UUID,
+        primaryKey: true,
+        defaultValue: DataTypes.UUIDV4
+    },
+    name: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    parent_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: { model: "folders", key: "id" }
+    },
+    created_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    updated_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    }
+}, {
+    sequelize,
+    modelName: "folder",
+    underscored: true,
+    tableName: "folders",
+    indexes: [{ fields: ["parent_id"] }]
+});
+
+MediaModel.init({
+    id: {
+        type: DataTypes.UUID,
+        primaryKey: true,
+        defaultValue: DataTypes.UUIDV4
+    },
+    folder_id: {
+        type: DataTypes.UUID,
+        allowNull: true,
+        references: { model: "folders", key: "id" }
+    },
+    content_name: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    s3_key: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+        unique: true
+    },
+    content_src: {
+        type: DataTypes.TEXT,
+        allowNull: true
+    },
+    mime_type: {
+        type: DataTypes.STRING(100),
+        allowNull: true
+    },
+    type: {
+        type: DataTypes.ENUM("pdf", "image"),
+        allowNull: false
+    },
+    created_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    },
+    updated_at: {
+        type: DataTypes.DATE,
+        allowNull: true
+    }
+}, {
+    sequelize,
+    modelName: "media_content",
+    underscored: true,
+    tableName: "media_contents",
+    indexes: [
+        { fields: ["folder_id"] },
+        { fields: ["type"] },
+        { fields: ["created_at"] }
+    ]
+});
+
 defineAssociations();
 }
 
-export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel };
+export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel };
+

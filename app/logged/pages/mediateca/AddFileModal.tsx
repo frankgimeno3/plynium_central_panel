@@ -1,8 +1,14 @@
 "use client";
 
 import React, { FC, useState, useRef } from "react";
+import { createPresign, createMedia } from "@/app/service/mediatecaService";
 
 type FileType = "pdf" | "image";
+
+function getErrorMessage(err: unknown): string {
+  if (err && typeof err === "object" && "message" in err) return String((err as { message: unknown }).message);
+  return "Something went wrong.";
+}
 
 interface AddFileModalProps {
   open: boolean;
@@ -21,6 +27,7 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
   const [fileType, setFileType] = useState<FileType | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -28,6 +35,7 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
     setFileType(null);
     setFile(null);
     setError(null);
+    setLoading(false);
   };
 
   const handleClose = () => {
@@ -48,7 +56,7 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
     setError(null);
   };
 
-  const validateAndSubmit = () => {
+  const validateAndSubmit = async () => {
     setError(null);
     if (!file) {
       setError("Please select a file.");
@@ -66,8 +74,34 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
         return;
       }
     }
-    // Mock: in a real app you would upload the file
-    setStep("success");
+
+    setLoading(true);
+    try {
+      const presign = await createPresign({ filename: file.name, contentType: file.type });
+      const { uploadUrl, mediaId, s3Key, cdnUrl } = presign;
+      const putRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!putRes.ok) {
+        throw new Error("Upload failed.");
+      }
+      await createMedia({
+        mediaId,
+        contentName: file.name,
+        s3Key,
+        folderPath,
+        cdnUrl: cdnUrl ?? undefined,
+        contentType: file.type,
+        type: fileType ?? "image",
+      });
+      setStep("success");
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleContinue = () => {
@@ -144,16 +178,18 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
               <button
                 type="button"
                 onClick={() => { setStep("type"); setFileType(null); setFile(null); setError(null); }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                disabled={loading}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
               >
                 Back
               </button>
               <button
                 type="button"
                 onClick={validateAndSubmit}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-950 rounded-lg hover:bg-blue-900"
+                disabled={loading}
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-950 rounded-lg hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Upload
+                {loading ? "Uploading…" : "Upload"}
               </button>
             </div>
           </>

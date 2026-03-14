@@ -1,27 +1,59 @@
 "use client";
 
-import React, { FC, use } from "react";
+import React, { FC, use, useState, useEffect } from "react";
 import Link from "next/link";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import contentsData from "@/app/contents/mediatecaContents.json";
+import { getMediaById } from "@/app/service/mediatecaService";
 
-type MediatecaContent = {
-  id: string;
-  name: string;
-  type: "pdf" | "image";
-  content_type: "json" | "image";
-  url?: string | null;
-  src: string;
-  thumbnailUrl?: string | null;
-};
+type ApiMediaItem = { id: string; name: string; s3Key: string; url?: string; folderPath: string; contentType?: string };
 
-const contents = contentsData as MediatecaContent[];
+function buildAssetSrc(item: ApiMediaItem): string {
+  const cloudFront = process.env.NEXT_PUBLIC_CLOUDFRONT_URL;
+  const baseUrl = cloudFront ? `https://${String(cloudFront).replace(/^https?:\/\//, "")}` : "";
+  return item.url || (baseUrl ? `${baseUrl}/${item.s3Key}` : item.s3Key);
+}
+
+function isPdf(item: ApiMediaItem): boolean {
+  if (item.contentType === "application/pdf") return true;
+  return item.name.toLowerCase().endsWith(".pdf");
+}
 
 const MediatecaAssetPage: FC<{ params: Promise<{ id: string }> }> = ({ params }) => {
   const { id } = use(params);
-  const content = contents.find((c) => c.id === id);
+  const [content, setContent] = useState<ApiMediaItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
 
-  if (!content) {
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setNotFound(false);
+    getMediaById(id)
+      .then((data) => {
+        if (!cancelled && data) setContent(data);
+        if (!cancelled && !data) setNotFound(true);
+      })
+      .catch(() => {
+        if (!cancelled) setNotFound(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 w-screen h-screen bg-gray-900 flex flex-col items-center justify-center">
+        <p className="text-gray-400">Loading…</p>
+        <Link href="/logged/pages/mediateca" className="text-blue-300 hover:text-white mt-4 text-sm">
+          Back to Mediateca
+        </Link>
+      </div>
+    );
+  }
+
+  if (notFound || !content) {
     return (
       <PageContentSection>
         <div className="flex flex-col w-full">
@@ -39,7 +71,8 @@ const MediatecaAssetPage: FC<{ params: Promise<{ id: string }> }> = ({ params })
     );
   }
 
-  const assetUrl = content.src || (content.content_type === "json" ? "https://www.w3.org/WAI/WCAG21/Techniques/pdf/img/table-word.pdf" : "https://picsum.photos/800/600");
+  const assetUrl = buildAssetSrc(content);
+  const isPdfType = isPdf(content);
 
   return (
     <div className="fixed inset-0 w-screen h-screen bg-gray-900 flex flex-col">
@@ -62,7 +95,7 @@ const MediatecaAssetPage: FC<{ params: Promise<{ id: string }> }> = ({ params })
         </div>
       </header>
       <main className="flex-1 min-h-0 w-full overflow-auto">
-        {content.content_type === "json" || content.type === "pdf" ? (
+        {isPdfType ? (
           <iframe
             src={assetUrl}
             title={content.name}

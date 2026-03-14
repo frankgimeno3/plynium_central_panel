@@ -1,11 +1,10 @@
 "use client";
 
-import React, { FC, use, useState, useMemo, useEffect } from "react";
+import React, { FC, use, useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import foldersData from "@/app/contents/mediatecaFolders.json";
-import contentsData from "@/app/contents/mediatecaContents.json";
+import { getFolders, getMedia } from "@/app/service/mediatecaService";
 import CreateFolderModal from "@/app/logged/pages/mediateca/CreateFolderModal";
 import AddFileModal from "@/app/logged/pages/mediateca/AddFileModal";
 
@@ -23,16 +22,27 @@ export type MediatecaContent = {
   src: string;
 };
 
-const folders = foldersData as MediatecaFolder[];
-const contents = contentsData as MediatecaContent[];
+type ApiMediaItem = { id: string; name: string; s3Key: string; url?: string; folderPath: string };
 
-function getSubfolders(currentPath: string): MediatecaFolder[] {
-  const prefix = currentPath ? `${currentPath}/` : "";
-  return folders.filter((f) => f.path.startsWith(prefix) && !f.path.slice(prefix.length).includes("/"));
-}
-
-function getContentsInFolder(currentPath: string): MediatecaContent[] {
-  return contents.filter((c) => c.folderPath === currentPath);
+function mapMediaToContent(item: ApiMediaItem): MediatecaContent {
+  const isPdf = item.name.toLowerCase().endsWith(".pdf");
+  const type = isPdf ? "pdf" : "image";
+  const content_type = isPdf ? "json" : "image";
+  const cloudFront = process.env.NEXT_PUBLIC_CLOUDFRONT_URL;
+  const baseUrl = cloudFront ? `https://${String(cloudFront).replace(/^https?:\/\//, "")}` : "";
+  const src = item.url || (baseUrl ? `${baseUrl}/${item.s3Key}` : item.s3Key);
+  return {
+    id: item.id,
+    name: item.name,
+    folderPath: item.folderPath,
+    type,
+    content_type,
+    publishedAt: "",
+    usedIn: [],
+    thumbnailUrl: content_type === "image" ? (item.url || (baseUrl ? `${baseUrl}/${item.s3Key}` : null)) : null,
+    url: item.url ?? null,
+    src,
+  };
 }
 
 function getCurrentFolderName(pathSegments: string[]): string {
@@ -48,10 +58,38 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
 
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [addFileOpen, setAddFileOpen] = useState(false);
+  const [subfolders, setSubfolders] = useState<MediatecaFolder[]>([]);
+  const [folderContents, setFolderContents] = useState<MediatecaContent[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const subfolders = useMemo(() => getSubfolders(currentPath), [currentPath]);
-  const folderContents = useMemo(() => getContentsInFolder(currentPath), [currentPath]);
   const folderName = useMemo(() => getCurrentFolderName(pathSegments), [pathSegments]);
+
+  const loadData = useCallback(async (path: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [foldersRes, mediaRes] = await Promise.all([
+        getFolders(path),
+        getMedia({ folderPath: path }),
+      ]);
+      setSubfolders(Array.isArray(foldersRes) ? foldersRes : []);
+      setFolderContents(Array.isArray(mediaRes) ? mediaRes.map(mapMediaToContent) : []);
+    } catch (err: unknown) {
+      const message = err && typeof err === "object" && "message" in err
+        ? String((err as { message: unknown }).message)
+        : "Failed to load data.";
+      setError(message);
+      setSubfolders([]);
+      setFolderContents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData(currentPath);
+  }, [currentPath, loadData]);
 
   const baseHref = "/logged/pages/mediateca";
   const breadcrumbs = useMemo(() => {
@@ -82,12 +120,12 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
 
   const handleCreateFolderSuccess = () => {
     setCreateFolderOpen(false);
-    router.refresh();
+    loadData(currentPath);
   };
 
   const handleAddFileSuccess = () => {
     setAddFileOpen(false);
-    router.refresh();
+    loadData(currentPath);
   };
 
   return (
@@ -108,7 +146,11 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
       <PageContentSection>
         <div className="flex flex-col w-full">
           <div className="bg-white rounded-b-lg overflow-hidden px-6">
+          {error && <p className="text-sm text-red-600 mt-4" role="alert">{error}</p>}
           <h2 className=" text-xl text-gray-600 mb-1 uppercase">Subfolders</h2>
+        {loading ? (
+          <p className="text-sm text-gray-500 py-4">Loading…</p>
+        ) : (
         <div className="w-full min-w-0 overflow-x-auto">
           <table className="w-full min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -150,6 +192,7 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
             </tbody>
           </table>
         </div>
+        )}
           </div>
         </div>
       </PageContentSection>
@@ -158,6 +201,9 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
         <div className="flex flex-col w-full mt-18">
           <div className="bg-white rounded-b-lg overflow-hidden p-6">
           <h2 className=" text-xl text-gray-600 mb-1 uppercase">Contents</h2>
+        {loading ? (
+          <p className="text-sm text-gray-500 py-4">Loading…</p>
+        ) : (
         <div className="w-full min-w-0 overflow-x-auto">
           <table className="w-full min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
             <thead className="bg-gray-50">
@@ -225,6 +271,7 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
             </tbody>
           </table>
         </div>
+        )}
           </div>
         </div>
       </PageContentSection>
