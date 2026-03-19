@@ -4,7 +4,7 @@ import React, { FC, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import contactsData from "@/app/contents/contactsContents.json";
+import { ContactService } from "@/app/service/ContactService";
 
 type Contact = {
   id_contact: string;
@@ -47,8 +47,13 @@ const ExportContactsPage: FC = () => {
     company: "",
   });
   const [csvBlobUrl, setCsvBlobUrl] = useState<string | null>(null);
+  const [allContacts, setAllContacts] = useState<Contact[]>([]);
 
-  const allContacts = useMemo(() => (contactsData as Contact[]).slice(), []);
+  useEffect(() => {
+    ContactService.getAllContacts()
+      .then((list: Contact[]) => setAllContacts(Array.isArray(list) ? list : []))
+      .catch(() => setAllContacts([]));
+  }, []);
 
   const filteredContacts = useMemo(() => {
     let list = [...allContacts];

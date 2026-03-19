@@ -25,16 +25,68 @@ export interface articleMiniatureInterface {
     url_imagen: string;
 }
 
-/** Publication (e.g. magazine issue). revista = magazine name, número = issue number */
-export interface publicationInterface {
+/** Slot for a page (cover, inside_cover, end or a numbered page). */
+export interface PublicationSlot {
+  slotKey?: string;
+  id_advertiser?: string;
+  id_project?: string;
+  image_src?: string;
+  article_id?: string;
+  state: string;
+  content_type: string;
+}
+
+/** Single unified publication: planned | in production | published. All fields present; blank when not applicable. */
+export type PublicationState = "planned" | "in production" | "published";
+
+export interface PublicationUnified {
+  state: PublicationState;
   id_publication: string;
+  id_planned_publication: string;
+  id_flatplan: string;
+  edition_name: string;
+  theme: string;
+  date: string;
+  publication_date: string;
+  redirectionLink: string;
+  revista: string;
+  número: string;
+  publication_main_image_url: string;
+  id_magazine: string;
+  year: number | null;
+  issue_number: number | null;
+  cover: PublicationSlot | null;
+  inside_cover: PublicationSlot | null;
+  end: PublicationSlot | null;
+  /** Rest of pages (numbered slots 1, 2, 3, ...) as array. */
+  pages: PublicationSlot[];
+  single_available: { state: string; offeredInProposal?: unknown[] } | null;
+  offeredPreferentialPages: { pageType: string; slotKey: string }[];
+}
+
+/** Publication (published issue). Use PublicationUnified filtered by state === "published" or this for backward compat. */
+export interface publicationInterface {
+  state?: PublicationState;
+  id_publication: string;
+  id_planned_publication?: string;
+  id_flatplan?: string;
   redirectionLink: string;
   date: string;
-  /** Magazine name */
   revista: string;
-  /** Issue number */
   número: number | string;
   publication_main_image_url: string;
+  edition_name?: string;
+  theme?: string;
+  publication_date?: string;
+  id_magazine?: string;
+  year?: number;
+  issue_number?: number;
+  cover?: PublicationSlot | null;
+  inside_cover?: PublicationSlot | null;
+  end?: PublicationSlot | null;
+  pages?: PublicationSlot[];
+  single_available?: { state: string; offeredInProposal?: unknown[] } | null;
+  offeredPreferentialPages?: { pageType: string; slotKey: string }[];
 }
 
 /** Planned issue for a magazine in a given year. */
@@ -42,6 +94,8 @@ export interface MagazineIssue {
   issue_number: number;
   is_special_edition: boolean;
   special_topic?: string;
+  /** Forecasted publication month (1-12). Required when creating/editing; unique per magazine/year. */
+  forecasted_publication_month?: number;
 }
 
 /** Magazine: container for years and issues (each issue can become a Published publication). */
@@ -58,31 +112,23 @@ export interface Magazine {
   issues_by_year?: Record<string, MagazineIssue[]>;
 }
 
-/** Flatplan: pre-publication organization of a flipbook (has Flatplan preview + Production sheet). */
-export interface FlatplanSlot {
-  id_advertiser: string;
-  id_project: string;
-  image_src?: string;
-  article_id?: string;
-  state: string;
-  content_type: string;
-}
+/** Flatplan slot (alias for PublicationSlot). */
+export type FlatplanSlot = PublicationSlot;
 
+/** Flatplan = PublicationUnified with state "in production". Kept for backward compat; use PublicationUnified + state. */
 export interface Flatplan {
   id_flatplan: string;
   edition_name: string;
   theme: string;
   publication_date: string;
   id_magazine?: string;
-  /** Year this flatplan is for (links to magazine issue). */
   year?: number;
-  /** Issue number within that year (links to magazine issue). */
   issue_number?: number;
-  /** Optional description for the flatplan. */
   description?: string;
   cover?: FlatplanSlot;
   inside_cover?: FlatplanSlot;
   end?: FlatplanSlot;
+  pages?: PublicationSlot[];
   "1"?: FlatplanSlot;
   "2"?: FlatplanSlot;
   "3"?: FlatplanSlot;

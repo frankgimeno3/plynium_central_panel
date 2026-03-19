@@ -4,7 +4,9 @@ import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import plannedPublicationsData from "@/app/contents/planned_publications.json";
+import publicationsData from "@/app/contents/publications.json";
+import { getPlanned } from "@/app/contents/publicationsHelpers";
+import type { PublicationUnified } from "@/app/contents/interfaces";
 
 type PlannedPublication = {
   id_planned_publication: string;
@@ -17,7 +19,7 @@ const ITEMS_PER_PAGE = 12;
 
 const PublicationsManagementPage: FC = () => {
   const router = useRouter();
-  const all = (plannedPublicationsData as PlannedPublication[]).slice();
+  const all = getPlanned(publicationsData as PublicationUnified[]) as PlannedPublication[];
   const [filter, setFilter] = useState({ id: "", edition: "", theme: "" });
 
   const filtered = useMemo(() => {

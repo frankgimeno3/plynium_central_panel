@@ -1,7 +1,7 @@
 "use client";
 
-import React, { FC, useState, useMemo, useEffect } from "react";
-import customersData from "@/app/contents/customers.json";
+import React, { FC, useState, useMemo, useEffect, useCallback } from "react";
+import { CustomerService } from "@/app/service/CustomerService";
 
 export interface CustomerRow {
   id_customer: string;
@@ -13,10 +13,6 @@ export interface CustomerRow {
   contracts?: string[];
   projects?: string[];
 }
-
-const allCustomers = (customersData as CustomerRow[]).filter(
-  (c) => c && typeof c.id_customer === "string"
-);
 
 const DEFAULT_PAGE_SIZE = 10;
 
@@ -38,9 +34,31 @@ const CustomerSelectModal: FC<CustomerSelectModalProps> = ({
   confirmLabel = "Select account",
 }) => {
   const pageSize = pageSizeProp ?? DEFAULT_PAGE_SIZE;
+  const [allCustomers, setAllCustomers] = useState<CustomerRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRow | null>(null);
   const [filter, setFilter] = useState({ id: "", name: "", cif: "", country: "" });
   const [currentPage, setCurrentPage] = useState(1);
+
+  const loadCustomers = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const list = await CustomerService.getAllCustomers();
+      setAllCustomers(Array.isArray(list) ? list.filter((c) => c && typeof c.id_customer === "string") : []);
+    } catch (err) {
+      setAllCustomers([]);
+      const message = err instanceof Error ? err.message : "Could not load customers from database.";
+      setLoadError(message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) loadCustomers();
+  }, [open, loadCustomers]);
 
   const filtered = useMemo(() => {
     let list = [...allCustomers];
@@ -49,7 +67,7 @@ const CustomerSelectModal: FC<CustomerSelectModalProps> = ({
     if (filter.cif) list = list.filter((c) => (c.cif || "").toLowerCase().includes(filter.cif.toLowerCase()));
     if (filter.country) list = list.filter((c) => (c.country || "").toLowerCase().includes(filter.country.toLowerCase()));
     return list;
-  }, [filter]);
+  }, [allCustomers, filter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated = useMemo(() => {
@@ -62,6 +80,7 @@ const CustomerSelectModal: FC<CustomerSelectModalProps> = ({
       setSelectedCustomer(null);
       setFilter({ id: "", name: "", cif: "", country: "" });
       setCurrentPage(1);
+      setLoadError(null);
     }
   }, [open]);
 
@@ -176,7 +195,21 @@ const CustomerSelectModal: FC<CustomerSelectModalProps> = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paginated.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                      Loading customers…
+                    </td>
+                  </tr>
+                ) : loadError ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-8 text-center">
+                      <p className="text-amber-700 font-medium">Could not load customers</p>
+                      <p className="text-sm text-gray-600 mt-1">{loadError}</p>
+                      <p className="text-xs text-gray-500 mt-2">Check .env (DATABASE_*) and that the customers_db table exists in your RDS.</p>
+                    </td>
+                  </tr>
+                ) : paginated.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
                       No customers found.

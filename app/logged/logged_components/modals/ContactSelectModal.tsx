@@ -1,7 +1,7 @@
 "use client";
 
-import React, { FC, useState, useMemo, useEffect } from "react";
-import contactsData from "@/app/contents/contactsContents.json";
+import React, { FC, useState, useMemo, useEffect, useCallback } from "react";
+import { ContactService } from "@/app/service/ContactService";
 
 export interface ContactRow {
   id_contact: string;
@@ -12,10 +12,6 @@ export interface ContactRow {
   id_customer?: string;
   company_name?: string;
 }
-
-const allContacts = (contactsData as ContactRow[]).filter(
-  (c) => c && typeof c.id_contact === "string"
-);
 
 const PAGE_SIZE = 10;
 
@@ -36,9 +32,27 @@ const ContactSelectModal: FC<ContactSelectModalProps> = ({
   filterByCustomerId,
   excludeContactIds,
 }) => {
+  const [allContacts, setAllContacts] = useState<ContactRow[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedContact, setSelectedContact] = useState<ContactRow | null>(null);
   const [filter, setFilter] = useState({ id: "", name: "", role: "", company: "" });
   const [currentPage, setCurrentPage] = useState(1);
+
+  const loadContacts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await ContactService.getAllContacts();
+      setAllContacts(Array.isArray(list) ? list.filter((c) => c && typeof c.id_contact === "string") : []);
+    } catch {
+      setAllContacts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (open) loadContacts();
+  }, [open, loadContacts]);
 
   const excludedSet = useMemo(() => new Set(excludeContactIds ?? []), [excludeContactIds]);
 
@@ -51,7 +65,7 @@ const ContactSelectModal: FC<ContactSelectModalProps> = ({
     if (filter.role) list = list.filter((c) => (c.role || "").toLowerCase().includes(filter.role.toLowerCase()));
     if (filter.company) list = list.filter((c) => (c.company_name || "").toLowerCase().includes(filter.company.toLowerCase()));
     return list;
-  }, [filter, filterByCustomerId, excludedSet]);
+  }, [allContacts, filter, filterByCustomerId, excludedSet]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paginated = useMemo(() => {
@@ -176,7 +190,13 @@ const ContactSelectModal: FC<ContactSelectModalProps> = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paginated.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                      Loading contacts…
+                    </td>
+                  </tr>
+                ) : paginated.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                       No contacts found.

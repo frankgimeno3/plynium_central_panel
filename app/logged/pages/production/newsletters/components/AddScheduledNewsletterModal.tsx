@@ -1,10 +1,9 @@
 "use client";
 
 import React, { FC, useState, useEffect } from "react";
-import userListsData from "@/app/contents/userLists.json";
+import apiClient from "@/app/apiClient";
 
 type UserList = { userList_id: string; userListName: string; userListPortal: string; userListTopic: string };
-const userLists = userListsData as UserList[];
 
 export interface AddScheduledNewsletterForm {
   topic: string;
@@ -19,9 +18,18 @@ interface AddScheduledNewsletterModalProps {
 }
 
 const AddScheduledNewsletterModal: FC<AddScheduledNewsletterModalProps> = ({ open, onClose, onSubmit }) => {
+  const [userLists, setUserLists] = useState<UserList[]>([]);
   const [topic, setTopic] = useState("");
   const [estimatedPublishDate, setEstimatedPublishDate] = useState("");
-  const [userNewsletterListId, setUserNewsletterListId] = useState(userLists[0]?.userList_id ?? "");
+  const [userNewsletterListId, setUserNewsletterListId] = useState("");
+
+  useEffect(() => {
+    apiClient.get("/api/v1/user-lists").then((res) => {
+      const lists = Array.isArray(res.data) ? (res.data as UserList[]) : [];
+      setUserLists(lists);
+      if (lists.length && !userNewsletterListId) setUserNewsletterListId(lists[0].userList_id);
+    }).catch(() => setUserLists([]));
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -29,7 +37,7 @@ const AddScheduledNewsletterModal: FC<AddScheduledNewsletterModalProps> = ({ ope
       setEstimatedPublishDate("");
       setUserNewsletterListId(userLists[0]?.userList_id ?? "");
     }
-  }, [open]);
+  }, [open, userLists]);
 
   useEffect(() => {
     if (!open) return;

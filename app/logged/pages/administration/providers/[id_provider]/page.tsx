@@ -1,13 +1,30 @@
 "use client";
 
-import React, { FC, useMemo, useEffect } from "react";
+import React, { FC, useEffect, useCallback, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import providersData from "@/app/contents/providers.json";
-import providerInvoicesData from "@/app/contents/provider_invoices.json";
-import type { Provider, ProviderInvoice } from "@/app/contents/interfaces";
+import { ProviderService } from "@/app/service/ProviderService.js";
+import { formatAdminDate } from "../adminDates";
+
+type Provider = {
+  id_provider: string;
+  name: string;
+  contact_email?: string;
+  contact_phone?: string;
+  address?: string;
+  tax_id?: string;
+  notes?: string;
+};
+
+type ProviderInvoice = {
+  id: string;
+  id_provider: string;
+  provider_name: string;
+  amount_eur: number;
+  payment_date: string;
+};
 
 const ProviderDetailPage: FC = () => {
   const params = useParams();
@@ -16,20 +33,29 @@ const ProviderDetailPage: FC = () => {
       ? decodeURIComponent(params.id_provider)
       : null;
 
-  const provider = useMemo(() => {
-    if (!idProvider) return null;
-    return (providersData as Provider[]).find((p) => p.id_provider === idProvider) ?? null;
+  const [provider, setProvider] = useState<Provider | null>(null);
+  const [invoices, setInvoices] = useState<ProviderInvoice[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const loadData = useCallback(async () => {
+    if (!idProvider) return;
+    setLoading(true);
+    try {
+      const data = await ProviderService.getProviderById(idProvider);
+      // API devuelve { provider, invoices }
+      setProvider(data?.provider ?? null);
+      setInvoices(Array.isArray(data?.invoices) ? data.invoices : []);
+    } catch {
+      setProvider(null);
+      setInvoices([]);
+    } finally {
+      setLoading(false);
+    }
   }, [idProvider]);
 
-  const invoices = useMemo(() => {
-    if (!idProvider) return [];
-    const list = (providerInvoicesData as ProviderInvoice[]).filter(
-      (inv) => inv.id_provider === idProvider
-    );
-    return [...list].sort(
-      (a, b) => new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
-    );
-  }, [idProvider]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
@@ -94,6 +120,9 @@ const ProviderDetailPage: FC = () => {
       <PageContentSection>
         <div className="flex flex-col w-full">
           <div className="bg-white rounded-b-lg overflow-hidden p-6">
+        {loading && (
+          <p className="text-gray-500 mb-4">Loading provider…</p>
+        )}
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Provider details</h2>
         <div className="overflow-hidden max-w-2xl">
           <table className="min-w-full divide-y divide-gray-200">
@@ -160,7 +189,9 @@ const ProviderDetailPage: FC = () => {
                         {inv.id}
                       </Link>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{inv.payment_date}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatAdminDate(inv.payment_date)}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">{inv.amount_eur.toLocaleString()}</td>
                   </tr>
                 ))}

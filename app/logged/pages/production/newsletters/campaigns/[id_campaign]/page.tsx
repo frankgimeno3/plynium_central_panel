@@ -5,9 +5,8 @@ import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import type { NewsletterCampaign, Newsletter } from "@/app/contents/interfaces";
-import campaignsData from "@/app/contents/newsletterCampaigns.json";
-import newslettersData from "@/app/contents/newsletters.json";
 import AddScheduledNewsletterModal, { type AddScheduledNewsletterForm } from "../../components/AddScheduledNewsletterModal";
+import { NewsletterService } from "@/app/service/NewsletterService";
 
 const BASE = "/logged/pages/production/newsletters";
 
@@ -22,51 +21,49 @@ function nextNewsletterId(existing: Newsletter[]): string {
 const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ params }) => {
   const router = useRouter();
   const { id_campaign } = use(params);
-  const campaigns = campaignsData as NewsletterCampaign[];
-  const baseNewsletters = newslettersData as Newsletter[];
+  const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
+  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
   const campaign = campaigns.find((c) => c.id === id_campaign);
 
-  const baseCampaignNewsletters = useMemo(
+  const campaignNewsletters = useMemo(
     () =>
-      baseNewsletters
+      newsletters
         .filter((n) => n.campaignId === id_campaign)
         .sort((a, b) => a.estimatedPublishDate.localeCompare(b.estimatedPublishDate)),
-    [baseNewsletters, id_campaign]
+    [newsletters, id_campaign]
   );
 
-  const [addedNewsletters, setAddedNewsletters] = useState<Newsletter[]>([]);
-  const campaignNewsletters = useMemo(() => {
-    const added = addedNewsletters
-      .filter((n) => n.campaignId === id_campaign)
-      .sort((a, b) => a.estimatedPublishDate.localeCompare(b.estimatedPublishDate));
-    const byDate = [...baseCampaignNewsletters, ...added].sort((a, b) =>
-      a.estimatedPublishDate.localeCompare(b.estimatedPublishDate)
-    );
-    return byDate;
-  }, [baseCampaignNewsletters, addedNewsletters, id_campaign]);
+  const reload = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    const [campaignsRes, newslettersRes] = await Promise.all([
+      NewsletterService.getNewsletterCampaigns(),
+      NewsletterService.getNewsletters(),
+    ]);
+    setCampaigns(Array.isArray(campaignsRes) ? campaignsRes : []);
+    setNewsletters(Array.isArray(newslettersRes) ? newslettersRes : []);
+    setLoading(false);
+  }, []);
 
   const [modalOpen, setModalOpen] = useState(false);
   const handleAddScheduled = useCallback(
-    (data: AddScheduledNewsletterForm) => {
-      const id = nextNewsletterId([...baseNewsletters, ...addedNewsletters]);
-      const now = new Date().toISOString();
-      setAddedNewsletters((prev) => [
-        ...prev,
-        {
-          id,
-          campaignId: id_campaign,
-          portalCode: campaign?.portalCode ?? "",
-          estimatedPublishDate: data.estimatedPublishDate,
-          topic: data.topic,
-          status: "calendarized" as const,
-          userNewsletterListId: data.userNewsletterListId,
-          sentToLists: null,
-          createdAt: now,
-          updatedAt: now,
-        },
-      ]);
+    async (data: AddScheduledNewsletterForm) => {
+      if (!campaign) return;
+      const id = nextNewsletterId(newsletters);
+      await NewsletterService.createNewsletter(id, {
+        idCampaign: id_campaign,
+        portalCode: campaign.portalCode,
+        estimatedPublishDate: data.estimatedPublishDate,
+        topic: data.topic,
+        status: "calendarized",
+        userNewsletterListId: data.userNewsletterListId,
+      });
+      await reload();
     },
-    [id_campaign, campaign?.portalCode, baseNewsletters, addedNewsletters]
+    [campaign, id_campaign, newsletters, reload]
   );
 
   const { setPageMeta } = usePageContent();
@@ -74,7 +71,8 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
   useEffect(() => {
     if (campaign) {
       setPageMeta({
-        pageTitle: campaign.name,
+        // Midnav title format: "NEWSLETTER CAMPAIGN - NAME"
+        pageTitle: `NEWSLETTER CAMPAIGN - ${campaign.name}`,
         breadcrumbs: [
           { label: "Production", href: "/logged/pages/production/services" },
           { label: "Newsletters", href: BASE },
@@ -84,7 +82,7 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
       });
     } else {
       setPageMeta({
-        pageTitle: "Campaign not found",
+        pageTitle: "NEWSLETTER CAMPAIGN - Campaign not found",
         breadcrumbs: [
           { label: "Production", href: "/logged/pages/production/services" },
           { label: "Newsletters", href: BASE },
@@ -93,6 +91,34 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
       });
     }
   }, [setPageMeta, campaign]);
+
+  useEffect(() => {
+    reload();
+  }, [reload]);
+
+  if (loading) {
+    return (
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-gray-600">Loading campaign…</div>
+          </div>
+        </div>
+      </PageContentSection>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-red-600">{error}</div>
+          </div>
+        </div>
+      </PageContentSection>
+    );
+  }
 
   if (!campaign) {
     return (

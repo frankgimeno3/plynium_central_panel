@@ -5,9 +5,8 @@ import Link from 'next/link';
 import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { useUsers } from './hooks/useUsers';
-import userListsData from '@/app/contents/userLists.json';
-import userContentsData from '@/app/contents/userContents.json';
-import contactsContentsData from '@/app/contents/contactsContents.json';
+import { ContactService } from '@/app/service/ContactService';
+import apiClient from '@/app/apiClient';
 
 type UserList = {
   userList_id: string;
@@ -17,6 +16,7 @@ type UserList = {
 };
 
 type UserContent = {
+  id?: string;
   id_user: string;
   user_full_name: string;
   user_name: string;
@@ -36,19 +36,30 @@ type ContactContent = {
 
 type UsersTabKey = 'all' | 'lists';
 
-const userLists = userListsData as UserList[];
-const userContents = userContentsData as UserContent[];
-const contactsContents = contactsContentsData as ContactContent[];
-
 interface UsersProps {}
 
 const USERS_BASE = '/logged/pages/network/users';
 
+const LISTS_BASE = `${USERS_BASE}/lists`;
+
 const Users: FC<UsersProps> = () => {
   const { users, loading, error, refetch } = useUsers();
+  const [userLists, setUserLists] = useState<UserList[]>([]);
   const [currentTab, setCurrentTab] = useState<UsersTabKey>('all');
-  const [selectedListId, setSelectedListId] = useState<string | null>(null);
   const [currentUser, setCurrentUser] = useState<{ user_name: string } | null>(null);
+  const [contactsContents, setContactsContents] = useState<ContactContent[]>([]);
+
+  useEffect(() => {
+    apiClient.get('/api/v1/user-lists')
+      .then((res) => setUserLists(Array.isArray(res.data) ? res.data as UserList[] : []))
+      .catch(() => setUserLists([]));
+  }, []);
+
+  useEffect(() => {
+    ContactService.getAllContacts()
+      .then((l) => setContactsContents(Array.isArray(l) ? l as ContactContent[] : []))
+      .catch(() => setContactsContents([]));
+  }, []);
 
   useEffect(() => {
     fetch('/api/me')
@@ -57,30 +68,24 @@ const Users: FC<UsersProps> = () => {
       .catch(() => setCurrentUser({ user_name: 'User' }));
   }, []);
 
+  const userContents: UserContent[] = useMemo(
+    () => users.map((u) => ({
+      id: (u as UserContent).id,
+      id_user: u.id_user,
+      user_full_name: u.user_full_name,
+      user_name: u.user_name,
+      user_role: u.user_role,
+      user_description: u.user_description,
+      userListArray: (u as UserContent).userListArray ?? [],
+    })),
+    [users]
+  );
+
   const breadcrumbs = [{ label: "Users" }];
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     setPageMeta({ pageTitle: "Users", breadcrumbs, buttons: [] });
   }, [setPageMeta, breadcrumbs]);
-
-  const usersInList = useMemo(() => {
-    if (!selectedListId) return [];
-    return userContents.filter(
-      (u) => Array.isArray(u.userListArray) && u.userListArray.includes(selectedListId)
-    );
-  }, [selectedListId]);
-
-  const contactsInList = useMemo(() => {
-    if (!selectedListId) return [];
-    return contactsContents.filter(
-      (c) => Array.isArray(c.userListArray) && c.userListArray.includes(selectedListId)
-    );
-  }, [selectedListId]);
-
-  const selectedList = useMemo(
-    () => userLists.find((l) => l.userList_id === selectedListId),
-    [selectedListId]
-  );
 
   const tabs: { key: UsersTabKey; label: string }[] = [
     { key: 'all', label: 'Plynium portal users DB' },
@@ -98,11 +103,7 @@ const Users: FC<UsersProps> = () => {
               <button
                 key={tab.key}
                 type="button"
-                onClick={() => {
-                  setCurrentTab(tab.key);
-                  if (tab.key === 'lists') setSelectedListId(userLists[0]?.userList_id ?? null);
-                  else setSelectedListId(null);
-                }}
+                onClick={() => setCurrentTab(tab.key)}
                 className={`
                   relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
                   ${
@@ -155,22 +156,29 @@ const Users: FC<UsersProps> = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {users.map((user) => (
-                      <tr key={user.id_user} className="hover:bg-gray-100 transition-colors">
-                        <td colSpan={4} className="p-0 border-b border-gray-200">
-                          <Link
-                            href={`${USERS_BASE}/${encodeURIComponent(user.id_user)}`}
-                            className="grid grid-cols-[1fr_1fr_1fr_2fr] gap-4 px-6 py-4 text-sm text-gray-900 cursor-pointer items-center"
-                            aria-label={`Ver usuario ${user.user_full_name}`}
-                          >
-                            <span className="whitespace-nowrap">{user.id_user}</span>
-                            <span className="whitespace-nowrap">{user.user_full_name}</span>
-                            <span className="whitespace-nowrap">{user.user_role}</span>
-                            <span>{user.user_description}</span>
-                          </Link>
-                        </td>
-                      </tr>
-                    ))}
+                    {users.map((user) => {
+                      const userSlug = (user as UserContent).id ?? user.id_user;
+                      const href = `${USERS_BASE}/${encodeURIComponent(userSlug)}`;
+                      const linkClass = "block w-full text-left text-gray-200 hover:text-blue-600 py-1 -my-1";
+                      return (
+                        <tr key={user.id_user} className="hover:bg-gray-100 transition-colors">
+                          <td className="px-6 py-3 text-sm border-b border-gray-200">
+                            <Link href={href} className={`${linkClass} text-gray-200 hover:underline whitespace-nowrap`} aria-label={`Ver usuario ${user.user_full_name}`}>
+                              {user.id_user}
+                            </Link>
+                          </td>
+                          <td className="px-6 py-3 text-sm border-b border-gray-200 whitespace-nowrap">
+                            <Link href={href} className={linkClass} tabIndex={-1} aria-hidden>{user.user_full_name}</Link>
+                          </td>
+                          <td className="px-6 py-3 text-sm border-b border-gray-200 whitespace-nowrap">
+                            <Link href={href} className={linkClass} tabIndex={-1} aria-hidden>{user.user_role}</Link>
+                          </td>
+                          <td className="px-6 py-3 text-sm border-b border-gray-200">
+                            <Link href={href} className={linkClass} tabIndex={-1} aria-hidden>{user.user_description}</Link>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -179,110 +187,60 @@ const Users: FC<UsersProps> = () => {
         )}
 
         {currentTab === 'lists' && !error && (
-          <div className="p-6 flex flex-col gap-6 flex-1 min-h-0">
-            <p className="text-sm text-gray-600">Listas de envío de newsletters. Selecciona una lista para ver los users y contacts asignados.</p>
-            <div className="flex flex-wrap gap-2">
-              {userLists.map((list) => (
-                <button
-                  key={list.userList_id}
-                  type="button"
-                  onClick={() => setSelectedListId(list.userList_id)}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    selectedListId === list.userList_id
-                      ? 'bg-blue-950 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  {list.userListName}
-                </button>
-              ))}
+          <div className="p-6 flex flex-col flex-1 min-h-0">
+            <p className="text-sm text-gray-600 mb-4">Listas de envío de newsletters. Haz clic en una fila para ver los users y contacts asignados.</p>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
+                      Lista
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
+                      ID
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
+                      Portal
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
+                      Tema
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {userLists.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-4 text-sm text-gray-200">
+                        No hay listas de envío de newsletters configuradas.
+                      </td>
+                    </tr>
+                  ) : (
+                    userLists.map((list) => {
+                      const href = `${LISTS_BASE}/${encodeURIComponent(list.userList_id)}`;
+                      const rowLinkClass = "block w-full text-left py-1 -my-1 text-gray-200 hover:text-gray-100";
+                      return (  
+                        <tr key={list.userList_id} className="hover:bg-gray-100 transition-colors">
+                          <td className="px-6 py-3 text-sm border-b border-gray-200">
+                            <Link href={href} className={`${rowLinkClass} font-medium`} aria-label={`Ver lista ${list.userListName}`}>
+                              {list.userListName}
+                            </Link>
+                          </td>
+                          <td className="px-6 py-3 text-sm border-b border-gray-200 font-mono text-gray-200">
+                            <Link href={href} className={rowLinkClass} tabIndex={-1} aria-hidden>{list.userList_id}</Link>
+                          </td>
+                          <td className="px-6 py-3 text-sm border-b border-gray-200 text-gray-200">
+                            <Link href={href} className={rowLinkClass} tabIndex={-1} aria-hidden>{list.userListPortal}</Link>
+                          </td>
+                          <td className="px-6 py-3 text-sm border-b border-gray-200 text-gray-200">
+                            <Link href={href} className={rowLinkClass} tabIndex={-1} aria-hidden>{list.userListTopic}</Link>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
             </div>
-
-            {selectedList && (
-              <>
-                <div className="rounded-lg border border-gray-200 bg-gray-50/50 p-3">
-                  <p className="text-xs font-mono text-gray-500 mb-1">ID: {selectedList.userList_id}</p>
-                  <p className="text-sm font-medium text-gray-700">
-                    <span className="text-gray-500">Lista de envío:</span> {selectedList.userListName}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Portal: {selectedList.userListPortal} · Tema: {selectedList.userListTopic}
-                  </p>
-                </div>
-
-                <div className="overflow-x-auto flex-1">
-                  <p className="text-sm font-semibold text-gray-700 mb-2">Users en esta lista de envío</p>
-                  <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">id_user</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Full name</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">User Type</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {usersInList.length === 0 ? (
-                        <tr>
-                          <td colSpan={3} className="px-4 py-3 text-sm text-gray-500">
-                            Ningún user en esta lista de envío
-                          </td>
-                        </tr>
-                      ) : (
-                        usersInList.map((u) => (
-                          <tr key={u.id_user} className="hover:bg-gray-100 transition-colors">
-                            <td colSpan={3} className="p-0">
-                              <Link
-                                href={`${USERS_BASE}/${encodeURIComponent(u.id_user)}`}
-                                className="grid grid-cols-3 gap-2 px-4 py-2 text-sm text-gray-900 cursor-pointer items-center"
-                                aria-label={`Ver usuario ${u.user_full_name}`}
-                              >
-                                <span>{u.id_user}</span>
-                                <span>{u.user_full_name}</span>
-                                <span>{u.user_role}</span>
-                              </Link>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-
-                  <p className="text-sm font-semibold text-gray-700 mt-4 mb-2">Contacts en esta lista de envío</p>
-                  <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">id_contact</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Role</th>
-                        <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {contactsInList.length === 0 ? (
-                        <tr>
-                          <td colSpan={4} className="px-4 py-3 text-sm text-gray-500">
-                            Ningún contact en esta lista de envío
-                          </td>
-                        </tr>
-                      ) : (
-                        contactsInList.map((c) => (
-                          <tr key={c.id_contact} className="hover:bg-gray-50">
-                            <td className="px-4 py-2 text-sm text-gray-900">{c.id_contact}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900">{c.name}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900">{c.role}</td>
-                            <td className="px-4 py-2 text-sm text-gray-900">{c.email}</td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </>
-            )}
-
-            {userLists.length === 0 && (
-              <p className="text-gray-500 text-sm">No hay listas de envío de newsletters configuradas.</p>
-            )}
           </div>
         )}
         </div>

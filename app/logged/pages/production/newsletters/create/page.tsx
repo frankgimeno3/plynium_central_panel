@@ -5,10 +5,9 @@ import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import type { NewsletterCampaign } from "@/app/contents/interfaces";
-import campaignsData from "@/app/contents/newsletterCampaigns.json";
+import { NewsletterService } from "@/app/service/NewsletterService";
 
 const BASE = "/logged/pages/production/newsletters";
-const existingCampaigns = campaignsData as NewsletterCampaign[];
 
 const FREQUENCY_OPTIONS = [
   { value: "weekly", label: "Weekly" },
@@ -19,7 +18,7 @@ const FREQUENCY_OPTIONS = [
   { value: "annual", label: "Annual" },
 ];
 
-function nextCampaignId(): string {
+function nextCampaignId(existingCampaigns: NewsletterCampaign[]): string {
   const nums = existingCampaigns
     .map((c) => (c.id.startsWith("camp-") ? parseInt(c.id.replace("camp-", ""), 10) : 0))
     .filter((n) => !Number.isNaN(n));
@@ -52,6 +51,8 @@ const initialForm: FormState = {
 const CreateNewsletterCampaignPage: FC = () => {
   const router = useRouter();
   const [form, setForm] = useState<FormState>(initialForm);
+  const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const breadcrumbs = [
     { label: "Production", href: "/logged/pages/production/services" },
@@ -68,6 +69,24 @@ const CreateNewsletterCampaignPage: FC = () => {
     });
   }, [setPageMeta]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    NewsletterService.getNewsletterCampaigns()
+      .then((list) => {
+        if (cancelled) return;
+        setCampaigns(Array.isArray(list) ? list : []);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCampaigns([]);
+        setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim() || !form.startDate || !form.endDate) return;
@@ -214,7 +233,7 @@ const CreateNewsletterCampaignPage: FC = () => {
           </div>
         </form>
         <p className="mt-4 text-xs text-gray-500">
-          New campaign ID would be: {nextCampaignId()} (no persistence in this demo).
+          New campaign ID would be: {loading ? "…" : nextCampaignId(campaigns)} (no persistence in this demo).
         </p>
             </div>
           </div>

@@ -4,8 +4,8 @@ import { FC, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import publicationsData from "@/app/contents/publications.json";
-import { publicationInterface } from "@/app/contents/interfaces";
+import { fetchPublishedPublications } from "@/app/contents/publicationsHelpers";
+import type { PublicationUnified, publicationInterface } from "@/app/contents/interfaces";
 
 const BASE = "/logged/pages/production/publications/published";
 const DEFAULT_IMAGE =
@@ -55,11 +55,17 @@ const applyFilters = (
 };
 
 const PublishedPage: FC = () => {
-  const all = (publicationsData as publicationInterface[]).slice();
+  const [all, setAll] = useState<publicationInterface[]>([]);
   const [selectedRevista, setSelectedRevista] = useState("");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [tag, setTag] = useState("");
+
+  useEffect(() => {
+    fetchPublishedPublications()
+      .then(setAll)
+      .catch(() => setAll([]));
+  }, []);
 
   const uniqueRevistas = useMemo(() => {
     const revistas = new Set<string>();

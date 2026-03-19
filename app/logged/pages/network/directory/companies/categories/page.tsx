@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FC, useEffect, useState, useCallback } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
@@ -15,9 +15,13 @@ interface CompanyCategory {
 }
 
 const CompanyCategoriesPage: FC = () => {
+  const router = useRouter();
   const [categories, setCategories] = useState<CompanyCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+
+  const categoryHref = (id: string) =>
+    `/logged/pages/network/directory/companies/categories/${id}`;
 
   const loadCategories = useCallback(async () => {
     try {
@@ -82,14 +86,21 @@ const CompanyCategoriesPage: FC = () => {
               </tr>
             ) : (
               categories.map((cat) => (
-                <tr key={cat.id_category}>
-                  <td className="px-4 py-3">
-                    <Link
-                      href={`/logged/pages/network/directory/companies/categories/${cat.id_category}`}
-                      className="text-blue-600 hover:underline font-medium"
-                    >
-                      {cat.name}
-                    </Link>
+                <tr
+                  key={cat.id_category}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => router.push(categoryHref(cat.id_category))}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(categoryHref(cat.id_category));
+                    }
+                  }}
+                  className="cursor-pointer hover:bg-gray-50 transition-colors"
+                >
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    {cat.name}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {(cat.portals_array || []).join(", ") || "—"}

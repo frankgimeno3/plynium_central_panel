@@ -7,6 +7,10 @@ import {
 
 export function errorHandler(error){
 
+    if (error?.statusCode && typeof error.statusCode === "number") {
+        return NextResponse.json({ message: error.message || "Request failed" }, { status: error.statusCode });
+    }
+
     if(error instanceof InvalidPasswordException){
         return NextResponse.json({message: error.message}, {status: 400});
     }

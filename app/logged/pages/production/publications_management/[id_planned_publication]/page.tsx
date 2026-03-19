@@ -5,22 +5,21 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import plannedPublicationsData from "@/app/contents/planned_publications.json";
+import publicationsData from "@/app/contents/publications.json";
+import { getPlanned } from "@/app/contents/publicationsHelpers";
+import type { PublicationUnified } from "@/app/contents/interfaces";
 
 type PublicationSlot = {
-  id_advertiser: string;
-  id_project: string;
+  id_advertiser?: string;
+  id_project?: string;
   image_src?: string;
   article_id?: string;
   state: string;
   content_type: string;
+  slotKey?: string;
 };
 
-type PlannedPublication = {
-  id_planned_publication: string;
-  edition_name: string;
-  theme: string;
-  publication_date: string;
+type PlannedPublication = PublicationUnified & {
   cover?: PublicationSlot;
   inside_cover?: PublicationSlot;
   end?: PublicationSlot;
@@ -36,12 +35,23 @@ type PlannedPublication = {
   "10"?: PublicationSlot;
 };
 
-const SLOT_ORDER: (keyof PlannedPublication)[] = ["cover", "inside_cover", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "end"];
+function plannedFromUnified(p: PublicationUnified): PlannedPublication {
+  const slots: Record<string, PublicationSlot> = {};
+  if (p.cover) slots.cover = p.cover;
+  if (p.inside_cover) slots.inside_cover = p.inside_cover;
+  (p.pages || []).forEach((s) => { slots[s.slotKey || ""] = s; });
+  if (p.end) slots.end = p.end;
+  return { ...p, ...slots } as PlannedPublication;
+}
+
+const SLOT_ORDER: string[] = ["cover", "inside_cover", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "end"];
 
 const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: string }> }> = ({ params }) => {
   const router = useRouter();
   const { id_planned_publication } = use(params);
-  const publication = (plannedPublicationsData as PlannedPublication[]).find((p) => p.id_planned_publication === id_planned_publication);
+  const list = getPlanned(publicationsData as PublicationUnified[]);
+  const pub = list.find((p) => p.id_planned_publication === id_planned_publication);
+  const publication = pub ? plannedFromUnified(pub) : undefined;
   const { setPageMeta } = usePageContent();
 
   useEffect(() => {
@@ -79,7 +89,8 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
     );
   }
 
-  const slots = SLOT_ORDER.filter((key) => key in publication && typeof publication[key] === "object") as (keyof PlannedPublication)[];
+  const publicationSlots = publication as unknown as Record<string, unknown>;
+  const slots = SLOT_ORDER.filter((key) => key in publication && typeof publicationSlots[key] === "object");
 
   const renderSlot = (slotKey: string, slot: PublicationSlot) => {
     const isArticle = slot.content_type === "article";
@@ -165,8 +176,8 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Publication layout</h3>
         <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
           {slots.map((key) => {
-            const slot = publication[key] as PublicationSlot;
-            return slot ? renderSlot(key as string, slot) : null;
+            const slot = publicationSlots[key] as PublicationSlot | undefined;
+            return slot ? renderSlot(key, slot) : null;
           })}
         </div>
             </div>

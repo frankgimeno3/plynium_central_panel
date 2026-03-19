@@ -1,34 +1,30 @@
 [
   {
-    "id_publication": "pub-001",
-    "redirectionLink": "https://example.com/flipbook/glass-today-march-2025",
-    "date": "2025-03-15",
+    "state": "planned",
+    "id_publication": "placeholder_pub_1",
+    "id_planned_publication": "placeholder_planned_1",
+    "id_flatplan": "",
+    "edition_name": "Glass Today March 2025",
+    "theme": "placeholder",
+    "date": "2025-03-01",
+    "publication_date": "2025-03-01",
+    "redirectionLink": "",
     "revista": "Glass Today",
-    "número": "2025 / 3 - March",
-    "publication_main_image_url": "https://images.unsplash.com/photo-1589994965851-a8f479c573a9?w=400&h=500&fit=crop"
-  },
-  {
-    "id_publication": "pub-002",
-    "redirectionLink": "https://example.com/flipbook/glass-construction-june-2025",
-    "date": "2025-06-01",
-    "revista": "Glass and Construction",
-    "número": "2025 / 2 - June",
-    "publication_main_image_url": "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?w=400&h=500&fit=crop"
-  },
-  {
-    "id_publication": "pub-003",
-    "redirectionLink": "https://example.com/flipbook/industrial-glass-feb-2025",
-    "date": "2025-02-10",
-    "revista": "Industrial Glass",
-    "número": "2025 / 1 - February",
-    "publication_main_image_url": "https://images.unsplash.com/photo-1560174038-da43ac74f01b?w=400&h=500&fit=crop"
-  },
-  {
-    "id_publication": "pub-004",
-    "redirectionLink": "https://example.com/flipbook/glass-today-special-2024",
-    "date": "2024-12-01",
-    "revista": "Glass Today",
-    "número": "2024 - Special Edition",
-    "publication_main_image_url": "https://images.unsplash.com/photo-1589994965851-a8f479c573a9?w=400&h=500&fit=crop"
+    "publication_main_image_url": "",
+    "id_magazine": "glass_today",
+    "year": 2025,
+    "issue_number": 3,
+    "cover": null,
+    "inside_cover": null,
+    "end": null,
+    "pages": [],
+    "single_available": null,
+    "offeredPreferentialPages": [
+      { "pageType": "Cover page", "slotKey": "cover" },
+      { "pageType": "Preferential page", "slotKey": "inside_cover" },
+      { "pageType": "Double page", "slotKey": "2" },
+      { "pageType": "Single page", "slotKey": "1" },
+      { "pageType": "End page", "slotKey": "end" }
+    ]
   }
 ]

@@ -4,7 +4,7 @@ import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import magazinesData from "@/app/contents/magazines.json";
+import { MagazineService } from "@/app/service/MagazineService";
 import { Magazine } from "@/app/contents/interfaces";
 
 const ITEMS_PER_PAGE = 12;
@@ -12,8 +12,30 @@ const BASE = "/logged/pages/production/publications/magazines";
 
 const MagazinesPage: FC = () => {
   const router = useRouter();
-  const all = (magazinesData as Magazine[]).slice();
+  const [all, setAll] = useState<Magazine[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [filter, setFilter] = useState({ id: "", name: "" });
+
+  const loadMagazines = React.useCallback(() => {
+    setFetchError(null);
+    setLoading(true);
+    MagazineService.getAllMagazines()
+      .then((data) => {
+        const list = Array.isArray(data) ? data : (data && Array.isArray((data as { data?: unknown }).data) ? (data as { data: Magazine[] }).data : []);
+        setAll(list);
+      })
+      .catch((err) => {
+        const message = err?.message ?? (typeof err === "string" ? err : "Error al cargar las revistas");
+        setFetchError(message);
+        setAll([]);
+      })
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    loadMagazines();
+  }, [loadMagazines]);
 
   const filtered = useMemo(() => {
     let list = [...all];
@@ -44,10 +66,30 @@ const MagazinesPage: FC = () => {
     });
   }, [setPageMeta, breadcrumbs]);
 
+  if (loading && all.length === 0 && !fetchError) {
+    return (
+      <PageContentSection>
+        <div className="p-6 text-center text-gray-500">Loading magazines…</div>
+      </PageContentSection>
+    );
+  }
+
   return (
     <>
       <PageContentSection>
         <div className="flex flex-col w-full">
+          {fetchError && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between gap-4">
+              <p className="text-sm text-red-800">{fetchError}</p>
+              <button
+                type="button"
+                onClick={loadMagazines}
+                className="px-3 py-1.5 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50"
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6">
               <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>

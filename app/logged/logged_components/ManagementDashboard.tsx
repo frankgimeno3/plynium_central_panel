@@ -1,11 +1,11 @@
 "use client";
 
-import React, { FC, useState, useMemo, useEffect } from "react";
+import React, { FC, useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import pmEventsData from "@/app/contents/pm_events.json";
-import customersData from "@/app/contents/customers.json";
-import projectsData from "@/app/contents/projects.json";
+import { CustomerService } from "@/app/service/CustomerService";
+import { PmEventService } from "@/app/service/PmEventService";
 import { renderMonth } from "./CalendarMonth";
+import { ProjectService } from "@/app/service/ProjectService";
 
 type PmEvent = {
   id_event: string;
@@ -58,19 +58,46 @@ const ManagementDashboard: FC = () => {
   const [filterCustomer, setFilterCustomer] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [addAgendaModalOpen, setAddAgendaModalOpen] = useState(false);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [pmEventsFromApi, setPmEventsFromApi] = useState<PmEvent[]>([]);
+
+  useEffect(() => {
+    PmEventService.getAllPmEvents()
+      .then((list: PmEvent[]) => setPmEventsFromApi(Array.isArray(list) ? list : []))
+      .catch(() => setPmEventsFromApi([]));
+  }, []);
+
+  useEffect(() => {
+    CustomerService.getAllCustomers()
+      .then((list: Customer[]) => setCustomers(Array.isArray(list) ? list : []))
+      .catch(() => setCustomers([]));
+  }, []);
+  const loadProjects = useCallback(async () => {
+    try {
+      const list = await ProjectService.getAllProjects();
+      setProjects(Array.isArray(list) ? list : []);
+    } catch {
+      setProjects([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
   const [agendaEvents, setAgendaEvents] = useState<PmEvent[]>([]);
   const [agendaFormDate, setAgendaFormDate] = useState("");
   const [agendaFormDescription, setAgendaFormDescription] = useState("");
   const [agendaFormType, setAgendaFormType] = useState<string>("task");
 
-  const allPmEvents = (pmEventsData as PmEvent[]).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const allPmEvents = useMemo(
+    () => [...pmEventsFromApi].sort((a, b) => (a.date || "").localeCompare(b.date || "")),
+    [pmEventsFromApi]
+  );
   const allEvents = allPmEvents.filter((e) => e.event_state !== "overdue");
   const combinedEvents = useMemo(() => [...allEvents, ...agendaEvents], [allEvents, agendaEvents]);
   const eventsFromToday = combinedEvents.filter((e) => e.date >= todayDate);
   const eventsForTable = eventsFromToday.length > 0 ? eventsFromToday : combinedEvents;
-  const customers = customersData as Customer[];
-  const projects = projectsData as Project[];
-
   const getProjectTitle = (id: string) => (id === "agenda" ? "Agenda" : projects.find((p) => p.id_project === id)?.title ?? id);
 
   const eventsByTab = useMemo(() => eventsForTable.filter((e) => e.event_state === eventStateTab), [eventsForTable, eventStateTab]);

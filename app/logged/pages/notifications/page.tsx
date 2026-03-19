@@ -4,15 +4,19 @@ import { FC, useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
-import notificationsData from '@/app/contents/notifications.json';
-import otherRequestsData from '@/app/contents/otherRequests.json';
-import companyRequestData from '@/app/contents/companyRequest.json';
-import advertisementRequestData from '@/app/contents/advertisementRequest.json';
+import { fetchNotifications, getNotificationsByCategory, unifiedToNotification, type UnifiedNotification, type NotificationCategory } from '@/app/contents/notifications.types';
+import { useCompanyRequests } from '@/app/logged/pages/network/requests/hooks/useCompanyRequests';
+import { useOtherRequests } from '@/app/logged/pages/network/requests/hooks/useOtherRequests';
+import { useAdvertisements } from '@/app/logged/pages/network/requests/hooks/useAdvertisements';
+import CompanyCreationRequestsTab from './components/CompanyCreationRequestsTab';
+import AdvertisementQuotationsTab from './components/AdvertisementQuotationsTab';
+import OtherCommunicationsTab from './components/OtherCommunicationsTab';
 
 type NotificationState = 'unread' | 'read' | 'solved';
-type TabKey = NotificationState | 'other';
+type MainTabKey = 'company' | 'quotations' | 'account_management' | 'production' | 'administration' | 'other';
+type NotificationSubTabKey = NotificationState;
 
-interface Notification {
+interface MappedNotification {
   notification_id: string;
   notification_brief_description: string;
   notification_time: string;
@@ -39,78 +43,78 @@ const formatNotificationTime = (dateStr: string) => {
 const NotificationsPage: FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialTab = (searchParams.get('tab') as TabKey) || 'unread';
-  const [currentTab, setCurrentTab] = useState<TabKey>(initialTab);
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const tabParam = searchParams.get('tab') as MainTabKey | null;
+  const validTabs: MainTabKey[] = ['company', 'quotations', 'account_management', 'production', 'administration', 'other'];
+  const initialTab: MainTabKey = tabParam && validTabs.includes(tabParam) ? tabParam : 'company';
+  
+  const [currentMainTab, setCurrentMainTab] = useState<MainTabKey>(initialTab);
+  const [currentNotificationSubTab, setCurrentNotificationSubTab] = useState<NotificationSubTabKey>('unread');
+  const [allData, setAllData] = useState<UnifiedNotification[]>([]);
+
+  const { requests: companyRequests } = useCompanyRequests();
+  const { requests: otherRequests } = useOtherRequests();
+  const { counts: advCounts } = useAdvertisements();
 
   useEffect(() => {
-    const tabParam = searchParams.get('tab') as TabKey | null;
-    if (tabParam && ['unread', 'read', 'solved', 'other'].includes(tabParam)) {
-      setCurrentTab(tabParam);
+    fetchNotifications({ notification_type: 'notification' })
+      .then(setAllData)
+      .catch(() => setAllData([]));
+  }, []);
+
+  const notificationsByCategory = useMemo(() => ({
+    account_management: getNotificationsByCategory(allData, 'account_management').map(unifiedToNotification),
+    production: getNotificationsByCategory(allData, 'production').map(unifiedToNotification),
+    administration: getNotificationsByCategory(allData, 'administration').map(unifiedToNotification),
+  }), [allData]);
+
+  const unreadByCategory = useMemo(() => ({
+    account_management: notificationsByCategory.account_management.filter(n => n.notification_state === 'unread').length,
+    production: notificationsByCategory.production.filter(n => n.notification_state === 'unread').length,
+    administration: notificationsByCategory.administration.filter(n => n.notification_state === 'unread').length,
+  }), [notificationsByCategory]);
+
+  const pendingByTab = useMemo(
+    () => ({
+      company: companyRequests.filter((r) => r.request_state === "Pending").length,
+      quotations: advCounts.pending,
+      other: otherRequests.filter((r) => r.request_state === "Pending").length,
+    }),
+    [companyRequests, otherRequests, advCounts.pending]
+  );
+
+  useEffect(() => {
+    const tab = searchParams.get('tab') as MainTabKey | null;
+    if (tab && validTabs.includes(tab)) {
+      setCurrentMainTab(tab);
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    const loaded = Array.isArray(notificationsData)
-      ? (notificationsData as Notification[]).map((n: Notification) => ({
-        notification_id: n.notification_id,
-        notification_brief_description: n.notification_brief_description,
-        notification_time: n.notification_time,
-        notification_state: n.notification_state as NotificationState,
-        notification_description: n.notification_description
-      }))
-      : [];
-    setNotifications(loaded);
-  }, []);
+  const currentNotifications: MappedNotification[] = useMemo(() => {
+    if (currentMainTab === 'account_management') return notificationsByCategory.account_management;
+    if (currentMainTab === 'production') return notificationsByCategory.production;
+    if (currentMainTab === 'administration') return notificationsByCategory.administration;
+    return [];
+  }, [currentMainTab, notificationsByCategory]);
 
   const filteredNotifications = useMemo(() => {
-    if (currentTab === 'other') return [];
-    return notifications
-      .filter(n => n.notification_state === currentTab)
+    return currentNotifications
+      .filter(n => n.notification_state === currentNotificationSubTab)
       .sort((a, b) => new Date(b.notification_time).getTime() - new Date(a.notification_time).getTime());
-  }, [notifications, currentTab]);
+  }, [currentNotifications, currentNotificationSubTab]);
 
-  const pendingOtherRequests = useMemo(() =>
-    (otherRequestsData as { id: string; author: string; content: string; request_state: string }[])
-      .filter(r => r.request_state === 'Pending'), []);
-  const pendingCompanyRequests = useMemo(() =>
-    (companyRequestData as { companyRequestId: string; content: { nombre_comercial: string }; request_state: string }[])
-      .filter(r => r.request_state === 'Pending'), []);
-  const pendingAdvertisementRequests = useMemo(() =>
-    (advertisementRequestData as { idAdvReq: string; senderCompany: string; requestDescription: string; advReqState: string }[])
-      .filter(r => r.advReqState === 'pending'), []);
+  const mainTabs: { key: MainTabKey; label: string }[] = [
+    { key: 'company', label: 'Company Creation Requests' },
+    { key: 'quotations', label: 'Advertisement quotations' },
+    { key: 'account_management', label: 'Account Management Notifications' },
+    { key: 'production', label: 'Production Notifications' },
+    { key: 'administration', label: 'Administration Notifications' },
+    { key: 'other', label: 'Other Communications' },
+  ];
 
-  type OtherRow = { type: 'other'; id: string; description: string; state: string; href: string } | { type: 'company'; id: string; description: string; state: string; href: string } | { type: 'advertisement'; id: string; description: string; state: string; href: string };
-  const otherTableRows = useMemo((): OtherRow[] => {
-    const other: OtherRow[] = pendingOtherRequests.map((r) => ({
-      type: 'other',
-      id: r.id,
-      description: r.content,
-      state: r.request_state,
-      href: `/logged/pages/network/requests/other/${encodeURIComponent(r.id)}`,
-    }));
-    const company: OtherRow[] = pendingCompanyRequests.map((r) => ({
-      type: 'company',
-      id: r.companyRequestId,
-      description: r.content.nombre_comercial + ' – Company registration request',
-      state: r.request_state,
-      href: `/logged/pages/network/requests/company/${encodeURIComponent(r.companyRequestId)}`,
-    }));
-    const adv: OtherRow[] = pendingAdvertisementRequests.map((r) => ({
-      type: 'advertisement',
-      id: r.idAdvReq,
-      description: r.requestDescription,
-      state: r.advReqState,
-      href: `/logged/pages/network/requests/quotations/${encodeURIComponent(r.idAdvReq)}`,
-    }));
-    return [...other, ...company, ...adv];
-  }, [pendingOtherRequests, pendingCompanyRequests, pendingAdvertisementRequests]);
-
-  const tabs: { key: TabKey; label: string }[] = [
+  const notificationSubTabs: { key: NotificationSubTabKey; label: string }[] = [
     { key: 'unread', label: 'Unread' },
     { key: 'read', label: 'Read' },
     { key: 'solved', label: 'Solved' },
-    { key: 'other', label: 'Other' }
   ];
 
   const breadcrumbs = [{ label: 'Notifications' }];
@@ -120,68 +124,82 @@ const NotificationsPage: FC = () => {
     setPageMeta({ pageTitle: 'Notifications', breadcrumbs, buttons: [] });
   }, [setPageMeta]);
 
+  const handleMainTabClick = (key: MainTabKey) => {
+    setCurrentMainTab(key);
+    router.push(`/logged/pages/notifications?tab=${key}`, { scroll: false });
+  };
+
+  const isNotificationTab = ['account_management', 'production', 'administration'].includes(currentMainTab);
+
   return (
     <>
       <PageContentSection>
         <div className="flex flex-col w-full mt-12">
-          <div className="flex border-b border-gray-200">
-            {tabs.map((tab) => (
+          <div className="flex border-b border-gray-200 flex-wrap">
+            {mainTabs.map((tab) => (
               <button
                 key={tab.key}
-                onClick={() => setCurrentTab(tab.key)}
-                className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${currentTab === tab.key
+                onClick={() => handleMainTabClick(tab.key)}
+                className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${currentMainTab === tab.key
                   ? 'text-blue-950 border-b-2 border-blue-950 bg-blue-50'
                   : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
                   }`}
               >
                 {tab.label}
+                {tab.key === 'company' && pendingByTab.company > 0 && (
+                  <span className="inline-flex items-center justify-center rounded px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-600">
+                    {pendingByTab.company}
+                  </span>
+                )}
+                {tab.key === 'quotations' && pendingByTab.quotations > 0 && (
+                  <span className="inline-flex items-center justify-center rounded px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-600">
+                    {pendingByTab.quotations}
+                  </span>
+                )}
+                {tab.key === 'account_management' && unreadByCategory.account_management > 0 && (
+                  <span className="inline-flex items-center justify-center rounded px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-600">
+                    {unreadByCategory.account_management}
+                  </span>
+                )}
+                {tab.key === 'production' && unreadByCategory.production > 0 && (
+                  <span className="inline-flex items-center justify-center rounded px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-600">
+                    {unreadByCategory.production}
+                  </span>
+                )}
+                {tab.key === 'administration' && unreadByCategory.administration > 0 && (
+                  <span className="inline-flex items-center justify-center rounded px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-600">
+                    {unreadByCategory.administration}
+                  </span>
+                )}
+                {tab.key === 'other' && pendingByTab.other > 0 && (
+                  <span className="inline-flex items-center justify-center rounded px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-600">
+                    {pendingByTab.other}
+                  </span>
+                )}
               </button>
             ))}
           </div>
 
-            {currentTab === 'other' ? (
-                <table className='min-w-full divide-y divide-gray-200'>
-                  <thead className='bg-gray-50'>
-                    <tr>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Type</th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>ID</th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>Description</th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>State</th>
-                    </tr>
-                  </thead>
-                  <tbody className='bg-white divide-y divide-gray-200'>
-                    {otherTableRows.length === 0 ? (
-                      <tr>
-                        <td colSpan={4} className='px-6 py-8 text-center text-gray-500'>
-                          No pending requests
-                        </td>
-                      </tr>
-                    ) : (
-                      otherTableRows.map((row) => (
-                        <tr
-                          key={`${row.type}-${row.id}`}
-                          role="button"
-                          tabIndex={0}
-                          onClick={() => router.push(row.href)}
-                          onKeyDown={(e) => e.key === 'Enter' && router.push(row.href)}
-                          className='hover:bg-gray-100 cursor-pointer'
-                        >
-                          <td className='px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900'>
-                            {row.type === 'other' ? 'Other' : row.type === 'company' ? 'Company' : 'Advertisement'}
-                          </td>
-                          <td className='px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900'>{row.id}</td>
-                          <td className='px-6 py-4 text-sm text-gray-900 line-clamp-2 max-w-md'>{row.description}</td>
-                          <td className='px-6 py-4 whitespace-nowrap'>
-                            <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-amber-100 text-amber-800'>
-                              {row.state}
-                            </span>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-            ) : (
+          <div className="overflow-hidden">
+            {currentMainTab === 'company' && <CompanyCreationRequestsTab />}
+            {currentMainTab === 'quotations' && <AdvertisementQuotationsTab />}
+            {currentMainTab === 'other' && <OtherCommunicationsTab />}
+            {isNotificationTab && (
+              <div className="p-6">
+                <div className="flex border-b border-gray-200 mb-4">
+                  {notificationSubTabs.map((tab) => (
+                    <button
+                      key={tab.key}
+                      onClick={() => setCurrentNotificationSubTab(tab.key)}
+                      className={`relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors ${currentNotificationSubTab === tab.key
+                        ? 'text-blue-950 border-b-2 border-blue-950 bg-blue-50'
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+                        }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
                 <table className='min-w-full divide-y divide-gray-200'>
                   <thead className='bg-gray-50'>
                     <tr>
@@ -230,7 +248,9 @@ const NotificationsPage: FC = () => {
                     )}
                   </tbody>
                 </table>
+              </div>
             )}
+          </div>
         </div>
       </PageContentSection>
     </>

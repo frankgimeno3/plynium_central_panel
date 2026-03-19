@@ -5,8 +5,7 @@ import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import type { NewsletterCampaign, Newsletter } from "@/app/contents/interfaces";
-import campaignsData from "@/app/contents/newsletterCampaigns.json";
-import newslettersData from "@/app/contents/newsletters.json";
+import { NewsletterService } from "@/app/service/NewsletterService";
 
 const BASE = "/logged/pages/production/newsletters";
 
@@ -19,8 +18,10 @@ const NewsletterManagementPage: FC = () => {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("campaigns");
 
-  const campaigns = (campaignsData as NewsletterCampaign[]).slice();
-  const newsletters = (newslettersData as Newsletter[]).slice();
+  const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
+  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const scheduledNewsletters = useMemo(
     () => newsletters.filter((n) => SCHEDULED_STATUSES.includes(n.status)),
@@ -47,11 +48,63 @@ const NewsletterManagementPage: FC = () => {
     });
   }, [setPageMeta, breadcrumbs]);
 
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    Promise.all([
+      NewsletterService.getNewsletterCampaigns(),
+      NewsletterService.getNewsletters(),
+    ])
+      .then(([campaignsRes, newslettersRes]) => {
+        if (cancelled) return;
+        setCampaigns(Array.isArray(campaignsRes) ? campaignsRes : []);
+        setNewsletters(Array.isArray(newslettersRes) ? newslettersRes : []);
+        setLoading(false);
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        setError(e?.message ? String(e.message) : "Failed to load newsletters");
+        setCampaigns([]);
+        setNewsletters([]);
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const tabs: { id: TabId; label: string }[] = [
     { id: "campaigns", label: "Campaigns" },
     { id: "scheduled", label: "Scheduled newsletters" },
     { id: "finished", label: "Finished newsletters" },
   ];
+
+  if (loading) {
+    return (
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-gray-600">Loading newsletters…</div>
+          </div>
+        </div>
+      </PageContentSection>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden">
+            <div className="p-6 text-red-600">{error}</div>
+          </div>
+        </div>
+      </PageContentSection>
+    );
+  }
 
   return (
     <>

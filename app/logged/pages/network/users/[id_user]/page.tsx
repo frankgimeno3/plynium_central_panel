@@ -8,7 +8,7 @@ import PageContentSection from '@/app/logged/logged_components/context_content/P
 import EditUserModal from '@/app/logged/logged_components/modals/EditUserModal';
 import UserService from '@/app/service/UserSerivce.js';
 import { useUsers, type User } from '../hooks/useUsers';
-import contactsData from '@/app/contents/contactsContents.json';
+import { ContactService } from '@/app/service/ContactService';
 
 interface UserDetail {
   id_user: string;
@@ -35,12 +35,19 @@ const UserDetailPage: FC = () => {
 
   const { updateUser } = useUsers();
   const [user, setUser] = useState<UserDetail | null>(null);
+  const [contactsData, setContactsData] = useState<ContactFromJson[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const { setPageMeta } = usePageContent();
+
+  useEffect(() => {
+    ContactService.getAllContacts()
+      .then((l) => setContactsData(Array.isArray(l) ? l as ContactFromJson[] : []))
+      .catch(() => setContactsData([]));
+  }, []);
 
   useEffect(() => {
     const loadUser = async () => {

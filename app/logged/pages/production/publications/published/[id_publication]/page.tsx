@@ -4,8 +4,8 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import publicationsData from "@/app/contents/publications.json";
-import { publicationInterface } from "@/app/contents/interfaces";
+import { fetchPublishedPublications } from "@/app/contents/publicationsHelpers";
+import type { publicationInterface } from "@/app/contents/interfaces";
 
 const BASE = "/logged/pages/production/publications/published";
 const DEFAULT_IMAGE =
@@ -17,9 +17,12 @@ export default function PublishedDetailPage({ params }: { params: Promise<{ id_p
   const [publication, setPublication] = useState<publicationInterface | null>(null);
 
   useEffect(() => {
-    const list = publicationsData as publicationInterface[];
-    const found = list.find((p) => p.id_publication === id_publication) ?? null;
-    setPublication(found);
+    fetchPublishedPublications()
+      .then((list) => {
+        const found = list.find((p) => p.id_publication === id_publication) ?? null;
+        setPublication(found);
+      })
+      .catch(() => setPublication(null));
   }, [id_publication]);
 
   const { setPageMeta } = usePageContent();

@@ -1,11 +1,11 @@
 "use client";
 
-import React, { FC, useState, useMemo, useEffect } from "react";
+import React, { FC, useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import contractsData from "@/app/contents/contracts.json";
-import customersData from "@/app/contents/customers.json";
+import { CustomerService } from "@/app/service/CustomerService";
+import { ContractService } from "@/app/service/ContractService";
 
 type Contract = {
   id_contract: string;
@@ -23,8 +23,29 @@ const ITEMS_PER_PAGE = 12;
 
 const ContractsPage: FC = () => {
   const router = useRouter();
-  const all = (contractsData as Contract[]).slice();
-  const customers = customersData as Customer[];
+  const [all, setAll] = useState<Contract[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  useEffect(() => {
+    CustomerService.getAllCustomers()
+      .then((list: Customer[]) => setCustomers(Array.isArray(list) ? list : []))
+      .catch(() => setCustomers([]));
+  }, []);
+  const loadContracts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await ContractService.getAllContracts();
+      setAll(Array.isArray(list) ? list : []);
+    } catch {
+      setAll([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadContracts();
+  }, [loadContracts]);
   const getCompanyName = (id: string) => customers.find((c) => c.id_customer === id)?.name ?? id;
   const [filter, setFilter] = useState({ id: "", company: "", process: "", payment: "" });
 
@@ -35,7 +56,7 @@ const ContractsPage: FC = () => {
     if (filter.process) list = list.filter((c) => c.process_state.toLowerCase().includes(filter.process.toLowerCase()));
     if (filter.payment) list = list.filter((c) => c.payment_state.toLowerCase().includes(filter.payment.toLowerCase()));
     return list;
-  }, [all, filter]);
+  }, [all, filter, customers]);
 
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -119,7 +140,20 @@ const ContractsPage: FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {paginated.map((c) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500 text-sm">
+                    Loading contracts…
+                  </td>
+                </tr>
+              ) : paginated.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500 text-sm">
+                    No contracts yet.
+                  </td>
+                </tr>
+              ) : (
+              paginated.map((c) => (
                 <tr key={c.id_contract} onClick={() => router.push(`/logged/pages/account-management/contracts/${c.id_contract}`)} className={rowClass}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{c.id_contract}</td>
                   <td className="px-6 py-4 text-sm text-gray-900">{getCompanyName(c.id_customer)}</td>
@@ -131,7 +165,8 @@ const ContractsPage: FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{c.amount_eur != null ? c.amount_eur.toLocaleString() : "—"}</td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>

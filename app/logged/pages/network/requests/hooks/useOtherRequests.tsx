@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
-import otherRequests from '@/app/contents/otherRequests.json';
+import { fetchNotifications, updateNotificationApi, unifiedToOther, type UnifiedNotification } from '@/app/contents/notifications.types';
 
 export type RequestState = 'Pending' | 'In Process' | 'Other';
 
@@ -24,25 +24,29 @@ export function OtherRequestsProvider({ children }: { children: ReactNode }) {
   const [requests, setRequests] = useState<OtherRequest[]>([]);
 
   useEffect(() => {
-    try {
-      const loaded = Array.isArray(otherRequests)
-        ? otherRequests.map((r: any) => ({
-            id: String(r.id ?? ''),
-            author: String(r.author ?? ''),
-            content: String(r.content ?? ''),
-            request_state: String(r.request_state ?? 'Pending') as RequestState
-          }))
-        : [];
-      setRequests(loaded);
-    } catch {
-      setRequests([]);
-    }
+    fetchNotifications({ notification_type: 'other' })
+      .then((data) => {
+        const loaded = data.map(unifiedToOther);
+        setRequests(loaded);
+      })
+      .catch(() => {
+        setRequests([]);
+      });
   }, []);
 
   const updateState = useCallback((id: string, newState: RequestState) => {
-    setRequests(prev =>
-      prev.map(r => (r.id === id ? { ...r, request_state: newState } : r))
-    );
+    const stateMap: Record<RequestState, string> = {
+      'Pending': 'pending',
+      'In Process': 'in_process',
+      'Other': 'other'
+    };
+    updateNotificationApi(id, { state: stateMap[newState] as any })
+      .then(() => {
+        setRequests(prev =>
+          prev.map(r => (r.id === id ? { ...r, request_state: newState } : r))
+        );
+      })
+      .catch(console.error);
   }, []);
 
   const getById = useCallback((id: string) => {

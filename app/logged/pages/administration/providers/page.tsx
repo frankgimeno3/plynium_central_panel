@@ -1,17 +1,40 @@
 "use client";
 
-import React, { FC, useMemo, useState, useEffect } from "react";
+import React, { FC, useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import providersData from "@/app/contents/providers.json";
-import type { Provider } from "@/app/contents/interfaces";
+import { ProviderService } from "@/app/service/ProviderService.js";
+
+type Provider = {
+  id_provider: string;
+  name: string;
+  contact_email?: string;
+  contact_phone?: string;
+};
 
 const PROVIDERS_BASE = "/logged/pages/administration/providers";
 
 const ProvidersPage: FC = () => {
-  const all = (providersData as Provider[]).slice();
+  const [all, setAll] = useState<Provider[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ name: "", id: "" });
+
+  const loadProviders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await ProviderService.getAllProviders();
+      setAll(Array.isArray(list) ? list : []);
+    } catch {
+      setAll([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProviders();
+  }, [loadProviders]);
 
   const filtered = useMemo(() => {
     let list = [...all];
@@ -80,27 +103,41 @@ const ProvidersPage: FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {filtered.map((p) => (
-                    <tr key={p.id_provider} className="hover:bg-gray-100 transition-colors">
-                      <td colSpan={4} className="p-0">
-                        <Link
-                          href={`${PROVIDERS_BASE}/${encodeURIComponent(p.id_provider)}`}
-                          className="grid grid-cols-4 gap-4 px-6 py-4 text-sm text-gray-300 cursor-pointer items-center"
-                          aria-label={`Ver proveedor ${p.name}`}
-                        >
-                          <span className="whitespace-nowrap font-medium ">{p.id_provider}</span>
-                          <span className="whitespace-nowrap ">{p.name}</span>
-                          <span className="whitespace-nowrap ">{p.contact_email ?? "—"}</span>
-                          <span className="whitespace-nowrap ">{p.contact_phone ?? "—"}</span>
-                        </Link>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500 text-sm">
+                        Loading providers…
                       </td>
                     </tr>
-                  ))}
+                  ) : filtered.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center text-gray-500 text-sm">
+                        No providers match the filters.
+                      </td>
+                    </tr>
+                  ) : (
+                    filtered.map((p) => (
+                      <tr key={p.id_provider} className="hover:bg-gray-100 transition-colors">
+                        <td colSpan={4} className="p-0">
+                          <Link
+                            href={`${PROVIDERS_BASE}/${encodeURIComponent(p.id_provider)}`}
+                            className="grid grid-cols-4 gap-4 px-6 py-4 text-sm text-gray-300 cursor-pointer items-center"
+                            aria-label={`View provider ${p.name}`}
+                          >
+                            <span className="whitespace-nowrap font-medium ">{p.id_provider}</span>
+                            <span className="whitespace-nowrap ">{p.name}</span>
+                            <span className="whitespace-nowrap ">{p.contact_email ?? "—"}</span>
+                            <span className="whitespace-nowrap ">{p.contact_phone ?? "—"}</span>
+                          </Link>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
 
-            {filtered.length === 0 && (
+            {!loading && filtered.length === 0 && (
               <p className="text-sm text-gray-500 text-center py-8">No providers match the filters.</p>
             )}
           </div>

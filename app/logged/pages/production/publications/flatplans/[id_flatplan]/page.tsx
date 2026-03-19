@@ -5,14 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import flatplansData from "@/app/contents/flatplans.json";
-import magazinesData from "@/app/contents/magazines.json";
-import plannedPublicationsData from "@/app/contents/planned_publications.json";
-import projectsData from "@/app/contents/projects.json";
-import contractsData from "@/app/contents/contracts.json";
-import customersData from "@/app/contents/customers.json";
-import servicesData from "@/app/contents/services.json";
-import { Flatplan, FlatplanSlot, Magazine, MagazineIssue } from "@/app/contents/interfaces";
+import { fetchAllPublicationsUnified, getFlatplans, getPlanned } from "@/app/contents/publicationsHelpers";
+import { MagazineService } from "@/app/service/MagazineService";
+import { ServiceService } from "@/app/service/ServiceService";
+import { CustomerService } from "@/app/service/CustomerService";
+import type { Flatplan, FlatplanSlot, Magazine, MagazineIssue, PublicationUnified } from "@/app/contents/interfaces";
+import { ProjectService } from "@/app/service/ProjectService";
+import { ContractService } from "@/app/service/ContractService";
 
 const BASE = "/logged/pages/production/publications/flatplans";
 
@@ -78,8 +77,21 @@ const PAGES_BY_PROJECT: Record<string, 1 | 2> = {
 const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ params }) => {
   const router = useRouter();
   const { id_flatplan } = use(params);
-  const flatplans = flatplansData as Flatplan[];
+  const [publicationsData, setPublicationsData] = useState<PublicationUnified[]>([]);
+
+  useEffect(() => {
+    fetchAllPublicationsUnified()
+      .then(setPublicationsData)
+      .catch(() => setPublicationsData([]));
+  }, []);
+
+  const flatplans = useMemo(() => getFlatplans(publicationsData), [publicationsData]);
   const flatplan = flatplans.find((f) => f.id_flatplan === id_flatplan);
+
+  const [customers, setCustomers] = useState<{ id_customer: string; name: string }[]>([]);
+  useEffect(() => {
+    CustomerService.getAllCustomers().then((l) => setCustomers(Array.isArray(l) ? l : [])).catch(() => setCustomers([]));
+  }, []);
 
   const [activeTab, setActiveTab] = useState<"preview" | "still">("preview");
   const [slots, setSlots] = useState<Record<string, FlatplanSlot>>({});
@@ -97,7 +109,13 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
 
   const { setPageMeta } = usePageContent();
 
-  const magazines = (magazinesData as Magazine[]) || [];
+  const [magazines, setMagazines] = useState<Magazine[]>([]);
+  useEffect(() => {
+    MagazineService.getAllMagazines()
+      .then((data) => setMagazines(Array.isArray(data) ? data : []))
+      .catch(() => setMagazines([]));
+  }, []);
+
   const magazine = useMemo(
     () => (flatplan?.id_magazine ? magazines.find((m) => m.id_magazine === flatplan.id_magazine) : null),
     [flatplan?.id_magazine, magazines]
@@ -108,11 +126,28 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
     return yearIssues?.find((i) => i.issue_number === flatplan.issue_number) ?? null;
   }, [flatplan?.year, flatplan?.issue_number, magazine?.issues_by_year]);
 
-  const plannedPublications = (plannedPublicationsData as { id_planned_publication: string; edition_name: string }[]) || [];
-  const projects = (projectsData as { id_project: string; id_contract: string; title: string; status: string; service: string; publication_id?: string }[]) || [];
-  const contracts = (contractsData as { id_contract: string; id_customer: string }[]) || [];
-  const customers = (customersData as { id_customer: string; name: string }[]) || [];
-  const services = (servicesData as { id_service: string; name: string }[]) || [];
+  const plannedPublications = useMemo(
+    () => getPlanned(publicationsData) as { id_planned_publication: string; edition_name: string }[],
+    [publicationsData]
+  );
+  const [services, setServices] = useState<{ id_service: string; name: string }[]>([]);
+  useEffect(() => {
+    ServiceService.getAllServices().then((list) => setServices(Array.isArray(list) ? list : [])).catch(() => setServices([]));
+  }, []);
+  const [projects, setProjects] = useState<{ id_project: string; id_contract: string; title: string; status: string; service: string; publication_id?: string }[]>([]);
+  const [contracts, setContracts] = useState<{ id_contract: string; id_customer: string }[]>([]);
+
+  useEffect(() => {
+    Promise.all([ProjectService.getAllProjects(), ContractService.getAllContracts()])
+      .then(([p, c]) => {
+        setProjects(Array.isArray(p) ? p : []);
+        setContracts(Array.isArray(c) ? c : []);
+      })
+      .catch(() => {
+        setProjects([]);
+        setContracts([]);
+      });
+  }, []);
 
   useEffect(() => {
     if (flatplan) {
@@ -146,7 +181,6 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
           { label: "Flatplans", href: BASE },
           { label: flatplan.edition_name },
         ],
-        buttons: [{ label: "Back to Flatplans", href: BASE }],
       });
     } else {
       setPageMeta({
@@ -156,7 +190,6 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
           { label: "Publications", href: BASE },
           { label: "Flatplans", href: BASE },
         ],
-        buttons: [{ label: "Back to Flatplans", href: BASE }],
       });
     }
   }, [setPageMeta, flatplan]);

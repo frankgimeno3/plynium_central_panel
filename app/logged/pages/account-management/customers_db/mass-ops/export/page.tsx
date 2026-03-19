@@ -4,7 +4,7 @@ import React, { FC, useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import customersData from "@/app/contents/customers.json";
+import { CustomerService } from "@/app/service/CustomerService";
 
 type Customer = {
   id_customer: string;
@@ -111,8 +111,13 @@ const ExportCustomersPage: FC = () => {
     country: "",
   });
   const [csvBlobUrl, setCsvBlobUrl] = useState<string | null>(null);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
 
-  const allCustomers = useMemo(() => (customersData as Customer[]).slice(), []);
+  useEffect(() => {
+    CustomerService.getAllCustomers()
+      .then((list: Customer[]) => setAllCustomers(Array.isArray(list) ? list : []))
+      .catch(() => setAllCustomers([]));
+  }, []);
 
   const filteredCustomers = useMemo(() => {
     let list = [...allCustomers];

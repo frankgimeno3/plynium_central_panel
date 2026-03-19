@@ -4,9 +4,11 @@ import React, { FC, use, useState, useMemo, useEffect, useCallback } from "react
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import { getFolders, getMedia } from "@/app/service/mediatecaService";
+import { getFolders, getMedia, deleteFolder } from "@/app/service/mediatecaService";
 import CreateFolderModal from "@/app/logged/pages/mediateca/CreateFolderModal";
 import AddFileModal from "@/app/logged/pages/mediateca/AddFileModal";
+import DeleteFileConfirmModal from "@/app/logged/pages/mediateca/DeleteFileConfirmModal";
+import EditSubfolderModal from "@/app/logged/pages/mediateca/EditSubfolderModal";
 
 export type MediatecaFolder = { id: string; name: string; path: string };
 export type MediatecaContent = {
@@ -50,18 +52,81 @@ function getCurrentFolderName(pathSegments: string[]): string {
   return pathSegments[pathSegments.length - 1];
 }
 
+/** Paths that cannot be edited or deleted (case-insensitive). Must match server list. */
+const PROTECTED_FOLDER_PATHS = new Set([
+  "structural media",
+  "structural media/invoices",
+  "structural media/contracts",
+  "structural media/proposals",
+  "structural media/network media",
+  "structural media/production media",
+  "structural media/invoices/issued invoices",
+  "structural media/invoices/providers invoices",
+  "structural media/production media/newsletters media",
+  "structural media/production media/publications media",
+  "structural media/network media/content media",
+  "structural media/network media/directory media",
+  "structural media/network media/content media/articles media",
+  "structural media/network media/content media/banners media",
+  "structural media/network media/content media/events media",
+  "structural media/network media/directory media/companies media",
+  "structural media/network media/directory media/products media",
+  "structural media/network media/directory media/users media",
+]);
+
+function isFolderPathProtected(path: string): boolean {
+  if (!path || typeof path !== "string") return false;
+  const normalized = path.trim().toLowerCase();
+  return PROTECTED_FOLDER_PATHS.has(normalized);
+}
+
+/** Build mediateca URL from path string; encodes each segment so spaces show as %20 in URL. */
+function pathToHref(baseHref: string, path: string): string {
+  if (!path.trim()) return baseHref;
+  const encoded = path.split("/").map((seg) => encodeURIComponent(seg)).join("/");
+  return `${baseHref}/${encoded}`;
+}
+
+/** Remove trailing consecutive duplicate segments beyond 2 (avoids breadcrumb "loop" when same name is nested). */
+function normalizePathSegments(segments: string[]): string[] {
+  if (segments.length < 3) return segments;
+  const last = segments[segments.length - 1];
+  let count = 0;
+  for (let i = segments.length - 1; i >= 0 && segments[i] === last; i--) count++;
+  if (count <= 2) return segments;
+  return segments.slice(0, segments.length - (count - 2));
+}
+
 const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params }) => {
   const router = useRouter();
   const resolved = use(params);
-  const pathSegments = resolved.path ?? [];
+  const rawPath = resolved.path ?? [];
+  const decoded = rawPath.map((seg) => {
+    try {
+      return decodeURIComponent(seg);
+    } catch {
+      return seg;
+    }
+  });
+  const pathSegments = useMemo(() => normalizePathSegments(decoded), [decoded.join("/")]);
   const currentPath = pathSegments.join("/");
+
+  useEffect(() => {
+    if (pathSegments.length < decoded.length) {
+      const href = pathSegments.length > 0 ? pathToHref("/logged/pages/mediateca", currentPath) : "/logged/pages/mediateca";
+      router.replace(href);
+    }
+  }, [currentPath, pathSegments.length, decoded.length, router]);
 
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [addFileOpen, setAddFileOpen] = useState(false);
+  const [deleteFileTarget, setDeleteFileTarget] = useState<{ id: string; name: string } | null>(null);
+  const [editSubfolderOpen, setEditSubfolderOpen] = useState(false);
   const [subfolders, setSubfolders] = useState<MediatecaFolder[]>([]);
   const [folderContents, setFolderContents] = useState<MediatecaContent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [deletingFolderId, setDeletingFolderId] = useState<string | null>(null);
 
   const folderName = useMemo(() => getCurrentFolderName(pathSegments), [pathSegments]);
 
@@ -95,7 +160,8 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
   const breadcrumbs = useMemo(() => {
     const items: { label: string; href?: string }[] = [{ label: "Mediateca", href: baseHref }];
     pathSegments.forEach((seg, i) => {
-      const href = `${baseHref}/${pathSegments.slice(0, i + 1).join("/")}`;
+      const path = pathSegments.slice(0, i + 1).join("/");
+      const href = pathToHref(baseHref, path);
       items.push({ label: seg, href: i < pathSegments.length - 1 ? href : undefined });
     });
     return items;
@@ -105,18 +171,23 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
   useEffect(() => {
     const items: { label: string; href?: string }[] = [{ label: "Mediateca", href: baseHref }];
     pathSegments.forEach((seg, i) => {
-      const href = `${baseHref}/${pathSegments.slice(0, i + 1).join("/")}`;
+      const path = pathSegments.slice(0, i + 1).join("/");
+      const href = pathToHref(baseHref, path);
       items.push({ label: seg, href: i < pathSegments.length - 1 ? href : undefined });
     });
+    const isCurrentFolderProtected = pathSegments.length > 0 && isFolderPathProtected(currentPath);
     setPageMeta({
       pageTitle: folderName,
       breadcrumbs: items,
       buttons: [
+        ...(pathSegments.length > 0 && !isCurrentFolderProtected
+          ? [{ label: "Edit subfolder", href: "#", onClick: () => setEditSubfolderOpen(true) }]
+          : []),
         { label: "Create folder", href: "#", onClick: () => setCreateFolderOpen(true) },
         { label: "Add file", href: "#", onClick: () => setAddFileOpen(true) },
       ],
     });
-  }, [setPageMeta, folderName, currentPath]);
+  }, [setPageMeta, folderName, currentPath, pathSegments.length]);
 
   const handleCreateFolderSuccess = () => {
     setCreateFolderOpen(false);
@@ -126,6 +197,24 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
   const handleAddFileSuccess = () => {
     setAddFileOpen(false);
     loadData(currentPath);
+  };
+
+  const handleDeleteFolder = async (e: React.MouseEvent, folder: MediatecaFolder) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm(`Delete folder "${folder.name}" and all its contents and subfolders?`)) return;
+    setDeletingFolderId(folder.id);
+    try {
+      await deleteFolder(folder.id);
+      loadData(currentPath);
+    } catch (err: unknown) {
+      const message = err && typeof err === "object" && "message" in err
+        ? String((err as { message: unknown }).message)
+        : "Failed to delete folder.";
+      setError(message);
+    } finally {
+      setDeletingFolderId(null);
+    }
   };
 
   return (
@@ -142,6 +231,30 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
         folderPath={currentPath}
         onSuccess={handleAddFileSuccess}
       />
+      <DeleteFileConfirmModal
+        open={!!deleteFileTarget}
+        onClose={() => setDeleteFileTarget(null)}
+        fileId={deleteFileTarget?.id ?? ""}
+        fileName={deleteFileTarget?.name ?? ""}
+        onSuccess={() => {
+          setDeleteFileTarget(null);
+          loadData(currentPath);
+        }}
+      />
+      <EditSubfolderModal
+        open={editSubfolderOpen}
+        onClose={() => setEditSubfolderOpen(false)}
+        folderPath={currentPath}
+        folderName={folderName}
+        onSuccess={(result) => {
+          setEditSubfolderOpen(false);
+          if (result.newPath) {
+            const href = pathToHref(baseHref, result.newPath);
+            router.push(href);
+            loadData(result.newPath);
+          }
+        }}
+      />
 
       <PageContentSection>
         <div className="flex flex-col w-full">
@@ -157,34 +270,49 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Path</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {subfolders.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="px-6 py-4 text-sm text-gray-500">
+                  <td colSpan={3} className="px-6 py-4 text-sm text-gray-500">
                     No subfolders in this folder.
                   </td>
                 </tr>
               ) : (
                 subfolders.map((f) => {
-                  const href = `${baseHref}/${f.path}`;
+                  const href = pathToHref(baseHref, f.path);
+                  const isDeleting = deletingFolderId === f.id;
+                  const isProtected = isFolderPathProtected(f.path);
                   return (
                     <tr
                       key={f.id}
                       role="link"
                       tabIndex={0}
-                      onClick={() => router.push(href)}
+                      onClick={() => !isDeleting && router.push(href)}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.preventDefault();
-                          router.push(href);
+                          if (!isDeleting) router.push(href);
                         }
                       }}
                       className="cursor-pointer hover:bg-blue-50/80 transition-colors focus:outline-none focus:bg-blue-50/80"
                     >
                       <td className="px-6 py-4 text-sm font-medium uppercase text-gray-900">{f.name}</td>
                       <td className="px-6 py-4 text-sm text-gray-500 font-mono">{f.path}</td>
+                      <td className="px-6 py-4 text-sm" onClick={(e) => e.stopPropagation()}>
+                        {!isProtected && (
+                          <button
+                            type="button"
+                            onClick={(e) => handleDeleteFolder(e, f)}
+                            disabled={isDeleting}
+                            className="text-red-500 hover:underline font-medium disabled:opacity-50"
+                          >
+                            {isDeleting ? "Deleting…" : "Delete"}
+                          </button>
+                        )}
+                      </td>
                     </tr>
                   );
                 })
@@ -263,6 +391,17 @@ const MediatecaPage: FC<{ params: Promise<{ path?: string[] }> }> = ({ params })
                         >
                           Download
                         </a>
+                        <span className="text-gray-300">|</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setDeleteFileTarget({ id: c.id, name: c.name });
+                          }}
+                          className="text-red-500 hover:underline font-medium"
+                        >
+                          Delete
+                        </button>
                       </div>
                     </td>
                   </tr>

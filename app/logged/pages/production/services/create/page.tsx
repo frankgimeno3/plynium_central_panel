@@ -4,7 +4,7 @@ import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import servicesData from "@/app/contents/services.json";
+import { ServiceService } from "@/app/service/ServiceService";
 
 type ServiceType = "newsletter" | "portal" | "magazine" | "other";
 
@@ -27,9 +27,7 @@ const SERVICE_TYPES: { value: ServiceType; label: string }[] = [
   { value: "other", label: "Other" },
 ];
 
-const allServices = servicesData as { id_service: string }[];
-
-function generateNextServiceId(): string {
+function generateNextServiceId(allServices: { id_service: string }[]): string {
   const prefix = "srv-";
   const numericIds = allServices
     .map((s) => {
@@ -54,10 +52,14 @@ const initialForm: FormState = {
 
 const CreateServicePage: FC = () => {
   const router = useRouter();
+  const [allServices, setAllServices] = useState<{ id_service: string }[]>([]);
+  useEffect(() => {
+    ServiceService.getAllServices().then((list) => setAllServices(Array.isArray(list) ? list : [])).catch(() => setAllServices([]));
+  }, []);
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormState>(initialForm);
 
-  const nextId = useMemo(() => generateNextServiceId(), []);
+  const nextId = useMemo(() => generateNextServiceId(allServices), [allServices]);
 
   const canAdvanceStep1 = form.name.trim().length > 0 && form.service_type !== "";
   const canAdvanceStep2 =

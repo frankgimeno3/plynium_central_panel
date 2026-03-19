@@ -10,12 +10,14 @@ const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
 };
 
 export interface User {
+  id?: string;
   id_user: string;
   user_full_name: string;
   user_name: string;
   user_role: UserRole;
   user_description: string;
   enabled?: boolean;
+  userListArray?: string[];
 }
 
 export function useUsers() {

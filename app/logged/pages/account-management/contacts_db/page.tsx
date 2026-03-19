@@ -1,10 +1,10 @@
 "use client";
 
-import React, { FC, useState, useMemo, useEffect } from "react";
+import React, { FC, useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import contactsData from "@/app/contents/contactsContents.json";
+import { ContactService } from "@/app/service/ContactService";
 
 type Contact = {
   id_contact: string;
@@ -20,8 +20,25 @@ type Contact = {
 
 const ContactsDbPage: FC = () => {
   const router = useRouter();
-  const all = (contactsData as Contact[]).slice();
+  const [all, setAll] = useState<Contact[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ id: "", name: "", role: "", company: "" });
+
+  const loadContacts = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await ContactService.getAllContacts();
+      setAll(Array.isArray(list) ? list : []);
+    } catch {
+      setAll([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadContacts();
+  }, [loadContacts]);
 
   const filtered = useMemo(() => {
     let list = [...all];
@@ -113,7 +130,20 @@ const ContactsDbPage: FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filtered.map((c) => (
+              {loading ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500 text-sm">
+                    Loading contacts…
+                  </td>
+                </tr>
+              ) : filtered.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-6 py-8 text-center text-gray-500 text-sm">
+                    No contacts yet. Create one with the button above.
+                  </td>
+                </tr>
+              ) : (
+              filtered.map((c) => (
                 <tr
                   key={c.id_contact}
                   onClick={() => router.push(`/logged/pages/account-management/contacts_db/${c.id_contact}`)}
@@ -127,7 +157,8 @@ const ContactsDbPage: FC = () => {
                   <td className="px-6 py-4 text-sm text-gray-500">{c.company_name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{c.based_in_country ?? "—"}</td>
                 </tr>
-              ))}
+              ))
+              )}
             </tbody>
           </table>
         </div>

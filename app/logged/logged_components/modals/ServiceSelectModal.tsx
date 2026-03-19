@@ -1,8 +1,10 @@
 "use client";
 
 import React, { FC, useState, useMemo, useEffect } from "react";
-import servicesData from "@/app/contents/servicesContents.json";
-import plannedPublicationsData from "@/app/contents/planned_publications.json";
+import { ServiceService } from "@/app/service/ServiceService";
+import publicationsData from "@/app/contents/publications.json";
+import { getPlanned, unifiedToPlannedSlots } from "@/app/contents/publicationsHelpers";
+import type { PublicationUnified } from "@/app/contents/interfaces";
 
 type Service = {
   id_service: string;
@@ -12,8 +14,6 @@ type Service = {
   tariff_price_eur: number;
   unit?: string;
 };
-
-const services = servicesData as Service[];
 
 export interface ServiceRow {
   id_service: string;
@@ -33,7 +33,7 @@ type PlannedPublication = {
   [slotKey: string]: unknown;
 };
 
-const plannedPublications = plannedPublicationsData as PlannedPublication[];
+const plannedPublications = (getPlanned(publicationsData as PublicationUnified[]).map(unifiedToPlannedSlots)) as PlannedPublication[];
 
 /** Extra data per service type, passed on confirm */
 export type ServiceExtra =
@@ -73,6 +73,12 @@ interface ServiceSelectModalProps {
 }
 
 const ServiceSelectModal: FC<ServiceSelectModalProps> = ({ open, onClose, onConfirm }) => {
+  const [services, setServices] = useState<Service[]>([]);
+  useEffect(() => {
+    if (open) {
+      ServiceService.getAllServices().then((list) => setServices(Array.isArray(list) ? list : [])).catch(() => setServices([]));
+    }
+  }, [open]);
   const [selected, setSelected] = useState<ServiceRow | null>(null);
   const [publicationMonth, setPublicationMonth] = useState<number>(new Date().getMonth() + 1);
   const [publicationYear, setPublicationYear] = useState<number>(new Date().getFullYear());

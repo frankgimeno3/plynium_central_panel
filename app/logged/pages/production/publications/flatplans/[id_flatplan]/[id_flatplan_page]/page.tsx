@@ -1,13 +1,13 @@
 "use client";
 
-import React, { FC, use } from "react";
+import React, { FC, use, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import flatplansData from "@/app/contents/flatplans.json";
-import projectsData from "@/app/contents/projects.json";
-import customersData from "@/app/contents/customers.json";
-import { Flatplan, FlatplanSlot } from "@/app/contents/interfaces";
+import { fetchFlatplans, getFlatplans } from "@/app/contents/publicationsHelpers";
+import type { Flatplan, FlatplanSlot } from "@/app/contents/interfaces";
+import { CustomerService } from "@/app/service/CustomerService";
+import { ProjectService } from "@/app/service/ProjectService";
 
 const BASE = "/logged/pages/production/publications/flatplans";
 
@@ -56,10 +56,32 @@ const FlatplanPageDetailPage: FC<{
   params: Promise<{ id_flatplan: string; id_flatplan_page: string }>;
 }> = ({ params }) => {
   const { id_flatplan, id_flatplan_page } = use(params);
-  const flatplans = flatplansData as Flatplan[];
+  const [publicationsData, setPublicationsData] = useState<import("@/app/contents/interfaces").PublicationUnified[]>([]);
+
+  useEffect(() => {
+    fetchFlatplans()
+      .then(setPublicationsData)
+      .catch(() => setPublicationsData([]));
+  }, []);
+
+  const flatplans = React.useMemo(() => getFlatplans(publicationsData), [publicationsData]);
   const flatplan = flatplans.find((f) => f.id_flatplan === id_flatplan);
-  const projects = (projectsData as { id_project: string; title: string }[]) || [];
-  const customers = (customersData as { id_customer: string; name: string }[]) || [];
+  const [projects, setProjects] = useState<{ id_project: string; title: string }[]>([]);
+  const loadProjects = useCallback(async () => {
+    try {
+      const list = await ProjectService.getAllProjects();
+      setProjects(Array.isArray(list) ? list : []);
+    } catch {
+      setProjects([]);
+    }
+  }, []);
+  useEffect(() => {
+    loadProjects();
+  }, [loadProjects]);
+  const [customers, setCustomers] = useState<{ id_customer: string; name: string }[]>([]);
+  useEffect(() => {
+    CustomerService.getAllCustomers().then((l) => setCustomers(Array.isArray(l) ? l : [])).catch(() => setCustomers([]));
+  }, []);
 
   const isValidSlot = SLOT_ORDER.includes(id_flatplan_page as keyof Flatplan);
   const slot = flatplan && isValidSlot
@@ -80,7 +102,6 @@ const FlatplanPageDetailPage: FC<{
         { label: flatplan?.edition_name ?? id_flatplan, href: `${BASE}/${id_flatplan}` },
         { label: slotLabel(id_flatplan_page) },
       ],
-      buttons: [{ label: "Volver al planillo", href: `${BASE}/${id_flatplan}` }],
     });
   }, [setPageMeta, flatplan, id_flatplan, id_flatplan_page]);
 

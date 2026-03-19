@@ -1,12 +1,8 @@
 "use client";
 
 import React, { FC, useState, useMemo, useEffect } from "react";
-import magazinesData from "@/app/contents/magazines.json";
+import { MagazineService } from "@/app/service/MagazineService";
 import { Magazine } from "@/app/contents/interfaces";
-
-const allMagazines = (magazinesData as Magazine[]).filter(
-  (m) => m && typeof m.id_magazine === "string"
-);
 
 interface MagazineSelectModalProps {
   open: boolean;
@@ -21,15 +17,26 @@ const MagazineSelectModal: FC<MagazineSelectModalProps> = ({
   onSelectMagazine,
   confirmLabel = "Select magazine",
 }) => {
+  const [allMagazines, setAllMagazines] = useState<Magazine[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selectedMagazine, setSelectedMagazine] = useState<Magazine | null>(null);
   const [filter, setFilter] = useState({ id: "", name: "" });
 
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    MagazineService.getAllMagazines()
+      .then((data) => setAllMagazines(Array.isArray(data) ? data : []))
+      .catch(() => setAllMagazines([]))
+      .finally(() => setLoading(false));
+  }, [open]);
+
   const filtered = useMemo(() => {
-    let list = [...allMagazines];
+    let list = allMagazines.filter((m) => m && typeof m.id_magazine === "string");
     if (filter.id) list = list.filter((m) => m.id_magazine.toLowerCase().includes(filter.id.toLowerCase()));
     if (filter.name) list = list.filter((m) => (m.name || "").toLowerCase().includes(filter.name.toLowerCase()));
     return list;
-  }, [filter]);
+  }, [allMagazines, filter]);
 
   useEffect(() => {
     if (!open) {
@@ -114,7 +121,13 @@ const MagazineSelectModal: FC<MagazineSelectModalProps> = ({
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filtered.length === 0 ? (
+                {loading ? (
+                  <tr>
+                    <td colSpan={2} className="px-6 py-8 text-center text-gray-500">
+                      Loading…
+                    </td>
+                  </tr>
+                ) : filtered.length === 0 ? (
                   <tr>
                     <td colSpan={2} className="px-6 py-8 text-center text-gray-500">
                       No magazines found.

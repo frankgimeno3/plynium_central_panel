@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import CustomerSelectModal, { type CustomerRow } from "@/app/logged/logged_components/modals/CustomerSelectModal";
-import contactsData from "@/app/contents/contactsContents.json";
+import { ContactService } from "@/app/service/ContactService";
+import { CustomerService } from "@/app/service/CustomerService";
 
 const COUNTRY_OPTIONS = [
   "Spain",
@@ -66,15 +67,11 @@ type ContactRow = {
   userListArray?: string[];
 };
 
-const allContacts = (contactsData as ContactRow[]).filter(
-  (c) => c && typeof c.id_contact === "string"
-);
-
-function generateNextContactId(): string {
+function generateNextContactId(contacts: ContactRow[]): string {
   const prefix = "cont-";
-  const numericIds = allContacts
+  const numericIds = contacts
     .map((c) => {
-      const match = c.id_contact.replace(prefix, "").match(/^(\d+)$/);
+      const match = (c?.id_contact || "").replace(prefix, "").match(/^(\d+)$/);
       return match ? parseInt(match[1], 10) : 0;
     })
     .filter((n) => n > 0);
@@ -117,11 +114,18 @@ const CreateContactPage: FC = () => {
   const router = useRouter();
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormState>(initialForm);
+  const [allContacts, setAllContacts] = useState<ContactRow[]>([]);
   const [linkCustomerModalOpen, setLinkCustomerModalOpen] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const [countryFilter, setCountryFilter] = useState("");
   const countryComboboxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    ContactService.getAllContacts()
+      .then((list: ContactRow[]) => setAllContacts(Array.isArray(list) ? list.filter((c) => c && typeof c.id_contact === "string") : []))
+      .catch(() => setAllContacts([]));
+  }, []);
 
   const countryOptionsFiltered = useMemo(() => {
     const q = countryFilter.trim().toLowerCase();
@@ -144,9 +148,9 @@ const CreateContactPage: FC = () => {
 
   useEffect(() => {
     if (step === 2 && !form.id_contact) {
-      setForm((f) => ({ ...f, id_contact: generateNextContactId() }));
+      setForm((f) => ({ ...f, id_contact: generateNextContactId(allContacts) }));
     }
-  }, [step, form.id_contact]);
+  }, [step, form.id_contact, allContacts]);
 
   const canAdvanceStep2 =
     !!form.id_contact &&
@@ -167,10 +171,26 @@ const CreateContactPage: FC = () => {
     if (step > 1) setStep((s) => (s - 1) as Step);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    router.push("/logged/pages/account-management/contacts_db");
-    router.refresh();
+    try {
+      await ContactService.createContact({
+        id_contact: form.id_contact,
+        name: form.name.trim(),
+        role: form.role?.trim() ?? "",
+        email: form.email.trim(),
+        phone: form.phone?.trim() ?? "",
+        id_customer: form.linkedCustomer?.id_customer ?? "",
+        company_name: form.linkedCustomer?.name ?? "",
+        based_in_country: form.based_in_country?.trim() ?? "",
+        linkedin_profile: form.linkedin_profile?.trim() ?? "",
+        id_user: form.id_user?.trim() ?? "",
+      });
+      router.push("/logged/pages/account-management/contacts_db");
+      router.refresh();
+    } catch {
+      setErrors({ name: "Failed to create contact. Try again." });
+    }
   };
 
   const breadcrumbs = [

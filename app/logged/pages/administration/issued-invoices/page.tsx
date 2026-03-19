@@ -1,11 +1,11 @@
 "use client";
 
-import React, { FC, useMemo, useState, useEffect } from "react";
+import React, { FC, useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import issuedInvoicesData from "@/app/contents/issued_invoices.json";
-import type { AdministrationContract, IssuedInvoice, Order } from "@/app/contents/interfaces";
+import { BillingService } from "@/app/service/BillingService";
+import { formatAdminDate } from "../adminDates";
 
 type InvoiceRow = {
   contract_code: string;
@@ -18,34 +18,85 @@ type InvoiceRow = {
   pending_count: number;
 };
 
-function toInvoiceRows(contracts: AdministrationContract[]): InvoiceRow[] {
-  const rows: InvoiceRow[] = [];
-  for (const c of contracts) {
-    for (const inv of c.invoices) {
-      const paid = inv.orders.filter((o: Order) => o.status === "paid").length;
-      const pending = inv.orders.filter((o: Order) => o.status === "pending").length;
-      rows.push({
-        contract_code: c.contract_code,
-        client_name: c.client_name,
-        invoice_id: inv.invoice_id,
-        amount_eur: inv.amount_eur,
-        issue_date: inv.issue_date,
-        orders_summary: `${inv.orders.length} order(s)`,
-        paid_count: paid,
-        pending_count: pending,
-      });
-    }
+type IssuedInvoice = {
+  invoice_id: string;
+  id_contract?: string;
+  contract_code: string;
+  client_id: string;
+  client_name: string;
+  agent?: string;
+  amount_eur: number;
+  issue_date: string;
+  invoice_state?: string;
+};
+
+type Order = {
+  order_code: string;
+  invoice_id: string;
+  id_contract?: string;
+  contract_code?: string;
+  client_id?: string;
+  client_name?: string;
+  agent?: string;
+  id_contact?: string;
+  collection_date: string;
+  payment_status: string;
+  amount_eur: number;
+};
+
+function toInvoiceRows(invoices: IssuedInvoice[], orders: Order[]): InvoiceRow[] {
+  const ordersByInvoice = new Map<string, Order[]>();
+  for (const o of orders) {
+    const key = o.invoice_id;
+    const list = ordersByInvoice.get(key) ?? [];
+    list.push(o);
+    ordersByInvoice.set(key, list);
   }
-  return rows;
+  return invoices.map((inv) => {
+    const list = ordersByInvoice.get(inv.invoice_id) ?? [];
+    const paid = list.filter((o) => o.payment_status === "paid").length;
+    const pending = list.filter((o) => o.payment_status === "pending").length;
+    return {
+      contract_code: inv.contract_code,
+      client_name: inv.client_name,
+      invoice_id: inv.invoice_id,
+      amount_eur: inv.amount_eur,
+      issue_date: inv.issue_date,
+      orders_summary: `${list.length} order(s)`,
+      paid_count: paid,
+      pending_count: pending,
+    };
+  });
 }
 
 const ISSUED_INVOICES_BASE = "/logged/pages/administration/issued-invoices";
 
 const IssuedInvoicesPage: FC = () => {
-  const all = useMemo(
-    () => toInvoiceRows(issuedInvoicesData as AdministrationContract[]),
-    []
-  );
+  const [issuedInvoices, setIssuedInvoices] = useState<IssuedInvoice[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [inv, ord] = await Promise.all([
+        BillingService.getAllIssuedInvoices(),
+        BillingService.getAllOrders(),
+      ]);
+      setIssuedInvoices(Array.isArray(inv) ? inv : []);
+      setOrders(Array.isArray(ord) ? ord : []);
+    } catch {
+      setIssuedInvoices([]);
+      setOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const all = useMemo(() => toInvoiceRows(issuedInvoices, orders), [issuedInvoices, orders]);
   const [filter, setFilter] = useState({
     contract: "",
     client: "",
@@ -76,7 +127,7 @@ const IssuedInvoicesPage: FC = () => {
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
-    setPageMeta({ pageTitle: "Issued invoices", breadcrumbs });
+    setPageMeta({ pageTitle: "Issued invoices", breadcrumbs, buttons: [] });
   }, [setPageMeta]);
 
   return (
@@ -137,34 +188,42 @@ const IssuedInvoicesPage: FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filtered.map((r) => (
-                <tr key={r.invoice_id} className="hover:bg-gray-100 transition-colors">
-                  <td colSpan={6} className="p-0">
-                    <Link
-                      href={`${ISSUED_INVOICES_BASE}/${encodeURIComponent(r.invoice_id)}`}
-                      className="grid grid-cols-6 gap-4 px-6 py-4 text-sm text-gray-900 cursor-pointer items-center"
-                      aria-label={`Ver factura emitida ${r.invoice_id}`}
-                    >
-                      <span className="whitespace-nowrap font-medium text-gray-900">{r.contract_code}</span>
-                      <span className="whitespace-nowrap text-gray-900">{r.client_name}</span>
-                      <span className="whitespace-nowrap text-gray-600">{r.invoice_id}</span>
-                      <span className="whitespace-nowrap text-gray-900">{r.issue_date}</span>
-                      <span className="whitespace-nowrap text-right text-gray-900">{r.amount_eur.toLocaleString()}</span>
-                      <span className="whitespace-nowrap text-center">
-                        <span className="text-green-600">{r.paid_count} paid</span>
-                        {r.pending_count > 0 && (
-                          <span className="text-amber-600 ml-2">{r.pending_count} pending</span>
-                        )}
-                      </span>
-                    </Link>
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-8 text-center text-gray-500 text-sm">
+                    Loading issued invoices…
                   </td>
                 </tr>
-              ))}
+              ) : filtered.map((r) => (
+                  <tr key={r.invoice_id} className="hover:bg-gray-100 transition-colors">
+                    <td colSpan={6} className="p-0">
+                      <Link
+                        href={`${ISSUED_INVOICES_BASE}/${encodeURIComponent(r.invoice_id)}`}
+                        className="grid grid-cols-6 gap-4 px-6 py-4 text-sm text-gray-900 cursor-pointer items-center"
+                        aria-label={`View issued invoice ${r.invoice_id}`}
+                      >
+                        <span className="whitespace-nowrap font-medium text-gray-900">{r.contract_code}</span>
+                        <span className="whitespace-nowrap text-gray-900">{r.client_name}</span>
+                        <span className="whitespace-nowrap text-gray-600">{r.invoice_id}</span>
+                        <span className="whitespace-nowrap text-gray-900">
+                          {formatAdminDate(r.issue_date)}
+                        </span>
+                        <span className="whitespace-nowrap text-right text-gray-900">{r.amount_eur.toLocaleString()}</span>
+                        <span className="whitespace-nowrap text-center">
+                          <span className="text-green-600">{r.paid_count} paid</span>
+                          {r.pending_count > 0 && (
+                            <span className="text-amber-600 ml-2">{r.pending_count} pending</span>
+                          )}
+                        </span>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
             </tbody>
           </table>
         </div>
 
-        {filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <p className="text-sm text-gray-500 text-center py-8">No issued invoices match the filters.</p>
         )}
           </div>

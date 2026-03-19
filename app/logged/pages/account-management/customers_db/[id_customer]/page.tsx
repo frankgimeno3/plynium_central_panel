@@ -5,13 +5,12 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import customersData from "@/app/contents/customers.json";
-import proposalsData from "@/app/contents/proposals.json";
-import contractsData from "@/app/contents/contracts.json";
-import projectsData from "@/app/contents/projects.json";
 import ga4Data from "@/app/contents/ga4.json";
 import { CustomerService } from "@/app/service/CustomerService";
 import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
+import { ProposalService } from "@/app/service/ProposalService";
+import { ContractService } from "@/app/service/ContractService";
+import { ProjectService } from "@/app/service/ProjectService";
 
 type ContactItem = { name: string; role: string; email: string; phone: string };
 type CommentItem = { id?: string; text: string; date?: string; author?: string };
@@ -89,11 +88,12 @@ type PublishedTabKey = (typeof PUBLISHED_TABS)[number]["key"];
 const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ params }) => {
   const router = useRouter();
   const { id_customer } = use(params);
-  const staticCustomers = customersData as Customer[];
-  const [customer, setCustomer] = useState<Customer | undefined>(
-    () => staticCustomers.find((c) => c.id_customer === id_customer)
-  );
+  const [customer, setCustomer] = useState<Customer | undefined>(undefined);
   const [customerLoading, setCustomerLoading] = useState(true);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
+  const [allProposals, setAllProposals] = useState<Proposal[]>([]);
+  const [allContracts, setAllContracts] = useState<Contract[]>([]);
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -102,13 +102,37 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
         if (!cancelled) setCustomer({ ...data, comments: data.comments ?? [] } as Customer);
       })
       .catch(() => {
-        if (!cancelled) setCustomer(staticCustomers.find((c) => c.id_customer === id_customer));
+        if (!cancelled) setCustomer(undefined);
       })
       .finally(() => {
         if (!cancelled) setCustomerLoading(false);
       });
     return () => { cancelled = true; };
   }, [id_customer]);
+
+  useEffect(() => {
+    CustomerService.getAllCustomers()
+      .then((list: Customer[]) => setAllCustomers(Array.isArray(list) ? list : []))
+      .catch(() => setAllCustomers([]));
+  }, []);
+
+  useEffect(() => {
+    Promise.all([
+      ProposalService.getAllProposals(),
+      ContractService.getAllContracts(),
+      ProjectService.getAllProjects(),
+    ])
+      .then(([p, c, pr]) => {
+        setAllProposals(Array.isArray(p) ? p : []);
+        setAllContracts(Array.isArray(c) ? c : []);
+        setAllProjects(Array.isArray(pr) ? pr : []);
+      })
+      .catch(() => {
+        setAllProposals([]);
+        setAllContracts([]);
+        setAllProjects([]);
+      });
+  }, []);
 
   const [currentTab, setCurrentTab] = useState<TabKey>("principal");
   const [proposalStatusTab, setProposalStatusTab] = useState<ProposalStatusTab>("pending");
@@ -134,7 +158,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
   }, [id_customer, customer?.comments]);
 
   const proposals = customer
-    ? (proposalsData as Proposal[]).filter((p) => customer.proposals?.includes(p.id_proposal))
+    ? allProposals.filter((p) => customer.proposals?.includes(p.id_proposal))
     : [];
   const proposalsByStatus = {
     pending: proposals.filter((p) => p.status === "pending"),
@@ -142,13 +166,12 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
     rejected: proposals.filter((p) => p.status === "rejected"),
   };
   const contracts = customer
-    ? (contractsData as Contract[]).filter((c) => customer.contracts?.includes(c.id_contract))
+    ? allContracts.filter((c) => customer.contracts?.includes(c.id_contract))
     : [];
   const contractsByListTab = {
     active: contracts.filter((c) => c.process_state === "active"),
     historical: contracts.filter((c) => c.process_state !== "active"),
   };
-  const allProjects = (projectsData as Project[]) || [];
   const projects = customer
     ? allProjects.filter((p) => customer.projects?.includes(p.id_project))
     : [];
@@ -160,11 +183,11 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
     : [];
   const portals: Portal[] = (ga4Data as { portals?: Portal[] }).portals ?? [];
   const relatedCustomers = customer
-    ? (customersData as Customer[]).filter((c) => customer.related_accounts?.includes(c.id_customer))
+    ? allCustomers.filter((c) => customer.related_accounts?.includes(c.id_customer))
     : [];
   const representedCustomers = customer?.represented_companies?.length
     ? (customer.represented_companies ?? []).map((id) =>
-        (customersData as Customer[]).find((c) => c.id_customer === id)
+        allCustomers.find((c) => c.id_customer === id)
       ).filter(Boolean) as Customer[]
     : [];
   const portalProducts = customer?.portal_products ?? {};

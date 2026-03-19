@@ -1,11 +1,10 @@
 "use client";
 
-import React, { FC, useState, useMemo, useEffect } from "react";
+import React, { FC, useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import customersData from "@/app/contents/customers.json";
+import { CustomerService } from "@/app/service/CustomerService";
 
 type Customer = {
   id_customer: string;
@@ -26,8 +25,25 @@ type Customer = {
 
 const CustomersDbPage: FC = () => {
   const router = useRouter();
-  const all = (customersData as Customer[]).slice();
+  const [all, setAll] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState({ id: "", name: "", cif: "", country: "" });
+
+  const loadCustomers = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await CustomerService.getAllCustomers();
+      setAll(Array.isArray(list) ? list : []);
+    } catch {
+      setAll([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCustomers();
+  }, [loadCustomers]);
 
   const filtered = useMemo(() => {
     let list = [...all];
@@ -120,7 +136,20 @@ const CustomersDbPage: FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {filtered.map((c) => (
+            {loading ? (
+              <tr>
+                <td colSpan={8} className="px-6 py-8 text-center text-gray-500 text-sm">
+                  Loading customers…
+                </td>
+              </tr>
+            ) : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-6 py-8 text-center text-gray-500 text-sm">
+                  No customers yet. Create one with the button above.
+                </td>
+              </tr>
+            ) : (
+            filtered.map((c) => (
               <tr
                 key={c.id_customer}
                 onClick={() => router.push(`/logged/pages/account-management/customers_db/${c.id_customer}`)}
@@ -135,7 +164,8 @@ const CustomersDbPage: FC = () => {
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{(c.contracts || []).length}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{(c.projects || []).length}</td>
               </tr>
-            ))}
+            ))
+            )}
           </tbody>
         </table>
         </div>

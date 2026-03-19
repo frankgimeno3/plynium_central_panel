@@ -115,7 +115,7 @@ Single entry for the Next app: API routes, client services, static contents, and
 ### Contents contract (app/contents)
 
 - **interfaces.ts:** TypeScript interfaces for domain entities (articleInterface, publicationInterface, Company, Product, etc.). Used for props and API payloads; naming may mix snake_case (API) and camelCase (UI).
-- **JSON files:** Static datasets. Who uses what: planned_publications, planned_newsletters, pm_events, notifications, userContents, services, companyRequest, advertisementRequest, otherRequests, proposals, contracts, projects, customers, ga4 — each imported by specific pages or hooks. When adding/renaming a JSON file, update consumers and (if needed) interfaces.
+- **JSON files:** Static datasets. Who uses what: planned_publications, pm_events, notifications, userContents, services, companyRequest, advertisementRequest, otherRequests, proposals, contracts, projects, customers, ga4 — each imported by specific pages or hooks. When adding/renaming a JSON file, update consumers and (if needed) interfaces.
 
 **Ownership:** This folder owns static data and shared types. It does **not** own live data (that goes through services → API).
 

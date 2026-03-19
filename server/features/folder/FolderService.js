@@ -2,7 +2,39 @@
  * FolderService – mediateca folders. Persists to RDS table `folders`.
  */
 
+import { Op } from "sequelize";
+
+/** Paths that cannot be renamed or deleted (case-insensitive). */
+const PROTECTED_FOLDER_PATHS = new Set([
+    "structural media",
+    "structural media/invoices",
+    "structural media/contracts",
+    "structural media/proposals",
+    "structural media/network media",
+    "structural media/production media",
+    "structural media/invoices/issued invoices",
+    "structural media/invoices/providers invoices",
+    "structural media/production media/newsletters media",
+    "structural media/production media/publications media",
+    "structural media/network media/content media",
+    "structural media/network media/directory media",
+    "structural media/network media/content media/articles media",
+    "structural media/network media/content media/banners media",
+    "structural media/network media/content media/events media",
+    "structural media/network media/directory media/companies media",
+    "structural media/network media/directory media/products media",
+    "structural media/network media/directory media/users media",
+]);
+
+function isFolderPathProtected(path) {
+    if (typeof path !== "string") return false;
+    const normalized = path.trim().toLowerCase().replace(/\s+/g, " ");
+    return PROTECTED_FOLDER_PATHS.has(normalized);
+}
+
 import FolderModel from "./FolderModel.js";
+import MediaModel from "../media/MediaModel.js";
+import { deleteObjectFromS3 } from "../media/S3Service.js";
 import "../../database/models.js";
 
 /**
@@ -42,12 +74,16 @@ export async function getFolders(opts = {}) {
             order: [["name", "ASC"]],
             attributes: ["id", "name", "parent_id"],
         });
-        const prefix = path ? `${path}/` : "";
-        return rows.map((row) => ({
-            id: String(row.id),
-            name: row.name,
-            path: prefix + row.name,
-        }));
+        const result = [];
+        for (const row of rows) {
+            const folderPath = await getFolderPathById(row.id);
+            result.push({
+                id: String(row.id),
+                name: row.name,
+                path: folderPath,
+            });
+        }
+        return result;
     } catch (err) {
         console.error("FolderService.getFolders:", err);
         return [];
@@ -82,6 +118,20 @@ export async function createFolder(data) {
 }
 
 /**
+ * Get folder by path. Returns { id, name, path } or null if not found.
+ * @param {string} path
+ * @returns {Promise<{ id: string, name: string, path: string } | null>}
+ */
+export async function getFolderByPath(path) {
+    const id = await getFolderIdByPath(path);
+    if (!id) return null;
+    const pathStr = await getFolderPathById(id);
+    const segments = pathStr.split("/").filter(Boolean);
+    const name = segments.length > 0 ? segments[segments.length - 1] : "";
+    return { id: String(id), name, path: pathStr };
+}
+
+/**
  * Get folder path string from folder id (walk up parent_id to root).
  * @param {string} folderId - UUID of the folder.
  * @returns {Promise<string>} - path like "a" or "a/b" or "" if not found.
@@ -98,4 +148,101 @@ export async function getFolderPathById(folderId) {
         currentId = row.parent_id;
     }
     return segments.join("/");
+}
+
+/**
+ * Get all descendant folder ids (recursive, including the folder itself).
+ * @param {string} folderId
+ * @returns {Promise<string[]>}
+ */
+async function getDescendantFolderIds(folderId) {
+    if (!folderId || !FolderModel.sequelize) return [];
+    const ids = [folderId];
+    let current = [folderId];
+    while (current.length > 0) {
+        const rows = await FolderModel.findAll({
+            where: { parent_id: { [Op.in]: current } },
+            attributes: ["id"],
+        });
+        const next = rows.map((r) => String(r.id));
+        ids.push(...next);
+        current = next;
+    }
+    return ids;
+}
+
+/**
+ * Update folder name (rename). Fails if a sibling folder already has the new name.
+ * @param {string} folderId
+ * @param {{ name: string }} data
+ * @returns {Promise<{ id: string, name: string, path: string }>}
+ */
+export async function updateFolder(folderId, data) {
+    const name = data?.name ? String(data.name).trim() : "";
+    if (!name) {
+        throw new Error("name is required");
+    }
+    if (!FolderModel.sequelize) {
+        throw new Error("Database not configured");
+    }
+    const row = await FolderModel.findByPk(folderId, { attributes: ["id", "name", "parent_id"] });
+    if (!row) {
+        throw new Error("Folder not found");
+    }
+    const currentPathStr = await getFolderPathById(row.id);
+    if (isFolderPathProtected(currentPathStr)) {
+        throw new Error("This folder is protected and cannot be renamed");
+    }
+    const parentPath = await getFolderPathById(row.parent_id);
+    const newPath = parentPath ? `${parentPath}/${name}` : name;
+    const existingId = await getFolderIdByPath(newPath);
+    if (existingId != null && existingId !== String(row.id)) {
+        throw new Error("A folder with this name already exists at this path");
+    }
+    await row.update({ name });
+    return {
+        id: String(row.id),
+        name: row.name,
+        path: newPath,
+    };
+}
+
+/**
+ * Delete a folder and all its contents and nested subfolders (and their contents).
+ * Deletes S3 objects for all media in the tree, then removes the folder (DB CASCADE removes children).
+ * @param {string} folderId
+ * @returns {Promise<{ deleted: boolean }>}
+ */
+export async function deleteFolder(folderId) {
+    if (!folderId || typeof folderId !== "string") {
+        throw new Error("folderId is required");
+    }
+    if (!FolderModel.sequelize) {
+        throw new Error("Database not configured");
+    }
+    const row = await FolderModel.findByPk(folderId);
+    if (!row) {
+        throw new Error("Folder not found");
+    }
+    const folderPathStr = await getFolderPathById(folderId);
+    if (isFolderPathProtected(folderPathStr)) {
+        throw new Error("This folder is protected and cannot be deleted");
+    }
+    const folderIds = await getDescendantFolderIds(folderId);
+    const mediaRows = await MediaModel.findAll({
+        where: { folder_id: { [Op.in]: folderIds } },
+        attributes: ["id", "s3_key"],
+    });
+    for (const media of mediaRows) {
+        if (media.s3_key) {
+            try {
+                await deleteObjectFromS3(media.s3_key);
+            } catch (e) {
+                console.warn("FolderService.deleteFolder: S3 delete failed for", media.s3_key, e.message);
+            }
+        }
+        await media.destroy();
+    }
+    await row.destroy();
+    return { deleted: true };
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import React, { FC, useState, useMemo, useEffect } from "react";
+import React, { FC, useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import projectsData from "@/app/contents/projects.json";
-import contractsData from "@/app/contents/contracts.json";
-import customersData from "@/app/contents/customers.json";
-import servicesData from "@/app/contents/services.json";
+import { CustomerService } from "@/app/service/CustomerService";
+import { ServiceService } from "@/app/service/ServiceService";
+import { ProjectService } from "@/app/service/ProjectService";
+import { ContractService } from "@/app/service/ContractService";
 
 type Project = {
   id_project: string;
@@ -38,10 +38,39 @@ const STATUS_BY_TAB: Record<string, string[]> = {
 
 const ProjectsPage: FC = () => {
   const router = useRouter();
-  const all = (projectsData as Project[]).slice();
-  const contracts = contractsData as Contract[];
-  const customers = customersData as Customer[];
-  const services = servicesData as Service[];
+  const [all, setAll] = useState<Project[]>([]);
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  useEffect(() => {
+    ServiceService.getAllServices().then((list) => setServices(Array.isArray(list) ? list : [])).catch(() => setServices([]));
+  }, []);
+  useEffect(() => {
+    CustomerService.getAllCustomers()
+      .then((list: Customer[]) => setCustomers(Array.isArray(list) ? list : []))
+      .catch(() => setCustomers([]));
+  }, []);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [projectsList, contractsList] = await Promise.all([
+        ProjectService.getAllProjects(),
+        ContractService.getAllContracts(),
+      ]);
+      setAll(Array.isArray(projectsList) ? projectsList : []);
+      setContracts(Array.isArray(contractsList) ? contractsList : []);
+    } catch {
+      setAll([]);
+      setContracts([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
   const getCompanyName = (idContract: string) => {
     const c = contracts.find((x) => x.id_contract === idContract);
     return c ? (customers.find((cust) => cust.id_customer === c.id_customer)?.name ?? c.id_customer) : idContract;
@@ -158,7 +187,20 @@ const ProjectsPage: FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {paginated.map((p) => (
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 text-sm">
+                        Loading projects…
+                      </td>
+                    </tr>
+                  ) : paginated.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 text-sm">
+                        No projects yet.
+                      </td>
+                    </tr>
+                  ) : (
+                  paginated.map((p) => (
                     <tr key={p.id_project} onClick={() => router.push(`/logged/pages/account-management/projects/${p.id_project}`)} className={rowClass}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.id_project}</td>
                       <td className="px-6 py-4 text-sm text-gray-900">{getCompanyName(p.id_contract)}</td>
@@ -174,7 +216,8 @@ const ProjectsPage: FC = () => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.publication_date}</td>
                     </tr>
-                  ))}
+                  ))
+                  )}
                 </tbody>
               </table>
             </div>

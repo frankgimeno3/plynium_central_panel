@@ -41,7 +41,8 @@ export function PageContentProvider({ children }: { children: ReactNode }) {
     setMeta((prev) => {
       const nextTitle = next.pageTitle ?? prev.pageTitle;
       const nextBreadcrumbs = next.breadcrumbs ?? prev.breadcrumbs;
-      const nextButtons = next.buttons !== undefined ? next.buttons : [];
+      const nextButtons =
+        next.buttons !== undefined ? next.buttons : prev.buttons;
       // Only update if content changed (avoids loops when deps are new refs every render)
       if (
         nextTitle === prev.pageTitle &&

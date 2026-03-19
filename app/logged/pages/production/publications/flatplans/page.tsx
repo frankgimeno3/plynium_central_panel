@@ -4,15 +4,47 @@ import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import flatplansData from "@/app/contents/flatplans.json";
-import { Flatplan } from "@/app/contents/interfaces";
+import { fetchFlatplans, getFlatplans } from "@/app/contents/publicationsHelpers";
+import type { PublicationUnified, Magazine, MagazineIssue } from "@/app/contents/interfaces";
+import { MagazineService } from "@/app/service/MagazineService";
+import { encodeForecastedIssueId } from "@/app/logged/pages/production/publications/flatplans/forecastedIssueRoute";
 
 const ITEMS_PER_PAGE = 12;
 const BASE = "/logged/pages/production/publications/flatplans";
 
+type TabId = "development" | "forecast";
+
+/** One row for the forecasted issues table: an issue that has no flatplan yet. */
+type ForecastedIssueRow = {
+  year: number;
+  id_magazine: string;
+  magazineName: string;
+  issue_number: number;
+  is_special_edition: boolean;
+  special_topic?: string;
+  /** Forecasted publication month (1-12). Used for display and sort order. */
+  forecasted_publication_month?: number;
+};
+
 const FlatplansPage: FC = () => {
   const router = useRouter();
-  const all = (flatplansData as Flatplan[]).slice();
+  const [activeTab, setActiveTab] = useState<TabId>("development");
+  const [publicationsData, setPublicationsData] = useState<PublicationUnified[]>([]);
+  const [magazines, setMagazines] = useState<Magazine[]>([]);
+
+  useEffect(() => {
+    fetchFlatplans()
+      .then(setPublicationsData)
+      .catch(() => setPublicationsData([]));
+  }, []);
+
+  useEffect(() => {
+    MagazineService.getAllMagazines()
+      .then((data) => setMagazines(Array.isArray(data) ? data : []))
+      .catch(() => setMagazines([]));
+  }, []);
+
+  const all = useMemo(() => getFlatplans(publicationsData), [publicationsData]);
   const [filter, setFilter] = useState({ id: "", edition: "", theme: "" });
 
   const filtered = useMemo(() => {
@@ -28,6 +60,53 @@ const FlatplansPage: FC = () => {
   const start = (page - 1) * ITEMS_PER_PAGE;
   const paginated = filtered.slice(start, start + ITEMS_PER_PAGE);
 
+  const currentYear = useMemo(() => new Date().getFullYear(), []);
+  const nextYear = currentYear + 1;
+  const flatplanKeys = useMemo(() => {
+    const set = new Set<string>();
+    all.forEach((f) => {
+      if (f.id_magazine != null && f.year != null && f.issue_number != null) {
+        set.add(`${f.id_magazine}|${f.year}|${f.issue_number}`);
+      }
+    });
+    return set;
+  }, [all]);
+
+  const forecastedIssues = useMemo((): ForecastedIssueRow[] => {
+    const rows: ForecastedIssueRow[] = [];
+    const years = [currentYear, nextYear];
+    magazines.forEach((mag) => {
+      years.forEach((year) => {
+        const issues = mag.issues_by_year?.[String(year)] ?? [];
+        issues.forEach((issue: MagazineIssue) => {
+          const key = `${mag.id_magazine}|${year}|${issue.issue_number}`;
+          if (!flatplanKeys.has(key)) {
+            rows.push({
+              year,
+              id_magazine: mag.id_magazine,
+              magazineName: mag.name ?? mag.id_magazine,
+              issue_number: issue.issue_number,
+              is_special_edition: issue.is_special_edition ?? false,
+              special_topic: issue.special_topic,
+              forecasted_publication_month: issue.forecasted_publication_month,
+            });
+          }
+        });
+      });
+    });
+    rows.sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      const monthA = a.forecasted_publication_month ?? 99;
+      const monthB = b.forecasted_publication_month ?? 99;
+      if (monthA !== monthB) return monthA - monthB;
+      const nameA = a.magazineName.toLowerCase();
+      const nameB = b.magazineName.toLowerCase();
+      if (nameA !== nameB) return nameA.localeCompare(nameB);
+      return a.issue_number - b.issue_number;
+    });
+    return rows;
+  }, [magazines, currentYear, flatplanKeys]);
+
   const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
 
   const breadcrumbs = [
@@ -41,7 +120,7 @@ const FlatplansPage: FC = () => {
     setPageMeta({
       pageTitle: "Flatplans",
       breadcrumbs,
-      buttons: [{ label: "Create Flatplan", href: "/logged/pages/production/publications/flatplans/create" }],
+      buttons: [{ label: "Create Flatplan", href: `${BASE}/create` }],
     });
   }, [setPageMeta, breadcrumbs]);
 
@@ -49,8 +128,35 @@ const FlatplansPage: FC = () => {
     <>
       <PageContentSection>
         <div className="flex flex-col w-full">
+          <div className="flex border-b border-gray-200 bg-gray-50 rounded-t-lg overflow-hidden">
+            <button
+              type="button"
+              onClick={() => setActiveTab("development")}
+              className={`px-6 py-3 text-sm font-medium transition-colors ${
+                activeTab === "development"
+                  ? "text-blue-950 border-b-2 border-blue-950 bg-white"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              }`}
+            >
+              Flatplans in development
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("forecast")}
+              className={`px-6 py-3 text-sm font-medium transition-colors ${
+                activeTab === "forecast"
+                  ? "text-blue-950 border-b-2 border-blue-950 bg-white"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+              }`}
+            >
+              Forecasted issues {currentYear}–{nextYear}
+            </button>
+          </div>
+
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6">
+              {activeTab === "development" && (
+                <>
               <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
@@ -140,6 +246,60 @@ const FlatplansPage: FC = () => {
             </div>
           </div>
         )}
+                </>
+              )}
+
+              {activeTab === "forecast" && (
+                <>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Issues planned for {currentYear} and {nextYear} that do not yet have a flatplan.
+                  </p>
+                  <div className="overflow-x-auto mt-4">
+                    <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Year</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Forecasted month</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Magazine</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue #</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Special edition</th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Special topic</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {forecastedIssues.length === 0 ? (
+                          <tr>
+                            <td colSpan={6} className="px-6 py-8 text-center text-gray-500 text-sm">
+                              No forecasted issues without a flatplan for {currentYear}–{nextYear}.
+                            </td>
+                          </tr>
+                        ) : (
+                          forecastedIssues.map((row) => (
+                            <tr
+                              key={`${row.id_magazine}|${row.year}|${row.issue_number}`}
+                              onClick={() =>
+                                router.push(`${BASE}/forecasted/${encodeForecastedIssueId(row.id_magazine, row.year, row.issue_number)}`)
+                              }
+                              className={rowClass}
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.year}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {row.forecasted_publication_month != null && row.forecasted_publication_month >= 1 && row.forecasted_publication_month <= 12
+                                  ? new Date(2000, row.forecasted_publication_month - 1, 1).toLocaleString("default", { month: "long" })
+                                  : "—"}
+                              </td>
+                              <td className="px-6 py-4 text-sm text-gray-900">{row.magazineName}</td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{row.issue_number}</td>
+                              <td className="px-6 py-4 text-sm text-gray-600">{row.is_special_edition ? "Yes" : "—"}</td>
+                              <td className="px-6 py-4 text-sm text-gray-600">{row.special_topic ?? "—"}</td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>

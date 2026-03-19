@@ -1,15 +1,13 @@
 "use client";
 
-import React, { FC, useState, useEffect } from "react";
-import categoriesData from "@/app/contents/categoriescontents.json";
+import React, { FC, useState, useEffect, useCallback } from "react";
+import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
 
 export interface CategoryItem {
   id_category: string;
   name: string;
   portals_array: string[];
 }
-
-const categories = categoriesData as CategoryItem[];
 
 interface CategoriesModalProps {
   open: boolean;
@@ -26,8 +24,22 @@ const CategoriesModal: FC<CategoriesModalProps> = ({
   selectedCategoryNames = [],
   onSelectCategories,
 }) => {
+  const [categories, setCategories] = useState<CategoryItem[]>([]);
+  const [loading, setLoading] = useState(false);
   const [selected, setSelected] = useState<CategoryItem[]>([]);
   const [confirmUntag, setConfirmUntag] = useState<string | null>(null);
+
+  const loadCategories = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await CompanyCategoryService.getAllCategories();
+      setCategories(Array.isArray(list) ? list : []);
+    } catch {
+      setCategories([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -35,12 +47,17 @@ const CategoriesModal: FC<CategoriesModalProps> = ({
       setConfirmUntag(null);
       return;
     }
+    loadCategories();
+  }, [open, loadCategories]);
+
+  useEffect(() => {
+    if (!open || categories.length === 0) return;
     const names = Array.isArray(selectedCategoryNames) ? selectedCategoryNames : [];
     const initial = names.length
       ? categories.filter((c) => names.includes(c.name))
       : [];
     setSelected(initial);
-  }, [open, selectedCategoryNames]);
+  }, [open, selectedCategoryNames, categories]);
 
   useEffect(() => {
     if (!open) return;
@@ -148,7 +165,16 @@ const CategoriesModal: FC<CategoriesModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {categories.length === 0 ? (
+                  {loading ? (
+                    <tr>
+                      <td
+                        colSpan={2}
+                        className="px-6 py-8 text-center text-gray-500"
+                      >
+                        Loading categories…
+                      </td>
+                    </tr>
+                  ) : categories.length === 0 ? (
                     <tr>
                       <td
                         colSpan={2}

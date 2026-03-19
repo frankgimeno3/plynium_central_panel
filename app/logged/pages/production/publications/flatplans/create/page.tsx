@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import MagazineSelectModal from "@/app/logged/logged_components/modals/MagazineSelectModal";
-import magazinesData from "@/app/contents/magazines.json";
-import flatplansData from "@/app/contents/flatplans.json";
-import { Flatplan, Magazine, MagazineIssue } from "@/app/contents/interfaces";
+import { MagazineService } from "@/app/service/MagazineService";
+import { createFlatplanApi, fetchFlatplans, getFlatplans } from "@/app/contents/publicationsHelpers";
+import type { Magazine, MagazineIssue } from "@/app/contents/interfaces";
 
 const BASE = "/logged/pages/production/publications/flatplans";
 
@@ -28,9 +28,24 @@ const CreateFlatplanPage: FC = () => {
   const [editionName, setEditionName] = useState("");
 
   const [submitting, setSubmitting] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [magazines, setMagazines] = useState<Magazine[]>([]);
 
-  const flatplans = (flatplansData as Flatplan[]) || [];
-  const magazines = (magazinesData as Magazine[]) || [];
+  const [publicationsData, setPublicationsData] = useState<import("@/app/contents/interfaces").PublicationUnified[]>([]);
+
+  useEffect(() => {
+    MagazineService.getAllMagazines()
+      .then((data) => setMagazines(Array.isArray(data) ? data : []))
+      .catch(() => setMagazines([]));
+  }, []);
+
+  useEffect(() => {
+    fetchFlatplans()
+      .then(setPublicationsData)
+      .catch(() => setPublicationsData([]));
+  }, []);
+
+  const flatplans = useMemo(() => getFlatplans(publicationsData) || [], [publicationsData]);
 
   const takenIssueKeys = useMemo(() => {
     const set = new Set<string>();
@@ -95,10 +110,35 @@ const CreateFlatplanPage: FC = () => {
     if (step > 1) setStep((s) => (s - 1) as Step);
   };
 
-  const handleCreate = () => {
+  const handleCreate = async () => {
+    if (!magazine || !selectedIssue || !year.trim() || !idFlatplan) return;
+    setCreateError(null);
     setSubmitting(true);
-    // Demo: no persistence
-    setTimeout(() => router.push(BASE), 300);
+    try {
+      const y = parseInt(year.trim(), 10);
+      const edition =
+        editionName.trim() ||
+        `${magazine.name} ${y} · Issue ${selectedIssue.issue_number}`;
+      const theme =
+        selectedIssue.is_special_edition && selectedIssue.special_topic
+          ? selectedIssue.special_topic
+          : "";
+      await createFlatplanApi({
+        id_flatplan: idFlatplan,
+        id_magazine: magazine.id_magazine,
+        year: y,
+        issue_number: selectedIssue.issue_number,
+        edition_name: edition,
+        theme,
+        publication_date: publicationDate.trim() || null,
+        description: description.trim(),
+      });
+      router.push(`${BASE}/${idFlatplan}`);
+    } catch (e) {
+      setCreateError(e instanceof Error ? e.message : "Could not create flatplan.");
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const issueDisplay = (issue: MagazineIssue) =>
@@ -301,13 +341,16 @@ const CreateFlatplanPage: FC = () => {
                   </div>
                 </dl>
               </div>
+              {createError && (
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{createError}</p>
+              )}
               <div className="flex gap-3">
                 <button type="button" onClick={goBack} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300">
                   Back
                 </button>
                 <button
                   type="button"
-                  onClick={handleCreate}
+                  onClick={() => void handleCreate()}
                   disabled={submitting}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
                 >

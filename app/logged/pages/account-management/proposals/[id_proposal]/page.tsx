@@ -1,14 +1,15 @@
 "use client";
 
-import React, { FC, use, useEffect, useMemo, useState } from "react";
+import React, { FC, use, useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import proposalsData from "@/app/contents/proposals.json";
-import customersData from "@/app/contents/customers.json";
-import contactsData from "@/app/contents/contactsContents.json";
-import servicesData from "@/app/contents/servicesContents.json";
-import plannedPublicationsData from "@/app/contents/planned_publications.json";
+import { ServiceService } from "@/app/service/ServiceService";
+import { CustomerService } from "@/app/service/CustomerService";
+import { ContactService } from "@/app/service/ContactService";
+import publicationsData from "@/app/contents/publications.json";
+import { getPlanned } from "@/app/contents/publicationsHelpers";
+import { ProposalService } from "@/app/service/ProposalService";
 
 type ServiceLine = {
   lineId: string;
@@ -66,14 +67,37 @@ type Customer = { id_customer: string; name: string; country?: string };
 type Contact = { id_contact: string; name: string; email?: string; id_customer?: string };
 type PlannedPublication = { id_planned_publication: string; edition_name: string };
 
-const services = servicesData as Service[];
-const customers = customersData as Customer[];
-const contacts = contactsData as Contact[];
-const plannedPublications = plannedPublicationsData as PlannedPublication[];
+const plannedPublications = getPlanned(publicationsData as import("@/app/contents/interfaces").PublicationUnified[]) as PlannedPublication[];
 
 const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ params }) => {
   const { id_proposal } = use(params);
-  const proposal = (proposalsData as Proposal[]).find((p) => p.id_proposal === id_proposal);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    ServiceService.getAllServices().then((list) => setServices(Array.isArray(list) ? list : [])).catch(() => setServices([]));
+  }, []);
+  useEffect(() => {
+    CustomerService.getAllCustomers().then((l: Customer[]) => setCustomers(Array.isArray(l) ? l : [])).catch(() => setCustomers([]));
+    ContactService.getAllContacts().then((l: Contact[]) => setContacts(Array.isArray(l) ? l : [])).catch(() => setContacts([]));
+  }, []);
+  const loadProposal = useCallback(async () => {
+    setLoading(true);
+    try {
+      const p = await ProposalService.getProposalById(id_proposal);
+      setProposal(p ?? null);
+    } catch {
+      setProposal(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [id_proposal]);
+
+  useEffect(() => {
+    loadProposal();
+  }, [loadProposal]);
 
   const creationDateFromData = proposal?.proposal_date ?? proposal?.date_created ?? "";
   const expirationDateFromData = proposal?.expiration_date ?? (() => {
@@ -152,7 +176,7 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
       <PageContentSection>
         <div className="flex flex-col w-full">
           <div className="bg-white rounded-b-lg overflow-hidden p-6">
-            <p className="text-gray-500">Proposal not found.</p>
+            <p className="text-gray-500">{loading ? "Loading proposal…" : "Proposal not found."}</p>
           </div>
         </div>
       </PageContentSection>

@@ -1,20 +1,9 @@
 import { createEndpoint } from "../../../../../server/createEndpoint.js";
 import { NextResponse } from "next/server";
 import Joi from "joi";
-import fs from "fs";
-import path from "path";
+import { getCustomerById, updateCustomer } from "../../../../../server/features/customer_db/CustomerDbService.js";
 
 export const runtime = "nodejs";
-
-const DATA_DIR = path.join(process.cwd(), "data");
-const FILE_PATH = path.join(DATA_DIR, "customers.json");
-const SEED_PATH = path.join(process.cwd(), "app", "contents", "customers.json");
-
-function ensureDataDir() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
-  }
-}
 
 function getIdFromRequest(request) {
   const url = new URL(request.url);
@@ -23,47 +12,18 @@ function getIdFromRequest(request) {
   throw new Error("id_customer not found in URL");
 }
 
-function readCustomers() {
-  ensureDataDir();
-  if (!fs.existsSync(FILE_PATH)) return [];
-  try {
-    const raw = fs.readFileSync(FILE_PATH, "utf8");
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
-  }
-}
-
-function writeCustomers(list) {
-  ensureDataDir();
-  fs.writeFileSync(FILE_PATH, JSON.stringify(list, null, 2), "utf8");
-}
-
-function getSeedCustomers() {
-  if (!fs.existsSync(SEED_PATH)) return [];
-  try {
-    const raw = fs.readFileSync(SEED_PATH, "utf8");
-    const data = JSON.parse(raw);
-    return Array.isArray(data) ? data : [];
-  } catch {
-    return [];
-  }
-}
-
 export const GET = createEndpoint(
   async (request) => {
     const id_customer = getIdFromRequest(request);
-    const list = readCustomers();
-    let customer = list.find((c) => String(c.id_customer) === String(id_customer));
-    if (!customer) {
-      const seed = getSeedCustomers();
-      customer = seed.find((c) => String(c.id_customer) === String(id_customer));
+    try {
+      const customer = await getCustomerById(id_customer);
+      return NextResponse.json(customer);
+    } catch (err) {
+      if (err.message && err.message.includes("not found")) {
+        return NextResponse.json({ message: "Customer not found" }, { status: 404 });
+      }
+      throw err;
     }
-    if (!customer) {
-      return NextResponse.json({ message: "Customer not found" }, { status: 404 });
-    }
-    return NextResponse.json(customer);
   },
   null,
   true
@@ -71,35 +31,43 @@ export const GET = createEndpoint(
 
 const patchSchema = Joi.object({
   company_categories_array: Joi.array().items(Joi.string().trim()).optional(),
+  name: Joi.string().trim().optional(),
+  cif: Joi.string().allow("").optional(),
+  country: Joi.string().allow("").optional(),
+  address: Joi.string().allow("").optional(),
+  phone: Joi.string().allow("").optional(),
+  email: Joi.string().allow("").optional(),
+  website: Joi.string().allow("").optional(),
+  industry: Joi.string().allow("").optional(),
+  segment: Joi.string().allow("").optional(),
+  owner: Joi.string().allow("").optional(),
+  source: Joi.string().allow("").optional(),
+  status: Joi.string().allow("").optional(),
+  revenue_eur: Joi.number().optional(),
+  next_activity: Joi.string().allow("").optional(),
+  tags: Joi.array().items(Joi.string()).optional(),
+  contact: Joi.object().optional(),
+  contacts: Joi.array().optional(),
+  comments: Joi.array().optional(),
+  proposals: Joi.array().items(Joi.string()).optional(),
+  contracts: Joi.array().items(Joi.string()).optional(),
+  projects: Joi.array().items(Joi.string()).optional(),
+  related_accounts: Joi.array().items(Joi.string()).optional(),
+  portal_products: Joi.object().optional(),
 });
 
 export const PATCH = createEndpoint(
   async (request, body) => {
     const id_customer = getIdFromRequest(request);
-    const list = readCustomers();
-    let index = list.findIndex((c) => String(c.id_customer) === String(id_customer));
-    if (index === -1) {
-      const seed = getSeedCustomers();
-      const fromSeed = seed.find((c) => String(c.id_customer) === String(id_customer));
-      if (fromSeed) {
-        list.push({ ...fromSeed });
-        index = list.length - 1;
-        writeCustomers(list);
+    try {
+      const customer = await updateCustomer(id_customer, body);
+      return NextResponse.json(customer);
+    } catch (err) {
+      if (err.message && err.message.includes("not found")) {
+        return NextResponse.json({ message: "Customer not found" }, { status: 404 });
       }
+      throw err;
     }
-    if (index === -1) {
-      return NextResponse.json({ message: "Customer not found" }, { status: 404 });
-    }
-    if (body.company_categories_array !== undefined) {
-      list[index] = {
-        ...list[index],
-        company_categories_array: Array.isArray(body.company_categories_array)
-          ? body.company_categories_array.filter(Boolean)
-          : [],
-      };
-      writeCustomers(list);
-    }
-    return NextResponse.json(list[index]);
   },
   patchSchema,
   true

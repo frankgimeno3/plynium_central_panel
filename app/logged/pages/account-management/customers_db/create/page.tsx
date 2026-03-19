@@ -5,51 +5,14 @@ import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import CustomerSelectModal, { type CustomerRow } from "@/app/logged/logged_components/modals/CustomerSelectModal";
-import customersData from "@/app/contents/customers.json";
-import agentsData from "@/app/contents/agentsContents.json";
+import { COUNTRY_NAMES } from "@/app/contents/countries";
+import { CustomerService } from "@/app/service/CustomerService";
 import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
-
-const COUNTRY_OPTIONS = [
-  "Spain",
-  "France",
-  "Germany",
-  "Italy",
-  "Portugal",
-  "United Kingdom",
-  "Netherlands",
-  "Belgium",
-  "Poland",
-  "Austria",
-  "Switzerland",
-  "Sweden",
-  "Norway",
-  "Denmark",
-  "Finland",
-  "Ireland",
-  "Greece",
-  "Czech Republic",
-  "Romania",
-  "Hungary",
-  "Turkey",
-  "Russia",
-  "Ukraine",
-  "United States",
-  "Canada",
-  "Mexico",
-  "Brazil",
-  "Argentina",
-  "Chile",
-  "Colombia",
-  "China",
-  "India",
-  "Japan",
-  "South Korea",
-  "Australia",
-  "South Africa",
-  "Morocco",
-  "Egypt",
-  "Other",
-];
+import { AgentService } from "@/app/service/AgentService";
+import { PortalService } from "@/app/service/PortalService";
+import { CompanyService } from "@/app/service/CompanyService";
+import MediatecaModal from "@/app/logged/logged_components/modals/MediatecaModal";
+import type { Agent } from "@/app/contents/interfaces";
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
@@ -67,18 +30,11 @@ type AccountTypeValue = (typeof ACCOUNT_TYPES)[number]["value"];
 const TYPES_REQUIRING_RELATED =
   new Set<AccountTypeValue>(["agency", "institution", "parent_company", "event"]);
 
-const allCustomers = (customersData as CustomerRow[]).filter(
-  (c) => c && typeof c.id_customer === "string"
-);
-
-type Agent = { id_agent: string; name: string; email?: string; phone?: string };
-const agents = (agentsData as Agent[]).filter((a) => a && typeof a.id_agent === "string");
-
-function generateNextCustomerId(): string {
+function generateNextCustomerId(customers: CustomerRow[]): string {
   const prefix = "cust-";
-  const numericIds = allCustomers
+  const numericIds = customers
     .map((c) => {
-      const match = c.id_customer.replace(prefix, "").match(/^(\d+)$/);
+      const match = (c?.id_customer || "").replace(prefix, "").match(/^(\d+)$/);
       return match ? parseInt(match[1], 10) : 0;
     })
     .filter((n) => n > 0);
@@ -131,15 +87,41 @@ const CreateCustomerPage: FC = () => {
   const [form, setForm] = useState<FormState>(initialForm);
   const [linkAccountModalOpen, setLinkAccountModalOpen] = useState(false);
   const [companyCategories, setCompanyCategories] = useState<{ id_category: string; name: string }[]>([]);
+  const [allCustomers, setAllCustomers] = useState<CustomerRow[]>([]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [createCompanyAsWell, setCreateCompanyAsWell] = useState(false);
+  const [companyMainImage, setCompanyMainImage] = useState("");
+  const [companyPortalId, setCompanyPortalId] = useState<string>("");
+  const [companyMainDescription, setCompanyMainDescription] = useState("");
+  const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
+  const [mediatecaOpen, setMediatecaOpen] = useState(false);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [countryDropdownOpen, setCountryDropdownOpen] = useState(false);
   const [countryFilter, setCountryFilter] = useState("");
   const countryComboboxRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    CustomerService.getAllCustomers()
+      .then((list: CustomerRow[]) => setAllCustomers(Array.isArray(list) ? list.filter((c) => c && typeof c.id_customer === "string") : []))
+      .catch(() => setAllCustomers([]));
+  }, []);
+  useEffect(() => {
+    AgentService.getAllAgents()
+      .then((list: Agent[]) => setAgents(Array.isArray(list) ? list : []))
+      .catch(() => setAgents([]));
+  }, []);
+  useEffect(() => {
+    if (step === 4) {
+      PortalService.getAllPortals()
+        .then((list: { id: number; name: string }[]) => setPortals(Array.isArray(list) ? list : []))
+        .catch(() => setPortals([]));
+    }
+  }, [step]);
+
   const countryOptionsFiltered = useMemo(() => {
     const q = countryFilter.trim().toLowerCase();
-    if (!q) return COUNTRY_OPTIONS;
-    return COUNTRY_OPTIONS.filter((c) => c.toLowerCase().includes(q));
+    if (!q) return [...COUNTRY_NAMES];
+    return COUNTRY_NAMES.filter((c) => c.toLowerCase().includes(q));
   }, [countryFilter]);
 
   useEffect(() => {
@@ -169,9 +151,9 @@ const CreateCustomerPage: FC = () => {
 
   useEffect(() => {
     if (step === 2 && !form.id_customer) {
-      setForm((f) => ({ ...f, id_customer: generateNextCustomerId() }));
+      setForm((f) => ({ ...f, id_customer: generateNextCustomerId(allCustomers) }));
     }
-  }, [step, form.id_customer]);
+  }, [step, form.id_customer, allCustomers]);
 
   const canAdvanceStep2 = useMemo(() => {
     return (
@@ -183,6 +165,11 @@ const CreateCustomerPage: FC = () => {
     );
   }, [form.id_customer, form.name, form.country, form.agent, form.website]);
 
+  const canAdvanceStep4 = useMemo(() => {
+    if (!createCompanyAsWell) return true;
+    return !!companyPortalId && companyMainDescription.trim().length > 0;
+  }, [createCompanyAsWell, companyPortalId, companyMainDescription]);
+
   const goNext = () => {
     if (step === 1 && canAdvanceStep1) {
       setErrors({});
@@ -191,18 +178,52 @@ const CreateCustomerPage: FC = () => {
       setErrors({});
       setStep(3);
     } else if (step === 3) setStep(4);
-    else if (step === 4) setStep(5);
+    else if (step === 4 && canAdvanceStep4) setStep(5);
   };
 
   const goBack = () => {
     if (step > 1) setStep((s) => (s - 1) as Step);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Persist would go here (e.g. append to customers.json via API). For now navigate back.
-    router.push("/logged/pages/account-management/customers_db");
-    router.refresh();
+    try {
+      await CustomerService.createCustomer({
+        id_customer: form.id_customer,
+        name: form.name.trim(),
+        country: form.country.trim(),
+        cif: form.cif.trim(),
+        address: form.address.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        website: form.website.trim(),
+        industry: form.sector.trim(),
+        owner: form.agent.trim(),
+        source: form.origin.trim(),
+        company_categories_array: form.company_categories_array,
+        contact: form.email || form.phone ? { name: "", role: "", email: form.email.trim(), phone: form.phone.trim() } : undefined,
+      });
+      if (createCompanyAsWell && companyPortalId && companyMainDescription.trim()) {
+        const companyId = `comp-${form.id_customer}`;
+        await CompanyService.createCompany({
+          companyId,
+          commercialName: form.name.trim(),
+          country: form.country.trim(),
+          category: form.sector.trim() || "",
+          mainDescription: companyMainDescription.trim(),
+          mainImage: companyMainImage.trim() || "",
+          mainEmail: form.email.trim() || "",
+          mailTelephone: form.phone.trim() || "",
+          fullAddress: form.address.trim() || "",
+          webLink: form.website.trim() || "",
+          portalIds: [Number(companyPortalId)],
+        });
+      }
+      router.push("/logged/pages/account-management/customers_db");
+      router.refresh();
+    } catch {
+      setErrors({ name: "Failed to create account. Try again." });
+    }
   };
 
   const breadcrumbs = [
@@ -616,7 +637,7 @@ const CreateCustomerPage: FC = () => {
             </div>
           )}
 
-          {/* Step 4: Contact – generic company email and phone */}
+          {/* Step 4: Contact + optional create company */}
           {step === 4 && (
             <div className="space-y-6">
               <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
@@ -643,6 +664,90 @@ const CreateCustomerPage: FC = () => {
                   />
                 </div>
               </div>
+
+              <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
+                <div className="flex items-center justify-between gap-4">
+                  <p className="text-sm font-semibold text-gray-700">Do you want to create a company as well?</p>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={createCompanyAsWell}
+                    onClick={() => setCreateCompanyAsWell((v) => !v)}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                      createCompanyAsWell ? "bg-blue-600" : "bg-gray-200"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                        createCompanyAsWell ? "translate-x-5" : "translate-x-1"
+                      }`}
+                      aria-hidden
+                    />
+                  </button>
+                </div>
+                {createCompanyAsWell && (
+                  <div className="mt-4 pt-4 border-t border-gray-200 space-y-4">
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Main image</label>
+                      <button
+                        type="button"
+                        onClick={() => setMediatecaOpen(true)}
+                        className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-blue-500 hover:bg-blue-50/50 transition-colors text-sm font-medium"
+                      >
+                        Add main image
+                      </button>
+                      {companyMainImage && (
+                        <div className="flex items-center gap-3 mt-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <img
+                            src={companyMainImage}
+                            alt="Company main"
+                            className="w-16 h-16 object-cover rounded border border-gray-200"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                          <span className="text-sm text-gray-600 truncate flex-1 min-w-0" title={companyMainImage}>
+                            {companyMainImage}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setCompanyMainImage("")}
+                            className="text-sm text-red-600 hover:text-red-800 font-medium"
+                          >
+                            Clear
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Portal <span className="text-red-500">*</span></label>
+                      <select
+                        value={companyPortalId}
+                        onChange={(e) => setCompanyPortalId(e.target.value)}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                      >
+                        <option value="">Select a portal</option>
+                        {portals.map((p) => (
+                          <option key={p.id} value={p.id}>
+                            {p.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-600 mb-1">Main description <span className="text-red-500">*</span></label>
+                      <textarea
+                        value={companyMainDescription}
+                        onChange={(e) => setCompanyMainDescription(e.target.value)}
+                        rows={4}
+                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        placeholder="Brief description of the company for the directory."
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-3">
                 <button
                   type="button"
@@ -654,7 +759,8 @@ const CreateCustomerPage: FC = () => {
                 <button
                   type="button"
                   onClick={goNext}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+                  disabled={step === 4 && !canAdvanceStep4}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next: Preview
                 </button>
@@ -734,6 +840,18 @@ const CreateCustomerPage: FC = () => {
                     <dt className="text-gray-500">Company generic phone</dt>
                     <dd className="font-medium text-gray-900">{form.phone || "—"}</dd>
                   </div>
+                  {createCompanyAsWell && (
+                    <div className="pt-3 mt-3 border-t border-gray-200">
+                      <dt className="text-gray-500 font-medium mb-1">Create company as well</dt>
+                      <dd className="space-y-1 text-sm">
+                        <p><span className="text-gray-500">Portal:</span> {portals.find((p) => String(p.id) === companyPortalId)?.name ?? "—"}</p>
+                        <p><span className="text-gray-500">Main description:</span> {companyMainDescription.trim() || "—"}</p>
+                        {companyMainImage && (
+                          <p><span className="text-gray-500">Main image:</span> <span className="truncate inline-block max-w-xs align-bottom" title={companyMainImage}>selected</span></p>
+                        )}
+                      </dd>
+                    </div>
+                  )}
                   {form.company_categories_array.length > 0 && (
                     <div>
                       <dt className="text-gray-500">Company categories</dt>
@@ -784,6 +902,15 @@ const CreateCustomerPage: FC = () => {
         }}
         pageSize={20}
         confirmLabel="Continue"
+      />
+
+      <MediatecaModal
+        open={mediatecaOpen}
+        onClose={() => setMediatecaOpen(false)}
+        onSelectImage={(imageUrl) => {
+          setCompanyMainImage(imageUrl);
+          setMediatecaOpen(false);
+        }}
       />
     </>
   );

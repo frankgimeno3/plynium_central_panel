@@ -1,17 +1,16 @@
 "use client";
 
-import React, { FC, use, useEffect, useMemo } from "react";
+import React, { FC, use, useState, useEffect, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import contractsData from "@/app/contents/contracts.json";
-import proposalsData from "@/app/contents/proposals.json";
-import customersData from "@/app/contents/customers.json";
-import contactsData from "@/app/contents/contactsContents.json";
-import servicesData from "@/app/contents/servicesContents.json";
-import plannedPublicationsData from "@/app/contents/planned_publications.json";
-import projectsData from "@/app/contents/projects.json";
+import { ServiceService } from "@/app/service/ServiceService";
+import { CustomerService } from "@/app/service/CustomerService";
+import { ContactService } from "@/app/service/ContactService";
+import publicationsData from "@/app/contents/publications.json";
+import { getPlanned } from "@/app/contents/publicationsHelpers";
+import { ContractService } from "@/app/service/ContractService";
 
 type ServiceLine = {
   lineId: string;
@@ -89,23 +88,50 @@ type Customer = { id_customer: string; name: string; country?: string };
 type Contact = { id_contact: string; name: string; email?: string; id_customer?: string };
 type PlannedPublication = { id_planned_publication: string; edition_name: string };
 
-const services = servicesData as Service[];
-const customers = customersData as Customer[];
-const contacts = contactsData as Contact[];
-const plannedPublications = plannedPublicationsData as PlannedPublication[];
+const plannedPublications = getPlanned(publicationsData as import("@/app/contents/interfaces").PublicationUnified[]) as PlannedPublication[];
 
 const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ params }) => {
   const router = useRouter();
   const { id_contract } = use(params);
-  const contract = (contractsData as Contract[]).find((c) => c.id_contract === id_contract);
-  const proposal = contract ? (proposalsData as Proposal[]).find((p) => p.id_proposal === contract.id_proposal) : null;
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [proposal, setProposal] = useState<Proposal | null>(null);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    ServiceService.getAllServices().then((list) => setServices(Array.isArray(list) ? list : [])).catch(() => setServices([]));
+  }, []);
+  useEffect(() => {
+    CustomerService.getAllCustomers().then((l: Customer[]) => setCustomers(Array.isArray(l) ? l : [])).catch(() => setCustomers([]));
+    ContactService.getAllContacts().then((l: Contact[]) => setContacts(Array.isArray(l) ? l : [])).catch(() => setContacts([]));
+  }, []);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await ContractService.getContractById(id_contract);
+      setContract(data?.contract ?? null);
+      setProposal(data?.proposal ?? null);
+      setProjects(Array.isArray(data?.projects) ? data.projects : []);
+    } catch {
+      setContract(null);
+      setProposal(null);
+      setProjects([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [id_contract]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
   const customer = (proposal ?? contract) ? customers.find((c) => c.id_customer === (proposal?.id_customer ?? contract!.id_customer)) : null;
   const contact = proposal?.id_contact ? contacts.find((c) => c.id_contact === proposal.id_contact) : null;
   const additionalContacts = useMemo(
     () => (proposal?.additionalContactIds ?? []).map((id) => contacts.find((c) => c.id_contact === id)).filter(Boolean) as Contact[],
     [proposal?.additionalContactIds]
   );
-  const projects = contract ? (projectsData as Project[]).filter((p) => p.id_contract === contract.id_contract) : [];
 
   const getServiceName = (id: string) => services.find((s) => s.id_service === id)?.display_name ?? services.find((s) => s.id_service === id)?.name?.replace(/_/g, " ") ?? id;
   const getPublicationName = (id: string) => plannedPublications.find((p) => p.id_planned_publication === id)?.edition_name ?? id;
@@ -152,7 +178,7 @@ const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ 
       <PageContentSection>
         <div className="flex flex-col w-full">
           <div className="bg-white rounded-b-lg overflow-hidden p-6">
-            <p className="text-gray-500">Contract not found.</p>
+            <p className="text-gray-500">{loading ? "Loading contract…" : "Contract not found."}</p>
           </div>
         </div>
       </PageContentSection>

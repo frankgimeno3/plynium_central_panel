@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import contactsData from "@/app/contents/contactsContents.json";
+import { ContactService } from "@/app/service/ContactService";
 
 type CommentItem = { id?: string; text: string; date?: string; author?: string };
 
@@ -29,7 +29,23 @@ type TabKey = "main" | "comments";
 const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ params }) => {
   const router = useRouter();
   const { id_contact } = use(params);
-  const contact = (contactsData as Contact[]).find((c) => c.id_contact === id_contact);
+  const [contact, setContact] = useState<Contact | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    ContactService.getContactById(id_contact)
+      .then((data: Contact) => {
+        if (!cancelled) setContact({ ...data, comments: data.comments ?? [] });
+      })
+      .catch(() => {
+        if (!cancelled) setContact(null);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [id_contact]);
 
   const [currentTab, setCurrentTab] = useState<TabKey>("main");
   const [comments, setComments] = useState<CommentItem[]>([]);
@@ -72,6 +88,18 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
       });
     }
   }, [contact, setPageMeta]);
+
+  if (loading) {
+    return (
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+            <p className="text-gray-500 text-sm">Loading contact…</p>
+          </div>
+        </div>
+      </PageContentSection>
+    );
+  }
 
   if (!contact) {
     return (

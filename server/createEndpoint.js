@@ -9,16 +9,15 @@ import {decodeJWT} from "@aws-amplify/core";
 const SESSION_COOKIE_MAX_AGE = 24 * 60 * 60; // 24 hours
 
 async function validate(request, schema) {
-    if (!schema) return;
     const contentType = request.headers.get('content-type') ?? '';
-    const method = request.method
+    const method = request.method;
     let data;
     let body;
 
     if (method === "GET") {
         const url = new URL(request.url);
         const params = url.searchParams;
-        data = Object.fromEntries(params)
+        data = Object.fromEntries(params);
         body = data;
     } else if (contentType.includes('application/json')) {
         body = await request.json();
@@ -29,12 +28,15 @@ async function validate(request, schema) {
     } else {
         throw Error('Solicitud incorrecta');
     }
-    const {value, error} = schema.validate(data);
-    if (error) {
-        throw new Error(`Solicitud no paso validacion: ${error}`);
+
+    if (schema) {
+        const { error } = schema.validate(data);
+        if (error) {
+            throw new Error(`Solicitud no paso validacion: ${error}`);
+        }
     }
 
-    return body;
+    return body ?? data;
 }
 
 async function checkTokens(request, response) {
@@ -72,8 +74,11 @@ async function checkTokens(request, response) {
 }
 
 export function createEndpoint(callback, schema = null, isProtected = false, roles = []) {
-    return async (request) => {
+    return async (request, context) => {
         const response = NextResponse.next();
+        
+        const routeParams = context?.params ? await context.params : {};
+        
         let body;
         try {
             body = await validate(request, schema);
@@ -111,7 +116,7 @@ export function createEndpoint(callback, schema = null, isProtected = false, rol
         }
 
         try {
-            const response = await callback(request, body);
+            const response = await callback(request, body, routeParams);
             if (isRefreshed) {
                 const maxAge = Math.min(cookieExpiresIn ?? 3600, SESSION_COOKIE_MAX_AGE);
                 response.cookies.set({

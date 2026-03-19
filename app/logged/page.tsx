@@ -3,22 +3,19 @@
 import { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
-import notificationsData from '@/app/contents/notifications.json';
-import otherRequestsData from '@/app/contents/otherRequests.json';
-import companyRequestData from '@/app/contents/companyRequest.json';
-import advertisementRequestData from '@/app/contents/advertisementRequest.json';
+import {
+  fetchNotifications,
+  getPendingRequests,
+  getNotifications,
+  unifiedToOther,
+  unifiedToCompany,
+  unifiedToAdvertisement,
+  unifiedToNotification,
+  type UnifiedNotification
+} from '@/app/contents/notifications.types';
 import ga4Data from '@/app/contents/ga4.json';
 import ManagementDashboard from './logged_components/ManagementDashboard';
 
-type NotificationState = 'unread' | 'read' | 'solved';
-
-interface Notification {
-  notification_id: string;
-  notification_brief_description: string;
-  notification_time: string;
-  notification_state: NotificationState;
-  notification_description: string;
-}
 
 const formatNotificationTime = (dateStr: string) => {
   try {
@@ -66,7 +63,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
   const [activeTab, setActiveTab] = useState<'notifications' | 'other'>('notifications');
   const [ga4PortalTab, setGa4PortalTab] = useState(0);
   const [userName, setUserName] = useState<string>('User');
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [allData, setAllData] = useState<UnifiedNotification[]>([]);
 
   useEffect(() => {
     setPageMeta({ pageTitle: 'Dashboard', breadcrumbs: [] });
@@ -80,29 +77,21 @@ const Logged: FC<LoggedProps> = ({ }) => {
   }, []);
 
   useEffect(() => {
-    const loaded = Array.isArray(notificationsData)
-      ? (notificationsData as Notification[]).map((n: Notification) => ({
-          notification_id: n.notification_id,
-          notification_brief_description: n.notification_brief_description,
-          notification_time: n.notification_time,
-          notification_state: n.notification_state as NotificationState,
-          notification_description: n.notification_description
-        }))
-      : [];
-    setNotifications(loaded);
+    fetchNotifications()
+      .then(setAllData)
+      .catch(() => setAllData([]));
   }, []);
 
-  const mainNotifications = notifications.slice(0, 5);
+  const notificationsOnly = getNotifications(allData).map(unifiedToNotification);
+  const mainNotifications = notificationsOnly.slice(0, 5);
   const welcomeFull = `Hello, ${userName}. Welcome to Plynium Central Panel.`;
   const welcomeDisplay = useTypewriter(welcomeFull, true, 55);
   const welcomeComplete = welcomeDisplay.length >= welcomeFull.length;
 
-  const pendingOtherFull = (otherRequestsData as { id: string; author: string; content: string; request_state: string }[])
-    .filter(r => r.request_state === 'Pending');
-  const pendingCompanyFull = (companyRequestData as { companyRequestId: string; content: { nombre_comercial: string }; request_state: string }[])
-    .filter(r => r.request_state === 'Pending');
-  const pendingAdvertisementFull = (advertisementRequestData as { idAdvReq: string; senderCompany: string; requestDescription: string; advReqState: string }[])
-    .filter(r => r.advReqState === 'pending');
+  const { other: pendingOtherRaw, company: pendingCompanyRaw, advertisement: pendingAdvRaw } = getPendingRequests(allData);
+  const pendingOtherFull = pendingOtherRaw.map(unifiedToOther);
+  const pendingCompanyFull = pendingCompanyRaw.map(unifiedToCompany);
+  const pendingAdvertisementFull = pendingAdvRaw.map(unifiedToAdvertisement);
   const allPendingItems = [
     ...pendingOtherFull.map(r => ({ type: 'other' as const, ...r })),
     ...pendingCompanyFull.map(r => ({ type: 'company' as const, ...r })),
@@ -184,7 +173,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
               item.type === 'other' ? (
                 <Link
                   key={item.id}
-                  href={`/logged/pages/account-management/requests/requests/${encodeURIComponent(item.id)}`}
+                  href={`/logged/pages/notifications/other/${encodeURIComponent(item.id)}`}
                   className='flex flex-row justify-between bg-slate-800 p-4 border-b border-slate-600 cursor-pointer hover:bg-slate-700'
                 >
                   <div>
@@ -196,7 +185,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
               ) : item.type === 'company' ? (
                 <Link
                   key={item.companyRequestId}
-                  href={`/logged/pages/account-management/requests/company/${encodeURIComponent(item.companyRequestId)}`}
+                  href={`/logged/pages/notifications/company/${encodeURIComponent(item.companyRequestId)}`}
                   className='flex flex-row justify-between bg-slate-800 p-4 border-b border-slate-600 cursor-pointer hover:bg-slate-700'
                 >
                   <div>
@@ -208,7 +197,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
               ) : (
                 <Link
                   key={item.idAdvReq}
-                  href={`/logged/pages/account-management/requests/quotations/${encodeURIComponent(item.idAdvReq)}`}
+                  href={`/logged/pages/notifications/quotations/${encodeURIComponent(item.idAdvReq)}`}
                   className='flex flex-row justify-between bg-slate-800 p-4 border-b border-slate-600 cursor-pointer hover:bg-slate-700'
                 >
                   <div>
@@ -224,7 +213,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
             )}
             <div className='flex flex-row justify-end'>
               <Link
-                href='/logged/pages/notifications?tab=other'
+                href='/logged/pages/notifications?tab=company'
                 className='bg-slate-700 text-slate-200 hover:bg-slate-600 px-4 py-2 m-3 cursor-pointer inline-block rounded-lg text-sm font-medium'
               >
                 See all other

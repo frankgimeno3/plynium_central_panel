@@ -13,6 +13,11 @@ export class CustomerService {
     return response.data;
   }
 
+  static async createCustomer(data) {
+    const response = await apiClient.post("/api/v1/customers", data);
+    return response.data;
+  }
+
   static async updateCustomer(idCustomer, data) {
     const response = await apiClient.patch(
       `/api/v1/customers/${encodeURIComponent(idCustomer)}`,

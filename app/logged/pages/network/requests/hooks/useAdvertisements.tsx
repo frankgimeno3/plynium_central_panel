@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
-import advertisementRequest from '@/app/contents/advertisementRequest.json';
+import { fetchNotifications, updateNotificationApi, addNotificationComment, unifiedToAdvertisement, type UnifiedNotification } from '@/app/contents/notifications.types';
 
 export type AdvertisementState =
   | 'pending'
@@ -56,32 +56,18 @@ export function AdvertisementsProvider({ children }: { children: ReactNode }) {
   const itemsPerPage = 20;
 
   useEffect(() => {
-    try {
-      const loadedAdvertisements = Array.isArray(advertisementRequest)
-        ? advertisementRequest.map((a: any) => ({
-            idAdvReq: String(a.idAdvReq ?? ''),
-            senderEmail: String(a.senderEmail ?? ''),
-            senderDate: String(a.senderDate ?? ''),
-            senderCompany: String(a.senderCompany ?? ''),
-            advReqState: String(a.advReqState ?? 'pending') as AdvertisementState,
-            requestDescription: String(a.requestDescription ?? ''),
-            companyCountry: String(a.companyCountry ?? ''),
-            senderContactPhone: String(a.senderContactPhone ?? ''),
-            commentsArray: Array.isArray(a.commentsArray)
-              ? a.commentsArray.map((c: any) => ({
-                  date: String(c.date ?? ''),
-                  content: String(c.content ?? '')
-                }))
-              : []
-          }))
-        : [];
-      setAdvertisements(loadedAdvertisements);
-    } catch (error) {
-      console.error('Error loading advertisements:', error);
-      setAdvertisements([]);
-    } finally {
-      setLoading(false);
-    }
+    fetchNotifications({ notification_type: 'advertisement' })
+      .then((data) => {
+        const loadedAdvertisements = data.map(unifiedToAdvertisement);
+        setAdvertisements(loadedAdvertisements);
+      })
+      .catch((error) => {
+        console.error('Error loading advertisements:', error);
+        setAdvertisements([]);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   const filteredAdvertisements = useMemo(() => {
@@ -123,18 +109,33 @@ export function AdvertisementsProvider({ children }: { children: ReactNode }) {
   const totalPages = Math.ceil(filteredAdvertisements.length / itemsPerPage);
 
   const updateAdvertisementState = useCallback((idAdvReq: string, newState: AdvertisementState) => {
-    setAdvertisements(prev =>
-      prev.map(a => (a.idAdvReq === idAdvReq ? { ...a, advReqState: newState } : a))
-    );
+    const stateMap: Record<AdvertisementState, string> = {
+      'pending': 'pending',
+      'in process': 'in_process',
+      'accepted': 'accepted',
+      'rejected': 'rejected',
+      'expired': 'expired'
+    };
+    updateNotificationApi(idAdvReq, { state: stateMap[newState] as any })
+      .then(() => {
+        setAdvertisements(prev =>
+          prev.map(a => (a.idAdvReq === idAdvReq ? { ...a, advReqState: newState } : a))
+        );
+      })
+      .catch(console.error);
   }, []);
 
   const addComment = useCallback((idAdvReq: string, content: string) => {
-    const newComment: AdvertisementComment = { date: new Date().toISOString(), content };
-    setAdvertisements(prev =>
-      prev.map(a =>
-        a.idAdvReq === idAdvReq ? { ...a, commentsArray: [...a.commentsArray, newComment] } : a
-      )
-    );
+    addNotificationComment(idAdvReq, content)
+      .then((updated) => {
+        const newComment: AdvertisementComment = { date: new Date().toISOString(), content };
+        setAdvertisements(prev =>
+          prev.map(a =>
+            a.idAdvReq === idAdvReq ? { ...a, commentsArray: [...a.commentsArray, newComment] } : a
+          )
+        );
+      })
+      .catch(console.error);
   }, []);
 
   const getAdvertisementById = useCallback(

@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
-import companyRequest from '@/app/contents/companyRequest.json';
+import { fetchNotifications, updateNotificationApi, unifiedToCompany, type UnifiedNotification } from '@/app/contents/notifications.types';
 
 export type RequestState = 'Pending' | 'In Process' | 'Other' | 'Done';
 
@@ -35,36 +35,32 @@ export function CompanyRequestsProvider({ children }: { children: ReactNode }) {
   const [requests, setRequests] = useState<CompanyRequest[]>([]);
 
   useEffect(() => {
-    try {
-      const loaded = Array.isArray(companyRequest)
-        ? companyRequest.map((r: any) => ({
-            companyRequestId: String(r.companyRequestId ?? ''),
-            userId: String(r.userId ?? ''),
-            request_date: String(r.request_date ?? ''),
-            request_state: String(r.request_state ?? 'Pending') as RequestState,
-            content: {
-              nombre_comercial: String(r.content?.nombre_comercial ?? ''),
-              nombre_fiscal: String(r.content?.nombre_fiscal ?? ''),
-              tax_id: String(r.content?.tax_id ?? ''),
-              cargo_creador: String(r.content?.cargo_creador ?? ''),
-              web_empresa: String(r.content?.web_empresa ?? ''),
-              pais_empresa: String(r.content?.pais_empresa ?? ''),
-              descripcion_empresa: String(r.content?.descripcion_empresa ?? '')
-            }
-          }))
-        : [];
-      setRequests(loaded);
-    } catch {
-      setRequests([]);
-    }
+    fetchNotifications({ notification_type: 'company' })
+      .then((data) => {
+        const loaded = data.map(unifiedToCompany);
+        setRequests(loaded);
+      })
+      .catch(() => {
+        setRequests([]);
+      });
   }, []);
 
   const updateState = useCallback((id: string, newState: RequestState) => {
-    setRequests(prev =>
-      prev.map(r =>
-        r.companyRequestId === id ? { ...r, request_state: newState } : r
-      )
-    );
+    const stateMap: Record<RequestState, string> = {
+      'Pending': 'pending',
+      'In Process': 'in_process',
+      'Other': 'other',
+      'Done': 'solved'
+    };
+    updateNotificationApi(id, { state: stateMap[newState] as any })
+      .then(() => {
+        setRequests(prev =>
+          prev.map(r =>
+            r.companyRequestId === id ? { ...r, request_state: newState } : r
+          )
+        );
+      })
+      .catch(console.error);
   }, []);
 
   const getById = useCallback((id: string) => {

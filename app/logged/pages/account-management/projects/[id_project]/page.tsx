@@ -1,15 +1,15 @@
 "use client";
 
-import React, { FC, use, useEffect } from "react";
+import React, { FC, use, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import projectsData from "@/app/contents/projects.json";
-import contractsData from "@/app/contents/contracts.json";
-import customersData from "@/app/contents/customers.json";
-import servicesData from "@/app/contents/services.json";
-import pmEventsData from "@/app/contents/pm_events.json";
+import { ServiceService } from "@/app/service/ServiceService";
+import { CustomerService } from "@/app/service/CustomerService";
+import { ProjectService } from "@/app/service/ProjectService";
+import { ContractService } from "@/app/service/ContractService";
+import { PmEventService } from "@/app/service/PmEventService";
 
 type Project = {
   id_project: string;
@@ -44,23 +44,51 @@ type PmEvent = {
   event_state: string;
 };
 
-const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ params }) => {
+const ProjectDetailPage: FC<{ params: Promise<{ id_project: string }> }> = ({ params }) => {
   const router = useRouter();
-  const { id_contract } = use(params);
-  const project = (projectsData as Project[]).find((p) => p.id_project === id_contract);
-  const services = servicesData as Service[];
+  const { id_project } = use(params);
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [project, setProject] = useState<Project | null>(null);
+  const [contract, setContract] = useState<Contract | null>(null);
+  const [linkedEvents, setLinkedEvents] = useState<PmEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    CustomerService.getAllCustomers().then((l: Customer[]) => setCustomers(Array.isArray(l) ? l : [])).catch(() => setCustomers([]));
+  }, []);
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const p = await ProjectService.getProjectById(id_project);
+      setProject(p ?? null);
+      if (p?.id_contract) {
+        const c = await ContractService.getContractById(p.id_contract);
+        setContract(c?.contract ?? null);
+      } else {
+        setContract(null);
+      }
+      const events = await PmEventService.getPmEventsByProjectId(id_project);
+      setLinkedEvents(Array.isArray(events) ? events : []);
+    } catch {
+      setProject(null);
+      setContract(null);
+      setLinkedEvents([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [id_project]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+  const [services, setServices] = useState<Service[]>([]);
+  useEffect(() => {
+    ServiceService.getAllServices().then((list) => setServices(Array.isArray(list) ? list : [])).catch(() => setServices([]));
+  }, []);
   const getServiceName = (idService: string) =>
     services.find((s) => s.id_service === idService)?.name?.replace(/_/g, " ") ?? idService;
-  const contract = project
-    ? (contractsData as Contract[]).find((c) => c.id_contract === project.id_contract)
-    : null;
   const customer = contract
-    ? (customersData as Customer[]).find((c) => c.id_customer === contract.id_customer)
+    ? customers.find((c) => c.id_customer === contract.id_customer)
     : null;
-
-  const linkedEvents = project?.pm_events_array
-    ? (pmEventsData as PmEvent[]).filter((e) => project.pm_events_array!.includes(e.id_event))
-    : [];
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
@@ -92,7 +120,7 @@ const ProjectDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ p
         <PageContentSection>
           <div className="flex flex-col w-full">
             <div className="bg-white rounded-b-lg overflow-hidden p-6">
-              <p className="text-gray-500">Project not found.</p>
+              <p className="text-gray-500">{loading ? "Loading project…" : "Project not found."}</p>
             </div>
           </div>
         </PageContentSection>

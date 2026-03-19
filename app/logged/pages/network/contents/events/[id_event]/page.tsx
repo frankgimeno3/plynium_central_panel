@@ -11,7 +11,7 @@ import EventSelectModal from '@/app/logged/logged_components/modals/EventSelectM
 import { EventsService } from '@/app/service/EventsService';
 import { PortalService } from '@/app/service/PortalService';
 import { ArticleService } from '@/app/service/ArticleService';
-import customersData from '@/app/contents/customers.json';
+import { CustomerService } from '@/app/service/CustomerService';
 
 const REGIONS = [
   'EUROPE',
@@ -39,10 +39,7 @@ interface Event {
   id_customer?: string | null;
 }
 
-const customersList = (customersData as CustomerRow[]).filter(
-  (c) => c && typeof c.id_customer === 'string'
-);
-function getCustomerById(id: string | null | undefined): CustomerRow | null {
+function getCustomerById(customersList: CustomerRow[], id: string | null | undefined): CustomerRow | null {
   if (!id) return null;
   return customersList.find((c) => c.id_customer === id) ?? null;
 }
@@ -217,6 +214,21 @@ const IdEvent: FC = () => {
   const [previousEditionOn, setPreviousEditionOn] = useState(false);
   const [previousEditionEvent, setPreviousEditionEvent] = useState<Event | null>(null);
   const [previousEditionModalOpen, setPreviousEditionModalOpen] = useState(false);
+  const [customersList, setCustomersList] = useState<CustomerRow[]>([]);
+
+  useEffect(() => {
+    CustomerService.getAllCustomers()
+      .then((l: CustomerRow[]) => setCustomersList(Array.isArray(l) ? l.filter((c) => c && typeof c.id_customer === 'string') : []))
+      .catch(() => setCustomersList([]));
+  }, []);
+
+  useEffect(() => {
+    if (event?.id_customer && customersList.length > 0) {
+      setRelatedCustomer(getCustomerById(customersList, event.id_customer));
+    } else if (!event?.id_customer) {
+      setRelatedCustomer(null);
+    }
+  }, [event?.id_customer, customersList]);
 
   /** Snapshot of form values when event was loaded (or after save). Used to show floating Save only when there are changes. */
   const [initialFormSnapshot, setInitialFormSnapshot] = useState<{
@@ -262,7 +274,7 @@ const IdEvent: FC = () => {
               : []
           );
           setEventPortals(Array.isArray(eventPortalsList) ? eventPortalsList : []);
-          setRelatedCustomer(getCustomerById(data.id_customer));
+          // relatedCustomer will be set in useEffect when customersList is loaded
         }
         if (!cancelled) {
           const start = normalizeDateForInput(data.start_date);

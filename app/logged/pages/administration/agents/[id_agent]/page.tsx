@@ -1,14 +1,14 @@
 "use client";
 
-import React, { FC, useMemo, useEffect } from "react";
+import React, { FC, useMemo, useEffect, useState, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import agentsData from "@/app/contents/agentsContents.json";
-import customersData from "@/app/contents/customers.json";
-import proposalsData from "@/app/contents/proposals.json";
 import type { Agent } from "@/app/contents/interfaces";
+import { CustomerService } from "@/app/service/CustomerService";
+import { AgentService } from "@/app/service/AgentService";
+import { ProposalService } from "@/app/service/ProposalService";
 
 type CustomerRecord = {
   id_customer: string;
@@ -35,24 +35,42 @@ const AgentDetailPage: FC = () => {
       ? decodeURIComponent(params.id_agent)
       : null;
 
-  const agent = useMemo(() => {
-    if (!idAgent) return null;
-    return (agentsData as Agent[]).find((a) => a.id_agent === idAgent) ?? null;
+  const [agent, setAgent] = useState<Agent | null | undefined>(undefined);
+  const [allCustomers, setAllCustomers] = useState<CustomerRecord[]>([]);
+  const [allProposals, setAllProposals] = useState<ProposalRecord[]>([]);
+  useEffect(() => {
+    if (!idAgent) return;
+    setAgent(undefined);
+    AgentService.getAgentById(idAgent)
+      .then((a: Agent) => setAgent(a))
+      .catch(() => setAgent(null));
   }, [idAgent]);
+  useEffect(() => {
+    CustomerService.getAllCustomers().then((l: CustomerRecord[]) => setAllCustomers(Array.isArray(l) ? l : [])).catch(() => setAllCustomers([]));
+  }, []);
+
+  const loadProposals = useCallback(async () => {
+    try {
+      const list = await ProposalService.getAllProposals();
+      setAllProposals(Array.isArray(list) ? list : []);
+    } catch {
+      setAllProposals([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadProposals();
+  }, [loadProposals]);
 
   const customers = useMemo(() => {
     if (!agent?.name) return [];
-    return (customersData as CustomerRecord[]).filter(
-      (c) => (c.owner ?? "").trim() === agent.name
-    );
-  }, [agent?.name]);
+    return allCustomers.filter((c) => (c.owner ?? "").trim() === agent.name);
+  }, [agent?.name, allCustomers]);
 
   const proposals = useMemo(() => {
     if (!agent?.name) return [];
-    return (proposalsData as ProposalRecord[]).filter(
-      (p) => (p.agent ?? "").trim() === agent.name
-    );
-  }, [agent?.name]);
+    return allProposals.filter((p) => (p.agent ?? "").trim() === agent.name);
+  }, [agent?.name, allProposals]);
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
@@ -102,7 +120,20 @@ const AgentDetailPage: FC = () => {
     );
   }
 
-  if (!agent) {
+  if (agent === undefined) {
+    return (
+      <>
+        <PageContentSection>
+          <div className="flex flex-col w-full">
+            <div className="bg-white rounded-b-lg overflow-hidden p-6">
+              <p className="text-gray-500">Loading agent…</p>
+            </div>
+          </div>
+        </PageContentSection>
+      </>
+    );
+  }
+  if (agent === null) {
     return (
       <>
         <PageContentSection>
@@ -150,14 +181,6 @@ const AgentDetailPage: FC = () => {
                 </td>
                 <td className="px-6 py-3 text-sm text-gray-900">
                   {agent.email ?? "—"}
-                </td>
-              </tr>
-              <tr>
-                <td className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Phone
-                </td>
-                <td className="px-6 py-3 text-sm text-gray-900">
-                  {agent.phone ?? "—"}
                 </td>
               </tr>
             </tbody>
@@ -267,7 +290,7 @@ const AgentDetailPage: FC = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {proposals.map((p) => {
-                    const customer = (customersData as CustomerRecord[]).find(
+                    const customer = allCustomers.find(
                       (c) => c.id_customer === p.id_customer
                     );
                     return (

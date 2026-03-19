@@ -1,42 +1,45 @@
 "use client";
 
-import React, { FC, useMemo, useState, useEffect } from "react";
+import React, { FC, useMemo, useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import issuedInvoicesData from "@/app/contents/issued_invoices.json";
-import type { AdministrationContract, OrderRow } from "@/app/contents/interfaces";
+import { BillingService } from "@/app/service/BillingService";
+import { formatAdminDate } from "../adminDates";
 
-function flattenOrders(contracts: AdministrationContract[]): OrderRow[] {
-  const rows: OrderRow[] = [];
-  for (const c of contracts) {
-    for (const inv of c.invoices) {
-      for (const order of inv.orders) {
-        rows.push({
-          order_code: order.order_code,
-          contract_code: c.contract_code,
-          id_contract: c.id_contract,
-          invoice_id: inv.invoice_id,
-          invoice_state: inv.invoice_state,
-          collection_date: order.collection_date,
-          payment_status: order.status,
-          client_id: c.client_id,
-          client_name: c.client_name,
-          agent: order.agent ?? c.agent,
-          id_contact: order.id_contact,
-          amount_eur: order.amount_eur,
-        });
-      }
-    }
-  }
-  return rows.sort((a, b) => (a.collection_date > b.collection_date ? -1 : 1));
-}
+type OrderRow = {
+  order_code: string;
+  contract_code: string;
+  id_contract?: string;
+  invoice_id: string;
+  invoice_state?: string;
+  collection_date: string;
+  payment_status: string;
+  client_id: string;
+  client_name: string;
+  agent?: string;
+  id_contact?: string;
+  amount_eur: number;
+};
 
 const AdministrationOrdersPage: FC = () => {
-  const allOrders = useMemo(
-    () => flattenOrders(issuedInvoicesData as AdministrationContract[]),
-    []
-  );
+  const [allOrders, setAllOrders] = useState<OrderRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const loadOrders = useCallback(async () => {
+    setLoading(true);
+    try {
+      const list = await BillingService.getAllOrders();
+      setAllOrders(Array.isArray(list) ? list : []);
+    } catch {
+      setAllOrders([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadOrders();
+  }, [loadOrders]);
   const [filter, setFilter] = useState({
     order: "",
     agent: "",
@@ -70,7 +73,7 @@ const AdministrationOrdersPage: FC = () => {
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
-    setPageMeta({ pageTitle: "Administration — Orders", breadcrumbs });
+    setPageMeta({ pageTitle: "Administration — Orders", breadcrumbs, buttons: [] });
   }, [setPageMeta]);
 
   return (
@@ -168,62 +171,70 @@ const AdministrationOrdersPage: FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filtered.map((row) => (
-                <tr key={row.order_code} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    <Link
-                      href={`/logged/pages/administration/orders/${encodeURIComponent(row.order_code)}`}
-                      className="text-blue-600 hover:text-blue-800 hover:underline"
-                    >
-                      {row.order_code}
-                    </Link>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {row.agent ?? "—"}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {row.invoice_id}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        row.invoice_state === "ok"
-                          ? "bg-green-100 text-green-800"
-                          : row.invoice_state === "cancelled"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-gray-100 text-gray-800"
-                      }`}
-                    >
-                      {row.invoice_state ?? "—"}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {row.collection_date}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                        row.payment_status === "paid"
-                          ? "bg-green-100 text-green-800"
-                          : "bg-amber-100 text-amber-800"
-                      }`}
-                    >
-                      {row.payment_status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {row.client_name}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
-                    {row.amount_eur.toLocaleString()}
+              {loading ? (
+                <tr>
+                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500 text-sm">
+                    Loading orders…
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filtered.map((row) => (
+                  <tr key={row.order_code} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <Link
+                        href={`/logged/pages/administration/orders/${encodeURIComponent(row.order_code)}`}
+                        className="text-blue-600 hover:text-blue-800 hover:underline"
+                      >
+                        {row.order_code}
+                      </Link>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {row.agent ?? "—"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                      {row.invoice_id}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          row.invoice_state === "ok"
+                            ? "bg-green-100 text-green-800"
+                            : row.invoice_state === "cancelled"
+                              ? "bg-red-100 text-red-800"
+                              : "bg-gray-100 text-gray-800"
+                        }`}
+                      >
+                        {row.invoice_state ?? "—"}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {formatAdminDate(row.collection_date)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                          row.payment_status === "paid"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
+                      >
+                        {row.payment_status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {row.client_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-900">
+                      {row.amount_eur.toLocaleString()}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
 
-        {filtered.length === 0 && (
+        {!loading && filtered.length === 0 && (
           <p className="text-sm text-gray-500 text-center py-8">
             No orders match the filters.
           </p>

@@ -59,3 +59,28 @@ export function getMediaById(mediaId) {
 export function deleteMedia(mediaId) {
     return apiClient.delete(`/api/v1/media/${mediaId}`).then((r) => r.data);
 }
+
+/**
+ * @param {string} path - Folder path (e.g. "a" or "a/b").
+ * @returns {Promise<{ id: string, name: string, path: string } | null>}
+ */
+export function getFolderByPath(path) {
+    return apiClient.get("/api/v1/folders/by-path", { params: { path } }).then((r) => r.data);
+}
+
+/**
+ * @param {string} folderId
+ * @param {{ name: string }} data
+ * @returns {Promise<{ id: string, name: string, path: string }>}
+ */
+export function updateFolder(folderId, data) {
+    return apiClient.patch(`/api/v1/folders/${folderId}`, data).then((r) => r.data);
+}
+
+/**
+ * @param {string} folderId
+ * @returns {Promise<{ deleted: boolean }>}
+ */
+export function deleteFolder(folderId) {
+    return apiClient.delete(`/api/v1/folders/${folderId}`).then((r) => r.data);
+}
