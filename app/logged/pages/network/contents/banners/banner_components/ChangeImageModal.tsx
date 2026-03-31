@@ -3,6 +3,8 @@
 import React, { FC, useEffect, useState } from "react";
 import MediatecaModal from "@/app/logged/logged_components/modals/MediatecaModal";
 
+const BANNERS_MEDIA_LIBRARY_PATH = "Structural media/Network media/content media/banners media";
+
 interface ChangeImageModalProps {
   isOpen: boolean;
   currentSrc: string;
@@ -218,6 +220,7 @@ const ChangeImageModal: FC<ChangeImageModalProps> = ({
         open={mediatecaOpen}
         onClose={() => setMediatecaOpen(false)}
         onSelectImage={handleSelectImageFromMediateca}
+        initialPath={BANNERS_MEDIA_LIBRARY_PATH}
       />
     </>
   );

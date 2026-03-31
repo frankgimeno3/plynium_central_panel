@@ -47,18 +47,26 @@ function getCurrentFolderName(pathSegments: string[]): string {
   return pathSegments[pathSegments.length - 1];
 }
 
+function formatFolderLabel(segment: string): string {
+  if (!segment) return "Mediateca";
+  return segment.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 interface MediatecaModalProps {
   open: boolean;
   onClose: () => void;
   onSelectImage: (imageUrl: string) => void;
+  initialPath?: string;
 }
 
 const MediatecaModal: FC<MediatecaModalProps> = ({
   open,
   onClose,
   onSelectImage,
+  initialPath = "",
 }) => {
   const [pathSegments, setPathSegments] = useState<string[]>([]);
+  const [hasInitializedPath, setHasInitializedPath] = useState(false);
   const [selectedContentId, setSelectedContentId] = useState<string | null>(null);
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [addFileOpen, setAddFileOpen] = useState(false);
@@ -106,11 +114,19 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
   useEffect(() => {
     if (!open) {
       setPathSegments([]);
+      setHasInitializedPath(false);
       setSelectedContentId(null);
       return;
     }
+    setPathSegments(initialPath ? initialPath.split("/").filter(Boolean) : []);
+    setHasInitializedPath(true);
+    setSelectedContentId(null);
+  }, [open, initialPath]);
+
+  useEffect(() => {
+    if (!open || !hasInitializedPath) return;
     loadData(currentPath);
-  }, [open, currentPath, loadData]);
+  }, [open, currentPath, hasInitializedPath, loadData]);
 
   useEffect(() => {
     if (!open) return;
@@ -188,27 +204,50 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
               </p>
             )}
             {/* Breadcrumb */}
-            <nav className="flex flex-wrap items-center gap-1 text-sm text-gray-600 mb-4">
-              <button
-                type="button"
-                onClick={() => setPathSegments([])}
-                className="hover:text-blue-600 hover:underline"
-              >
-                Mediateca
-              </button>
-              {pathSegments.map((seg, i) => (
-                <span key={i} className="flex items-center gap-1">
-                  <span className="text-gray-400">/</span>
-                  <button
-                    type="button"
-                    onClick={() => setPathSegments(pathSegments.slice(0, i + 1))}
-                    className="hover:text-blue-600 hover:underline"
-                  >
-                    {seg}
-                  </button>
+            <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              <div className="mb-2 flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Navigation
                 </span>
-              ))}
-            </nav>
+                <button
+                  type="button"
+                  onClick={() => setPathSegments(pathSegments.slice(0, -1))}
+                  disabled={pathSegments.length === 0}
+                  className="rounded-md border border-gray-300 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Back one level
+                </button>
+              </div>
+              <nav className="flex flex-wrap items-center gap-1 text-sm text-gray-700">
+                <button
+                  type="button"
+                  onClick={() => setPathSegments([])}
+                  className="rounded-md px-2 py-1 font-medium text-blue-700 hover:bg-blue-100"
+                >
+                  Mediateca
+                </button>
+                {pathSegments.map((seg, i) => {
+                  const isCurrent = i === pathSegments.length - 1;
+                  return (
+                    <span key={i} className="flex items-center gap-1">
+                      <span className="text-gray-400">/</span>
+                      <button
+                        type="button"
+                        onClick={() => setPathSegments(pathSegments.slice(0, i + 1))}
+                        disabled={isCurrent}
+                        className={`rounded-md px-2 py-1 ${
+                          isCurrent
+                            ? "cursor-default bg-white font-semibold text-gray-900"
+                            : "text-blue-700 hover:bg-blue-100"
+                        }`}
+                      >
+                        {formatFolderLabel(seg)}
+                      </button>
+                    </span>
+                  );
+                })}
+              </nav>
+            </div>
 
             {/* Actions */}
             <div className="flex flex-wrap gap-2 mb-4">
@@ -230,7 +269,7 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
 
             {/* Subfolders */}
             <h3 className="text-sm font-semibold text-gray-700 mb-2">
-              {folderName} — Subfolders
+              {formatFolderLabel(folderName)} — Subfolders
             </h3>
             {loading ? (
               <p className="text-sm text-gray-500 mb-6">Loading…</p>
