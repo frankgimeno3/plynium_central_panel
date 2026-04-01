@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import { Banner } from '../hooks/useBanners';
 
 interface BannerCardProps {
@@ -24,11 +24,28 @@ const BannerCard: FC<BannerCardProps> = ({
     onChangeImage,
     onChangeRedirection,
 }) => {
+    const [imageError, setImageError] = useState(false);
+
+    useEffect(() => {
+        setImageError(false);
+    }, [banner.src]);
+
     return (
         <div className='flex flex-row items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50'>
             <div className='flex flex-row items-center gap-5'>
                 <p className='text-sm text-gray-500'>Current Image:</p>
-                <img src={banner.src} alt={`Banner ${banner.id}`} className='w-10 h-10 rounded-lg' />
+                <div className='flex h-12 w-12 items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-100 bg-[linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%,#f3f4f6),linear-gradient(45deg,#f3f4f6_25%,transparent_25%,transparent_75%,#f3f4f6_75%,#f3f4f6)] bg-[length:12px_12px] bg-[position:0_0,6px_6px]'>
+                    {imageError ? (
+                        <span className='px-1 text-center text-[10px] leading-tight text-gray-500'>PNG</span>
+                    ) : (
+                        <img
+                            src={banner.src}
+                            alt={`Banner ${banner.id}`}
+                            className='h-full w-full object-contain'
+                            onError={() => setImageError(true)}
+                        />
+                    )}
+                </div>
                 <p className='text-sm text-gray-500'>ID: {banner.id}</p>
                 <p className='text-sm text-gray-500'>Route: {banner.route}</p>
                 <p className='text-sm text-gray-500'>BannerRedirection: {banner.bannerRedirection ?? 'https://www.vidrioperfil.com'}</p>

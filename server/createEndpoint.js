@@ -19,6 +19,9 @@ async function validate(request, schema) {
         const params = url.searchParams;
         data = Object.fromEntries(params);
         body = data;
+    } else if (method === "DELETE") {
+        body = {};
+        data = body;
     } else if (contentType.includes('application/json')) {
         body = await request.json();
         data = body;

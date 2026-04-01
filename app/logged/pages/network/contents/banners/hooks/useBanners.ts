@@ -4,6 +4,51 @@ import { BannerService } from '@/app/service/BannerService';
 const DEFAULT_BANNER_IMAGE = 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0';
 const DEFAULT_BANNER_REDIRECTION = 'https://www.vidrioperfil.com';
 
+const decodeRepeatedly = (value: string) => {
+    let current = value;
+
+    for (let i = 0; i < 3; i += 1) {
+        try {
+            const decoded = decodeURIComponent(current);
+            if (decoded === current) break;
+            current = decoded;
+        } catch {
+            break;
+        }
+    }
+
+    return current;
+};
+
+const normalizeBannerSrc = (src: string) => {
+    const trimmedSrc = src.trim();
+    if (!trimmedSrc || trimmedSrc.startsWith('data:')) return trimmedSrc;
+
+    try {
+        const parsed = new URL(trimmedSrc);
+        parsed.pathname = parsed.pathname
+            .split('/')
+            .map((segment) => encodeURIComponent(decodeRepeatedly(segment)))
+            .join('/');
+        return parsed.toString();
+    } catch {
+        return trimmedSrc;
+    }
+};
+
+const getErrorDetails = (error: unknown) => {
+    if (error && typeof error === 'object') {
+        const maybeError = error as { message?: unknown; status?: unknown; data?: unknown };
+        return {
+            message: typeof maybeError.message === 'string' ? maybeError.message : 'Unknown error',
+            status: maybeError.status,
+            data: maybeError.data,
+        };
+    }
+
+    return { message: String(error) };
+};
+
 export type AppearanceWeight = 'low' | 'medium' | 'high';
 
 export interface Banner {
@@ -96,19 +141,19 @@ export const useBanners = (portalId: number | null) => {
         if (!list || list.length === 0) return;
         const homeRightBanners = list
             .filter(b => b.pageType === 'home' && b.positionType === 'right')
-            .map(b => ({ ...b, bannerRedirection: b.bannerRedirection ?? DEFAULT_BANNER_REDIRECTION }))
+            .map(b => ({ ...b, src: normalizeBannerSrc(b.src), bannerRedirection: b.bannerRedirection ?? DEFAULT_BANNER_REDIRECTION }))
             .sort((a, b) => a.position - b.position);
         setHomePageRightBanners(homeRightBanners);
 
         const homeTopBanners = list
             .filter(b => b.pageType === 'home' && b.positionType === 'top')
-            .map(b => ({ ...b, bannerRedirection: b.bannerRedirection ?? DEFAULT_BANNER_REDIRECTION, appearanceWeight: (b.appearanceWeight ?? 'medium') as AppearanceWeight }))
+            .map(b => ({ ...b, src: normalizeBannerSrc(b.src), bannerRedirection: b.bannerRedirection ?? DEFAULT_BANNER_REDIRECTION, appearanceWeight: (b.appearanceWeight ?? 'medium') as AppearanceWeight }))
             .sort((a, b) => a.position - b.position);
         setHomePageTopBanners(homeTopBanners);
 
         const generalMediumBannersList = list
             .filter(b => b.pageType === 'home' && b.positionType === 'medium')
-            .map(b => ({ ...b, bannerRedirection: b.bannerRedirection ?? DEFAULT_BANNER_REDIRECTION, appearanceWeight: (b.appearanceWeight ?? 'medium') as AppearanceWeight }))
+            .map(b => ({ ...b, src: normalizeBannerSrc(b.src), bannerRedirection: b.bannerRedirection ?? DEFAULT_BANNER_REDIRECTION, appearanceWeight: (b.appearanceWeight ?? 'medium') as AppearanceWeight }))
             .sort((a, b) => a.position - b.position);
         setGeneralMediumBanners(generalMediumBannersList);
 
@@ -117,7 +162,9 @@ export const useBanners = (portalId: number | null) => {
             id: `${prefix}${route.replace(/\//g, '-')}`,
             name: `Custom Page - ${route}`,
             route,
-            banners: banners.sort((a, b) => a.position - b.position)
+            banners: banners
+                .map(b => ({ ...b, src: normalizeBannerSrc(b.src) }))
+                .sort((a, b) => a.position - b.position)
         });
         const groupByRoute = (positionType: 'right' | 'top' | 'medium') => {
             const byRoute = customBanners
@@ -465,7 +512,7 @@ export const useBanners = (portalId: number | null) => {
         if (section === 'home-top') {
             const updated = homePageTopBanners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
             setHomePageTopBanners(updated);
-            BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', err));
+            BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
             updated.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
         } else {
             const sectionIndex = customTopSections.findIndex(s => s.id === section);
@@ -474,7 +521,7 @@ export const useBanners = (portalId: number | null) => {
                 const sec = newSections[sectionIndex];
                 sec.banners = sec.banners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
                 setCustomTopSections(newSections);
-                BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', err));
+                BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
                 sec.banners.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
             }
         }
@@ -484,7 +531,7 @@ export const useBanners = (portalId: number | null) => {
         if (section === 'home-medium') {
             const updated = generalMediumBanners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
             setGeneralMediumBanners(updated);
-            BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', err));
+            BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
             updated.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
         } else {
             const sectionIndex = customMediumSections.findIndex(s => s.id === section);
@@ -493,7 +540,7 @@ export const useBanners = (portalId: number | null) => {
                 const sec = newSections[sectionIndex];
                 sec.banners = sec.banners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
                 setCustomMediumSections(newSections);
-                BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', err));
+                BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
                 sec.banners.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
             }
         }
@@ -503,7 +550,7 @@ export const useBanners = (portalId: number | null) => {
         if (section === 'home') {
             const updated = homePageRightBanners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
             setHomePageRightBanners(updated);
-            BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', err));
+            BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
             updated.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
         } else {
             const sectionIndex = customRightSections.findIndex(s => s.id === section);
@@ -512,7 +559,7 @@ export const useBanners = (portalId: number | null) => {
                 const sec = newSections[sectionIndex];
                 sec.banners = sec.banners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
                 setCustomRightSections(newSections);
-                BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', err));
+                BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
                 sec.banners.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
             }
         }
@@ -593,7 +640,7 @@ export const useBanners = (portalId: number | null) => {
         }
         setShowDeleteModal(false);
         setDeleteSectionId(null);
-        bannerIds.forEach((id) => BannerService.deleteBanner(id).catch((err) => console.error('Error deleting banner:', err)));
+        bannerIds.forEach((id) => BannerService.deleteBanner(id).catch((err) => console.error('Error deleting banner:', getErrorDetails(err))));
     };
 
     const handleEditRoute = (newRoute: string) => {
@@ -741,7 +788,9 @@ export const useBanners = (portalId: number | null) => {
             }
         }
 
-        BannerService.updateBanner(changeImageBannerId, { src: newSrc }).catch((err) => console.error('Error persisting banner image:', err));
+        BannerService.updateBanner(changeImageBannerId, { src: newSrc }).catch((err) => {
+            console.error('Error persisting banner image:', getErrorDetails(err));
+        });
         setShowChangeImageModal(false);
         setChangeImageBannerId(null);
         setChangeImageBannerSection(null);

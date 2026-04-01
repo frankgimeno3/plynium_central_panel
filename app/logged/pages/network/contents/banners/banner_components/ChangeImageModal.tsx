@@ -5,6 +5,42 @@ import MediatecaModal from "@/app/logged/logged_components/modals/MediatecaModal
 
 const BANNERS_MEDIA_LIBRARY_PATH = "Structural media/Network media/content media/banners media";
 
+const decodeRepeatedly = (value: string): string => {
+  let current = value;
+
+  for (let i = 0; i < 3; i += 1) {
+    try {
+      const decoded = decodeURIComponent(current);
+      if (decoded === current) {
+        break;
+      }
+      current = decoded;
+    } catch {
+      break;
+    }
+  }
+
+  return current;
+};
+
+const normalizeSrc = (src: string): string => {
+  const trimmedSrc = src.trim();
+  if (!trimmedSrc || trimmedSrc.startsWith("data:")) {
+    return trimmedSrc;
+  }
+
+  try {
+    const parsed = new URL(trimmedSrc);
+    parsed.pathname = parsed.pathname
+      .split("/")
+      .map((segment) => encodeURIComponent(decodeRepeatedly(segment)))
+      .join("/");
+    return parsed.toString();
+  } catch {
+    return trimmedSrc;
+  }
+};
+
 interface ChangeImageModalProps {
   isOpen: boolean;
   currentSrc: string;
@@ -23,7 +59,7 @@ const ChangeImageModal: FC<ChangeImageModalProps> = ({
   const [mediatecaOpen, setMediatecaOpen] = useState(false);
 
   const validateSrc = (src: string): string => {
-    const trimmedSrc = src.trim();
+    const trimmedSrc = normalizeSrc(src);
     
     if (!trimmedSrc) {
       return "Source URL is required";
@@ -48,7 +84,7 @@ const ChangeImageModal: FC<ChangeImageModalProps> = ({
   };
 
   const handleUpdate = () => {
-    const trimmedSrc = newSrc.trim();
+    const trimmedSrc = normalizeSrc(newSrc);
     const error = validateSrc(trimmedSrc);
     
     if (trimmedSrc && !error && trimmedSrc !== currentSrc) {
@@ -59,7 +95,7 @@ const ChangeImageModal: FC<ChangeImageModalProps> = ({
   };
 
   const handleSelectImageFromMediateca = (imageUrl: string) => {
-    const url = (imageUrl || "").trim();
+    const url = normalizeSrc(imageUrl || "");
     if (url) {
       setNewSrc(url);
       setSrcError("");
