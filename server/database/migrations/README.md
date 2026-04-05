@@ -44,5 +44,6 @@ Ejecutar en orden numérico (000 es opcional, solo lectura).
 | 037 | create_notifications_db | Tablas `notifications`, `notification_comments`, `notification_company_content` + seed |
 | 038 | create_publications_workflow_db | Tablas `planned_publications`, `flatplans`, `publication_slots`, `offered_preferential_pages`, `publication_single_available` + seed |
 | 042 | add_magazine_issues_forecasted_publication_month | Columna `forecasted_publication_month` (1-12) en `magazine_issues` |
+| 047 | rename_agents_db_columns | Columnas `agents_db` con prefijo `agent_` |
 
 Todas las migraciones son idempotentes (IF NOT EXISTS / ADD COLUMN IF NOT EXISTS donde aplica).

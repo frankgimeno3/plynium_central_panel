@@ -567,10 +567,11 @@ AgentDbModel.init({
     id_agent: {
         type: DataTypes.STRING(64),
         primaryKey: true,
-        unique: true
+        unique: true,
+        field: "agent_id"
     },
-    name: { type: DataTypes.STRING(512), allowNull: false },
-    email: { type: DataTypes.STRING(512), allowNull: true, defaultValue: "" }
+    name: { type: DataTypes.STRING(512), allowNull: false, field: "agent_name" },
+    email: { type: DataTypes.STRING(512), allowNull: true, defaultValue: "", field: "agent_email" }
 }, {
     sequelize,
     modelName: "agent_db",
@@ -578,7 +579,10 @@ AgentDbModel.init({
     tableName: "agents_db",
     indexes: [
         { fields: ["name"] }
-    ]
+    ],
+    timestamps: true,
+    createdAt: "agent_created_at",
+    updatedAt: "agent_updated_at"
 });
 
 MagazineDbModel.init({

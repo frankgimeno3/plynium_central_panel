@@ -128,10 +128,10 @@ const ListDetailPage: FC<{ params: Promise<{ id_list: string }> }> = ({ params }
                   const slug = (u as { id?: string }).id ?? u.id_user;
                   const href = `${USERS_BASE}/${encodeURIComponent(slug)}`;
                   return (
-                    <tr key={u.id_user} className="hover:bg-gray-100 transition-colors">
-                      <td className="px-4 py-2 text-sm text-gray-900 border-b border-gray-200">{u.user_full_name || u.id_user}</td>
+                    <tr key={u.id_user} className="group hover:bg-gray-700 transition-colors">
+                      <td className="px-4 py-2 text-sm text-gray-900 group-hover:text-white border-b border-gray-200">{u.user_full_name || u.id_user}</td>
                       <td className="px-4 py-2 text-sm border-b border-gray-200">
-                        <Link href={href} className="text-blue-600 hover:underline font-medium" aria-label={`Ver detalle de ${u.user_full_name || u.id_user}`}>
+                        <Link href={href} className="text-gray-900 group-hover:text-white hover:underline font-medium" aria-label={`Ver detalle de ${u.user_full_name || u.id_user}`}>
                           Ver detalle
                         </Link>
                       </td>

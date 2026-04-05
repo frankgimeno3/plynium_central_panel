@@ -86,6 +86,12 @@ const UserDetailPage: FC = () => {
     }
   }, [setPageMeta, user]);
 
+  const linkedContact = useMemo(() => {
+    if (!user) return null;
+    const list = Array.isArray(contactsData) ? contactsData : [];
+    return list.find((c) => c.id_user === user.id_user) ?? null;
+  }, [user, contactsData]);
+
   const handleEditClick = () => {
     if (!user) return;
     const modalUser: User = {
@@ -162,16 +168,6 @@ const UserDetailPage: FC = () => {
   const companyStr = company
     ? [company.id_company, company.userPosition].filter(Boolean).join(' · ')
     : '-';
-
-  const linkedContact = useMemo(() => {
-    const list = Array.isArray(contactsData) ? (contactsData as ContactFromJson[]) : [];
-    return list.find((c) => c.id_user === user.id_user) ?? null;
-  }, [user.id_user]);
-
-  const breadcrumbs = [
-    { label: "Users", href: "/logged/pages/network/users" },
-    { label: user.user_full_name ?? user.id_user },
-  ];
 
   return (
     <>

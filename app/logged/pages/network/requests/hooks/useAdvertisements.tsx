@@ -42,7 +42,7 @@ interface AdvertisementsContextValue {
   totalPages: number;
   itemsPerPage: number;
   updateAdvertisementState: (idAdvReq: string, newState: AdvertisementState) => void;
-  addComment: (idAdvReq: string, content: string) => void;
+  addComment: (idAdvReq: string, content: string) => Promise<void>;
   getAdvertisementById: (idAdvReq: string) => AdvertisementRequest | undefined;
 }
 
@@ -108,6 +108,8 @@ export function AdvertisementsProvider({ children }: { children: ReactNode }) {
 
   const totalPages = Math.ceil(filteredAdvertisements.length / itemsPerPage);
 
+  const idMatches = (a: string, b: string) => a.toLowerCase() === b.toLowerCase();
+
   const updateAdvertisementState = useCallback((idAdvReq: string, newState: AdvertisementState) => {
     const stateMap: Record<AdvertisementState, string> = {
       'pending': 'pending',
@@ -119,23 +121,20 @@ export function AdvertisementsProvider({ children }: { children: ReactNode }) {
     updateNotificationApi(idAdvReq, { state: stateMap[newState] as any })
       .then(() => {
         setAdvertisements(prev =>
-          prev.map(a => (a.idAdvReq === idAdvReq ? { ...a, advReqState: newState } : a))
+          prev.map(a => (idMatches(a.idAdvReq, idAdvReq) ? { ...a, advReqState: newState } : a))
         );
       })
       .catch(console.error);
   }, []);
 
-  const addComment = useCallback((idAdvReq: string, content: string) => {
-    addNotificationComment(idAdvReq, content)
-      .then((updated) => {
-        const newComment: AdvertisementComment = { date: new Date().toISOString(), content };
-        setAdvertisements(prev =>
-          prev.map(a =>
-            a.idAdvReq === idAdvReq ? { ...a, commentsArray: [...a.commentsArray, newComment] } : a
-          )
-        );
-      })
-      .catch(console.error);
+  const addComment = useCallback(async (idAdvReq: string, content: string) => {
+    await addNotificationComment(idAdvReq, content);
+    const newComment: AdvertisementComment = { date: new Date().toISOString(), content };
+    setAdvertisements(prev =>
+      prev.map(a =>
+        idMatches(a.idAdvReq, idAdvReq) ? { ...a, commentsArray: [...a.commentsArray, newComment] } : a
+      )
+    );
   }, []);
 
   const getAdvertisementById = useCallback(

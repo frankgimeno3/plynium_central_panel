@@ -81,6 +81,62 @@ const Users: FC<UsersProps> = () => {
     [users]
   );
 
+  const [usersFilter, setUsersFilter] = useState({
+    id_user: "",
+    user_full_name: "",
+    user_role: "",
+    user_description: "",
+  });
+
+  const [listsFilter, setListsFilter] = useState({
+    userListName: "",
+    userList_id: "",
+    userListPortal: "",
+    userListTopic: "",
+  });
+
+  const filteredUsers = useMemo(() => {
+    let list = [...users];
+    if (usersFilter.id_user.trim()) {
+      const q = usersFilter.id_user.toLowerCase();
+      list = list.filter((u) => u.id_user.toLowerCase().includes(q));
+    }
+    if (usersFilter.user_full_name.trim()) {
+      const q = usersFilter.user_full_name.toLowerCase();
+      list = list.filter((u) => u.user_full_name?.toLowerCase().includes(q));
+    }
+    if (usersFilter.user_role.trim()) {
+      const q = usersFilter.user_role.toLowerCase();
+      list = list.filter((u) => u.user_role?.toLowerCase().includes(q));
+    }
+    if (usersFilter.user_description.trim()) {
+      const q = usersFilter.user_description.toLowerCase();
+      list = list.filter((u) => (u.user_description ?? "").toLowerCase().includes(q));
+    }
+    return list;
+  }, [users, usersFilter]);
+
+  const filteredUserLists = useMemo(() => {
+    let list = [...userLists];
+    if (listsFilter.userListName.trim()) {
+      const q = listsFilter.userListName.toLowerCase();
+      list = list.filter((l) => l.userListName?.toLowerCase().includes(q));
+    }
+    if (listsFilter.userList_id.trim()) {
+      const q = listsFilter.userList_id.toLowerCase();
+      list = list.filter((l) => l.userList_id?.toLowerCase().includes(q));
+    }
+    if (listsFilter.userListPortal.trim()) {
+      const q = listsFilter.userListPortal.toLowerCase();
+      list = list.filter((l) => (l.userListPortal ?? "").toLowerCase().includes(q));
+    }
+    if (listsFilter.userListTopic.trim()) {
+      const q = listsFilter.userListTopic.toLowerCase();
+      list = list.filter((l) => (l.userListTopic ?? "").toLowerCase().includes(q));
+    }
+    return list;
+  }, [userLists, listsFilter]);
+
   const breadcrumbs = [{ label: "Users" }];
   const { setPageMeta } = usePageContent();
   useEffect(() => {
@@ -138,6 +194,49 @@ const Users: FC<UsersProps> = () => {
               <p className="p-6 text-gray-500">Loading users...</p>
             ) : (
               <div className="p-6 overflow-x-auto">
+                <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
+                  <div className="min-w-0">
+                    <label className="block text-xs text-gray-600 mb-1">id_usuario</label>
+                    <input
+                      type="text"
+                      value={usersFilter.id_user}
+                      onChange={(e) => setUsersFilter((f) => ({ ...f, id_user: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Filtrar por id"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <label className="block text-xs text-gray-600 mb-1">Full name</label>
+                    <input
+                      type="text"
+                      value={usersFilter.user_full_name}
+                      onChange={(e) => setUsersFilter((f) => ({ ...f, user_full_name: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Filtrar por nombre"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <label className="block text-xs text-gray-600 mb-1">User Type</label>
+                    <input
+                      type="text"
+                      value={usersFilter.user_role}
+                      onChange={(e) => setUsersFilter((f) => ({ ...f, user_role: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Filtrar por tipo"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <label className="block text-xs text-gray-600 mb-1">Description</label>
+                    <input
+                      type="text"
+                      value={usersFilter.user_description}
+                      onChange={(e) => setUsersFilter((f) => ({ ...f, user_description: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Filtrar por descripción"
+                    />
+                  </div>
+                </div>
                 <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
                   <thead className="bg-gray-50">
                     <tr>
@@ -156,14 +255,14 @@ const Users: FC<UsersProps> = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {users.map((user) => {
+                    {filteredUsers.map((user) => {
                       const userSlug = (user as UserContent).id ?? user.id_user;
                       const href = `${USERS_BASE}/${encodeURIComponent(userSlug)}`;
-                      const linkClass = "block w-full text-left text-gray-200 hover:text-blue-600 py-1 -my-1";
+                      const linkClass = "block w-full text-left text-gray-900 group-hover:text-white py-1 -my-1";
                       return (
-                        <tr key={user.id_user} className="hover:bg-gray-100 transition-colors">
+                        <tr key={user.id_user} className="group hover:bg-gray-700 transition-colors">
                           <td className="px-6 py-3 text-sm border-b border-gray-200">
-                            <Link href={href} className={`${linkClass} text-gray-200 hover:underline whitespace-nowrap`} aria-label={`Ver usuario ${user.user_full_name}`}>
+                            <Link href={href} className={`${linkClass} hover:underline whitespace-nowrap`} aria-label={`Ver usuario ${user.user_full_name}`}>
                               {user.id_user}
                             </Link>
                           </td>
@@ -179,6 +278,13 @@ const Users: FC<UsersProps> = () => {
                         </tr>
                       );
                     })}
+                    {users.length > 0 && filteredUsers.length === 0 && (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-4 text-sm text-gray-500">
+                          No hay resultados que coincidan con el filtro.
+                        </td>
+                      </tr>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -189,6 +295,49 @@ const Users: FC<UsersProps> = () => {
         {currentTab === 'lists' && !error && (
           <div className="p-6 flex flex-col flex-1 min-h-0">
             <p className="text-sm text-gray-600 mb-4">Listas de envío de newsletters. Haz clic en una fila para ver los users y contacts asignados.</p>
+            <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
+              <div className="min-w-0">
+                <label className="block text-xs text-gray-600 mb-1">Lista</label>
+                <input
+                  type="text"
+                  value={listsFilter.userListName}
+                  onChange={(e) => setListsFilter((f) => ({ ...f, userListName: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Filtrar por nombre de lista"
+                />
+              </div>
+              <div className="min-w-0">
+                <label className="block text-xs text-gray-600 mb-1">ID</label>
+                <input
+                  type="text"
+                  value={listsFilter.userList_id}
+                  onChange={(e) => setListsFilter((f) => ({ ...f, userList_id: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Filtrar por ID"
+                />
+              </div>
+              <div className="min-w-0">
+                <label className="block text-xs text-gray-600 mb-1">Portal</label>
+                <input
+                  type="text"
+                  value={listsFilter.userListPortal}
+                  onChange={(e) => setListsFilter((f) => ({ ...f, userListPortal: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Filtrar por portal"
+                />
+              </div>
+              <div className="min-w-0">
+                <label className="block text-xs text-gray-600 mb-1">Tema</label>
+                <input
+                  type="text"
+                  value={listsFilter.userListTopic}
+                  onChange={(e) => setListsFilter((f) => ({ ...f, userListTopic: e.target.value }))}
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Filtrar por tema"
+                />
+              </div>
+            </div>
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200 border border-gray-300">
                 <thead className="bg-gray-50">
@@ -215,28 +364,35 @@ const Users: FC<UsersProps> = () => {
                       </td>
                     </tr>
                   ) : (
-                    userLists.map((list) => {
+                    filteredUserLists.map((list) => {
                       const href = `${LISTS_BASE}/${encodeURIComponent(list.userList_id)}`;
-                      const rowLinkClass = "block w-full text-left py-1 -my-1 text-gray-200 hover:text-gray-100";
+                      const rowLinkClass = "block w-full text-left py-1 -my-1 text-gray-900 group-hover:text-white";
                       return (  
-                        <tr key={list.userList_id} className="hover:bg-gray-100 transition-colors">
+                        <tr key={list.userList_id} className="group hover:bg-gray-700 transition-colors">
                           <td className="px-6 py-3 text-sm border-b border-gray-200">
                             <Link href={href} className={`${rowLinkClass} font-medium`} aria-label={`Ver lista ${list.userListName}`}>
                               {list.userListName}
                             </Link>
                           </td>
-                          <td className="px-6 py-3 text-sm border-b border-gray-200 font-mono text-gray-200">
+                          <td className="px-6 py-3 text-sm border-b border-gray-200 font-mono">
                             <Link href={href} className={rowLinkClass} tabIndex={-1} aria-hidden>{list.userList_id}</Link>
                           </td>
-                          <td className="px-6 py-3 text-sm border-b border-gray-200 text-gray-200">
+                          <td className="px-6 py-3 text-sm border-b border-gray-200">
                             <Link href={href} className={rowLinkClass} tabIndex={-1} aria-hidden>{list.userListPortal}</Link>
                           </td>
-                          <td className="px-6 py-3 text-sm border-b border-gray-200 text-gray-200">
+                          <td className="px-6 py-3 text-sm border-b border-gray-200">
                             <Link href={href} className={rowLinkClass} tabIndex={-1} aria-hidden>{list.userListTopic}</Link>
                           </td>
                         </tr>
                       );
                     })
+                  )}
+                  {userLists.length > 0 && filteredUserLists.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-4 text-sm text-gray-500">
+                        No hay resultados que coincidan con el filtro.
+                      </td>
+                    </tr>
                   )}
                 </tbody>
               </table>

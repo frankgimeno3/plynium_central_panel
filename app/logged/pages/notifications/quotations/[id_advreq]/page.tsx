@@ -113,8 +113,7 @@ export default function AdvertisementDetailPage() {
 
   const handleStateChange = async (newState: AdvertisementState) => {
     if (!advertisement) return;
-    const decodedId = decodeURIComponent(advReqId).trim();
-    updateAdvertisementState(decodedId, newState);
+    updateAdvertisementState(advertisement.idAdvReq, newState);
     setAdvertisement({ ...advertisement, advReqState: newState });
     setSelectedState(newState);
   };
@@ -123,8 +122,7 @@ export default function AdvertisementDetailPage() {
     if (!advertisement || !newComment.trim()) return;
     setIsAddingComment(true);
     try {
-      const decodedId = decodeURIComponent(advReqId).trim();
-      addComment(decodedId, newComment.trim());
+      await addComment(advertisement.idAdvReq, newComment.trim());
       setNewComment("");
     } catch (err) {
       console.error("Error adding comment:", err);
