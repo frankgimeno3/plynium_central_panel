@@ -1,6 +1,6 @@
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 import { createPresignedUpload, deleteObjectFromS3 } from "./S3Service.js";
-import { getFolderIdByPath, getFolderPathById } from "../folder/FolderService.js";
+import { getFolderIdByPath, getFolderIdsByPath, getFolderPathById } from "../folder/FolderService.js";
 import MediaModel from "./MediaModel.js";
 import "../../database/models.js";
 
@@ -14,14 +14,17 @@ export async function getMedia(params = {}) {
     const search = typeof params.search === "string" ? params.search.trim() : "";
     try {
         if (!MediaModel.sequelize) return [];
-        const folderId = await getFolderIdByPath(folderPath);
-        const where = { folder_id: folderId };
+        const folderIds = await getFolderIdsByPath(folderPath);
+        if (folderIds.length === 0) return [];
+        const nonNullIds = folderIds.filter((x) => x != null);
+        const where = nonNullIds.length === 0 ? { folder_id: null } : { folder_id: { [Op.in]: nonNullIds } };
         if (search) {
             where.content_name = { [Op.iLike]: `%${search}%` };
         }
         const rows = await MediaModel.findAll({
             where,
-            order: [["created_at", "DESC"]],
+            // Use real DB column name; `createdAt` ends up quoted as a column ("createdAt") with our model setup.
+            order: [[Sequelize.literal('"media_content"."mediateca_content_created_at"'), "DESC"]],
             attributes: ["id", "content_name", "s3_key", "content_src", "folder_id"],
         });
         const result = [];
@@ -74,6 +77,7 @@ export async function createMedia(data) {
     }
     let folderId = data?.folderId ? String(data.folderId).trim() : null;
     if (!folderId && data?.folderPath != null) {
+        // If duplicates exist for the same folderPath, pick a stable canonical one.
         folderId = await getFolderIdByPath(String(data.folderPath));
     }
     await MediaModel.create({

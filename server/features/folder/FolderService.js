@@ -2,7 +2,7 @@
  * FolderService – mediateca folders. Persists to RDS table `mediateca_folders`.
  */
 
-import { Op } from "sequelize";
+import { Op, Sequelize } from "sequelize";
 
 /** Paths that cannot be renamed or deleted (case-insensitive). */
 const PROTECTED_FOLDER_PATHS = new Set([
@@ -26,6 +26,30 @@ const PROTECTED_FOLDER_PATHS = new Set([
     "structural media/network media/directory media/users media",
 ]);
 
+function normalizeFolderSegment(name) {
+    if (typeof name !== "string") return "";
+    return name.trim().replace(/\s+/g, " ");
+}
+
+function normalizedNameWhereClause(normalizedName) {
+    const expected = normalizeFolderSegment(normalizedName).toLowerCase();
+    const nameColumn =
+        (FolderModel?.rawAttributes?.name && FolderModel.rawAttributes.name.field)
+            ? FolderModel.rawAttributes.name.field
+            : "name";
+    // Match even if the stored name has inconsistent casing or multiple spaces.
+    return Sequelize.where(
+        Sequelize.fn(
+            "regexp_replace",
+            Sequelize.fn("lower", Sequelize.col(nameColumn)),
+            "\\s+",
+            " ",
+            "g"
+        ),
+        expected
+    );
+}
+
 function isFolderPathProtected(path) {
     if (typeof path !== "string") return false;
     const normalized = path.trim().toLowerCase().replace(/\s+/g, " ");
@@ -44,18 +68,37 @@ import "../../database/models.js";
  * @returns {Promise<string | null>}
  */
 export async function getFolderIdByPath(path) {
-    if (!FolderModel.sequelize) return null;
+    const ids = await getFolderIdsByPath(path);
+    return ids.length > 0 ? ids[0] : null;
+}
+
+/**
+ * Resolve path string to folder ids (supports legacy duplicates).
+ * path "" -> [null] (root). path "a" -> [ids of folders named "a" at root]. path "a/b" -> [ids of "b" under any matching "a"].
+ * @param {string} path
+ * @returns {Promise<Array<string|null>>}
+ */
+export async function getFolderIdsByPath(path) {
+    if (!FolderModel.sequelize) return [];
     const segments = typeof path === "string" ? path.split("/").filter(Boolean) : [];
-    let parentId = null;
-    for (const name of segments) {
-        const row = await FolderModel.findOne({
-            where: { parent_id: parentId, name: name.trim() },
-            attributes: ["id"],
-        });
-        if (!row) return null;
-        parentId = row.id;
+    // root
+    if (segments.length === 0) return [null];
+
+    let parentIds = [null];
+    for (const seg of segments) {
+        const normalizedName = normalizeFolderSegment(seg);
+        if (!normalizedName) return [];
+
+        const where = parentIds.length === 1 && parentIds[0] == null
+            ? { parent_id: null, [Op.and]: [normalizedNameWhereClause(normalizedName)] }
+            : { parent_id: { [Op.in]: parentIds }, [Op.and]: [normalizedNameWhereClause(normalizedName)] };
+
+        const rows = await FolderModel.findAll({ where, attributes: ["id"] });
+        const nextIds = rows.map((r) => String(r.id));
+        if (nextIds.length === 0) return [];
+        parentIds = nextIds;
     }
-    return parentId;
+    return parentIds;
 }
 
 /**
@@ -67,8 +110,11 @@ export async function getFolders(opts = {}) {
     const path = typeof opts.path === "string" ? opts.path : "";
     try {
         if (!FolderModel.sequelize) return [];
-        const parentId = await getFolderIdByPath(path);
-        const where = parentId == null ? { parent_id: null } : { parent_id: parentId };
+        const parentIds = await getFolderIdsByPath(path);
+        if (parentIds.length === 0) return [];
+        const where = parentIds.length === 1 && parentIds[0] == null
+            ? { parent_id: null }
+            : { parent_id: { [Op.in]: parentIds.filter((x) => x != null) } };
         const rows = await FolderModel.findAll({
             where,
             order: [["name", "ASC"]],
@@ -96,7 +142,7 @@ export async function getFolders(opts = {}) {
  * @returns {Promise<{ id: string, name: string, path: string }>}
  */
 export async function createFolder(data) {
-    const name = data?.name ? String(data.name).trim() : "";
+    const name = normalizeFolderSegment(data?.name ? String(data.name) : "");
     const path = typeof data?.path === "string" ? data.path.trim() : "";
     if (!name) {
         throw new Error("name is required");
@@ -105,6 +151,14 @@ export async function createFolder(data) {
         throw new Error("Database not configured");
     }
     const parentId = await getFolderIdByPath(path);
+    // Prevent duplicates ignoring case/whitespace (path resolution uses iLike).
+    const existingSibling = await FolderModel.findOne({
+        where: { parent_id: parentId, [Op.and]: [normalizedNameWhereClause(name)] },
+        attributes: ["id"],
+    });
+    if (existingSibling) {
+        throw new Error("A folder with this name already exists at this path");
+    }
     const row = await FolderModel.create({
         name,
         parent_id: parentId,
@@ -178,7 +232,7 @@ async function getDescendantFolderIds(folderId) {
  * @returns {Promise<{ id: string, name: string, path: string }>}
  */
 export async function updateFolder(folderId, data) {
-    const name = data?.name ? String(data.name).trim() : "";
+    const name = normalizeFolderSegment(data?.name ? String(data.name) : "");
     if (!name) {
         throw new Error("name is required");
     }

@@ -1092,6 +1092,7 @@ NotificationCompanyContentDbModel.init({
     modelName: "notification_company_content",
     underscored: true,
     tableName: "panel_ticket_company_data",
+    timestamps: false,
     indexes: []
 });
 

@@ -66,7 +66,17 @@ export async function fetchNotifications(filters?: {
   
   const url = `/api/v1/notifications${params.toString() ? `?${params.toString()}` : ''}`;
   const res = await fetch(url);
-  if (!res.ok) throw new Error('Failed to fetch notifications');
+  if (!res.ok) {
+    let details = '';
+    try {
+      details = (await res.text())?.trim();
+    } catch {
+      // ignore
+    }
+    throw new Error(
+      `Failed to fetch notifications (${res.status} ${res.statusText})${details ? `: ${details}` : ''}`
+    );
+  }
   return res.json();
 }
 
@@ -194,6 +204,7 @@ export function unifiedToCompany(r: UnifiedNotification): {
   request_date: string;
   request_state: RequestStateDisplay;
   content: CompanyContent;
+  commentsArray: NotificationComment[];
 } {
   const content = r.company_content ?? {
     nombre_comercial: '',
@@ -210,6 +221,7 @@ export function unifiedToCompany(r: UnifiedNotification): {
     request_date: r.date,
     request_state: stateToCompanyDisplay(r.state),
     content,
+    commentsArray: r.comments ?? [],
   };
 }
 
@@ -219,6 +231,7 @@ export function unifiedToOther(r: UnifiedNotification): {
   author: string;
   content: string;
   request_state: RequestStateDisplay;
+  commentsArray: NotificationComment[];
 } {
   const author = r.sender_email
     ? `${r.sender_company} - ${r.sender_email}`
@@ -228,6 +241,7 @@ export function unifiedToOther(r: UnifiedNotification): {
     author,
     content: r.description,
     request_state: stateToCompanyDisplay(r.state),
+    commentsArray: r.comments ?? [],
   };
 }
 

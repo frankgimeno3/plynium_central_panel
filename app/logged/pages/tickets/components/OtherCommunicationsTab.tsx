@@ -2,42 +2,27 @@
 
 import { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useCompanyRequests, RequestState } from "@/app/logged/pages/network/requests/hooks/useCompanyRequests";
+import {
+  useOtherRequests,
+  RequestState,
+} from "@/app/logged/pages/network/requests/hooks/useOtherRequests";
 
-const BASE = "/logged/pages/notifications";
-
-const formatDate = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  } catch {
-    return dateString;
-  }
-};
+const BASE = "/logged/pages/tickets";
 
 type TabFilter = RequestState;
 
 const stateBadgeClass = (): string =>
   "border-blue-500 bg-blue-950/40 font-medium text-blue-300";
 
-const CompanyCreationRequestsTab: FC = () => {
+const OtherCommunicationsTab: FC = () => {
   const router = useRouter();
-  const { requests } = useCompanyRequests();
+  const { requests } = useOtherRequests();
   const [currentTab, setCurrentTab] = useState<TabFilter>("Pending");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const filteredRequests = useMemo(() => {
-    const filtered = requests.filter((r) => r.request_state === currentTab);
-    return filtered.sort(
-      (a, b) => new Date(b.request_date).getTime() - new Date(a.request_date).getTime()
-    );
+    return requests.filter((r) => r.request_state === currentTab);
   }, [requests, currentTab]);
 
   const paginatedRequests = useMemo(() => {
@@ -55,18 +40,17 @@ const CompanyCreationRequestsTab: FC = () => {
   const tabs: { key: TabFilter; label: string }[] = [
     { key: "Pending", label: "Pending" },
     { key: "In Process", label: "In Process" },
-    { key: "Done", label: "Done" },
     { key: "Other", label: "Other" },
   ];
 
-  const handleRowClick = (id: string) => {
-    router.push(`${BASE}/company/${encodeURIComponent(id)}`);
+  const handleRowClick = (reqId: string) => {
+    router.push(`${BASE}/other/${encodeURIComponent(reqId)}`);
   };
 
   return (
     <div className="p-6">
       <p className="text-sm text-gray-500 mb-4">
-        Requests from users to add a company profile to the directory
+        General contact and inquiry requests
       </p>
       <div className="flex border-b border-gray-200 mb-4">
         {tabs.map((tab) => (
@@ -102,48 +86,34 @@ const CompanyCreationRequestsTab: FC = () => {
                 ID
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                User ID
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Company name
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Country
+                Author
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 State
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
+                Content
               </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {paginatedRequests.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                  No company requests found for this filter.
+                <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                  No requests found for this filter.
                 </td>
               </tr>
             ) : (
               paginatedRequests.map((req) => (
                 <tr
-                  key={req.companyRequestId}
-                  onClick={() => handleRowClick(req.companyRequestId)}
+                  key={req.id}
+                  onClick={() => handleRowClick(req.id)}
                   className="hover:bg-gray-100 cursor-pointer transition-colors"
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
-                    {req.companyRequestId}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-600">
+                    {req.id}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {req.userId}
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-900">
-                    {req.content.nombre_comercial}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {req.content.pais_empresa}
-                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{req.author}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`inline-flex rounded-r-md border-l-2 py-1.5 pl-2 pr-3 text-xs font-medium uppercase ${stateBadgeClass()}`}
@@ -151,8 +121,8 @@ const CompanyCreationRequestsTab: FC = () => {
                       {req.request_state}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(req.request_date)}
+                  <td className="px-6 py-4 text-sm text-gray-600 max-w-md truncate">
+                    {req.content}
                   </td>
                 </tr>
               ))
@@ -196,4 +166,4 @@ const CompanyCreationRequestsTab: FC = () => {
   );
 };
 
-export default CompanyCreationRequestsTab;
+export default OtherCommunicationsTab;

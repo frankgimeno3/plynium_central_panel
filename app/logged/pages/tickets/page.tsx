@@ -40,7 +40,7 @@ const formatNotificationTime = (dateStr: string) => {
   }
 };
 
-const NotificationsPage: FC = () => {
+const TicketsPage: FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabParam = searchParams.get('tab') as MainTabKey | null;
@@ -105,9 +105,9 @@ const NotificationsPage: FC = () => {
   const mainTabs: { key: MainTabKey; label: string }[] = [
     { key: 'company', label: 'Company Creation Requests' },
     { key: 'quotations', label: 'Advertisement quotations' },
-    { key: 'account_management', label: 'Account Management Notifications' },
-    { key: 'production', label: 'Production Notifications' },
-    { key: 'administration', label: 'Administration Notifications' },
+    { key: 'account_management', label: 'Account Management Tickets' },
+    { key: 'production', label: 'Production Tickets' },
+    { key: 'administration', label: 'Administration Tickets' },
     { key: 'other', label: 'Other Communications' },
   ];
 
@@ -117,16 +117,16 @@ const NotificationsPage: FC = () => {
     { key: 'solved', label: 'Solved' },
   ];
 
-  const breadcrumbs = [{ label: 'Notifications' }];
+  const breadcrumbs = [{ label: 'Tickets' }];
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
-    setPageMeta({ pageTitle: 'Notifications', breadcrumbs, buttons: [] });
+    setPageMeta({ pageTitle: 'Tickets', breadcrumbs, buttons: [] });
   }, [setPageMeta]);
 
   const handleMainTabClick = (key: MainTabKey) => {
     setCurrentMainTab(key);
-    router.push(`/logged/pages/notifications?tab=${key}`, { scroll: false });
+    router.push(`/logged/pages/tickets?tab=${key}`, { scroll: false });
   };
 
   const isNotificationTab = ['account_management', 'production', 'administration'].includes(currentMainTab);
@@ -213,7 +213,7 @@ const NotificationsPage: FC = () => {
                     {filteredNotifications.length === 0 ? (
                       <tr>
                         <td colSpan={4} className='px-6 py-8 text-center text-gray-500'>
-                          No notifications in this category.
+                          No tickets in this category.
                         </td>
                       </tr>
                     ) : (
@@ -222,8 +222,8 @@ const NotificationsPage: FC = () => {
                           key={n.notification_id}
                           role="button"
                           tabIndex={0}
-                          onClick={() => router.push(`/logged/pages/notifications/${n.notification_id}`)}
-                          onKeyDown={(e) => e.key === 'Enter' && router.push(`/logged/pages/notifications/${n.notification_id}`)}
+                          onClick={() => router.push(`/logged/pages/tickets/${n.notification_id}`)}
+                          onKeyDown={(e) => e.key === 'Enter' && router.push(`/logged/pages/tickets/${n.notification_id}`)}
                           className='hover:bg-gray-100 cursor-pointer'
                         >
                           <td className='px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900'>
@@ -260,7 +260,7 @@ const NotificationsPage: FC = () => {
 function NotificationsPageWithSuspense() {
   return (
     <Suspense fallback={<div className='p-12 text-gray-600'>Loading...</div>}>
-      <NotificationsPage />
+      <TicketsPage />
     </Suspense>
   );
 }

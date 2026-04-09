@@ -60,7 +60,7 @@ interface LoggedProps {
 
 const Logged: FC<LoggedProps> = ({ }) => {
   const { setPageMeta } = usePageContent();
-  const [activeTab, setActiveTab] = useState<'notifications' | 'other'>('notifications');
+  const [activeTab, setActiveTab] = useState<'tickets' | 'other'>('tickets');
   const [ga4PortalTab, setGa4PortalTab] = useState(0);
   const [userName, setUserName] = useState<string>('User');
   const [allData, setAllData] = useState<UnifiedNotification[]>([]);
@@ -82,8 +82,8 @@ const Logged: FC<LoggedProps> = ({ }) => {
       .catch(() => setAllData([]));
   }, []);
 
-  const notificationsOnly = getNotifications(allData).map(unifiedToNotification);
-  const mainNotifications = notificationsOnly.slice(0, 5);
+  const ticketsOnly = getNotifications(allData).map(unifiedToNotification);
+  const mainTickets = ticketsOnly.slice(0, 5);
   const welcomeFull = `Hello, ${userName}. Welcome to Plynium Central Panel.`;
   const welcomeDisplay = useTypewriter(welcomeFull, true, 55);
   const welcomeComplete = welcomeDisplay.length >= welcomeFull.length;
@@ -114,21 +114,21 @@ const Logged: FC<LoggedProps> = ({ }) => {
 
       <ManagementDashboard />
 
-      <p className='my-12 text-3xl font-semibold text-slate-100'>Main notifications</p>
+      <p className='my-12 text-3xl font-semibold text-slate-100'>Main tickets</p>
 
       {/* Tabs */}
       <div className='flex border-b border-slate-600 bg-slate-800/50 rounded-t-lg overflow-hidden'>
         <button
-          onClick={() => setActiveTab('notifications')}
+          onClick={() => setActiveTab('tickets')}
           className={`
             px-6 py-3 text-sm font-medium transition-colors
-            ${activeTab === 'notifications'
+            ${activeTab === 'tickets'
               ? 'text-blue-200 border-b-2 border-blue-400 bg-slate-700 text-white'
               : 'text-slate-400 hover:text-slate-100 hover:bg-slate-700/70'
             }
           `}
         >
-          Notifications
+          Tickets
         </button>
         <button
           onClick={() => setActiveTab('other')}
@@ -146,12 +146,12 @@ const Logged: FC<LoggedProps> = ({ }) => {
 
       {/* Tab Content */}
       <div className='flex flex-col bg-slate-800/50 pb-1 shadow-xl border border-slate-600 border-t-0 rounded-b-lg'>
-        {activeTab === 'notifications' ? (
+        {activeTab === 'tickets' ? (
           <>
-            {mainNotifications.map((n) => (
+            {mainTickets.map((n) => (
               <Link
                 key={n.notification_id}
-                href={`/logged/pages/notifications/${n.notification_id}`}
+                href={`/logged/pages/tickets/${n.notification_id}`}
                 className='flex flex-row justify-between bg-slate-800 p-4 border-b border-slate-600 cursor-pointer hover:bg-slate-700 text-slate-200'
               >
                 <p>{n.notification_brief_description}</p>
@@ -160,10 +160,10 @@ const Logged: FC<LoggedProps> = ({ }) => {
             ))}
             <div className='flex flex-row justify-end'>
               <Link
-                href='/logged/pages/notifications'
+                href='/logged/pages/tickets'
                 className='bg-slate-700 text-slate-200 hover:bg-slate-600 px-4 py-2 m-3 cursor-pointer inline-block rounded-lg text-sm font-medium'
               >
-                See all notifications
+                See all tickets
               </Link>
             </div>
           </>
@@ -173,7 +173,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
               item.type === 'other' ? (
                 <Link
                   key={item.id}
-                  href={`/logged/pages/notifications/other/${encodeURIComponent(item.id)}`}
+                  href={`/logged/pages/tickets/other/${encodeURIComponent(item.id)}`}
                   className='flex flex-row justify-between bg-slate-800 p-4 border-b border-slate-600 cursor-pointer hover:bg-slate-700'
                 >
                   <div>
@@ -185,7 +185,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
               ) : item.type === 'company' ? (
                 <Link
                   key={item.companyRequestId}
-                  href={`/logged/pages/notifications/company/${encodeURIComponent(item.companyRequestId)}`}
+                  href={`/logged/pages/tickets/company/${encodeURIComponent(item.companyRequestId)}`}
                   className='flex flex-row justify-between bg-slate-800 p-4 border-b border-slate-600 cursor-pointer hover:bg-slate-700'
                 >
                   <div>
@@ -197,7 +197,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
               ) : (
                 <Link
                   key={item.idAdvReq}
-                  href={`/logged/pages/notifications/quotations/${encodeURIComponent(item.idAdvReq)}`}
+                  href={`/logged/pages/tickets/quotations/${encodeURIComponent(item.idAdvReq)}`}
                   className='flex flex-row justify-between bg-slate-800 p-4 border-b border-slate-600 cursor-pointer hover:bg-slate-700'
                 >
                   <div>
@@ -213,7 +213,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
             )}
             <div className='flex flex-row justify-end'>
               <Link
-                href='/logged/pages/notifications?tab=company'
+                href='/logged/pages/tickets?tab=company'
                 className='bg-slate-700 text-slate-200 hover:bg-slate-600 px-4 py-2 m-3 cursor-pointer inline-block rounded-lg text-sm font-medium'
               >
                 See all other

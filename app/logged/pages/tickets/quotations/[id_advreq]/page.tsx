@@ -10,7 +10,7 @@ import {
   AdvertisementState,
 } from "@/app/logged/pages/network/requests/hooks/useAdvertisements";
 
-const BASE = "/logged/pages/notifications";
+const BASE = "/logged/pages/tickets";
 
 export default function AdvertisementDetailPage() {
   const params = useParams();
@@ -68,7 +68,7 @@ export default function AdvertisementDetailPage() {
       setPageMeta({
         pageTitle: "Advertisement Request Details",
         breadcrumbs: [
-          { label: "Notifications", href: BASE },
+          { label: "Tickets", href: BASE },
           { label: "Advertisement quotations", href: `${BASE}?tab=quotations` },
           { label: advertisement.idAdvReq },
         ],
@@ -78,7 +78,7 @@ export default function AdvertisementDetailPage() {
       setPageMeta({
         pageTitle: "Advertisement Request Details",
         breadcrumbs: [
-          { label: "Notifications", href: BASE },
+          { label: "Tickets", href: BASE },
           { label: "Advertisement quotations", href: `${BASE}?tab=quotations` },
         ],
         buttons: [{ label: "Back to Advertisement Quotations", href: `${BASE}?tab=quotations` }],
@@ -172,7 +172,7 @@ export default function AdvertisementDetailPage() {
               onClick={() => router.push(`${BASE}?tab=quotations`)}
               className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-950/80"
             >
-              Back to Notifications
+              Back to Tickets
             </button>
           </div>
         </div>

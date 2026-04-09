@@ -1,13 +1,14 @@
 "use client";
 
-import { FC, useState, useEffect } from "react";
+import { FC, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { useCompanyRequests, RequestState } from "@/app/logged/pages/network/requests/hooks/useCompanyRequests";
+import type { NotificationComment } from "@/app/contents/notifications.types";
 
-const BASE = "/logged/pages/notifications";
+const BASE = "/logged/pages/tickets";
 
 const formatDate = (dateString: string): string => {
   try {
@@ -32,9 +33,11 @@ const CompanyRequestDetailPage: FC = () => {
   const idParam = params?.id;
   const id = Array.isArray(idParam) ? idParam[0] : (idParam as string) || "";
 
-  const { getById, updateState } = useCompanyRequests();
+  const { getById, updateState, addComment } = useCompanyRequests();
   const [request, setRequest] = useState<ReturnType<typeof getById>>(undefined);
   const [loading, setLoading] = useState(true);
+  const [newComment, setNewComment] = useState("");
+  const [isAddingComment, setIsAddingComment] = useState(false);
   const { setPageMeta } = usePageContent();
 
   useEffect(() => {
@@ -49,7 +52,7 @@ const CompanyRequestDetailPage: FC = () => {
       setPageMeta({
         pageTitle: "Company Request Details",
         breadcrumbs: [
-          { label: "Notifications", href: BASE },
+          { label: "Tickets", href: BASE },
           { label: "Company Creation Requests", href: `${BASE}?tab=company` },
           { label: request.companyRequestId },
         ],
@@ -59,7 +62,7 @@ const CompanyRequestDetailPage: FC = () => {
       setPageMeta({
         pageTitle: "Company Request Details",
         breadcrumbs: [
-          { label: "Notifications", href: BASE },
+          { label: "Tickets", href: BASE },
           { label: "Company Creation Requests", href: `${BASE}?tab=company` },
         ],
         buttons: [{ label: "Back to Company Requests", href: `${BASE}?tab=company` }],
@@ -71,6 +74,29 @@ const CompanyRequestDetailPage: FC = () => {
     if (!request) return;
     updateState(request.companyRequestId, newState);
     setRequest({ ...request, request_state: newState });
+  };
+
+  const sortedComments: NotificationComment[] = useMemo(() => {
+    const list = request?.commentsArray ?? [];
+    return [...list].sort((a, b) => {
+      const ta = Date.parse(a.date || "") || 0;
+      const tb = Date.parse(b.date || "") || 0;
+      return ta - tb;
+    });
+  }, [request?.commentsArray]);
+
+  const handleAddComment = async () => {
+    if (!request || !newComment.trim()) return;
+    setIsAddingComment(true);
+    try {
+      await addComment(request.companyRequestId, newComment.trim());
+      setNewComment("");
+      // keep local detail state in sync with provider state
+      const refreshed = getById(request.companyRequestId);
+      setRequest(refreshed ?? request);
+    } finally {
+      setIsAddingComment(false);
+    }
   };
 
   if (loading) {
@@ -95,7 +121,7 @@ const CompanyRequestDetailPage: FC = () => {
               onClick={() => router.push(`${BASE}?tab=company`)}
               className="mt-4 px-4 py-2 bg-blue-950 text-white rounded-xl hover:bg-blue-950/80"
             >
-              Back to Notifications
+              Back to Tickets
             </button>
           </div>
         </div>
@@ -180,6 +206,53 @@ const CompanyRequestDetailPage: FC = () => {
               Create company
             </Link>
           </div>
+          </div>
+        </div>
+      </PageContentSection>
+
+      <PageContentSection>
+        <div className="flex flex-col w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Comments</h2>
+            <div className="mb-6">
+              <label htmlFor="newComment" className="block text-sm font-medium text-gray-700 mb-2">
+                Add Comment
+              </label>
+              <textarea
+                id="newComment"
+                value={newComment}
+                onChange={(e) => setNewComment(e.target.value)}
+                rows={4}
+                className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-950 focus:border-blue-950 text-gray-900"
+                placeholder="Enter your comment here..."
+              />
+              <button
+                onClick={handleAddComment}
+                disabled={!newComment.trim() || isAddingComment}
+                className={`mt-3 px-4 py-2 rounded-md text-white font-medium ${
+                  !newComment.trim() || isAddingComment
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-blue-950 hover:bg-blue-950/80 cursor-pointer"
+                }`}
+              >
+                {isAddingComment ? "Adding..." : "Add Comment"}
+              </button>
+            </div>
+            <div className="space-y-4">
+              {sortedComments.length === 0 ? (
+                <p className="text-gray-500 italic">No comments yet.</p>
+              ) : (
+                sortedComments.map((comment, index) => (
+                  <div
+                    key={`${comment.date}-${index}`}
+                    className="border-l-4 border-blue-950 pl-4 py-2 bg-gray-50 rounded-r"
+                  >
+                    <p className="text-sm font-medium text-gray-900">{comment.content}</p>
+                    <p className="text-xs text-gray-500 mt-1">{formatDate(comment.date)}</p>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       </PageContentSection>

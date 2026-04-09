@@ -1,13 +1,10 @@
 "use client";
 
-import { FC } from "react";
+import { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import {
-  useAdvertisements,
-  TabFilter,
-} from "@/app/logged/pages/network/requests/hooks/useAdvertisements";
+import { useCompanyRequests, RequestState } from "@/app/logged/pages/network/requests/hooks/useCompanyRequests";
 
-const BASE = "/logged/pages/notifications";
+const BASE = "/logged/pages/tickets";
 
 const formatDate = (dateString: string): string => {
   try {
@@ -24,43 +21,61 @@ const formatDate = (dateString: string): string => {
   }
 };
 
-const formatState = (state: string): string => {
-  return state
-    .replace(/([A-Z])/g, " $1")
-    .replace(/^./, (str) => str.toUpperCase())
-    .trim();
-};
+type TabFilter = RequestState;
 
 const stateBadgeClass = (): string =>
   "border-blue-500 bg-blue-950/40 font-medium text-blue-300";
 
-const AdvertisementQuotationsTab: FC = () => {
+const CompanyCreationRequestsTab: FC = () => {
   const router = useRouter();
-  const {
-    currentTab,
-    setCurrentTab,
-    currentPage,
-    setCurrentPage,
-    paginatedAdvertisements,
-    totalPages,
-  } = useAdvertisements();
+  const { requests } = useCompanyRequests();
+  const [currentTab, setCurrentTab] = useState<TabFilter>("Pending");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  const filteredRequests = useMemo(() => {
+    const filtered = requests.filter((r) => r.request_state === currentTab);
+    return filtered.sort(
+      (a, b) => new Date(b.request_date).getTime() - new Date(a.request_date).getTime()
+    );
+  }, [requests, currentTab]);
+
+  const paginatedRequests = useMemo(() => {
+    const start = (currentPage - 1) * itemsPerPage;
+    return filteredRequests.slice(start, start + itemsPerPage);
+  }, [filteredRequests, currentPage]);
+
+  const totalPages = Math.ceil(filteredRequests.length / itemsPerPage);
+
+  const pendingCount = useMemo(
+    () => requests.filter((r) => r.request_state === "Pending").length,
+    [requests]
+  );
 
   const tabs: { key: TabFilter; label: string }[] = [
-    { key: "pending", label: "Pending" },
-    { key: "in process", label: "In Process" },
-    { key: "other", label: "Other" },
+    { key: "Pending", label: "Pending" },
+    { key: "In Process", label: "In Process" },
+    { key: "Done", label: "Done" },
+    { key: "Other", label: "Other" },
   ];
+
+  const handleRowClick = (id: string) => {
+    router.push(`${BASE}/company/${encodeURIComponent(id)}`);
+  };
 
   return (
     <div className="p-6">
-      <p className="text-sm text-gray-500 mb-4">        
-        Requests from companies to advertise their products or services
-      </p>  
+      <p className="text-sm text-gray-500 mb-4">
+        Requests from users to add a company profile to the directory
+      </p>
       <div className="flex border-b border-gray-200 mb-4">
         {tabs.map((tab) => (
           <button
             key={tab.key}
-            onClick={() => setCurrentTab(tab.key)}
+            onClick={() => {
+              setCurrentTab(tab.key);
+              setCurrentPage(1);
+            }}
             className={`
               relative flex items-center gap-2 px-6 py-3 text-sm font-medium transition-colors
               ${
@@ -71,6 +86,11 @@ const AdvertisementQuotationsTab: FC = () => {
             `}
           >
             {tab.label}
+            {tab.key === "Pending" && pendingCount > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-blue-950 rounded-full">
+                {pendingCount}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -82,10 +102,13 @@ const AdvertisementQuotationsTab: FC = () => {
                 ID
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Sender Email
+                User ID
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Sender Company
+                Company name
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Country
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 State
@@ -96,41 +119,40 @@ const AdvertisementQuotationsTab: FC = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {paginatedAdvertisements.length === 0 ? (
+            {paginatedRequests.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-gray-500">
-                  No advertisement requests found for this filter.
+                <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                  No company requests found for this filter.
                 </td>
               </tr>
             ) : (
-              paginatedAdvertisements.map((advertisement) => (
+              paginatedRequests.map((req) => (
                 <tr
-                  key={advertisement.idAdvReq}
-                  onClick={() =>
-                    router.push(
-                      `${BASE}/quotations/${encodeURIComponent(advertisement.idAdvReq)}`
-                    )
-                  }
+                  key={req.companyRequestId}
+                  onClick={() => handleRowClick(req.companyRequestId)}
                   className="hover:bg-gray-100 cursor-pointer transition-colors"
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {advertisement.idAdvReq}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">
+                    {req.companyRequestId}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {advertisement.senderEmail}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {req.userId}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {advertisement.senderCompany}
+                  <td className="px-6 py-4 text-sm text-gray-900">
+                    {req.content.nombre_comercial}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                    {req.content.pais_empresa}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span
                       className={`inline-flex rounded-r-md border-l-2 py-1.5 pl-2 pr-3 text-xs font-medium uppercase ${stateBadgeClass()}`}
                     >
-                      {formatState(advertisement.advReqState)}
+                      {req.request_state}
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {formatDate(advertisement.senderDate)}
+                    {formatDate(req.request_date)}
                   </td>
                 </tr>
               ))
@@ -146,7 +168,7 @@ const AdvertisementQuotationsTab: FC = () => {
           </p>
           <div className="flex gap-2">
             <button
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               disabled={currentPage === 1}
               className={`px-3 py-1 rounded border text-sm ${
                 currentPage === 1
@@ -157,7 +179,7 @@ const AdvertisementQuotationsTab: FC = () => {
               Previous
             </button>
             <button
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
               className={`px-3 py-1 rounded border text-sm ${
                 currentPage === totalPages
@@ -174,4 +196,4 @@ const AdvertisementQuotationsTab: FC = () => {
   );
 };
 
-export default AdvertisementQuotationsTab;
+export default CompanyCreationRequestsTab;

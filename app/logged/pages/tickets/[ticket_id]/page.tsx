@@ -1,11 +1,19 @@
 "use client";
 
-import { FC, useState, useEffect } from 'react';
+import { FC, useMemo, useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
-import { fetchNotifications, fetchNotificationById, updateNotificationApi, getNotifications, getByNotificationType, unifiedToNotification, type UnifiedNotification } from '@/app/contents/notifications.types';
+import {
+  fetchNotifications,
+  fetchNotificationById,
+  updateNotificationApi,
+  addNotificationComment,
+  unifiedToNotification,
+  type UnifiedNotification,
+  type NotificationComment,
+} from '@/app/contents/notifications.types';
 import { CustomerService } from '@/app/service/CustomerService';
 
 type NotificationState = 'unread' | 'read' | 'solved';
@@ -99,14 +107,17 @@ const formatNotificationTime = (dateStr: string) => {
 
 const NotificationDetailPage: FC = () => {
   const params = useParams();
-  const idParam = params?.notification_id;
-  const notificationId = Array.isArray(idParam) ? idParam[0] : (idParam as string) || '';
+  const idParam = params?.ticket_id;
+  const ticketId = Array.isArray(idParam) ? idParam[0] : (idParam as string) || '';
 
+  const [unified, setUnified] = useState<UnifiedNotification | null>(null);
   const [notification, setNotification] = useState<Notification | null>(null);
   const [loading, setLoading] = useState(true);
   const [localState, setLocalState] = useState<NotificationState>('unread');
   const [customers, setCustomers] = useState<{ id_customer: string; name: string; contact?: { name: string } }[]>([]);
   const [otherRequestsData, setOtherRequestsData] = useState<{ id: string; author: string }[]>([]);
+  const [commentDraft, setCommentDraft] = useState('');
+  const [isSavingComment, setIsSavingComment] = useState(false);
 
   useEffect(() => {
     CustomerService.getAllCustomers().then((l) => setCustomers(Array.isArray(l) ? l : [])).catch(() => setCustomers([]));
@@ -125,22 +136,24 @@ const NotificationDetailPage: FC = () => {
   }, []);
 
   useEffect(() => {
-    if (!notificationId) return;
+    if (!ticketId) return;
     setLoading(true);
-    const decodedId = decodeURIComponent(notificationId).trim();
+    const decodedId = decodeURIComponent(ticketId).trim();
     fetchNotificationById(decodedId)
       .then((data) => {
+        setUnified(data);
         const mapped = unifiedToNotification(data);
         setNotification(mapped);
         setLocalState(mapped.notification_state);
       })
       .catch(() => {
+        setUnified(null);
         setNotification(null);
       })
       .finally(() => {
         setLoading(false);
       });
-  }, [notificationId]);
+  }, [ticketId]);
 
   const handleStateChange = (newState: NotificationState) => {
     if (!notification) return;
@@ -153,28 +166,28 @@ const NotificationDetailPage: FC = () => {
   const stateOptions: NotificationState[] = ['unread', 'read', 'solved'];
 
   const breadcrumbsList = [
-    { label: 'Notifications', href: '/logged/pages/notifications' },
-    { label: notification?.notification_brief_description ?? notificationId ?? 'Detail' },
+    { label: 'Tickets', href: '/logged/pages/tickets' },
+    { label: notification?.notification_brief_description ?? ticketId ?? 'Detail' },
   ];
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     if (!loading && !notification) {
       setPageMeta({
-        pageTitle: 'Notification not found',
-        breadcrumbs: [{ label: 'Notifications', href: '/logged/pages/notifications' }, { label: 'Not found' }],
-        buttons: [{ label: 'Back to Notifications', href: '/logged/pages/notifications' }],
+        pageTitle: 'Ticket not found',
+        breadcrumbs: [{ label: 'Tickets', href: '/logged/pages/tickets' }, { label: 'Not found' }],
+        buttons: [{ label: 'Back to Tickets', href: '/logged/pages/tickets' }],
       });
     } else if (loading) {
-      setPageMeta({ pageTitle: 'Notification', breadcrumbs: [{ label: 'Notifications', href: '/logged/pages/notifications' }] });
+      setPageMeta({ pageTitle: 'Ticket', breadcrumbs: [{ label: 'Tickets', href: '/logged/pages/tickets' }] });
     } else {
       setPageMeta({
-        pageTitle: 'Notification Details',
+        pageTitle: 'Ticket Details',
         breadcrumbs: breadcrumbsList,
-        buttons: [{ label: 'Back to Notifications', href: '/logged/pages/notifications' }],
+        buttons: [{ label: 'Back to Tickets', href: '/logged/pages/tickets' }],
       });
     }
-  }, [notification, loading, notificationId, setPageMeta]);
+  }, [notification, loading, ticketId, setPageMeta]);
 
   if (!loading && !notification) {
     return (
@@ -183,8 +196,8 @@ const NotificationDetailPage: FC = () => {
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6 text-center">
               <p className="text-red-500 text-lg">Notification not found.</p>
-              <Link href="/logged/pages/notifications" className="mt-4 inline-block text-blue-950 hover:underline">
-                Back to Notifications
+              <Link href="/logged/pages/tickets" className="mt-4 inline-block text-blue-950 hover:underline">
+                Back to Tickets
               </Link>
             </div>
           </div>
@@ -204,6 +217,29 @@ const NotificationDetailPage: FC = () => {
       </PageContentSection>
     );
   }
+
+  const comments: NotificationComment[] = useMemo(() => {
+    const list = unified?.comments ?? [];
+    return [...list].sort((a, b) => {
+      const ta = Date.parse(a.date || '') || 0;
+      const tb = Date.parse(b.date || '') || 0;
+      return ta - tb;
+    });
+  }, [unified?.comments]);
+
+  const handleAddComment = async () => {
+    if (!unified) return;
+    const content = commentDraft.trim();
+    if (!content) return;
+    try {
+      setIsSavingComment(true);
+      const updated = await addNotificationComment(unified.id, content);
+      setUnified(updated);
+      setCommentDraft('');
+    } finally {
+      setIsSavingComment(false);
+    }
+  };
 
   const redirectionLink = getRedirectionLink(notification.notification_description, customers, otherRequestsData);
 
@@ -255,6 +291,51 @@ const NotificationDetailPage: FC = () => {
           <div className="border-t pt-6">
             <label className="text-sm font-medium text-gray-500">Full Description</label>
             <p className="text-base text-gray-900 mt-1 whitespace-pre-wrap">{notification.notification_description}</p>
+          </div>
+
+          <div className="border-t pt-6 mt-6">
+            <label className="text-sm font-medium text-gray-500">Comments</label>
+
+            <div className="mt-3 space-y-3">
+              {comments.length === 0 ? (
+                <p className="text-gray-500 text-sm">No comments yet.</p>
+              ) : (
+                comments.map((c, idx) => (
+                  <div key={`${c.date}-${idx}`} className="bg-gray-50 border border-gray-200 rounded-md p-3">
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-xs text-gray-500">{formatNotificationTime(c.date)}</p>
+                      <p className="text-xs text-gray-400 font-mono">{c.agent_id ? `agent: ${c.agent_id}` : 'agent: —'}</p>
+                    </div>
+                    <p className="text-sm text-gray-900 mt-2 whitespace-pre-wrap">{c.content}</p>
+                  </div>
+                ))
+              )}
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700">Add a comment</label>
+              <textarea
+                value={commentDraft}
+                onChange={(e) => setCommentDraft(e.target.value)}
+                rows={4}
+                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-950 focus:border-blue-950 text-gray-900"
+                placeholder="Write a note for this ticket..."
+              />
+              <div className="mt-2 flex justify-end">
+                <button
+                  type="button"
+                  onClick={handleAddComment}
+                  disabled={isSavingComment || commentDraft.trim().length === 0}
+                  className={`px-4 py-2 rounded-md text-sm font-medium ${
+                    isSavingComment || commentDraft.trim().length === 0
+                      ? 'bg-gray-200 text-gray-500 cursor-not-allowed'
+                      : 'bg-blue-950 text-white hover:bg-blue-900'
+                  }`}
+                >
+                  {isSavingComment ? 'Saving...' : 'Add comment'}
+                </button>
+              </div>
+            </div>
           </div>
             </div>
           </div>

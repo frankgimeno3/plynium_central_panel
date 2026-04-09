@@ -33,7 +33,7 @@ const putSchema = Joi.object({
 
 export const PUT = createEndpoint(async (request, body, params) => {
     if (body.add_comment) {
-        const notification = await addComment(params.id, body.add_comment);
+        const notification = await addComment(params.id, body.add_comment, request?.sub ?? null);
         return NextResponse.json(notification);
     }
     

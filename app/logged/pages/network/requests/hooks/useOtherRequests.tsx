@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
-import { fetchNotifications, updateNotificationApi, unifiedToOther, type UnifiedNotification } from '@/app/contents/notifications.types';
+import { fetchNotifications, updateNotificationApi, addNotificationComment, unifiedToOther, type NotificationComment } from '@/app/contents/notifications.types';
 
 export type RequestState = 'Pending' | 'In Process' | 'Other';
 
@@ -10,11 +10,13 @@ export interface OtherRequest {
   author: string;
   content: string;
   request_state: RequestState;
+  commentsArray: NotificationComment[];
 }
 
 interface OtherRequestsContextValue {
   requests: OtherRequest[];
   updateState: (id: string, newState: RequestState) => void;
+  addComment: (id: string, content: string) => Promise<void>;
   getById: (id: string) => OtherRequest | undefined;
 }
 
@@ -53,9 +55,19 @@ export function OtherRequestsProvider({ children }: { children: ReactNode }) {
     return requests.find(r => r.id === id);
   }, [requests]);
 
+  const addComment = useCallback(async (id: string, content: string) => {
+    await addNotificationComment(id, content);
+    const newComment: NotificationComment = { date: new Date().toISOString(), content };
+    setRequests(prev =>
+      prev.map(r =>
+        r.id === id ? { ...r, commentsArray: [...(r.commentsArray ?? []), newComment] } : r
+      )
+    );
+  }, []);
+
   const value = useMemo(
-    () => ({ requests, updateState, getById }),
-    [requests, updateState, getById]
+    () => ({ requests, updateState, addComment, getById }),
+    [requests, updateState, addComment, getById]
   );
 
   return (

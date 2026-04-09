@@ -1,6 +1,7 @@
 import NotificationDbModel from "./NotificationDbModel.js";
 import NotificationCommentDbModel from "./NotificationCommentDbModel.js";
 import NotificationCompanyContentDbModel from "./NotificationCompanyContentDbModel.js";
+import AgentDbModel from "../agent_db/AgentDbModel.js";
 import "../../database/models.js";
 
 /** API body uses legacy keys (nombre_comercial, …); DB uses ticket_company_* */
@@ -172,7 +173,7 @@ export async function updateNotification(id, data) {
     return getNotificationById(id);
 }
 
-export async function addComment(notificationId, content) {
+export async function addComment(notificationId, content, agentId = null) {
     if (!NotificationDbModel.sequelize) {
         throw new Error("Database not configured.");
     }
@@ -181,9 +182,19 @@ export async function addComment(notificationId, content) {
         throw new Error(`Notification with id ${notificationId} not found`);
     }
 
+    let safeAgentId = null;
+    if (agentId != null && String(agentId).trim() !== "" && AgentDbModel?.sequelize) {
+        try {
+            const agent = await AgentDbModel.findByPk(String(agentId).trim());
+            if (agent) safeAgentId = String(agentId).trim();
+        } catch {
+            safeAgentId = null;
+        }
+    }
+
     await NotificationCommentDbModel.create({
         panel_ticket_id: notificationId,
-        agent_id: null,
+        agent_id: safeAgentId,
         panel_ticket_comment_date: new Date(),
         panel_ticket_comment_content: content
     });
