@@ -66,4 +66,14 @@ export class ArticleService {
         );
         return response.data;
     }
+
+    /**
+     * @param {string} idArticle
+     * @param {number} portalId
+     * @param {{ visibility?: string, commentingEnabled?: boolean }} patch
+     */
+    static async updateArticlePublication(idArticle, portalId, patch) {
+        const response = await apiClient.patch(`/api/v1/articles/${idArticle}/publications/${portalId}`, patch);
+        return response.data;
+    }
 }

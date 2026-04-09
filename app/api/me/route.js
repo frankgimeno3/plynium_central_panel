@@ -19,7 +19,7 @@ export async function GET(request) {
       return NextResponse.json({ user_name: "User" }, { status: 200 });
     }
 
-    // 1. Si Cognito devuelve UUID (sub), buscar por cognito_sub en la tabla users
+    // 1. Si Cognito devuelve UUID (sub), buscar por user_cognito_sub en users_db (antes cognito_sub en users)
     const dbUserBySub = await getUserByCognitoSubFromRds(cognitoUsername);
     if (dbUserBySub?.user_name) {
       return NextResponse.json({ user_name: dbUserBySub.user_name }, { status: 200 });

@@ -1,24 +1,11 @@
 import MagazineDbModel from "./MagazineDbModel.js";
-import MagazineIssueDbModel from "./MagazineIssueDbModel.js";
 import "../../database/models.js";
 
 function toPlain(row) {
   return typeof row?.get === "function" ? row.get({ plain: true }) : row;
 }
 
-function toApiIssue(row) {
-  const p = toPlain(row);
-  if (!p) return null;
-  const issue = {
-    issue_number: p.issue_number,
-    is_special_edition: Boolean(p.is_special_edition),
-  };
-  if (p.special_topic) issue.special_topic = p.special_topic;
-  if (p.forecasted_publication_month != null) issue.forecasted_publication_month = p.forecasted_publication_month;
-  return issue;
-}
-
-function toApiMagazine(row, issuesByYear = {}) {
+function toApiMagazine(row) {
   const p = toPlain(row);
   if (!p) return null;
   return {
@@ -26,26 +13,9 @@ function toApiMagazine(row, issuesByYear = {}) {
     name: p.name ?? "",
     description: p.description ?? undefined,
     first_year: p.first_year ?? undefined,
-    last_year: p.last_year ?? undefined,
-    notes: p.notes ?? undefined,
-    portal_name: p.portal_name ?? undefined,
-    issues_by_year: Object.keys(issuesByYear).length > 0 ? issuesByYear : undefined,
+    periodicity: p.periodicity ?? "",
+    subscriber_number: p.subscriber_number ?? undefined,
   };
-}
-
-function buildIssuesByYear(issueRows) {
-  const byMagazineAndYear = {};
-  for (const row of issueRows) {
-    const p = toPlain(row);
-    if (!p) continue;
-    const key = `${p.id_magazine}|${p.year}`;
-    if (!byMagazineAndYear[key]) byMagazineAndYear[key] = [];
-    byMagazineAndYear[key].push(toApiIssue(row));
-  }
-  for (const arr of Object.values(byMagazineAndYear)) {
-    arr.sort((a, b) => a.issue_number - b.issue_number);
-  }
-  return byMagazineAndYear;
 }
 
 async function ensureModels() {
@@ -62,28 +32,7 @@ export async function getAllMagazines() {
     const rows = await MagazineDbModel.findAll({
       order: [["name", "ASC"]],
     });
-    if (rows.length === 0) return [];
-    const ids = rows.map((r) => toPlain(r).id_magazine);
-    const issueRows = await MagazineIssueDbModel.findAll({
-      where: { id_magazine: ids },
-      order: [
-        ["id_magazine", "ASC"],
-        ["year", "ASC"],
-        ["issue_number", "ASC"],
-      ],
-    });
-    const byKey = buildIssuesByYear(issueRows);
-    return rows.map((r) => {
-      const p = toPlain(r);
-      const issuesByYear = {};
-      for (const k of Object.keys(byKey)) {
-        if (k.startsWith(p.id_magazine + "|")) {
-          const year = k.split("|")[1];
-          issuesByYear[year] = byKey[k];
-        }
-      }
-      return toApiMagazine(r, issuesByYear);
-    });
+    return rows.map((r) => toApiMagazine(r));
   } catch (error) {
     console.error("Error fetching magazines from database:", error);
     if (
@@ -107,23 +56,7 @@ export async function getMagazineById(idMagazine) {
   if (!row) {
     throw new Error(`Magazine with id ${idMagazine} not found`);
   }
-  const issueRows = await MagazineIssueDbModel.findAll({
-    where: { id_magazine: idMagazine },
-    order: [
-      ["year", "ASC"],
-      ["issue_number", "ASC"],
-    ],
-  });
-  const byKey = buildIssuesByYear(issueRows);
-  const p = toPlain(row);
-  const issuesByYear = {};
-  for (const k of Object.keys(byKey)) {
-    if (k.startsWith(p.id_magazine + "|")) {
-      const year = k.split("|")[1];
-      issuesByYear[year] = byKey[k];
-    }
-  }
-  return toApiMagazine(row, issuesByYear);
+  return toApiMagazine(row);
 }
 
 export async function createMagazine(data) {
@@ -133,14 +66,16 @@ export async function createMagazine(data) {
     name: data.name,
     description: data.description ?? "",
     first_year: data.first_year ?? null,
-    last_year: data.last_year ?? data.first_year ?? null,
-    notes: data.notes ?? "",
-    portal_name: data.portal_name ?? "",
+    periodicity: data.periodicity != null ? String(data.periodicity).trim() : "",
+    subscriber_number:
+      data.subscriber_number != null && data.subscriber_number !== ""
+        ? Number(data.subscriber_number)
+        : null,
   };
-  await MagazineDbModel.create(payload);
-  if (data.issues_by_year && typeof data.issues_by_year === "object") {
-    await setMagazineIssues(data.id_magazine, data.issues_by_year);
+  if (payload.subscriber_number != null && Number.isNaN(payload.subscriber_number)) {
+    payload.subscriber_number = null;
   }
+  await MagazineDbModel.create(payload);
   return getMagazineById(data.id_magazine);
 }
 
@@ -152,42 +87,21 @@ export async function updateMagazine(idMagazine, body) {
   const updates = {};
   if (body.name !== undefined) updates.name = String(body.name).trim();
   if (body.description !== undefined) updates.description = (body.description ?? "").trim() || "";
-  if (body.notes !== undefined) updates.notes = String(body.notes ?? "").trim();
   if (body.first_year !== undefined) updates.first_year = body.first_year == null ? null : Number(body.first_year);
-  if (body.last_year !== undefined) updates.last_year = body.last_year == null ? null : Number(body.last_year);
-  if (body.portal_name !== undefined) updates.portal_name = String(body.portal_name ?? "").trim();
-  updates.updated_at = new Date();
+  if (body.periodicity !== undefined) updates.periodicity = String(body.periodicity ?? "").trim();
+  if (body.subscriber_number !== undefined) {
+    updates.subscriber_number =
+      body.subscriber_number == null || body.subscriber_number === ""
+        ? null
+        : Number(body.subscriber_number);
+    if (updates.subscriber_number != null && Number.isNaN(updates.subscriber_number)) {
+      updates.subscriber_number = null;
+    }
+  }
   if (Object.keys(updates).length > 0) {
     await row.update(updates);
   }
-  if (body.issues_by_year !== undefined && typeof body.issues_by_year === "object") {
-    await setMagazineIssues(idMagazine, body.issues_by_year);
-  }
   return getMagazineById(idMagazine);
-}
-
-export async function setMagazineIssues(idMagazine, issuesByYear) {
-  await MagazineIssueDbModel.destroy({ where: { id_magazine: idMagazine } });
-  const toInsert = [];
-  for (const [yearStr, issues] of Object.entries(issuesByYear)) {
-    if (!Array.isArray(issues)) continue;
-    const year = parseInt(yearStr, 10);
-    if (Number.isNaN(year)) continue;
-    for (const issue of issues) {
-      const month = issue.forecasted_publication_month;
-      toInsert.push({
-        id_magazine: idMagazine,
-        year,
-        issue_number: issue.issue_number,
-        is_special_edition: Boolean(issue.is_special_edition),
-        special_topic: issue.special_topic ?? null,
-        forecasted_publication_month: month >= 1 && month <= 12 ? month : null,
-      });
-    }
-  }
-  if (toInsert.length > 0) {
-    await MagazineIssueDbModel.bulkCreate(toInsert);
-  }
 }
 
 export function generateNextMagazineId(existingIds) {

@@ -11,15 +11,18 @@ import ChangeRedirectionModal from './banner_components/ChangeRedirectionModal';
 import TopBannersTab from './banner_tabs/TopBannersTab';
 import MiddleBannersTab from './banner_tabs/MiddleBannersTab';
 import RightBannersTab from './banner_tabs/RightBannersTab';
+import ExpiredBannersTab from './banner_tabs/ExpiredBannersTab';
+import BannerScheduleModal from './banner_components/BannerScheduleModal';
 import { useBanners } from './hooks/useBanners';
 import { PortalService } from '@/app/service/PortalService';
 
-type BannerTab = 'top' | 'middle' | 'right';
+type BannerTab = 'top' | 'middle' | 'right' | 'expired';
 
 const TAB_LABELS: Record<BannerTab, string> = {
     top: 'Top Banners',
     middle: 'Middle Banners',
     right: 'Right Banners',
+    expired: 'Expired',
 };
 
 export interface PortalItem {
@@ -34,6 +37,7 @@ const Banners: FC = () => {
     const [portalsLoading, setPortalsLoading] = useState(true);
     const [selectedPortalId, setSelectedPortalId] = useState<number | null>(null);
     const [activeTab, setActiveTab] = useState<BannerTab>('top');
+    const [expiredPortalTabId, setExpiredPortalTabId] = useState<number | null>(null);
 
     useEffect(() => {
         PortalService.getAllPortals()
@@ -44,6 +48,13 @@ const Banners: FC = () => {
             .finally(() => setPortalsLoading(false));
     }, []);
 
+    // Keep the expired-portal tab in sync with the selected portal.
+    useEffect(() => {
+        if (selectedPortalId != null) {
+            setExpiredPortalTabId(selectedPortalId);
+        }
+    }, [selectedPortalId]);
+
     const {
         homePageRightBanners,
         homePageTopBanners,
@@ -51,6 +62,10 @@ const Banners: FC = () => {
         customTopSections,
         customRightSections,
         customMediumSections,
+        expiredBanners,
+        bannerScheduleModalOpen,
+        bannerScheduleModalMode,
+        bannerScheduleDefaults,
         showAdSectionModal,
         showDeleteModal,
         showEditRouteModal,
@@ -87,6 +102,11 @@ const Banners: FC = () => {
         getCurrentRoute,
         getCurrentBannerSrc,
         getCurrentBannerRedirection,
+        handleBannerScheduleConfirm,
+        handleBannerScheduleCancel,
+        openEditScheduleForBanner,
+        saveBannerScheduleInline,
+        resolveSectionForBanner,
     } = useBanners(selectedPortalId);
 
     const openTopCustomSectionModal = () => {
@@ -197,6 +217,7 @@ const Banners: FC = () => {
                                 onDeleteTopBanner={handleDeleteTopBanner}
                                 onEditRoute={openEditRouteModal}
                                 onDeleteSection={openDeleteModal}
+                                onSaveSchedule={saveBannerScheduleInline}
                             />
                         )}
                         {activeTab === 'middle' && (
@@ -208,10 +229,12 @@ const Banners: FC = () => {
                                 onAddBannerToSection={handleAddCustomMediumBanner}
                                 onChangeImage={openChangeImageModal}
                                 onChangeRedirection={openChangeRedirectionModal}
+                                onEditSchedule={openEditScheduleForBanner}
                                 onChangeAppearanceWeight={handleChangeAppearanceWeight}
                                 onDeleteMediumBanner={handleDeleteMediumBanner}
                                 onEditRoute={openEditRouteModal}
                                 onDeleteSection={openDeleteModal}
+                                onSaveSchedule={saveBannerScheduleInline}
                             />
                         )}
                         {activeTab === 'right' && (
@@ -223,11 +246,52 @@ const Banners: FC = () => {
                                 onAddBannerToSection={handleAddCustomRightBanner}
                                 onChangeImage={openChangeImageModal}
                                 onChangeRedirection={openChangeRedirectionModal}
+                                onEditSchedule={openEditScheduleForBanner}
                                 onChangeAppearanceWeight={handleChangeAppearanceWeight}
                                 onDeleteRightBanner={handleDeleteRightBanner}
                                 onEditRoute={openEditRouteModal}
                                 onDeleteSection={openDeleteModal}
+                                onSaveSchedule={saveBannerScheduleInline}
                             />
+                        )}
+                        {activeTab === 'expired' && (
+                            <div className="flex flex-col gap-4">
+                                <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                    <span className="text-xs font-semibold uppercase tracking-wide text-gray-600">
+                                        Expired by portal
+                                    </span>
+                                    {portals.map((p) => {
+                                        const isActive = (expiredPortalTabId ?? selectedPortalId) === p.id;
+                                        return (
+                                            <button
+                                                key={p.id}
+                                                type="button"
+                                                onClick={() => {
+                                                    setExpiredPortalTabId(p.id);
+                                                    setSelectedPortalId(p.id);
+                                                }}
+                                                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                                                    isActive
+                                                        ? "border-blue-900 bg-blue-900 text-white"
+                                                        : "border-gray-300 bg-white text-gray-700 hover:bg-gray-100"
+                                                }`}
+                                                title={p.domain || p.key}
+                                            >
+                                                {p.name || p.key || p.id}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+
+                                <ExpiredBannersTab
+                                    expiredBanners={expiredBanners}
+                                    onEditSchedule={openEditScheduleForBanner}
+                                    onChangeImage={openChangeImageModal}
+                                    onChangeRedirection={openChangeRedirectionModal}
+                                    resolveSectionForBanner={resolveSectionForBanner}
+                                    onSaveSchedule={saveBannerScheduleInline}
+                                />
+                            </div>
                         )}
 
                         {/* Modals (shared) */}
@@ -265,6 +329,14 @@ const Banners: FC = () => {
                             currentRedirection={getCurrentBannerRedirection()}
                             onConfirm={handleChangeRedirection}
                             onCancel={() => setShowChangeRedirectionModal(false)}
+                        />
+                        <BannerScheduleModal
+                            isOpen={bannerScheduleModalOpen}
+                            mode={bannerScheduleModalMode}
+                            defaultStartIso={bannerScheduleDefaults?.start}
+                            defaultEndIso={bannerScheduleDefaults?.end}
+                            onConfirm={handleBannerScheduleConfirm}
+                            onCancel={handleBannerScheduleCancel}
                         />
                     </>
                 )}

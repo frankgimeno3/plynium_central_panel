@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { BannerService } from '@/app/service/BannerService';
+import { addOneYearYmd, todayYmd } from '../bannerDateUtils';
 
 const DEFAULT_BANNER_IMAGE = 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?q=80&w=2340&auto=format&fit=crop&ixlib=rb-4.1.0';
 const DEFAULT_BANNER_REDIRECTION = 'https://www.vidrioperfil.com';
@@ -51,6 +52,8 @@ const getErrorDetails = (error: unknown) => {
 
 export type AppearanceWeight = 'low' | 'medium' | 'high';
 
+export type BannerStatus = 'published' | 'expired';
+
 export interface Banner {
     id: string;
     portalId?: number;
@@ -60,9 +63,24 @@ export interface Banner {
     positionType: 'right' | 'top' | 'medium';
     pageType: 'home' | 'custom';
     position: number;
-    /** For top/medium: display probability weight. low=1, medium=2, high=3 */
+    /** Display probability weight (DB 1/2/3). Not used when expired. */
     appearanceWeight?: AppearanceWeight;
+    bannerStatus: BannerStatus;
+    /** YYYY-MM-DD */
+    startsAt: string;
+    /** YYYY-MM-DD */
+    endsAt: string;
+    /** When empty, UI and API use id as alt text */
+    imageAlt?: string;
 }
+
+type PendingAddKind =
+    | { type: 'home-top' }
+    | { type: 'home-medium' }
+    | { type: 'home-right' }
+    | { type: 'custom-top'; sectionId: string }
+    | { type: 'custom-medium'; sectionId: string }
+    | { type: 'custom-right'; sectionId: string };
 
 export interface CustomSection {
     id: string;
@@ -89,6 +107,14 @@ export const useBanners = (portalId: number | null) => {
 
     // Custom Medium Banners state
     const [customMediumSections, setCustomMediumSections] = useState<CustomSection[]>([]);
+
+    const [expiredBanners, setExpiredBanners] = useState<Banner[]>([]);
+
+    const [bannerScheduleModalOpen, setBannerScheduleModalOpen] = useState(false);
+    const [bannerScheduleModalMode, setBannerScheduleModalMode] = useState<'add' | 'edit'>('add');
+    const [bannerScheduleDefaults, setBannerScheduleDefaults] = useState<{ start: string; end: string } | null>(null);
+    const [pendingAddKind, setPendingAddKind] = useState<PendingAddKind | null>(null);
+    const [editScheduleBannerId, setEditScheduleBannerId] = useState<string | null>(null);
 
     // Modal states
     const [showAdSectionModal, setShowAdSectionModal] = useState(false);
@@ -118,7 +144,8 @@ export const useBanners = (portalId: number | null) => {
             ...generalMediumBanners,
             ...customTopSections.flatMap(s => s.banners),
             ...customRightSections.flatMap(s => s.banners),
-            ...customMediumSections.flatMap(s => s.banners)
+            ...customMediumSections.flatMap(s => s.banners),
+            ...expiredBanners,
         ];
         
         const matchingBanners = allBanners.filter(b => 
@@ -136,54 +163,105 @@ export const useBanners = (portalId: number | null) => {
         return `banner-${typeCode}-${year}-${paddedNumber}`;
     };
 
+    const mapBannerFromApi = (b: Banner): Banner => {
+        const id = b.id;
+        const st = b.startsAt && b.startsAt.length >= 10 ? b.startsAt.slice(0, 10) : todayYmd();
+        const en = b.endsAt && b.endsAt.length >= 10 ? b.endsAt.slice(0, 10) : addOneYearYmd(st);
+        const alt = b.imageAlt && b.imageAlt.trim() !== '' ? b.imageAlt.trim() : id;
+        const stat: BannerStatus = b.bannerStatus === 'expired' ? 'expired' : 'published';
+        let aw = (b.appearanceWeight ?? 'medium') as AppearanceWeight | 'expired';
+        if (stat === 'published' && aw === 'expired') {
+            aw = 'medium';
+        }
+        return {
+            ...b,
+            src: normalizeBannerSrc(b.src),
+            bannerRedirection: b.bannerRedirection ?? DEFAULT_BANNER_REDIRECTION,
+            appearanceWeight: aw === 'expired' ? 'medium' : aw,
+            bannerStatus: stat,
+            startsAt: st,
+            endsAt: en,
+            imageAlt: alt,
+        };
+    };
+
     // Map flat banner list from API to UI state
     const applyBannersListToState = useCallback((list: Banner[]) => {
-        if (!list || list.length === 0) return;
-        const homeRightBanners = list
-            .filter(b => b.pageType === 'home' && b.positionType === 'right')
-            .map(b => ({ ...b, src: normalizeBannerSrc(b.src), bannerRedirection: b.bannerRedirection ?? DEFAULT_BANNER_REDIRECTION }))
+        if (!list || list.length === 0) {
+            setExpiredBanners([]);
+            setHomePageRightBanners([]);
+            setHomePageTopBanners([]);
+            setGeneralMediumBanners([]);
+            setCustomTopSections([]);
+            setCustomRightSections([]);
+            setCustomMediumSections([]);
+            return;
+        }
+        const mapped = list.map(mapBannerFromApi);
+        const published = mapped.filter((b) => b.bannerStatus !== 'expired');
+        const expired = mapped.filter((b) => b.bannerStatus === 'expired');
+        setExpiredBanners(expired.sort((a, b) => b.endsAt.localeCompare(a.endsAt)));
+
+        const homeRightBanners = published
+            .filter((b) => b.pageType === 'home' && b.positionType === 'right')
             .sort((a, b) => a.position - b.position);
         setHomePageRightBanners(homeRightBanners);
 
-        const homeTopBanners = list
-            .filter(b => b.pageType === 'home' && b.positionType === 'top')
-            .map(b => ({ ...b, src: normalizeBannerSrc(b.src), bannerRedirection: b.bannerRedirection ?? DEFAULT_BANNER_REDIRECTION, appearanceWeight: (b.appearanceWeight ?? 'medium') as AppearanceWeight }))
+        const homeTopBanners = published
+            .filter((b) => b.pageType === 'home' && b.positionType === 'top')
             .sort((a, b) => a.position - b.position);
         setHomePageTopBanners(homeTopBanners);
 
-        const generalMediumBannersList = list
-            .filter(b => b.pageType === 'home' && b.positionType === 'medium')
-            .map(b => ({ ...b, src: normalizeBannerSrc(b.src), bannerRedirection: b.bannerRedirection ?? DEFAULT_BANNER_REDIRECTION, appearanceWeight: (b.appearanceWeight ?? 'medium') as AppearanceWeight }))
+        const generalMediumBannersList = published
+            .filter((b) => b.pageType === 'home' && b.positionType === 'medium')
             .sort((a, b) => a.position - b.position);
         setGeneralMediumBanners(generalMediumBannersList);
 
-        const customBanners = list.filter(b => b.pageType === 'custom');
+        const customBanners = published.filter((b) => b.pageType === 'custom');
         const toSection = (route: string, banners: Banner[], prefix = 'section-') => ({
             id: `${prefix}${route.replace(/\//g, '-')}`,
             name: `Custom Page - ${route}`,
             route,
-            banners: banners
-                .map(b => ({ ...b, src: normalizeBannerSrc(b.src) }))
-                .sort((a, b) => a.position - b.position)
+            banners: banners.sort((a, b) => a.position - b.position),
         });
         const groupByRoute = (positionType: 'right' | 'top' | 'medium') => {
             const byRoute = customBanners
-                .filter(b => b.positionType === positionType)
-                .reduce((acc, b) => {
-                    if (!acc[b.route]) acc[b.route] = [];
-                    acc[b.route].push({
-                        ...b,
-                        bannerRedirection: b.bannerRedirection ?? DEFAULT_BANNER_REDIRECTION,
-                        appearanceWeight: (b.appearanceWeight ?? 'medium') as AppearanceWeight,
-                    });
-                    return acc;
-                }, {} as Record<string, Banner[]>);
-            return Object.entries(byRoute).map(([route, banners]) => toSection(route, banners, positionType === 'medium' ? 'section-medium-' : 'section-'));
+                .filter((b) => b.positionType === positionType)
+                .reduce(
+                    (acc, b) => {
+                        if (!acc[b.route]) acc[b.route] = [];
+                        acc[b.route].push(b);
+                        return acc;
+                    },
+                    {} as Record<string, Banner[]>
+                );
+            return Object.entries(byRoute).map(([route, banners]) =>
+                toSection(route, banners, positionType === 'medium' ? 'section-medium-' : 'section-')
+            );
         };
         setCustomRightSections(groupByRoute('right'));
         setCustomTopSections(groupByRoute('top'));
         setCustomMediumSections(groupByRoute('medium'));
     }, []);
+
+    const reloadBanners = useCallback(() => {
+        if (portalId == null) return;
+        BannerService.getBannersByPortalId(portalId)
+            .then((data) => {
+                const list = Array.isArray(data) ? data : (data as { banners?: Banner[] })?.banners;
+                if (list && list.length > 0) {
+                    applyBannersListToState(list as Banner[]);
+                } else {
+                    applyBannersListToState([]);
+                }
+            })
+            .catch((err) => {
+                const status = (err as { status?: number })?.status;
+                const msg = (err as { message?: string })?.message;
+                const body = (err as { data?: unknown })?.data;
+                console.error('Error loading banners from API:', { status, message: msg, data: body });
+            });
+    }, [portalId, applyBannersListToState]);
 
     // Reset banner state when portal changes; load banners for the selected portal only
     useEffect(() => {
@@ -193,6 +271,7 @@ export const useBanners = (portalId: number | null) => {
         setCustomTopSections([]);
         setCustomRightSections([]);
         setCustomMediumSections([]);
+        setExpiredBanners([]);
         if (portalId == null) return;
         let cancelled = false;
         BannerService.getBannersByPortalId(portalId)
@@ -214,392 +293,274 @@ export const useBanners = (portalId: number | null) => {
         return () => { cancelled = true; };
     }, [portalId, applyBannersListToState]);
 
-    // Move banner up/down handlers
-    const handleMoveBannerUp = (bannerId: string, section: 'home' | string, sectionType?: 'top' | 'right' | 'medium') => {
-        if (section === 'home') {
-            const sortedBanners = [...homePageRightBanners].sort((a, b) => a.position - b.position);
-            const bannerIndex = sortedBanners.findIndex(b => b.id === bannerId);
-
-            if (bannerIndex > 0) {
-                const newBanners = [...sortedBanners];
-                [newBanners[bannerIndex - 1], newBanners[bannerIndex]] = [newBanners[bannerIndex], newBanners[bannerIndex - 1]];
-                const updatedBanners = newBanners.map((banner, index) => ({
-                    ...banner,
-                    position: index
-                }));
-                setHomePageRightBanners(updatedBanners);
-                updatedBanners.forEach((b) => BannerService.updateBanner(b.id, { position: b.position }).catch((err) => console.error('Error persisting order:', err)));
+    const resolveSectionForBanner = useCallback(
+        (banner: Banner): string => {
+            if (banner.pageType === 'home') {
+                if (banner.positionType === 'top') return 'home-top';
+                if (banner.positionType === 'medium') return 'home-medium';
+                return 'home';
             }
-        } else {
-            if (sectionType === 'top') {
-                const sectionIndex = customTopSections.findIndex(s => s.id === section);
-                if (sectionIndex !== -1) {
-                    const newSections = [...customTopSections];
-                    const sectionData = newSections[sectionIndex];
-                    const sortedBanners = [...sectionData.banners].sort((a, b) => a.position - b.position);
-                    const bannerIndex = sortedBanners.findIndex(b => b.id === bannerId);
+            const list =
+                banner.positionType === 'top'
+                    ? customTopSections
+                    : banner.positionType === 'medium'
+                      ? customMediumSections
+                      : customRightSections;
+            const sec = list.find((s) => s.route === banner.route);
+            return sec?.id ?? `section-${banner.route.replace(/\//g, '-')}`;
+        },
+        [customTopSections, customMediumSections, customRightSections]
+    );
 
-                    if (bannerIndex > 0) {
-                        const newBanners = [...sortedBanners];
-                        [newBanners[bannerIndex - 1], newBanners[bannerIndex]] = [newBanners[bannerIndex], newBanners[bannerIndex - 1]];
-                        const updatedBanners = newBanners.map((banner, index) => ({
-                            ...banner,
-                            position: index
-                        }));
-                        sectionData.banners = updatedBanners;
-                        setCustomTopSections(newSections);
-                        updatedBanners.forEach((b) => BannerService.updateBanner(b.id, { position: b.position }).catch((err) => console.error('Error persisting order:', err)));
-                    }
-                }
-            } else if (sectionType === 'medium') {
-                const sectionIndex = customMediumSections.findIndex(s => s.id === section);
-                if (sectionIndex !== -1) {
-                    const newSections = [...customMediumSections];
-                    const sectionData = newSections[sectionIndex];
-                    const sortedBanners = [...sectionData.banners].sort((a, b) => a.position - b.position);
-                    const bannerIndex = sortedBanners.findIndex(b => b.id === bannerId);
-
-                    if (bannerIndex > 0) {
-                        const newBanners = [...sortedBanners];
-                        [newBanners[bannerIndex - 1], newBanners[bannerIndex]] = [newBanners[bannerIndex], newBanners[bannerIndex - 1]];
-                        const updatedBanners = newBanners.map((banner, index) => ({
-                            ...banner,
-                            position: index
-                        }));
-                        sectionData.banners = updatedBanners;
-                        setCustomMediumSections(newSections);
-                        updatedBanners.forEach((b) => BannerService.updateBanner(b.id, { position: b.position }).catch((err) => console.error('Error persisting order:', err)));
-                    }
-                }
-            } else {
-                const sectionIndex = customRightSections.findIndex(s => s.id === section);
-                if (sectionIndex !== -1) {
-                    const newSections = [...customRightSections];
-                    const sectionData = newSections[sectionIndex];
-                    const sortedBanners = [...sectionData.banners].sort((a, b) => a.position - b.position);
-                    const bannerIndex = sortedBanners.findIndex(b => b.id === bannerId);
-
-                    if (bannerIndex > 0) {
-                        const newBanners = [...sortedBanners];
-                        [newBanners[bannerIndex - 1], newBanners[bannerIndex]] = [newBanners[bannerIndex], newBanners[bannerIndex - 1]];
-                        const updatedBanners = newBanners.map((banner, index) => ({
-                            ...banner,
-                            position: index
-                        }));
-                        sectionData.banners = updatedBanners;
-                        setCustomRightSections(newSections);
-                        updatedBanners.forEach((b) => BannerService.updateBanner(b.id, { position: b.position }).catch((err) => console.error('Error persisting order:', err)));
-                    }
-                }
-            }
+    const handleBannerScheduleConfirm = (startsAt: string, endsAt: string) => {
+        if (portalId == null) return;
+        if (bannerScheduleModalMode === 'edit' && editScheduleBannerId) {
+            BannerService.updateBanner(editScheduleBannerId, { startsAt, endsAt })
+                .then(() => reloadBanners())
+                .catch((err) => console.error('Error updating banner schedule:', getErrorDetails(err)));
+            setBannerScheduleModalOpen(false);
+            setEditScheduleBannerId(null);
+            setPendingAddKind(null);
+            return;
         }
+        if (!pendingAddKind) return;
+
+        const runCreate = (newBanner: Banner) => {
+            BannerService.createBanner({
+                ...newBanner,
+                portalId,
+                startsAt,
+                endsAt,
+                imageAlt: newBanner.imageAlt ?? newBanner.id,
+            })
+                .then(() => reloadBanners())
+                .catch((err) => console.error('Error persisting banner:', err));
+        };
+
+        switch (pendingAddKind.type) {
+            case 'home-top': {
+                const id = generateBannerId('top', 'home');
+                runCreate({
+                    id,
+                    src: DEFAULT_BANNER_IMAGE,
+                    route: '/',
+                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    positionType: 'top',
+                    pageType: 'home',
+                    position: homePageTopBanners.length,
+                    appearanceWeight: 'medium',
+                    bannerStatus: 'published',
+                    startsAt,
+                    endsAt,
+                    imageAlt: id,
+                });
+                break;
+            }
+            case 'home-medium': {
+                const id = generateBannerId('medium', 'home');
+                runCreate({
+                    id,
+                    src: DEFAULT_BANNER_IMAGE,
+                    route: '/',
+                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    positionType: 'medium',
+                    pageType: 'home',
+                    position: generalMediumBanners.length,
+                    appearanceWeight: 'medium',
+                    bannerStatus: 'published',
+                    startsAt,
+                    endsAt,
+                    imageAlt: id,
+                });
+                break;
+            }
+            case 'home-right': {
+                const id = generateBannerId('right', 'home');
+                runCreate({
+                    id,
+                    src: DEFAULT_BANNER_IMAGE,
+                    route: '/',
+                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    positionType: 'right',
+                    pageType: 'home',
+                    position: homePageRightBanners.length,
+                    appearanceWeight: 'medium',
+                    bannerStatus: 'published',
+                    startsAt,
+                    endsAt,
+                    imageAlt: id,
+                });
+                break;
+            }
+            case 'custom-top': {
+                const sectionIndex = customTopSections.findIndex((s) => s.id === pendingAddKind.sectionId);
+                if (sectionIndex === -1) break;
+                const section = customTopSections[sectionIndex];
+                const id = generateBannerId('top', 'custom');
+                runCreate({
+                    id,
+                    src: DEFAULT_BANNER_IMAGE,
+                    route: section.route,
+                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    positionType: 'top',
+                    pageType: 'custom',
+                    position: section.banners.length,
+                    appearanceWeight: 'medium',
+                    bannerStatus: 'published',
+                    startsAt,
+                    endsAt,
+                    imageAlt: id,
+                });
+                break;
+            }
+            case 'custom-medium': {
+                const sectionIndex = customMediumSections.findIndex((s) => s.id === pendingAddKind.sectionId);
+                if (sectionIndex === -1) break;
+                const section = customMediumSections[sectionIndex];
+                const id = generateBannerId('medium', 'custom');
+                runCreate({
+                    id,
+                    src: DEFAULT_BANNER_IMAGE,
+                    route: section.route,
+                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    positionType: 'medium',
+                    pageType: 'custom',
+                    position: section.banners.length,
+                    appearanceWeight: 'medium',
+                    bannerStatus: 'published',
+                    startsAt,
+                    endsAt,
+                    imageAlt: id,
+                });
+                break;
+            }
+            case 'custom-right': {
+                const sectionIndex = customRightSections.findIndex((s) => s.id === pendingAddKind.sectionId);
+                if (sectionIndex === -1) break;
+                const section = customRightSections[sectionIndex];
+                const id = generateBannerId('right', 'custom');
+                runCreate({
+                    id,
+                    src: DEFAULT_BANNER_IMAGE,
+                    route: section.route,
+                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    positionType: 'right',
+                    pageType: 'custom',
+                    position: section.banners.length,
+                    appearanceWeight: 'medium',
+                    bannerStatus: 'published',
+                    startsAt,
+                    endsAt,
+                    imageAlt: id,
+                });
+                break;
+            }
+            default:
+                break;
+        }
+        setBannerScheduleModalOpen(false);
+        setPendingAddKind(null);
     };
 
-    const handleMoveBannerDown = (bannerId: string, section: 'home' | string, sectionType?: 'top' | 'right' | 'medium') => {
-        if (section === 'home') {
-            const sortedBanners = [...homePageRightBanners].sort((a, b) => a.position - b.position);
-            const bannerIndex = sortedBanners.findIndex(b => b.id === bannerId);
+    const openEditScheduleForBanner = (bannerId: string) => {
+        const all = [
+            ...homePageRightBanners,
+            ...homePageTopBanners,
+            ...generalMediumBanners,
+            ...customTopSections.flatMap((s) => s.banners),
+            ...customRightSections.flatMap((s) => s.banners),
+            ...customMediumSections.flatMap((s) => s.banners),
+            ...expiredBanners,
+        ];
+        const banner = all.find((b) => b.id === bannerId);
+        if (!banner) return;
+        setBannerScheduleModalMode('edit');
+        setEditScheduleBannerId(bannerId);
+        setPendingAddKind(null);
+        setBannerScheduleDefaults({ start: banner.startsAt, end: banner.endsAt });
+        setBannerScheduleModalOpen(true);
+    };
 
-            if (bannerIndex < sortedBanners.length - 1) {
-                const newBanners = [...sortedBanners];
-                [newBanners[bannerIndex], newBanners[bannerIndex + 1]] = [newBanners[bannerIndex + 1], newBanners[bannerIndex]];
-                const updatedBanners = newBanners.map((banner, index) => ({
-                    ...banner,
-                    position: index
-                }));
-                setHomePageRightBanners(updatedBanners);
-                updatedBanners.forEach((b) => BannerService.updateBanner(b.id, { position: b.position }).catch((err) => console.error('Error persisting order:', err)));
-            }
-        } else {
-            if (sectionType === 'top') {
-                const sectionIndex = customTopSections.findIndex(s => s.id === section);
-                if (sectionIndex !== -1) {
-                    const newSections = [...customTopSections];
-                    const sectionData = newSections[sectionIndex];
-                    const sortedBanners = [...sectionData.banners].sort((a, b) => a.position - b.position);
-                    const bannerIndex = sortedBanners.findIndex(b => b.id === bannerId);
-
-                    if (bannerIndex < sortedBanners.length - 1) {
-                        const newBanners = [...sortedBanners];
-                        [newBanners[bannerIndex], newBanners[bannerIndex + 1]] = [newBanners[bannerIndex + 1], newBanners[bannerIndex]];
-                        const updatedBanners = newBanners.map((banner, index) => ({
-                            ...banner,
-                            position: index
-                        }));
-                        sectionData.banners = updatedBanners;
-                        setCustomTopSections(newSections);
-                        updatedBanners.forEach((b) => BannerService.updateBanner(b.id, { position: b.position }).catch((err) => console.error('Error persisting order:', err)));
-                    }
-                }
-            } else if (sectionType === 'medium') {
-                const sectionIndex = customMediumSections.findIndex(s => s.id === section);
-                if (sectionIndex !== -1) {
-                    const newSections = [...customMediumSections];
-                    const sectionData = newSections[sectionIndex];
-                    const sortedBanners = [...sectionData.banners].sort((a, b) => a.position - b.position);
-                    const bannerIndex = sortedBanners.findIndex(b => b.id === bannerId);
-
-                    if (bannerIndex < sortedBanners.length - 1) {
-                        const newBanners = [...sortedBanners];
-                        [newBanners[bannerIndex], newBanners[bannerIndex + 1]] = [newBanners[bannerIndex + 1], newBanners[bannerIndex]];
-                        const updatedBanners = newBanners.map((banner, index) => ({
-                            ...banner,
-                            position: index
-                        }));
-                        sectionData.banners = updatedBanners;
-                        setCustomMediumSections(newSections);
-                        updatedBanners.forEach((b) => BannerService.updateBanner(b.id, { position: b.position }).catch((err) => console.error('Error persisting order:', err)));
-                    }
-                }
-            } else {
-                const sectionIndex = customRightSections.findIndex(s => s.id === section);
-                if (sectionIndex !== -1) {
-                    const newSections = [...customRightSections];
-                    const sectionData = newSections[sectionIndex];
-                    const sortedBanners = [...sectionData.banners].sort((a, b) => a.position - b.position);
-                    const bannerIndex = sortedBanners.findIndex(b => b.id === bannerId);
-
-                    if (bannerIndex < sortedBanners.length - 1) {
-                        const newBanners = [...sortedBanners];
-                        [newBanners[bannerIndex], newBanners[bannerIndex + 1]] = [newBanners[bannerIndex + 1], newBanners[bannerIndex]];
-                        const updatedBanners = newBanners.map((banner, index) => ({
-                            ...banner,
-                            position: index
-                        }));
-                        sectionData.banners = updatedBanners;
-                        setCustomRightSections(newSections);
-                        updatedBanners.forEach((b) => BannerService.updateBanner(b.id, { position: b.position }).catch((err) => console.error('Error persisting order:', err)));
-                    }
-                }
-            }
-        }
+    const beginAddBannerSchedule = (kind: PendingAddKind) => {
+        const t = todayYmd();
+        setBannerScheduleModalMode('add');
+        setEditScheduleBannerId(null);
+        setPendingAddKind(kind);
+        setBannerScheduleDefaults({ start: t, end: addOneYearYmd(t) });
+        setBannerScheduleModalOpen(true);
     };
 
     const handleAddHomePageTopBanner = () => {
         if (portalId == null) return;
-        const newBanner: Banner = {
-            id: generateBannerId('top', 'home'),
-            src: DEFAULT_BANNER_IMAGE,
-            route: '/',
-            bannerRedirection: DEFAULT_BANNER_REDIRECTION,
-            positionType: 'top',
-            pageType: 'home',
-            position: homePageTopBanners.length,
-            appearanceWeight: 'medium',
-        };
-        setHomePageTopBanners([...homePageTopBanners, newBanner]);
-        BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
+        beginAddBannerSchedule({ type: 'home-top' });
     };
 
     const handleAddGeneralMediumBanner = () => {
         if (portalId == null) return;
-        const newBanner: Banner = {
-            id: generateBannerId('medium', 'home'),
-            src: DEFAULT_BANNER_IMAGE,
-            route: '/',
-            bannerRedirection: DEFAULT_BANNER_REDIRECTION,
-            positionType: 'medium',
-            pageType: 'home',
-            position: generalMediumBanners.length,
-            appearanceWeight: 'medium',
-        };
-        setGeneralMediumBanners([...generalMediumBanners, newBanner]);
-        BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
+        beginAddBannerSchedule({ type: 'home-medium' });
     };
 
     const handleAddHomePageRightBanner = () => {
         if (portalId == null) return;
-        const newBanner: Banner = {
-            id: generateBannerId('right', 'home'),
-            src: DEFAULT_BANNER_IMAGE,
-            route: '/',
-            bannerRedirection: DEFAULT_BANNER_REDIRECTION,
-            positionType: 'right',
-            pageType: 'home',
-            position: homePageRightBanners.length,
-            appearanceWeight: 'medium',
-        };
-        setHomePageRightBanners([...homePageRightBanners, newBanner]);
-        BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
+        beginAddBannerSchedule({ type: 'home-right' });
     };
 
     const handleAddCustomRightBanner = (sectionId: string) => {
         if (portalId == null) return;
-        const sectionIndex = customRightSections.findIndex(s => s.id === sectionId);
-        if (sectionIndex !== -1) {
-            const newSections = [...customRightSections];
-            const section = newSections[sectionIndex];
-            const newBanner: Banner = {
-                id: generateBannerId('right', 'custom'),
-                src: DEFAULT_BANNER_IMAGE,
-                route: section.route,
-                bannerRedirection: DEFAULT_BANNER_REDIRECTION,
-                positionType: 'right',
-                pageType: 'custom',
-                position: section.banners.length,
-                appearanceWeight: 'medium',
-            };
-            section.banners = [...section.banners, newBanner];
-            setCustomRightSections(newSections);
-            BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
-        }
+        beginAddBannerSchedule({ type: 'custom-right', sectionId });
     };
 
     const handleAddCustomTopBanner = (sectionId: string) => {
         if (portalId == null) return;
-        const sectionIndex = customTopSections.findIndex(s => s.id === sectionId);
-        if (sectionIndex !== -1) {
-            const newSections = [...customTopSections];
-            const section = newSections[sectionIndex];
-            const newBanner: Banner = {
-                id: generateBannerId('top', 'custom'),
-                src: DEFAULT_BANNER_IMAGE,
-                route: section.route,
-                bannerRedirection: DEFAULT_BANNER_REDIRECTION,
-                positionType: 'top',
-                pageType: 'custom',
-                position: section.banners.length,
-                appearanceWeight: 'medium',
-            };
-            section.banners = [...section.banners, newBanner];
-            setCustomTopSections(newSections);
-            BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
-        }
+        beginAddBannerSchedule({ type: 'custom-top', sectionId });
     };
 
-    const handleChangeAppearanceWeight = (bannerId: string, section: 'home-top' | 'home-medium' | 'home' | string, weight: AppearanceWeight) => {
-        const persist = () => BannerService.updateBanner(bannerId, { appearanceWeight: weight }).catch((err) => console.error('Error persisting appearance weight:', err));
-        if (section === 'home-top') {
-            setHomePageTopBanners(homePageTopBanners.map(b => (b.id === bannerId ? { ...b, appearanceWeight: weight } : b)));
-            persist();
-        } else if (section === 'home-medium') {
-            setGeneralMediumBanners(generalMediumBanners.map(b => (b.id === bannerId ? { ...b, appearanceWeight: weight } : b)));
-            persist();
-        } else if (section === 'home') {
-            setHomePageRightBanners(homePageRightBanners.map(b => (b.id === bannerId ? { ...b, appearanceWeight: weight } : b)));
-            persist();
-        } else {
-            const topIdx = customTopSections.findIndex(s => s.id === section);
-            if (topIdx !== -1) {
-                const newSections = [...customTopSections];
-                const sec = newSections[topIdx];
-                sec.banners = sec.banners.map(b => (b.id === bannerId ? { ...b, appearanceWeight: weight } : b));
-                setCustomTopSections(newSections);
-                persist();
-                return;
-            }
-            const mediumIdx = customMediumSections.findIndex(s => s.id === section);
-            if (mediumIdx !== -1) {
-                const newSections = [...customMediumSections];
-                const sec = newSections[mediumIdx];
-                sec.banners = sec.banners.map(b => (b.id === bannerId ? { ...b, appearanceWeight: weight } : b));
-                setCustomMediumSections(newSections);
-                persist();
-                return;
-            }
-            const rightIdx = customRightSections.findIndex(s => s.id === section);
-            if (rightIdx !== -1) {
-                const newSections = [...customRightSections];
-                const sec = newSections[rightIdx];
-                sec.banners = sec.banners.map(b => (b.id === bannerId ? { ...b, appearanceWeight: weight } : b));
-                setCustomRightSections(newSections);
-                persist();
-            }
-        }
+    const handleChangeAppearanceWeight = (
+        bannerId: string,
+        _section: 'home-top' | 'home-medium' | 'home' | string,
+        weight: AppearanceWeight
+    ) => {
+        BannerService.updateBanner(bannerId, { appearanceWeight: weight })
+            .then(() => reloadBanners())
+            .catch((err) => console.error('Error persisting appearance weight:', err));
     };
 
-    const handleDeleteTopBanner = (bannerId: string, section: 'home-top' | string) => {
-        if (section === 'home-top') {
-            const updated = homePageTopBanners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
-            setHomePageTopBanners(updated);
-            BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
-            updated.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
-        } else {
-            const sectionIndex = customTopSections.findIndex(s => s.id === section);
-            if (sectionIndex !== -1) {
-                const newSections = [...customTopSections];
-                const sec = newSections[sectionIndex];
-                sec.banners = sec.banners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
-                setCustomTopSections(newSections);
-                BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
-                sec.banners.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
-            }
-        }
+    const handleDeleteTopBanner = (bannerId: string, _section: 'home-top' | string) => {
+        BannerService.deleteBanner(bannerId)
+            .then(() => reloadBanners())
+            .catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
     };
 
-    const handleDeleteMediumBanner = (bannerId: string, section: 'home-medium' | string) => {
-        if (section === 'home-medium') {
-            const updated = generalMediumBanners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
-            setGeneralMediumBanners(updated);
-            BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
-            updated.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
-        } else {
-            const sectionIndex = customMediumSections.findIndex(s => s.id === section);
-            if (sectionIndex !== -1) {
-                const newSections = [...customMediumSections];
-                const sec = newSections[sectionIndex];
-                sec.banners = sec.banners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
-                setCustomMediumSections(newSections);
-                BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
-                sec.banners.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
-            }
-        }
+    const handleDeleteMediumBanner = (bannerId: string, _section: 'home-medium' | string) => {
+        BannerService.deleteBanner(bannerId)
+            .then(() => reloadBanners())
+            .catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
     };
 
-    const handleDeleteRightBanner = (bannerId: string, section: 'home' | string) => {
-        if (section === 'home') {
-            const updated = homePageRightBanners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
-            setHomePageRightBanners(updated);
-            BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
-            updated.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
-        } else {
-            const sectionIndex = customRightSections.findIndex(s => s.id === section);
-            if (sectionIndex !== -1) {
-                const newSections = [...customRightSections];
-                const sec = newSections[sectionIndex];
-                sec.banners = sec.banners.filter(b => b.id !== bannerId).map((b, i) => ({ ...b, position: i }));
-                setCustomRightSections(newSections);
-                BannerService.deleteBanner(bannerId).catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
-                sec.banners.forEach((b, i) => BannerService.updateBanner(b.id, { position: i }).catch(() => {}));
-            }
-        }
+    const handleDeleteRightBanner = (bannerId: string, _section: 'home' | string) => {
+        BannerService.deleteBanner(bannerId)
+            .then(() => reloadBanners())
+            .catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
     };
 
     const handleAddCustomMediumBanner = (sectionId: string) => {
         if (portalId == null) return;
-        const sectionIndex = customMediumSections.findIndex(s => s.id === sectionId);
-        if (sectionIndex !== -1) {
-            const newSections = [...customMediumSections];
-            const section = newSections[sectionIndex];
-            const newBanner: Banner = {
-                id: generateBannerId('medium', 'custom'),
-                src: DEFAULT_BANNER_IMAGE,
-                route: section.route,
-                bannerRedirection: DEFAULT_BANNER_REDIRECTION,
-                positionType: 'medium',
-                pageType: 'custom',
-                position: section.banners.length,
-                appearanceWeight: 'medium',
-            };
-            section.banners = [...section.banners, newBanner];
-            setCustomMediumSections(newSections);
-            BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
-        }
+        beginAddBannerSchedule({ type: 'custom-medium', sectionId });
     };
 
-    const handleAddCustomSection = (sectionName: string, sectionRoute: string, bannerSrc?: string) => {
+    const handleAddCustomSection = (
+        sectionName: string,
+        sectionRoute: string,
+        bannerSrc?: string,
+        schedule?: { startsAt: string; endsAt: string }
+    ) => {
         if (portalId == null) return;
         const routeSlug = sectionRoute.replace(/\//g, '-');
-        const newSection: CustomSection = {
-            id: adSectionType === 'medium' ? `section-medium-${routeSlug}-${Date.now()}` : `section-${routeSlug}-${Date.now()}`,
-            name: sectionName,
-            route: sectionRoute,
-            banners: []
-        };
 
-        if ((adSectionType === 'top' || adSectionType === 'medium') && bannerSrc) {
+        if ((adSectionType === 'top' || adSectionType === 'medium') && bannerSrc && schedule) {
+            const id = generateBannerId(adSectionType, 'custom');
             const newBanner: Banner = {
-                id: generateBannerId(adSectionType, 'custom'),
+                id,
                 src: bannerSrc,
                 route: sectionRoute,
                 bannerRedirection: DEFAULT_BANNER_REDIRECTION,
@@ -607,10 +568,30 @@ export const useBanners = (portalId: number | null) => {
                 pageType: 'custom',
                 position: 0,
                 appearanceWeight: 'medium',
+                bannerStatus: 'published',
+                startsAt: schedule.startsAt,
+                endsAt: schedule.endsAt,
+                imageAlt: id,
             };
-            newSection.banners = [newBanner];
-            BannerService.createBanner({ ...newBanner, portalId }).catch((err) => console.error('Error persisting banner:', err));
+            BannerService.createBanner({
+                ...newBanner,
+                portalId,
+                startsAt: schedule.startsAt,
+                endsAt: schedule.endsAt,
+                imageAlt: id,
+            })
+                .then(() => reloadBanners())
+                .catch((err) => console.error('Error persisting banner:', err));
+            setShowAdSectionModal(false);
+            return;
         }
+
+        const newSection: CustomSection = {
+            id: adSectionType === 'medium' ? `section-medium-${routeSlug}-${Date.now()}` : `section-${routeSlug}-${Date.now()}`,
+            name: sectionName,
+            route: sectionRoute,
+            banners: [],
+        };
 
         if (adSectionType === 'top') {
             setCustomTopSections([...customTopSections, newSection]);
@@ -640,7 +621,9 @@ export const useBanners = (portalId: number | null) => {
         }
         setShowDeleteModal(false);
         setDeleteSectionId(null);
-        bannerIds.forEach((id) => BannerService.deleteBanner(id).catch((err) => console.error('Error deleting banner:', getErrorDetails(err))));
+        Promise.all(bannerIds.map((id) => BannerService.deleteBanner(id)))
+            .then(() => reloadBanners())
+            .catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
     };
 
     const handleEditRoute = (newRoute: string) => {
@@ -788,9 +771,11 @@ export const useBanners = (portalId: number | null) => {
             }
         }
 
-        BannerService.updateBanner(changeImageBannerId, { src: newSrc }).catch((err) => {
-            console.error('Error persisting banner image:', getErrorDetails(err));
-        });
+        BannerService.updateBanner(changeImageBannerId, { src: newSrc, imageAlt: changeImageBannerId })
+            .then(() => reloadBanners())
+            .catch((err) => {
+                console.error('Error persisting banner image:', getErrorDetails(err));
+            });
         setShowChangeImageModal(false);
         setChangeImageBannerId(null);
         setChangeImageBannerSection(null);
@@ -814,6 +799,9 @@ export const useBanners = (portalId: number | null) => {
 
     const getCurrentBannerRedirection = (): string => {
         if (!changeRedirectionBannerId) return '';
+        const expired = expiredBanners.find((b) => b.id === changeRedirectionBannerId);
+        if (expired) return expired.bannerRedirection ?? '';
+
         if (changeRedirectionBannerSection === 'home-top') {
             const banner = homePageTopBanners.find(b => b.id === changeRedirectionBannerId);
             return banner?.bannerRedirection ?? '';
@@ -884,12 +872,34 @@ export const useBanners = (portalId: number | null) => {
                 setCustomRightSections(newSections);
             }
         }
-        BannerService.updateBanner(changeRedirectionBannerId, { bannerRedirection: newUrl }).catch((err) => console.error('Error persisting banner redirection:', err));
+        BannerService.updateBanner(changeRedirectionBannerId, { bannerRedirection: newUrl })
+            .then(() => reloadBanners())
+            .catch((err) => console.error('Error persisting banner redirection:', err));
         setShowChangeRedirectionModal(false);
         setChangeRedirectionBannerId(null);
         setChangeRedirectionBannerSection(null);
         setChangeRedirectionBannerType(null);
     };
+
+    const handleBannerScheduleCancel = () => {
+        setBannerScheduleModalOpen(false);
+        setPendingAddKind(null);
+        setEditScheduleBannerId(null);
+    };
+
+    const saveBannerScheduleInline = useCallback(
+        async (bannerId: string, startsAt: string, endsAt: string) => {
+            if (!bannerId) return;
+            try {
+                await BannerService.updateBanner(bannerId, { startsAt, endsAt });
+                reloadBanners();
+            } catch (error) {
+                const { message } = getErrorDetails(error);
+                alert(`Error saving schedule: ${message}`);
+            }
+        },
+        [reloadBanners]
+    );
 
     return {
         // State
@@ -899,6 +909,10 @@ export const useBanners = (portalId: number | null) => {
         customTopSections,
         customRightSections,
         customMediumSections,
+        expiredBanners,
+        bannerScheduleModalOpen,
+        bannerScheduleModalMode,
+        bannerScheduleDefaults,
         showAdSectionModal,
         showDeleteModal,
         showEditRouteModal,
@@ -919,8 +933,11 @@ export const useBanners = (portalId: number | null) => {
         setEditSectionType,
         setAdSectionType,
         // Handlers
-        handleMoveBannerUp,
-        handleMoveBannerDown,
+        handleBannerScheduleConfirm,
+        handleBannerScheduleCancel,
+        openEditScheduleForBanner,
+        saveBannerScheduleInline,
+        resolveSectionForBanner,
         handleAddHomePageTopBanner,
         handleAddGeneralMediumBanner,
         handleAddHomePageRightBanner,

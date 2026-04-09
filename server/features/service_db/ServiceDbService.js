@@ -1,22 +1,38 @@
 import ServiceDbModel from "./ServiceDbModel.js";
 import "../../database/models.js";
 
+/** Maps canonical service_channel to legacy service_type values used by older UI. */
+function channelToLegacyServiceType(channel) {
+    const c = String(channel ?? "").toLowerCase().trim();
+    if (c === "dem") return "newsletter";
+    if (c === "portal") return "portal";
+    if (c === "magazine") return "magazine";
+    return "other";
+}
+
 function toApiService(row) {
     if (!row) return null;
     const plain = typeof row.get === "function" ? row.get({ plain: true }) : row;
-    const out = {
-        id_service: plain.id_service,
-        name: plain.name ?? "",
-        service_type: plain.service_type ?? "",
-        display_name: plain.display_name ?? "",
-        description: plain.description ?? "",
+    const service_id = plain.service_id;
+    const service_full_name = plain.service_full_name ?? "";
+    const service_unit_price = Number(plain.service_unit_price ?? 0);
+    const service_channel = plain.service_channel ?? "";
+    return {
+        service_id,
+        service_full_name,
+        service_channel,
+        service_product: plain.service_product ?? "",
+        service_format: plain.service_format ?? "",
         service_description: plain.service_description ?? "",
-        tariff_price_eur: Number(plain.tariff_price_eur ?? 0),
-        unit: plain.unit ?? "",
-        delivery_days: Number(plain.delivery_days ?? 0),
+        service_unit: plain.service_unit ?? "",
+        service_unit_price,
+        service_unit_specifications: plain.service_unit_specifications ?? "",
+        // Backward-compatible aliases for logged UI still using legacy field names
+        id_service: service_id,
+        name: service_full_name,
+        tariff_price_eur: service_unit_price,
+        service_type: channelToLegacyServiceType(service_channel)
     };
-    if (plain.publication_date != null) out.publication_date = plain.publication_date;
-    return out;
 }
 
 export async function getAllServices() {
@@ -26,7 +42,7 @@ export async function getAllServices() {
             return [];
         }
         const rows = await ServiceDbModel.findAll({
-            order: [["id_service", "ASC"]],
+            order: [["service_id", "ASC"]],
         });
         return rows.map((r) => toApiService(r));
     } catch (error) {
@@ -64,25 +80,31 @@ export async function updateService(idService, patch) {
     // Only pass fields we actually want to update.
     const updateData = {};
 
-    if (patch?.name !== undefined) updateData.name = String(patch.name);
-    if (patch?.service_type !== undefined) updateData.service_type = String(patch.service_type);
+    if (patch?.service_full_name !== undefined) updateData.service_full_name = String(patch.service_full_name);
+    else if (patch?.name !== undefined) updateData.service_full_name = String(patch.name);
+
+    if (patch?.service_channel !== undefined) updateData.service_channel = String(patch.service_channel);
+    else if (patch?.service_type !== undefined) {
+        const t = String(patch.service_type).toLowerCase().trim();
+        const legacy = { newsletter: "dem", portal: "portal", magazine: "magazine", other: "dem" };
+        updateData.service_channel = legacy[t] ?? "dem";
+    }
+
+    if (patch?.service_product !== undefined) updateData.service_product = String(patch.service_product);
+    if (patch?.service_format !== undefined) updateData.service_format = String(patch.service_format);
     if (patch?.service_description !== undefined) updateData.service_description = String(patch.service_description);
+    if (patch?.service_unit !== undefined) updateData.service_unit = String(patch.service_unit);
+    if (patch?.service_unit_specifications !== undefined) {
+        updateData.service_unit_specifications = String(patch.service_unit_specifications);
+    }
 
-    if (patch?.tariff_price_eur !== undefined) {
+    if (patch?.service_unit_price !== undefined) {
+        const v = Number(patch.service_unit_price);
+        updateData.service_unit_price = Number.isNaN(v) ? 0 : v;
+    } else if (patch?.tariff_price_eur !== undefined) {
         const v = Number(patch.tariff_price_eur);
-        updateData.tariff_price_eur = Number.isNaN(v) ? 0 : v;
+        updateData.service_unit_price = Number.isNaN(v) ? 0 : v;
     }
-
-    if (patch?.publication_date !== undefined) {
-        // Sequelize accepts either a YYYY-MM-DD string (DATEONLY) or null.
-        updateData.publication_date = patch.publication_date ? String(patch.publication_date) : null;
-    }
-
-    // Optional fields used by the DB schema (kept for future extensibility).
-    if (patch?.display_name !== undefined) updateData.display_name = String(patch.display_name);
-    if (patch?.description !== undefined) updateData.description = String(patch.description);
-    if (patch?.unit !== undefined) updateData.unit = String(patch.unit);
-    if (patch?.delivery_days !== undefined) updateData.delivery_days = Number(patch.delivery_days ?? 0);
 
     await row.update(updateData);
     return toApiService(row);

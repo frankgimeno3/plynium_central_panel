@@ -21,7 +21,7 @@ interface Publication {
 interface CompanySelectModalProps {
   open: boolean;
   onClose: () => void;
-  onSelectCompany: (commercialName: string) => void;
+  onSelectCompany: (payload: { companyId: string; commercialName: string }) => void;
   publications: Publication[];
 }
 
@@ -108,7 +108,10 @@ const CompanySelectModal: FC<CompanySelectModalProps> = ({
 
   const handleConfirm = () => {
     if (!selectedCompany) return;
-    onSelectCompany(selectedCompany.commercialName ?? selectedCompany.companyId);
+    onSelectCompany({
+      companyId: selectedCompany.companyId,
+      commercialName: selectedCompany.commercialName ?? selectedCompany.companyId,
+    });
     onClose();
   };
 

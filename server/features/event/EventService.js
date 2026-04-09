@@ -78,17 +78,26 @@ export async function getAllEvents(opts = {}) {
       if (portalNames.length > 0) {
         const placeholders = portalNames.map((_, i) => `:p${i}`).join(", ");
         portalNames.forEach((n, i) => { replacements[`p${i}`] = n; });
-        joinClause = ` INNER JOIN event_portals ep ON ep.event_id = e.id_fair
-         INNER JOIN portals p ON p.id = ep.portal_id AND p.name IN (${placeholders})`;
+        joinClause = ` INNER JOIN event_portals ep ON ep.event_id = e.event_id
+         INNER JOIN portals_id p ON p.portal_id = ep.portal_id AND p.portal_name IN (${placeholders})`;
       }
 
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
       const [rows] = await EventModel.sequelize.query(
-        `SELECT DISTINCT e.id_fair, e.event_name, e.country, e.main_description, e.region,
-                e.start_date, e.end_date, e.location, e.event_main_image, e.id_customer
+        `SELECT DISTINCT
+                e.event_id AS id_fair,
+                e.event_name,
+                e.event_country AS country,
+                e.event_main_description AS main_description,
+                e.event_region AS region,
+                e.event_start_date AS start_date,
+                e.event_end_date AS end_date,
+                e.event_location AS location,
+                e.event_main_image_src AS event_main_image,
+                e.customer_id AS id_customer
          FROM events e${joinClause}
          ${whereClause}
-         ORDER BY e.start_date ASC`,
+         ORDER BY e.event_start_date ASC`,
         { replacements }
       );
       return (rows || []).map((r) => toApiEvent(r));

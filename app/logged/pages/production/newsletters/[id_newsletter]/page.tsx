@@ -135,7 +135,11 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
     { value: "cancelled", label: "Cancelled" },
   ];
 
-  const isSent = newsletter.status === "published" && newsletter.sentToLists != null && newsletter.sentToLists.length > 0;
+  const allSentListIds = [
+    ...(newsletter.userNewsletterListId ? [newsletter.userNewsletterListId] : []),
+    ...(newsletter.sentToLists ?? []),
+  ];
+  const isSent = newsletter.status === "published" && allSentListIds.length > 0;
 
   const handleStatusChange = async (newStatus: Newsletter["status"]) => {
     if (isSavingStatus) return;
@@ -165,6 +169,12 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
             <p className="text-xs text-gray-500 uppercase">Estimated publish date</p>
             <p className="font-medium text-gray-900">{newsletter.estimatedPublishDate}</p>
           </div>
+          {newsletter.realPublicationDate ? (
+            <div>
+              <p className="text-xs text-gray-500 uppercase">Real publication date</p>
+              <p className="font-medium text-gray-900">{newsletter.realPublicationDate}</p>
+            </div>
+          ) : null}
           <div>
             <p className="text-xs text-gray-500 uppercase">Topic</p>
             <p className="font-medium text-gray-900">{newsletter.topic}</p>
@@ -207,7 +217,7 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
           {isSent && (
             <div className="md:col-span-2">
               <p className="text-xs text-gray-500 uppercase">Sent to lists</p>
-              <p className="font-medium text-gray-900">{newsletter.sentToLists!.join(", ")}</p>
+              <p className="font-medium text-gray-900">{allSentListIds.join(", ")}</p>
             </div>
           )}
         </div>

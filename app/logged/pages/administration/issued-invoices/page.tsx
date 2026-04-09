@@ -27,6 +27,7 @@ type IssuedInvoice = {
   agent?: string;
   amount_eur: number;
   issue_date: string;
+  payment_date?: string;
   invoice_state?: string;
 };
 

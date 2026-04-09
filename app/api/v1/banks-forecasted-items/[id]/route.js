@@ -34,16 +34,40 @@ export const GET = createEndpoint(
 
 const putForecastedItemSchema = Joi.object({
   amount_eur: Joi.number().min(0).optional(),
+  revenue_expected_amount_eur: Joi.number().min(0).optional(),
+  revenue_real_amount_eur: Joi.number().min(0).allow(null).optional(),
   label: Joi.string().max(512).allow("").optional(),
+  customer_name: Joi.string().max(255).allow("").optional(),
+  date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  revenue_real_payment_date: Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
+    .allow(null)
+    .optional(),
   id_provider: Joi.string().max(64).allow("", null).optional(),
   provider_name: Joi.string().max(512).allow("").optional(),
   payment_date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  payment_expected_amount_eur: Joi.number().min(0).optional(),
+  payment_real_amount_eur: Joi.number().min(0).allow(null).optional(),
+  payment_expected_date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  payment_real_date: Joi.string()
+    .pattern(/^\d{4}-\d{2}-\d{2}$/)
+    .allow(null)
+    .optional(),
 }).or(
   "amount_eur",
+  "revenue_expected_amount_eur",
+  "revenue_real_amount_eur",
   "label",
+  "customer_name",
+  "date",
+  "revenue_real_payment_date",
   "id_provider",
   "provider_name",
-  "payment_date"
+  "payment_date",
+  "payment_expected_amount_eur",
+  "payment_real_amount_eur",
+  "payment_expected_date",
+  "payment_real_date"
 );
 
 export const PUT = createEndpoint(

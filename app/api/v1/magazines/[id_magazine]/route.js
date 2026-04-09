@@ -35,10 +35,9 @@ export const GET = createEndpoint(
 const patchSchema = Joi.object({
   name: Joi.string().trim().min(1).optional(),
   description: Joi.string().allow("").optional(),
-  notes: Joi.string().allow("").optional(),
   first_year: Joi.number().integer().optional(),
-  last_year: Joi.number().integer().optional(),
-  portal_name: Joi.string().allow("").optional(),
+  periodicity: Joi.string().allow("").optional(),
+  subscriber_number: Joi.number().integer().allow(null).optional(),
   issues_by_year: Joi.object().pattern(Joi.string(), Joi.array().items(
     Joi.object({
       issue_number: Joi.number().integer().required(),

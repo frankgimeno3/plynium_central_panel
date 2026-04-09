@@ -10,13 +10,16 @@ import { getPlanned } from "@/app/contents/publicationsHelpers";
 import type { PublicationUnified } from "@/app/contents/interfaces";
 
 type PublicationSlot = {
-  id_advertiser?: string;
-  id_project?: string;
-  image_src?: string;
-  article_id?: string;
-  state: string;
-  content_type: string;
-  slotKey?: string;
+  publication_slot_id?: number;
+  publication_id?: string | null;
+  publication_format?: "flipbook" | "informer";
+  slot_key?: string;
+  slot_content_type: string;
+  slot_state: string;
+  customer_id?: string;
+  project_id?: string;
+  slot_media_url?: string;
+  slot_article_id?: string;
 };
 
 type PlannedPublication = PublicationUnified & {
@@ -39,7 +42,7 @@ function plannedFromUnified(p: PublicationUnified): PlannedPublication {
   const slots: Record<string, PublicationSlot> = {};
   if (p.cover) slots.cover = p.cover;
   if (p.inside_cover) slots.inside_cover = p.inside_cover;
-  (p.pages || []).forEach((s) => { slots[s.slotKey || ""] = s; });
+  (p.pages || []).forEach((s) => { slots[s.slot_key || ""] = s; });
   if (p.end) slots.end = p.end;
   return { ...p, ...slots } as PlannedPublication;
 }
@@ -93,38 +96,38 @@ const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: stri
   const slots = SLOT_ORDER.filter((key) => key in publication && typeof publicationSlots[key] === "object");
 
   const renderSlot = (slotKey: string, slot: PublicationSlot) => {
-    const isArticle = slot.content_type === "article";
+    const isArticle = slot.slot_content_type === "article";
     return (
       <div key={slotKey} className="border border-gray-200 rounded-lg p-4 bg-white">
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <span className="font-medium text-gray-900 capitalize">{slotKey.replace("_", " ")}</span>
-          <span className={`px-2 py-1 rounded text-xs font-medium ${slot.state === "content ok" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
-            {slot.state}
+          <span className={`px-2 py-1 rounded text-xs font-medium ${slot.slot_state === "content ok" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
+            {slot.slot_state}
           </span>
-          <span className={`px-2 py-0.5 rounded text-xs ${slot.content_type === "article" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"}`}>
-            {slot.content_type}
+          <span className={`px-2 py-0.5 rounded text-xs ${slot.slot_content_type === "article" ? "bg-blue-100 text-blue-800" : "bg-purple-100 text-purple-800"}`}>
+            {slot.slot_content_type}
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2 text-sm">
           <div>
             <p className="text-xs text-gray-500 uppercase">Advertiser</p>
-            <p className="font-mono">{slot.id_advertiser}</p>
+            <p className="font-mono">{slot.customer_id}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase">Project</p>
-            <p className="font-mono">{slot.id_project}</p>
+            <p className="font-mono">{slot.project_id}</p>
           </div>
-          {isArticle && slot.article_id ? (
+          {isArticle && slot.slot_article_id ? (
             <div className="col-span-2">
               <p className="text-xs text-gray-500 uppercase">Article ID</p>
-              <p className="font-mono">{slot.article_id}</p>
+              <p className="font-mono">{slot.slot_article_id}</p>
             </div>
           ) : (
-            slot.image_src && (
+            slot.slot_media_url && (
               <div className="col-span-2">
                 <p className="text-xs text-gray-500 uppercase mb-1">Image</p>
                 <div className="aspect-video max-w-xs bg-gray-100 rounded flex items-center justify-center overflow-hidden">
-                  <img src={slot.image_src} alt="" className="w-full h-full object-cover" />
+                  <img src={slot.slot_media_url} alt="" className="w-full h-full object-cover" />
                 </div>
               </div>
             )

@@ -10,9 +10,9 @@ export async function getPortalsByProductId(productId) {
     if (!db.isConfigured()) return [];
     const sequelize = db.getSequelize();
     const [rows] = await sequelize.query(
-        `SELECT pp.portal_id AS "portalId", p.name AS "portalName", pp.slug, pp.status
+        `SELECT pp.portal_id AS "portalId", p.portal_name AS "portalName", pp.product_slug AS slug, pp.product_status AS status
          FROM product_portals pp
-         JOIN portals p ON p.id = pp.portal_id
+         JOIN portals_id p ON p.portal_id = pp.portal_id
          WHERE pp.product_id = :productId
          ORDER BY p.name`,
         { replacements: { productId } }
@@ -50,15 +50,16 @@ export async function addProductToPortal(productId, portalId, productName = "") 
     let suffix = 0;
     for (;;) {
         const [collision] = await sequelize.query(
-            `SELECT 1 FROM product_portals WHERE portal_id = :portalId AND slug = :slug`,
+            `SELECT 1 FROM product_portals WHERE portal_id = :portalId AND product_slug = :slug`,
             { replacements: { portalId, slug: finalSlug } }
         );
         if (!collision || collision.length === 0) break;
         finalSlug = `${baseSlug}-${++suffix}`;
     }
     await sequelize.query(
-        `INSERT INTO product_portals (product_id, portal_id, slug, status)
-         VALUES (:productId, :portalId, :slug, 'active')`,
+        `INSERT INTO product_portals (product_id, portal_id, product_slug, product_status)
+         VALUES (:productId, :portalId, :slug, 'active')
+         ON CONFLICT (product_id, portal_id) DO NOTHING`,
         { replacements: { productId, portalId, slug: finalSlug } }
     );
     return getPortalsByProductId(productId);
@@ -98,14 +99,14 @@ export async function createProductPortals(productId, portalIds, productName = "
         let suffix = 0;
         for (;;) {
             const [collision] = await sequelize.query(
-                `SELECT 1 FROM product_portals WHERE portal_id = :portalId AND slug = :slug`,
+                `SELECT 1 FROM product_portals WHERE portal_id = :portalId AND product_slug = :slug`,
                 { replacements: { portalId, slug: finalSlug } }
             );
             if (!collision || collision.length === 0) break;
             finalSlug = `${baseSlug}-${++suffix}`;
         }
         await sequelize.query(
-            `INSERT INTO product_portals (product_id, portal_id, slug, status)
+            `INSERT INTO product_portals (product_id, portal_id, product_slug, product_status)
              VALUES (:productId, :portalId, :slug, 'active')
              ON CONFLICT (product_id, portal_id) DO NOTHING`,
             { replacements: { productId, portalId, slug: finalSlug } }

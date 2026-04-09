@@ -23,9 +23,8 @@ const postSchema = Joi.object({
   name: Joi.string().required().trim().min(1),
   description: Joi.string().allow("").optional(),
   first_year: Joi.number().integer().optional(),
-  last_year: Joi.number().integer().optional(),
-  notes: Joi.string().allow("").optional(),
-  portal_name: Joi.string().allow("").optional(),
+  periodicity: Joi.string().allow("").optional(),
+  subscriber_number: Joi.number().integer().allow(null).optional(),
   issues_by_year: Joi.object().pattern(Joi.string(), Joi.array().items(
     Joi.object({
       issue_number: Joi.number().integer().required(),
@@ -45,9 +44,8 @@ export const POST = createEndpoint(
       name: String(body.name).trim(),
       description: body.description != null ? String(body.description).trim() : undefined,
       first_year: body.first_year != null ? Number(body.first_year) : undefined,
-      last_year: body.last_year != null ? Number(body.last_year) : undefined,
-      notes: body.notes != null ? String(body.notes).trim() : undefined,
-      portal_name: body.portal_name != null ? String(body.portal_name).trim() : undefined,
+      periodicity: body.periodicity != null ? String(body.periodicity).trim() : undefined,
+      subscriber_number: body.subscriber_number,
       issues_by_year: body.issues_by_year,
     });
     return NextResponse.json(newMagazine);

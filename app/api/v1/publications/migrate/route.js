@@ -20,21 +20,21 @@ export const POST = createEndpoint(async () => {
         const [results] = await sequelize.query(`
             SELECT column_name 
             FROM information_schema.columns 
-            WHERE table_name = 'publications' 
+            WHERE table_schema = 'public' AND table_name = 'publications_db'
             AND column_name = 'publication_main_image_url'
         `);
         
         if (results.length > 0) {
             return NextResponse.json({
                 success: true,
-                message: "La columna 'publication_main_image_url' ya existe en la tabla 'publications'"
+                message: "La columna 'publication_main_image_url' ya existe en la tabla 'publications_db'"
             });
         }
         
         // Agregar la columna
-        console.log("Agregando columna 'publication_main_image_url' a la tabla 'publications'...");
+        console.log("Agregando columna 'publication_main_image_url' a la tabla 'publications_db'...");
         await sequelize.query(`
-            ALTER TABLE publications 
+            ALTER TABLE publications_db 
             ADD COLUMN publication_main_image_url VARCHAR(255)
         `);
         

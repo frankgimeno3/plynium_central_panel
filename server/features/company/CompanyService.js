@@ -11,12 +11,10 @@ function toApiCompany(row) {
         category: row.category ?? "",
         mainDescription: row.main_description ?? "",
         mainImage: row.main_image ?? "",
-        productsArray: [],
-        categoriesArray: [],
-        mainEmail: row.main_email ?? "",
         mailTelephone: row.mail_telephone ?? "",
         fullAddress: row.full_address ?? "",
         webLink: row.web_link ?? "",
+        employeeRelationsArray: Array.isArray(row.employee_relations_array) ? row.employee_relations_array : [],
     };
 }
 
@@ -67,12 +65,10 @@ export async function createCompany(data) {
         category: data.category ?? "",
         main_description: data.mainDescription ?? "",
         main_image: data.mainImage ?? "",
-        products_array: Array.isArray(data.productsArray) ? data.productsArray : [],
-        categories_array: Array.isArray(data.categoriesArray) ? data.categoriesArray : [],
-        main_email: data.mainEmail ?? "",
         mail_telephone: data.mailTelephone ?? "",
         full_address: data.fullAddress ?? "",
         web_link: data.webLink ?? "",
+        employee_relations_array: Array.isArray(data.employeeRelationsArray) ? data.employeeRelationsArray : [],
     };
     const row = await CompanyModel.create(payload);
     const portalIds = Array.isArray(data.portalIds) ? data.portalIds.filter((id) => Number.isInteger(Number(id))).map(Number) : [];
@@ -93,10 +89,12 @@ export async function updateCompany(idCompany, data) {
     if (data.category !== undefined) updates.category = data.category;
     if (data.mainDescription !== undefined) updates.main_description = data.mainDescription;
     if (data.mainImage !== undefined) updates.main_image = data.mainImage;
-    if (data.mainEmail !== undefined) updates.main_email = data.mainEmail;
     if (data.mailTelephone !== undefined) updates.mail_telephone = data.mailTelephone;
     if (data.fullAddress !== undefined) updates.full_address = data.fullAddress;
     if (data.webLink !== undefined) updates.web_link = data.webLink;
+    if (data.employeeRelationsArray !== undefined) {
+        updates.employee_relations_array = Array.isArray(data.employeeRelationsArray) ? data.employeeRelationsArray : [];
+    }
     if (Object.keys(updates).length === 0) {
         return toApiCompany(row);
     }

@@ -22,7 +22,9 @@ export async function getAllPortals() {
         }
         const sequelize = db.getSequelize();
         const [rows] = await sequelize.query(
-            "SELECT id, key, name, domain, default_locale, theme, created_at FROM portals ORDER BY id ASC"
+            `SELECT portal_id AS id, portal_name_key AS key, portal_name AS name, portal_domain AS domain,
+                    portal_default_locale AS default_locale, portal_theme AS theme, portal_created_at AS created_at
+             FROM portals_id ORDER BY portal_id ASC`
         );
         const list = Array.isArray(rows) ? rows : [];
         return list.map(toApiPortal);

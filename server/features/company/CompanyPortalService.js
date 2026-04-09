@@ -12,7 +12,7 @@ export async function getCompaniesByPortalId(portalId) {
     const [rows] = await sequelize.query(
         `SELECT c.company_id AS "companyId", c.commercial_name AS "commercialName", c.country, c.category, c.main_email AS "mainEmail"
          FROM company_portals cp
-         JOIN companies c ON c.company_id = cp.company_id
+         JOIN companies_db c ON c.company_id = cp.company_id
          WHERE cp.portal_id = :portalId
          ORDER BY c.commercial_name ASC`,
         { replacements: { portalId } }
@@ -36,9 +36,9 @@ export async function getPortalsByCompanyId(companyId) {
     if (!db.isConfigured()) return [];
     const sequelize = db.getSequelize();
     const [rows] = await sequelize.query(
-        `SELECT cp.portal_id AS "portalId", p.name AS "portalName", cp.slug, cp.status
+        `SELECT cp.portal_id AS "portalId", p.portal_name AS "portalName", cp.company_portal_slug AS slug
          FROM company_portals cp
-         JOIN portals p ON p.id = cp.portal_id
+         JOIN portals_id p ON p.portal_id = cp.portal_id
          WHERE cp.company_id = :companyId
          ORDER BY p.name`,
         { replacements: { companyId } }
@@ -47,7 +47,7 @@ export async function getPortalsByCompanyId(companyId) {
         portalId: r.portalId,
         portalName: r.portalName,
         slug: r.slug,
-        status: r.status ?? "active",
+        status: "active",
     }));
 }
 
@@ -75,15 +75,15 @@ export async function addCompanyToPortal(companyId, portalId, commercialName = "
     let suffix = 0;
     for (;;) {
         const [collision] = await sequelize.query(
-            `SELECT 1 FROM company_portals WHERE portal_id = :portalId AND slug = :slug`,
+            `SELECT 1 FROM company_portals WHERE portal_id = :portalId AND company_portal_slug = :slug`,
             { replacements: { portalId, slug: finalSlug } }
         );
-        if (!collision || collision.length === 0) break;
+    if (!collision || collision.length === 0) break;
         finalSlug = `${baseSlug}-${++suffix}`;
     }
     await sequelize.query(
-        `INSERT INTO company_portals (company_id, portal_id, slug, status)
-         VALUES (:companyId, :portalId, :slug, 'active')`,
+        `INSERT INTO company_portals (company_id, portal_id, company_portal_slug)
+         VALUES (:companyId, :portalId, :slug)`,
         { replacements: { companyId, portalId, slug: finalSlug } }
     );
     return getPortalsByCompanyId(companyId);
@@ -122,15 +122,15 @@ export async function createCompanyPortals(companyId, portalIds, commercialName 
         let suffix = 0;
         for (;;) {
             const [collision] = await sequelize.query(
-                `SELECT 1 FROM company_portals WHERE portal_id = :portalId AND slug = :slug`,
+                `SELECT 1 FROM company_portals WHERE portal_id = :portalId AND company_portal_slug = :slug`,
                 { replacements: { portalId, slug: finalSlug } }
             );
             if (!collision || collision.length === 0) break;
             finalSlug = `${baseSlug}-${++suffix}`;
         }
         await sequelize.query(
-            `INSERT INTO company_portals (company_id, portal_id, slug, status)
-             VALUES (:companyId, :portalId, :slug, 'active')
+            `INSERT INTO company_portals (company_id, portal_id, company_portal_slug)
+             VALUES (:companyId, :portalId, :slug)
              ON CONFLICT (company_id, portal_id) DO NOTHING`,
             { replacements: { companyId, portalId, slug: finalSlug } }
         );

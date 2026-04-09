@@ -3,7 +3,6 @@ import "../../database/models.js";
 
 function toApiCustomer(row) {
     if (!row) return null;
-    const contact = row.contact && typeof row.contact === "object" ? row.contact : {};
     return {
         id_customer: row.id_customer,
         name: row.name ?? "",
@@ -14,27 +13,12 @@ function toApiCustomer(row) {
         email: row.email ?? "",
         website: row.website ?? "",
         industry: row.industry ?? "",
-        segment: row.segment ?? "",
         owner: row.owner ?? "",
-        source: row.source ?? "",
         status: row.status ?? "active",
-        revenue_eur: row.revenue_eur != null ? Number(row.revenue_eur) : 0,
-        next_activity: row.next_activity ?? "",
         tags: Array.isArray(row.tags) ? row.tags : [],
-        contact: {
-            name: contact.name ?? "",
-            role: contact.role ?? "",
-            email: contact.email ?? "",
-            phone: contact.phone ?? "",
-        },
-        contacts: Array.isArray(row.contacts) ? row.contacts : [],
-        comments: Array.isArray(row.comments) ? row.comments : [],
-        proposals: Array.isArray(row.proposals) ? row.proposals : [],
-        contracts: Array.isArray(row.contracts) ? row.contracts : [],
-        projects: Array.isArray(row.projects) ? row.projects : [],
         related_accounts: Array.isArray(row.related_accounts) ? row.related_accounts : [],
-        portal_products: row.portal_products && typeof row.portal_products === "object" ? row.portal_products : {},
-        company_categories_array: Array.isArray(row.company_categories_array) ? row.company_categories_array : [],
+        customer_company_id_array: Array.isArray(row.customer_company_id_array) ? row.customer_company_id_array : [],
+        customer_product_id_array: Array.isArray(row.customer_product_id_array) ? row.customer_product_id_array : [],
     };
 }
 
@@ -84,7 +68,7 @@ export async function createCustomer(data) {
         throw new Error("CustomerDbModel not initialized");
     }
     const payload = {
-        id_customer: data.id_customer || data.id_customer,
+        id_customer: data.id_customer,
         name: data.name ?? "",
         cif: data.cif ?? "",
         country: data.country ?? "",
@@ -93,22 +77,12 @@ export async function createCustomer(data) {
         email: data.email ?? "",
         website: data.website ?? "",
         industry: data.industry ?? "",
-        segment: data.segment ?? "",
         owner: data.owner ?? "",
-        source: data.source ?? "",
         status: data.status ?? "active",
-        revenue_eur: data.revenue_eur != null ? Number(data.revenue_eur) : 0,
-        next_activity: data.next_activity ?? "",
         tags: Array.isArray(data.tags) ? data.tags : [],
-        contact: data.contact && typeof data.contact === "object" ? data.contact : {},
-        contacts: Array.isArray(data.contacts) ? data.contacts : [],
-        comments: Array.isArray(data.comments) ? data.comments : [],
-        proposals: Array.isArray(data.proposals) ? data.proposals : [],
-        contracts: Array.isArray(data.contracts) ? data.contracts : [],
-        projects: Array.isArray(data.projects) ? data.projects : [],
         related_accounts: Array.isArray(data.related_accounts) ? data.related_accounts : [],
-        portal_products: data.portal_products && typeof data.portal_products === "object" ? data.portal_products : {},
-        company_categories_array: Array.isArray(data.company_categories_array) ? data.company_categories_array : [],
+        customer_company_id_array: Array.isArray(data.customer_company_id_array) ? data.customer_company_id_array : [],
+        customer_product_id_array: Array.isArray(data.customer_product_id_array) ? data.customer_product_id_array : [],
     };
     const row = await CustomerDbModel.create(payload);
     return toApiCustomer(row.get({ plain: true }));
@@ -128,23 +102,15 @@ export async function updateCustomer(idCustomer, data) {
     if (data.email !== undefined) updates.email = data.email;
     if (data.website !== undefined) updates.website = data.website;
     if (data.industry !== undefined) updates.industry = data.industry;
-    if (data.segment !== undefined) updates.segment = data.segment;
     if (data.owner !== undefined) updates.owner = data.owner;
-    if (data.source !== undefined) updates.source = data.source;
     if (data.status !== undefined) updates.status = data.status;
-    if (data.revenue_eur !== undefined) updates.revenue_eur = data.revenue_eur;
-    if (data.next_activity !== undefined) updates.next_activity = data.next_activity;
     if (data.tags !== undefined) updates.tags = Array.isArray(data.tags) ? data.tags : [];
-    if (data.contact !== undefined) updates.contact = data.contact && typeof data.contact === "object" ? data.contact : {};
-    if (data.contacts !== undefined) updates.contacts = Array.isArray(data.contacts) ? data.contacts : [];
-    if (data.comments !== undefined) updates.comments = Array.isArray(data.comments) ? data.comments : [];
-    if (data.proposals !== undefined) updates.proposals = Array.isArray(data.proposals) ? data.proposals : [];
-    if (data.contracts !== undefined) updates.contracts = Array.isArray(data.contracts) ? data.contracts : [];
-    if (data.projects !== undefined) updates.projects = Array.isArray(data.projects) ? data.projects : [];
     if (data.related_accounts !== undefined) updates.related_accounts = Array.isArray(data.related_accounts) ? data.related_accounts : [];
-    if (data.portal_products !== undefined) updates.portal_products = data.portal_products && typeof data.portal_products === "object" ? data.portal_products : {};
-    if (data.company_categories_array !== undefined) {
-        updates.company_categories_array = Array.isArray(data.company_categories_array) ? data.company_categories_array : [];
+    if (data.customer_company_id_array !== undefined) {
+        updates.customer_company_id_array = Array.isArray(data.customer_company_id_array) ? data.customer_company_id_array : [];
+    }
+    if (data.customer_product_id_array !== undefined) {
+        updates.customer_product_id_array = Array.isArray(data.customer_product_id_array) ? data.customer_product_id_array : [];
     }
     if (Object.keys(updates).length === 0) {
         return toApiCustomer(row.get({ plain: true }));

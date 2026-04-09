@@ -1,10 +1,7 @@
 import { createEndpoint } from "../../../../server/createEndpoint.js";
 import { NextResponse } from "next/server";
 import Joi from "joi";
-import {
-    getAllFlatplans,
-    createFlatplan,
-} from "../../../../server/features/publication_workflow/PublicationWorkflowService.js";
+import { getAllFlatplans, createFlatplan } from "../../../../server/features/publication_workflow/PublicationWorkflowService.js";
 
 export const runtime = "nodejs";
 

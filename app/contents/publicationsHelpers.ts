@@ -4,7 +4,7 @@ import type { PublicationUnified, PublicationState, Flatplan, FlatplanSlot, publ
  * Publications workflow: Data is now fetched from RDS via APIs:
  * - Published: /api/v1/publications (existing)
  * - Planned: /api/v1/planned-publications
- * - Flatplans: /api/v1/flatplans
+ * - Flatplans: removed from DB; /api/v1/flatplans returns [] (POST returns 410).
  */
 
 /** Fetch all published publications from the API */
@@ -30,11 +30,9 @@ export async function fetchPlannedPublications(): Promise<PublicationUnified[]> 
   return res.json();
 }
 
-/** Fetch all flatplans from the API */
+/** Flatplans table removed; returns an empty list (no network). */
 export async function fetchFlatplans(): Promise<PublicationUnified[]> {
-  const res = await fetch('/api/v1/flatplans');
-  if (!res.ok) throw new Error('Failed to fetch flatplans');
-  return res.json();
+  return [];
 }
 
 export type CreateFlatplanPayload = {
@@ -48,24 +46,10 @@ export type CreateFlatplanPayload = {
   description?: string;
 };
 
-/** Create a flatplan (persisted); issue leaves forecasted list once a row exists for magazine/year/issue. */
-export async function createFlatplanApi(payload: CreateFlatplanPayload): Promise<PublicationUnified> {
-  const res = await fetch('/api/v1/flatplans', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    let msg = 'Failed to create flatplan';
-    try {
-      const j = await res.json();
-      if (j?.message) msg = j.message;
-    } catch {
-      msg = await res.text().catch(() => msg);
-    }
-    throw new Error(msg);
-  }
-  return res.json();
+/** Flatplans are no longer persisted; always fails with a clear message. */
+export async function createFlatplanApi(_payload: CreateFlatplanPayload): Promise<PublicationUnified> {
+  void _payload;
+  throw new Error('Flatplans are no longer stored in the database.');
 }
 
 /** Fetch all publications (all states) from APIs */
@@ -109,7 +93,7 @@ export function publicationUnifiedToSlots(p: PublicationUnified): Record<string,
   if (p.cover) r.cover = p.cover;
   if (p.inside_cover) r.inside_cover = p.inside_cover;
   (p.pages || []).forEach((slot) => {
-    const key = slot.slotKey || String((Object.keys(r).length + 1));
+    const key = slot.slot_key || String((Object.keys(r).length + 1));
     r[key] = slot;
   });
   if (p.end) r.end = p.end;
@@ -158,7 +142,7 @@ export function unifiedToPlannedSlots(p: PublicationUnified): Record<string, unk
   if (p.inside_cover) r.inside_cover = p.inside_cover;
   if (p.end) r.end = p.end;
   (p.pages || []).forEach((s) => {
-    r[s.slotKey || ""] = s;
+    r[s.slot_key || ""] = s;
   });
   return r;
 }

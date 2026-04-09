@@ -22,6 +22,8 @@ export type NotificationState =
 export interface NotificationComment {
   date: string;
   content: string;
+  /** Present when comment is associated to an agent row */
+  agent_id?: string;
 }
 
 export interface CompanyContent {

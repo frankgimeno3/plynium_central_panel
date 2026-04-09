@@ -131,14 +131,14 @@ const FlatplanPageDetailPage: FC<{
     );
   }
 
-  const customerName = slot?.id_advertiser
-    ? customers.find((c) => c.id_customer === slot.id_advertiser)?.name ?? slot.id_advertiser
+  const customerName = slot?.customer_id
+    ? customers.find((c) => c.id_customer === slot.customer_id)?.name ?? slot.customer_id
     : null;
-  const projectTitle = slot?.id_project
-    ? projects.find((p) => p.id_project === slot.id_project)?.title ?? slot.id_project
+  const projectTitle = slot?.project_id
+    ? projects.find((p) => p.id_project === slot.project_id)?.title ?? slot.project_id
     : null;
 
-  const isArticle = slot?.content_type === "article";
+  const isArticle = slot?.slot_content_type === "article";
 
   return (
     <PageContentSection>
@@ -148,10 +148,10 @@ const FlatplanPageDetailPage: FC<{
           {slot && (
             <>
               {" · "}
-              <span className="capitalize">{slot.content_type}</span>
-              {slot.state && (
+              <span className="capitalize">{slot.slot_content_type}</span>
+              {slot.slot_state && (
                 <span className="ml-2 px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
-                  {slot.state}
+                  {slot.slot_state}
                 </span>
               )}
             </>
@@ -193,9 +193,9 @@ const FlatplanPageDetailPage: FC<{
         ) : (
           <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
             <div className="aspect-[3/2] bg-gray-100 flex items-center justify-center overflow-hidden">
-              {slot.image_src ? (
+              {slot.slot_media_url ? (
                 <img
-                  src={slot.image_src}
+                  src={slot.slot_media_url}
                   alt=""
                   className="w-full h-full object-cover"
                 />

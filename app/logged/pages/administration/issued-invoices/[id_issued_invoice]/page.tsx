@@ -16,6 +16,7 @@ type InvoiceDetail = {
   client_id: string;
   amount_eur: number;
   issue_date: string;
+  payment_date?: string;
   invoice_state?: string;
   orders: {
     order_code: string;
@@ -144,6 +145,14 @@ const IssuedInvoiceDetailPage: FC = () => {
                 <td className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Issue date</td>
                 <td className="px-6 py-3 text-sm text-gray-900">
                   {formatAdminDate(invoice.issue_date)}
+                </td>
+              </tr>
+              <tr>
+                <td className="px-6 py-3 text-xs font-medium text-gray-500 uppercase tracking-wider">Payment date</td>
+                <td className="px-6 py-3 text-sm text-gray-900">
+                  {invoice.payment_date && String(invoice.payment_date).trim() !== ""
+                    ? formatAdminDate(invoice.payment_date)
+                    : "—"}
                 </td>
               </tr>
               <tr>

@@ -13,7 +13,8 @@ export interface ArticleData {
   articleTitle: string;
   articleSubtitle: string;
   article_main_image_url: string;
-  company: string;
+  article_company_names_array: string[];
+  article_company_id_array: string[];
   date: string;
   article_tags_array: string[];
   contents_array: string[];

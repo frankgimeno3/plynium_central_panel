@@ -13,13 +13,14 @@ export type ArticlePublication = {
   portalName: string;
   slug: string;
   status: string;
+  visibility?: string;
+  commentingEnabled?: boolean;
 };
 
 type EditTarget =
   | { kind: "articleTitle" }
   | { kind: "articleSubtitle" }
   | { kind: "articleMainImage" }
-  | { kind: "company" }
   | { kind: "date" }
   | { kind: "content"; contentId: string; field: "center" | "left" | "right" };
 
@@ -58,12 +59,28 @@ export function useArticlePage(id_article: string) {
   });
 
   const normalizeArticle = (raw: any): articleInterface => {
+    let names = Array.isArray(raw?.article_company_names_array)
+      ? raw.article_company_names_array.map((s: string) => String(s))
+      : [];
+    let ids = Array.isArray(raw?.article_company_id_array)
+      ? raw.article_company_id_array.map((s: string) => String(s ?? ""))
+      : [];
+    if (names.length === 0 && raw?.company) {
+      names = [String(raw.company)];
+      ids = [""];
+    }
+    while (ids.length < names.length) ids.push("");
+    if (ids.length > names.length) ids = ids.slice(0, names.length);
+    const companyDisplay =
+      names.length > 0 ? names.join(", ") : String(raw?.company ?? "");
     return {
       id_article: String(raw?.id_article ?? ""),
       articleTitle: String(raw?.articleTitle ?? ""),
       articleSubtitle: String(raw?.articleSubtitle ?? ""),
       article_main_image_url: String(raw?.article_main_image_url ?? ""),
-      company: String(raw?.company ?? ""),
+      company: companyDisplay,
+      article_company_names_array: names,
+      article_company_id_array: ids,
       date: String(raw?.date ?? ""),
       article_tags_array: Array.isArray(raw?.article_tags_array)
         ? raw.article_tags_array
@@ -160,6 +177,10 @@ export function useArticlePage(id_article: string) {
       articleSubtitle: updates.articleSubtitle ?? articleData.articleSubtitle,
       article_main_image_url:
         updates.article_main_image_url ?? articleData.article_main_image_url,
+      article_company_names_array:
+        updates.article_company_names_array ?? articleData.article_company_names_array ?? [],
+      article_company_id_array:
+        updates.article_company_id_array ?? articleData.article_company_id_array ?? [],
       company: updates.company ?? articleData.company,
       date: updates.date ?? articleData.date,
       article_tags_array: updates.article_tags_array ?? articleData.article_tags_array,
@@ -211,10 +232,6 @@ export function useArticlePage(id_article: string) {
         });
         await ArticleService.updateArticle(id_article, updateData);
         setArticleData({ ...articleData, article_main_image_url: newValue });
-      } else if (currentEditTarget.kind === "company") {
-        const updateData = createArticleUpdateData({ company: newValue });
-        await ArticleService.updateArticle(id_article, updateData);
-        setArticleData({ ...articleData, company: newValue });
       } else if (currentEditTarget.kind === "date") {
         const updateData = createArticleUpdateData({ date: newValue });
         await ArticleService.updateArticle(id_article, updateData);
@@ -443,20 +460,29 @@ export function useArticlePage(id_article: string) {
     setIsMediatecaModalOpen(true);
   };
 
-  const handleEditCompany = () => {
+  const handleRemoveCompany = async (index: number) => {
     if (!articleData) return;
-    openEditModal({ kind: "company" }, articleData.company ?? "", "Edit company");
-  };
-
-  const handleSaveCompany = async (newCompany: string) => {
-    if (!articleData) return;
-    const value = (newCompany ?? "").trim();
-    if (value === (articleData.company ?? "")) return;
+    const names = [...(articleData.article_company_names_array ?? [])];
+    const ids = [...(articleData.article_company_id_array ?? [])];
+    if (names.length <= 1) {
+      alert("At least one company is required.");
+      return;
+    }
+    names.splice(index, 1);
+    ids.splice(index, 1);
     setIsSaving(true);
     try {
-      const updateData = createArticleUpdateData({ company: value });
+      const updateData = createArticleUpdateData({
+        article_company_names_array: names,
+        article_company_id_array: ids,
+      });
       await ArticleService.updateArticle(id_article, updateData);
-      setArticleData({ ...articleData, company: value });
+      setArticleData({
+        ...articleData,
+        article_company_names_array: names,
+        article_company_id_array: ids,
+        company: names.join(", "),
+      });
     } catch (error: any) {
       const errorMessage =
         typeof error === "string"
@@ -466,10 +492,53 @@ export function useArticlePage(id_article: string) {
             : error?.data?.message
               ? error.data.message
               : "Unknown error";
-      alert(`Error saving company: ${errorMessage}`);
+      alert(`Error saving companies: ${errorMessage}`);
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const handleAddCompany = async (name: string, companyId: string) => {
+    if (!articleData) return;
+    const n = name.trim();
+    if (!n) return;
+    const names = [...(articleData.article_company_names_array ?? [])];
+    const ids = [...(articleData.article_company_id_array ?? [])];
+    names.push(n);
+    ids.push(companyId.trim());
+    setIsSaving(true);
+    try {
+      const updateData = createArticleUpdateData({
+        article_company_names_array: names,
+        article_company_id_array: ids,
+      });
+      await ArticleService.updateArticle(id_article, updateData);
+      setArticleData({
+        ...articleData,
+        article_company_names_array: names,
+        article_company_id_array: ids,
+        company: names.join(", "),
+      });
+    } catch (error: any) {
+      const errorMessage =
+        typeof error === "string"
+          ? error
+          : error?.message
+            ? error.message
+            : error?.data?.message
+              ? error.data.message
+              : "Unknown error";
+      alert(`Error saving companies: ${errorMessage}`);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleAddCompanyFromDirectory = async (payload: {
+    companyId: string;
+    commercialName: string;
+  }) => {
+    await handleAddCompany(payload.commercialName, payload.companyId);
   };
 
   const handleEditDate = () => {
@@ -796,8 +865,9 @@ export function useArticlePage(id_article: string) {
     handleEditMainImage,
     openMediatecaForContentImage,
     handleSaveContentField,
-    handleEditCompany,
-    handleSaveCompany,
+    handleRemoveCompany,
+    handleAddCompany,
+    handleAddCompanyFromDirectory,
     handleEditDate,
     handleEditHighlitedPosition,
     handleEditIsArticleEvent,
@@ -838,6 +908,28 @@ export function useArticlePage(id_article: string) {
         setPublications(Array.isArray(list) ? list : []);
       } catch (e: any) {
         const msg = e?.message || e?.data?.message || "Error removing from portal";
+        alert(msg);
+      } finally {
+        setIsPortalActionLoading(false);
+      }
+    },
+    handleUpdatePublicationPublication: async (
+      portalId: number,
+      updates: { visibility?: string; commentingEnabled?: boolean }
+    ) => {
+      if (!id_article || isPortalActionLoading) return;
+      if (
+        updates.visibility === undefined &&
+        updates.commentingEnabled === undefined
+      ) {
+        return;
+      }
+      setIsPortalActionLoading(true);
+      try {
+        const list = await ArticleService.updateArticlePublication(id_article, portalId, updates);
+        setPublications(Array.isArray(list) ? list : []);
+      } catch (e: any) {
+        const msg = e?.message || e?.data?.message || "Error updating publication";
         alert(msg);
       } finally {
         setIsPortalActionLoading(false);

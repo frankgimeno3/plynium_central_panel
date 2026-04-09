@@ -47,10 +47,11 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
     return () => { cancelled = true; };
   }, [id_magazine]);
 
-  // Editable fields for name, description, notes
+  // Editable fields for name, description, periodicity, subscriber count
   const [editableName, setEditableName] = useState("");
   const [editableDescription, setEditableDescription] = useState("");
-  const [editableNotes, setEditableNotes] = useState("");
+  const [editablePeriodicity, setEditablePeriodicity] = useState("");
+  const [editableSubscriberNumber, setEditableSubscriberNumber] = useState("");
   const [saving, setSaving] = useState(false);
   const [issuesDirty, setIssuesDirty] = useState(false);
 
@@ -58,15 +59,20 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
     if (magazine) {
       setEditableName(magazine.name ?? "");
       setEditableDescription(magazine.description ?? "");
-      setEditableNotes(magazine.notes ?? "");
+      setEditablePeriodicity(magazine.periodicity ?? "");
+      setEditableSubscriberNumber(
+        magazine.subscriber_number != null ? String(magazine.subscriber_number) : ""
+      );
     }
-  }, [magazine?.id_magazine, magazine?.name, magazine?.description, magazine?.notes]);
+  }, [magazine?.id_magazine, magazine?.name, magazine?.description, magazine?.periodicity, magazine?.subscriber_number]);
 
   const hasChanges = Boolean(
     magazine &&
     (editableName !== (magazine.name ?? "") ||
       editableDescription !== (magazine.description ?? "") ||
-      editableNotes !== (magazine.notes ?? ""))
+      editablePeriodicity !== (magazine.periodicity ?? "") ||
+      editableSubscriberNumber !==
+        (magazine.subscriber_number != null ? String(magazine.subscriber_number) : ""))
   );
 
   const handleSaveChanges = async () => {
@@ -75,11 +81,22 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
     if (issuesDirty && !issuesMonthValid) return;
     setSaving(true);
     try {
-      const payload: { name?: string; description?: string; notes?: string; issues_by_year?: Record<string, MagazineIssue[]> } = {};
+      const payload: {
+        name?: string;
+        description?: string;
+        periodicity?: string;
+        subscriber_number?: number | null;
+        issues_by_year?: Record<string, MagazineIssue[]>;
+      } = {};
       if (hasChanges) {
         payload.name = editableName.trim();
         payload.description = editableDescription.trim();
-        payload.notes = editableNotes.trim();
+        payload.periodicity = editablePeriodicity.trim();
+        const sn = editableSubscriberNumber.trim();
+        payload.subscriber_number = sn === "" ? null : Number(sn);
+        if (payload.subscriber_number != null && Number.isNaN(payload.subscriber_number)) {
+          payload.subscriber_number = null;
+        }
       }
       if (issuesDirty) payload.issues_by_year = issuesByYear;
       const updated = await MagazineService.updateMagazine(magazine.id_magazine, payload);
@@ -87,7 +104,10 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
       if (updated.issues_by_year) setIssuesByYear(updated.issues_by_year);
       setEditableName(updated.name ?? "");
       setEditableDescription(updated.description ?? "");
-      setEditableNotes(updated.notes ?? "");
+      setEditablePeriodicity(updated.periodicity ?? "");
+      setEditableSubscriberNumber(
+        updated.subscriber_number != null ? String(updated.subscriber_number) : ""
+      );
       setIssuesDirty(false);
     } catch {
       // Could add toast/alert
@@ -120,14 +140,14 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
   const yearOptions = useMemo(() => {
     const fromIssues = Object.keys(issuesByYear);
     const first = magazine?.first_year ?? new Date().getFullYear();
-    const last = magazine?.last_year ?? new Date().getFullYear();
+    const last = new Date().getFullYear();
     const range: string[] = [];
     for (let y = first; y <= last; y++) range.push(String(y));
     const combined = Array.from(new Set([...fromIssues, ...range])).sort(
       (a, b) => Number(b) - Number(a)
     );
     return combined;
-  }, [magazine?.first_year, magazine?.last_year, issuesByYear]);
+  }, [magazine?.first_year, issuesByYear]);
 
   useEffect(() => {
     if (selectedYear === "" && yearOptions.length > 0) {
@@ -309,12 +329,6 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
             className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-medium"
           />
         </div>
-        {magazine.portal_name && (
-          <div className="md:col-span-2">
-            <p className="text-xs text-gray-500 uppercase">Portal</p>
-            <p className="font-medium text-gray-900">{magazine.portal_name}</p>
-          </div>
-        )}
         <div className="md:col-span-2">
           <p className="text-xs text-gray-500 uppercase">Description</p>
           <textarea
@@ -325,19 +339,26 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
           />
         </div>
         <div>
-          <p className="text-xs text-gray-500 uppercase">First year</p>
+          <p className="text-xs text-gray-500 uppercase">Starting year</p>
           <p className="text-gray-900">{magazine.first_year ?? "—"}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-500 uppercase">Last year</p>
-          <p className="text-gray-900">{magazine.last_year ?? "—"}</p>
+          <p className="text-xs text-gray-500 uppercase">Periodicity</p>
+          <input
+            type="text"
+            value={editablePeriodicity}
+            onChange={(e) => setEditablePeriodicity(e.target.value)}
+            className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
+            placeholder="e.g. monthly, quarterly"
+          />
         </div>
-        <div className="md:col-span-2">
-          <p className="text-xs text-gray-500 uppercase">Notes</p>
-          <textarea
-            value={editableNotes}
-            onChange={(e) => setEditableNotes(e.target.value)}
-            rows={2}
+        <div>
+          <p className="text-xs text-gray-500 uppercase">Subscribers</p>
+          <input
+            type="number"
+            min={0}
+            value={editableSubscriberNumber}
+            onChange={(e) => setEditableSubscriberNumber(e.target.value)}
             className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-700"
             placeholder="—"
           />

@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 const postSchema = Joi.object({
   name: Joi.string().required().trim().min(1),
   description: Joi.string().allow("").optional(),
-  portals_array: Joi.array().items(Joi.string().trim()).min(1).required(),
+  // Relations moved to company_categories_portal table; create category without portal binding here.
 });
 
 export const GET = createEndpoint(

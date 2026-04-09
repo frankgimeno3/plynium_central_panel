@@ -4,15 +4,17 @@ import "../../database/models.js";
 
 function toApiIssuedInvoice(row) {
   if (!row) return null;
+  const contractId = row.contract_id ?? row.id_contract ?? "";
   return {
     invoice_id: row.invoice_id,
-    id_contract: row.id_contract ?? "",
-    contract_code: row.contract_code ?? "",
-    client_id: row.client_id ?? "",
-    client_name: row.client_name ?? "",
-    agent: row.agent ?? "",
-    amount_eur: row.amount_eur != null ? Number(row.amount_eur) : 0,
-    issue_date: row.issue_date ?? "",
+    id_contract: contractId,
+    contract_code: contractId,
+    client_id: row.customer_id ?? row.client_id ?? "",
+    client_name: row.customer_company ?? row.client_name ?? "",
+    agent: row.agent_id ?? row.agent ?? "",
+    amount_eur: row.invoice_amount_eur != null ? Number(row.invoice_amount_eur) : (row.amount_eur != null ? Number(row.amount_eur) : 0),
+    issue_date: row.invoice_issue_date ?? row.issue_date ?? "",
+    payment_date: row.invoice_payment_date ?? "",
     invoice_state: row.invoice_state ?? "",
   };
 }
@@ -41,7 +43,7 @@ export async function getAllIssuedInvoices() {
       return [];
     }
     const rows = await IssuedInvoiceDbModel.findAll({
-      order: [["issue_date", "DESC"]],
+      order: [["invoice_issue_date", "DESC"]],
     });
     return rows.map((r) => toApiIssuedInvoice(r.get({ plain: true })));
   } catch (error) {

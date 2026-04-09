@@ -24,10 +24,12 @@ export interface RightBannersTabProps {
     onAddBannerToSection: (sectionId: string) => void;
     onChangeImage: (bannerId: string, section: string, type?: 'right') => void;
     onChangeRedirection: (bannerId: string, section: string, type?: 'right') => void;
+    onEditSchedule: (bannerId: string) => void;
     onChangeAppearanceWeight: (bannerId: string, section: 'home' | string, weight: AppearanceWeight) => void;
     onDeleteRightBanner: (bannerId: string, section: 'home' | string) => void;
     onEditRoute: (sectionId: string, type: 'right') => void;
     onDeleteSection: (sectionId: string, type: 'right') => void;
+    onSaveSchedule: (bannerId: string, startsAt: string, endsAt: string) => void;
 }
 
 const RightBannersTab: FC<RightBannersTabProps> = ({
@@ -38,10 +40,12 @@ const RightBannersTab: FC<RightBannersTabProps> = ({
     onAddBannerToSection,
     onChangeImage,
     onChangeRedirection,
+    onEditSchedule,
     onChangeAppearanceWeight,
     onDeleteRightBanner,
     onEditRoute,
     onDeleteSection,
+    onSaveSchedule,
 }) => {
     const sortedHomeRight = useMemo(
         () => [...homePageRightBanners].sort((a, b) => a.position - b.position),
@@ -74,6 +78,8 @@ const RightBannersTab: FC<RightBannersTabProps> = ({
                                         showArrows={false}
                                         onChangeImage={() => onChangeImage(banner.id, 'home')}
                                         onChangeRedirection={() => onChangeRedirection(banner.id, 'home')}
+                                        onEditSchedule={() => onEditSchedule(banner.id)}
+                                        onSaveSchedule={(s, e) => onSaveSchedule(banner.id, s, e)}
                                     />
                                     <div className="flex flex-row items-center gap-2 flex-shrink-0">
                                         <label className="text-sm text-gray-600">Probability weight:</label>
@@ -161,6 +167,8 @@ const RightBannersTab: FC<RightBannersTabProps> = ({
                                                     showArrows={false}
                                                     onChangeImage={() => onChangeImage(banner.id, section.id, 'right')}
                                                     onChangeRedirection={() => onChangeRedirection(banner.id, section.id, 'right')}
+                                                    onEditSchedule={() => onEditSchedule(banner.id)}
+                                                    onSaveSchedule={(s, e) => onSaveSchedule(banner.id, s, e)}
                                                 />
                                                 <div className="flex flex-row items-center gap-2 flex-shrink-0">
                                                     <label className="text-sm text-gray-600">Probability weight:</label>

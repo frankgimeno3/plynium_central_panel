@@ -16,6 +16,7 @@ import ArticleTags from "./id_article_components/ArticleTags";
 import ArticleContentsList from "./id_article_components/ArticleContentsList";
 import ArticleTitleSection from "./id_article_components/ArticleTitleSection";
 import ArticleCompanyDateSection from "./id_article_components/ArticleCompanyDateSection";
+import ArticlePublicationPortalsSection from "./id_article_components/ArticlePublicationPortalsSection";
 import ContentModal from "./id_article_components/ContentModal";
 import { useArticlePage } from "./hooks/useArticlePage";
 
@@ -53,8 +54,9 @@ export default function IdArticlePage() {
     handleEditMainImage,
     openMediatecaForContentImage,
     handleSaveContentField,
-    handleEditCompany,
-    handleSaveCompany,
+    handleRemoveCompany,
+    handleAddCompany,
+    handleAddCompanyFromDirectory,
     handleEditDate,
     handleEditHighlitedPosition,
     handleEditIsArticleEvent,
@@ -76,6 +78,7 @@ export default function IdArticlePage() {
     isPortalActionLoading,
     handleAddArticleToPortal,
     handleRemoveArticleFromPortal,
+    handleUpdatePublicationPublication,
   } = useArticlePage(id_article);
 
   const { setPageMeta } = usePageContent();
@@ -180,10 +183,14 @@ export default function IdArticlePage() {
         </div>
 
         <ArticleCompanyDateSection
-          company={articleData.company}
+          companyNames={articleData.article_company_names_array ?? (articleData.company ? [articleData.company] : [])}
+          companyIds={articleData.article_company_id_array ?? []}
+          onRemoveCompany={handleRemoveCompany}
+          onAddCompany={handleAddCompany}
+          onOpenDirectory={() => setCompanySelectModalOpen(true)}
           date={articleData.date}
-          onEditCompany={() => setCompanySelectModalOpen(true)}
           onEditDate={handleEditDate}
+          isSaving={isSaving}
         />
 
         <div className="flex flex-col gap-2">
@@ -240,67 +247,14 @@ export default function IdArticlePage() {
           </div>
         )}
 
-        <div className="flex flex-col gap-2">
-          <label className="text-lg font-bold text-gray-800">Published in portals</label>
-          <div className="flex flex-col gap-2">
-            {publications.length === 0 ? (
-              <p className="text-sm text-gray-400">Not published in any portal yet.</p>
-            ) : (
-              <ul className="list-none flex flex-wrap gap-2">
-                {publications.map((pub) => (
-                  <li
-                    key={pub.id}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 rounded-lg text-sm"
-                  >
-                    <span>{pub.portalName}</span>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveArticleFromPortal(pub.portalId)}
-                      disabled={isPortalActionLoading}
-                      className="text-red-600 hover:text-red-800 disabled:opacity-50 text-xs font-medium"
-                    >
-                      Remove
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {allPortals.filter((p) => !publications.some((pub) => pub.portalId === p.id)).length > 0 && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <select
-                  id="add-portal-select"
-                  disabled={isPortalActionLoading}
-                  className="px-3 py-2 border rounded-xl bg-white text-gray-700 text-sm disabled:opacity-50 max-w-xs"
-                  defaultValue=""
-                >
-                  <option value="">Select portal to add…</option>
-                  {allPortals
-                    .filter((p) => !publications.some((pub) => pub.portalId === p.id))
-                    .map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                </select>
-                <button
-                  type="button"
-                  disabled={isPortalActionLoading}
-                  onClick={() => {
-                    const sel = document.getElementById("add-portal-select") as HTMLSelectElement;
-                    const portalId = sel?.value ? Number(sel.value) : 0;
-                    if (portalId) {
-                      handleAddArticleToPortal(portalId);
-                      sel.value = "";
-                    }
-                  }}
-                  className="px-3 py-2 text-xs rounded-xl bg-blue-950 text-white hover:bg-blue-950/90 disabled:opacity-50"
-                >
-                  {isPortalActionLoading ? "…" : "Add to portal"}
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
+        <ArticlePublicationPortalsSection
+          publications={publications}
+          allPortals={allPortals}
+          isPortalActionLoading={isPortalActionLoading}
+          onAddToPortal={handleAddArticleToPortal}
+          onRemoveFromPortal={handleRemoveArticleFromPortal}
+          onUpdatePublication={handleUpdatePublicationPublication}
+        />
 
         <div className="flex flex-col gap-2">
           <label className="text-lg font-bold text-gray-800">Tags</label>
@@ -396,9 +350,8 @@ export default function IdArticlePage() {
       <CompanySelectModal
         open={companySelectModalOpen}
         onClose={() => setCompanySelectModalOpen(false)}
-        onSelectCompany={(commercialName) => {
-          handleSaveCompany(commercialName);
-          setCompanySelectModalOpen(false);
+        onSelectCompany={(payload) => {
+          handleAddCompanyFromDirectory(payload);
         }}
         publications={publications.map((p) => ({ portalId: p.portalId, portalName: p.portalName }))}
       />

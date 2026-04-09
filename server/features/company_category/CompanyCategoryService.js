@@ -4,10 +4,11 @@ import "../../database/models.js";
 function toApiCategory(row) {
     if (!row) return null;
     return {
-        id_category: row.id_category,
-        name: row.name ?? "",
-        description: row.description ?? "",
-        portals_array: Array.isArray(row.portals_array) ? row.portals_array : [],
+        category_id: row.id_category,
+        category_name: row.name ?? "",
+        category_description: row.description ?? "",
+        category_created_at: row.createdAt ?? null,
+        category_updated_at: row.updatedAt ?? null,
     };
 }
 
@@ -69,14 +70,10 @@ export async function createCategory(data) {
     });
     const nextNum = (Number(maxRow?.max_num) || 0) + 1;
     const id_category = `cat-${String(nextNum).padStart(3, "0")}`;
-    const portals_array = Array.isArray(data.portals_array)
-        ? data.portals_array.map((p) => String(p).trim()).filter(Boolean)
-        : [];
     const row = await CompanyCategoryModel.create({
         id_category,
         name,
         description: typeof data.description === "string" ? data.description.trim() : "",
-        portals_array,
     });
     return toApiCategory(row);
 }

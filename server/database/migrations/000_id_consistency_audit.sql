@@ -1,42 +1,82 @@
 -- 000_id_consistency_audit.sql
 -- SOLO LECTURA: no modifica datos ni esquema. Ejecutar a mano para auditar tipos PK/FK.
--- Estándar: IDs string (TEXT) en entidades principales; UUID solo en article_publications.id.
+-- Canon: ver 065_bootstrap_core_schema.sql. Este audit valida:
+-- - tablas faltantes vs canon
+-- - tablas extra (legacy / no canon)
+-- - mismatches FK/PK por tipo
 
--- ========== 1) Tipos de columnas clave (PK y columnas de referencia) ==========
-SELECT
-    c.table_schema,
-    c.table_name,
-    c.column_name,
-    c.data_type,
-    c.character_maximum_length
-FROM information_schema.columns c
-WHERE c.table_schema = 'public'
-  AND (
-    (c.table_name, c.column_name) IN (
-        ('users', 'id_user'),
-        ('articles', 'id_article'),
-        ('companies', 'company_id'),
-        ('products', 'product_id'),
-        ('events', 'id_fair'),
-        ('publications', 'id_publication'),
-        ('banners', 'id'),
-        ('portals', 'id'),
-        ('article_publications', 'id'),
-        ('article_publications', 'article_id'),
-        ('comments', 'id_article'),
-        ('comments', 'article_publication_id'),
-        ('contents', 'content_id'),
-        ('contents', 'article_id'),
-        ('company_portals', 'company_id'),
-        ('product_portals', 'product_id'),
-        ('event_portals', 'event_id'),
-        ('publication_portals', 'publication_id'),
-        ('event_articles', 'event_id'),
-        ('event_articles', 'article_id'),
-        ('banners', 'portal_id')
-    )
-  )
-ORDER BY c.table_name, c.column_name;
+-- ========== 0) Tablas esperadas vs reales ==========
+WITH expected(table_name) AS (
+  VALUES
+    ('portals_id'),
+    ('users_db'),
+    ('companies_db'),
+    ('products_db'),
+    ('company_portals'),
+    ('product_portals'),
+    ('employee_relations'),
+    ('company_administrators'),
+    ('company_categories'),
+    ('company_categories_portal'),
+    ('portal_banners'),
+    ('articles_db'),
+    ('article_portals'),
+    ('article_contents'),
+    ('article_comments'),
+    ('events'),
+    ('event_portals'),
+    ('event_articles'),
+    ('publications_db'),
+    ('mediateca_folders'),
+    ('mediateca_media_contents'),
+    ('customers_db'),
+    ('contacts_db'),
+    ('agents_db'),
+    ('magazines_db'),
+    ('providers_db'),
+    ('provider_invoices_db'),
+    ('proposals_db'),
+    ('proposal_service_lines'),
+    ('proposal_payments'),
+    ('contracts_db'),
+    ('projects_db'),
+    ('pm_events_db'),
+    ('issued_invoices_db'),
+    ('orders_db'),
+    ('services_db'),
+    ('panel_tickets'),
+    ('panel_ticket_comments'),
+    ('panel_ticket_company_data'),
+    ('user_notifications'),
+    ('publication_slots_db'),
+    ('publication_slot_content'),
+    ('offered_preferential_pages'),
+    ('newsletter_campaigns'),
+    ('newsletters_db'),
+    ('newsletter_content_blocks'),
+    ('revenues_db'),
+    ('payments_db'),
+    ('newsletter_user_lists')
+),
+actual AS (
+  SELECT table_name
+  FROM information_schema.tables
+  WHERE table_schema='public' AND table_type='BASE TABLE'
+),
+missing AS (
+  SELECT e.table_name FROM expected e
+  LEFT JOIN actual a ON a.table_name = e.table_name
+  WHERE a.table_name IS NULL
+),
+extra AS (
+  SELECT a.table_name FROM actual a
+  LEFT JOIN expected e ON e.table_name = a.table_name
+  WHERE e.table_name IS NULL
+)
+SELECT 'MISSING' AS status, table_name FROM missing
+UNION ALL
+SELECT 'EXTRA' AS status, table_name FROM extra
+ORDER BY status, table_name;
 
 -- ========== 2) FKs: tipo de columna FK vs tipo de PK referenciada ==========
 SELECT
@@ -61,27 +101,7 @@ WHERE tc.constraint_type = 'FOREIGN KEY'
   AND tc.table_schema = 'public'
 ORDER BY tc.table_name, kcu.column_name;
 
--- ========== 3) Columnas que referencian lógicamente sin FK ==========
-SELECT 'company_portals.company_id' AS col, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'company_portals' AND column_name = 'company_id'
-UNION ALL
-SELECT 'companies.company_id', data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'companies' AND column_name = 'company_id';
-
-SELECT 'product_portals.product_id' AS col, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'product_portals' AND column_name = 'product_id'
-UNION ALL
-SELECT 'products.product_id', data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'products' AND column_name = 'product_id';
-
-SELECT 'contents.article_id' AS col, data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'contents' AND column_name = 'article_id'
-UNION ALL
-SELECT 'articles.id_article', data_type FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'articles' AND column_name = 'id_article';
-
--- ========== 4) comments: columna de timestamp ==========
-SELECT table_name, column_name, data_type
-FROM information_schema.columns
-WHERE table_schema = 'public' AND table_name = 'comments'
-  AND column_name IN ('created_at', 'updated_at', 'id_timestamp', 'timestamp', 'date')
-ORDER BY column_name;
-
--- ========== 5) UUID donde se espera TEXT ==========
+-- ========== 3) UUID donde se espera TEXT (inspección general) ==========
 SELECT table_name, column_name, data_type
 FROM information_schema.columns
 WHERE table_schema = 'public'

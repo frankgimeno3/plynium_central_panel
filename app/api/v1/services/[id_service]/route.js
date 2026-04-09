@@ -30,28 +30,27 @@ export const GET = createEndpoint(
 );
 
 const patchSchema = Joi.object({
+  service_full_name: Joi.string().trim().min(1).optional(),
+  service_channel: Joi.string().valid("dem", "portal", "magazine").optional(),
+  service_product: Joi.string()
+    .valid("newsletter", "magazine", "company directory", "banner")
+    .optional(),
+  service_format: Joi.string().allow("").optional(),
+  service_description: Joi.string().allow("").optional(),
+  service_unit: Joi.string().allow("").optional(),
+  service_unit_price: Joi.number().min(0).optional(),
+  service_unit_specifications: Joi.string().allow("").optional(),
+  // Legacy aliases (older logged UI)
   name: Joi.string().trim().min(1).optional(),
   service_type: Joi.string().valid("newsletter", "portal", "magazine", "other").optional(),
-  service_description: Joi.string().allow("").optional(),
   tariff_price_eur: Joi.number().min(0).optional(),
-  publication_date: Joi.alternatives()
-    .try(Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/), Joi.valid(null))
-    .optional(),
-
-  // Optional DB fields kept for extensibility
-  display_name: Joi.string().allow("").optional(),
-  description: Joi.string().allow("").optional(),
-  unit: Joi.string().allow("").optional(),
-  delivery_days: Joi.number().integer().min(0).optional(),
 }).unknown(false);
 
 export const PATCH = createEndpoint(
   async (request, body) => {
     const id_service = getIdFromRequest(request);
     try {
-      const normalized =
-        body?.publication_date === "" ? { ...body, publication_date: null } : body;
-      const updated = await updateService(id_service, normalized);
+      const updated = await updateService(id_service, body);
       return NextResponse.json(updated);
     } catch (err) {
       if (err.message && err.message.includes("not found")) {

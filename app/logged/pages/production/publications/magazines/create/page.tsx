@@ -18,7 +18,8 @@ type FormState = {
   name: string;
   description: string;
   starting_year: string;
-  notes: string;
+  periodicity: string;
+  subscriber_number: string;
   num_issues: number;
   issues: IssueFormRow[];
   /** When true, do NOT auto-create next year issues at end of year (user checked the box). */
@@ -43,7 +44,8 @@ const initialForm: FormState = {
   name: "",
   description: "",
   starting_year: "",
-  notes: "",
+  periodicity: "",
+  subscriber_number: "",
   num_issues: 0,
   issues: [],
   doNotAutoCreateNextYearIssues: false,
@@ -177,12 +179,14 @@ const CreateMagazinePage: FC = () => {
           ...(forecasted_publication_month != null && forecasted_publication_month >= 1 && forecasted_publication_month <= 12 ? { forecasted_publication_month } : {}),
         })
       );
+      const subRaw = form.subscriber_number.trim();
       await MagazineService.createMagazine({
         id_magazine: form.id_magazine || nextId,
         name: form.name.trim(),
         description: form.description.trim() || undefined,
         first_year: form.starting_year ? Number(form.starting_year) : currentYear,
-        notes: form.notes.trim() || undefined,
+        periodicity: form.periodicity.trim() || undefined,
+        subscriber_number: subRaw === "" ? undefined : Number(subRaw),
         issues_by_year: form.issues.length > 0 ? { [yearKey]: issuesForYear } : undefined,
       });
       router.push(BASE);
@@ -215,7 +219,7 @@ const CreateMagazinePage: FC = () => {
               ))}
               <span className="text-sm text-gray-600 ml-2">
                 {step === 1 && "Name and description"}
-                {step === 2 && "Starting year, notes and issues"}
+                {step === 2 && "Starting year, details and issues"}
                 {step === 3 && "Review"}
               </span>
             </div>
@@ -263,13 +267,13 @@ const CreateMagazinePage: FC = () => {
                       disabled={!canAdvanceStep1}
                       className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                      Next: Starting year, notes and issues
+                      Next: Starting year, details and issues
                     </button>
                   </div>
                 </div>
               )}
 
-              {/* Step 2: Starting year, Notes, Issues this year */}
+              {/* Step 2: Starting year, periodicity, subscribers, issues this year */}
               {step === 2 && (
                 <div className="space-y-6">
                   <div>
@@ -286,13 +290,25 @@ const CreateMagazinePage: FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-xs text-gray-600 mb-1">Notes</label>
-                    <textarea
-                      value={form.notes}
-                      onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-                      rows={2}
+                    <label className="block text-xs text-gray-600 mb-1">Periodicity</label>
+                    <input
+                      type="text"
+                      value={form.periodicity}
+                      onChange={(e) => setForm((f) => ({ ...f, periodicity: e.target.value }))}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Optional notes"
+                      placeholder="e.g. monthly, quarterly"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Subscriber number</label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.subscriber_number}
+                      onChange={(e) => setForm((f) => ({ ...f, subscriber_number: e.target.value }))}
+                      className="w-full max-w-[160px] px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Optional"
                     />
                   </div>
 
@@ -516,8 +532,12 @@ const CreateMagazinePage: FC = () => {
                         <dd className="font-medium">{form.starting_year || "—"}</dd>
                       </div>
                       <div>
-                        <dt className="text-gray-500">Notes</dt>
-                        <dd className="font-medium whitespace-pre-wrap">{form.notes || "—"}</dd>
+                        <dt className="text-gray-500">Periodicity</dt>
+                        <dd className="font-medium">{form.periodicity.trim() || "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-500">Subscriber number</dt>
+                        <dd className="font-medium">{form.subscriber_number.trim() || "—"}</dd>
                       </div>
                       <div>
                         <dt className="text-gray-500">Issues this year</dt>

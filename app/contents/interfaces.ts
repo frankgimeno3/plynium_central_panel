@@ -5,7 +5,10 @@ export interface articleInterface {
   article_main_image_url: string;
   article_tags_array: string[];
   contents_array: string[];
+  /** Comma-separated display; prefer article_company_names_array */
   company: string;
+  article_company_names_array?: string[];
+  article_company_id_array?: string[];
   date: string;
   highlited_position?: string;
   is_article_event?: boolean;
@@ -25,15 +28,34 @@ export interface articleMiniatureInterface {
     url_imagen: string;
 }
 
-/** Slot for a page (cover, inside_cover, end or a numbered page). */
+/** Slot for a page (cover, inside_cover, end or a numbered page). Aligns with publication_slots_db. */
 export interface PublicationSlot {
-  slotKey?: string;
-  id_advertiser?: string;
-  id_project?: string;
-  image_src?: string;
-  article_id?: string;
-  state: string;
-  content_type: string;
+  publication_slot_id?: number;
+  publication_id?: string | null;
+  /** Display surface: flipbook (viewer) or informer (other). */
+  publication_format?: "flipbook" | "informer";
+  slot_key?: string;
+  slot_content_type: string;
+  slot_state: string;
+  customer_id?: string;
+  project_id?: string;
+  slot_media_url?: string;
+  slot_article_id?: string;
+  slot_created_at?: string;
+  slot_updated_at?: string;
+}
+
+/** Row in offered_preferential_pages (preferential ad page offered on a proposal). */
+export interface OfferedPreferentialPage {
+  offeredPageId?: string;
+  pageType: string;
+  slotKey: string;
+  publicationId?: string | null;
+  publicationSlotId?: number | null;
+  agentId?: string | null;
+  customerId?: string | null;
+  proposalId?: string | null;
+  offeredPageProposalDate?: string | null;
 }
 
 /** Single unified publication: planned | in production | published. All fields present; blank when not applicable. */
@@ -61,7 +83,7 @@ export interface PublicationUnified {
   /** Rest of pages (numbered slots 1, 2, 3, ...) as array. */
   pages: PublicationSlot[];
   single_available: { state: string; offeredInProposal?: unknown[] } | null;
-  offeredPreferentialPages: { pageType: string; slotKey: string }[];
+  offeredPreferentialPages: OfferedPreferentialPage[];
 }
 
 /** Publication (published issue). Use PublicationUnified filtered by state === "published" or this for backward compat. */
@@ -86,7 +108,7 @@ export interface publicationInterface {
   end?: PublicationSlot | null;
   pages?: PublicationSlot[];
   single_available?: { state: string; offeredInProposal?: unknown[] } | null;
-  offeredPreferentialPages?: { pageType: string; slotKey: string }[];
+  offeredPreferentialPages?: OfferedPreferentialPage[];
 }
 
 /** Planned issue for a magazine in a given year. */
@@ -104,11 +126,10 @@ export interface Magazine {
   name: string;
   description?: string;
   first_year?: number;
-  last_year?: number;
-  notes?: string;
-  /** Portal this magazine is related to (display name or code). */
-  portal_name?: string;
-  /** Planned issues per year. Key = year as string (e.g. "2025"). */
+  /** e.g. monthly, quarterly */
+  periodicity?: string;
+  subscriber_number?: number;
+  /** Planned issues per year. Key = year as string (e.g. "2025"). Client-only unless API persists. */
   issues_by_year?: Record<string, MagazineIssue[]>;
 }
 
@@ -139,7 +160,7 @@ export interface Flatplan {
   "8"?: FlatplanSlot;
   "9"?: FlatplanSlot;
   "10"?: FlatplanSlot;
-  offeredPreferentialPages?: { pageType: string; slotKey: string }[];
+  offeredPreferentialPages?: OfferedPreferentialPage[];
 }
 
 export interface Company {
@@ -187,6 +208,7 @@ export interface IssuedInvoice {
   invoice_id: string;
   amount_eur: number;
   issue_date: string;
+  payment_date?: string;
   invoice_state?: 'created' | 'ok' | 'cancelled';
   orders: Order[];
 }
@@ -252,10 +274,14 @@ export interface NewsletterCampaign {
   name: string;
   description: string;
   portalCode: string;
+  /** DB column newsletter_campaign (free text). */
+  newsletterCampaign?: string;
   contentTheme: string;
   frequency: string;
   startDate: string;
   endDate: string;
+  /** DB: newsletter_campaign_planned_publication_dates_array (ISO date strings). */
+  plannedPublicationDates?: string[];
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -269,6 +295,8 @@ export interface Newsletter {
   campaignId: string;
   portalCode: string;
   estimatedPublishDate: string;
+  /** Set when the newsletter was actually published (DB: newsletter_real_publication_date). */
+  realPublicationDate?: string;
   topic: string;
   status: NewsletterStatus;
   /** User newsletter list id (from userLists) for scheduled/target send list. */

@@ -154,7 +154,7 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
       const initial: Record<string, FlatplanSlot> = {};
       SLOT_ORDER.forEach((key) => {
         const v = (flatplan as unknown as Record<string, unknown>)[key];
-        if (v && typeof v === "object" && v !== null && "id_project" in v) {
+        if (v && typeof v === "object" && v !== null && "project_id" in v) {
           initial[key as string] = v as FlatplanSlot;
         }
       });
@@ -207,7 +207,9 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
 
   const projectIdsInFlatplan = useMemo(() => {
     const set = new Set<string>();
-    Object.values(slots).forEach((s) => set.add(s.id_project));
+    Object.values(slots).forEach((s) => {
+      if (s.project_id) set.add(s.project_id);
+    });
     return set;
   }, [slots]);
 
@@ -218,9 +220,9 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
         const contract = contracts.find((c) => c.id_contract === p.id_contract);
         const customer = contract ? customers.find((c) => c.id_customer === contract.id_customer) : null;
         const service = services.find((s) => s.id_service === p.service);
-        const slotEntry = Object.entries(slots).find(([, s]) => s.id_project === p.id_project);
+        const slotEntry = Object.entries(slots).find(([, s]) => s.project_id === p.id_project);
         const slotData = slotEntry?.[1];
-        const content_type = (slotData?.content_type as ProjectRow["content_type"]) || "advert";
+        const content_type = (slotData?.slot_content_type as ProjectRow["content_type"]) || "advert";
         return {
           id_project: p.id_project,
           id_contract: p.id_contract,
@@ -264,8 +266,8 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
   };
 
   const getSlotDisplayName = (slot: FlatplanSlot): string => {
-    const proj = projects.find((p) => p.id_project === slot.id_project);
-    return proj?.title ?? slot.id_project;
+    const proj = projects.find((p) => p.id_project === slot.project_id);
+    return proj?.title ?? slot.project_id ?? "";
   };
 
   const canDropOn = useCallback(
@@ -353,7 +355,7 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
         return;
       }
       const slot = buildSlotFromProject(proj);
-      setSlots((prev) => ({ ...prev, [slotKey]: slot, [rightSlot]: { ...slot, content_type: "advert" } }));
+      setSlots((prev) => ({ ...prev, [slotKey]: slot, [rightSlot]: { ...slot, slot_content_type: "advert" } }));
       setAddModalForSlot(null);
       return;
     }
@@ -369,19 +371,20 @@ const FlatplanDetailPage: FC<{ params: Promise<{ id_flatplan: string }> }> = ({ 
         return;
       }
       const slot = buildSlotFromProject(proj);
-      setSlots((prev) => ({ ...prev, [slotKey]: slot, [nextSlot]: { ...slot, content_type: "article" } }));
+      setSlots((prev) => ({ ...prev, [slotKey]: slot, [nextSlot]: { ...slot, slot_content_type: "article" } }));
       setAddModalForSlot(null);
     }
   };
 
   function buildSlotFromProject(proj: ProjectRow): FlatplanSlot {
     const contract = contracts.find((c) => c.id_contract === proj.id_contract);
-    const id_advertiser = contract?.id_customer ?? "";
+    const customer_id = contract?.id_customer ?? "";
     return {
-      id_advertiser,
-      id_project: proj.id_project,
-      state: proj.state,
-      content_type: proj.content_type,
+      publication_format: "flipbook",
+      customer_id,
+      project_id: proj.id_project,
+      slot_state: proj.state,
+      slot_content_type: proj.content_type,
     };
   }
 

@@ -24,10 +24,12 @@ export interface MiddleBannersTabProps {
     onAddBannerToSection: (sectionId: string) => void;
     onChangeImage: (bannerId: string, section: string, type?: 'medium') => void;
     onChangeRedirection: (bannerId: string, section: string, type?: 'medium') => void;
+    onEditSchedule: (bannerId: string) => void;
     onChangeAppearanceWeight: (bannerId: string, section: 'home-medium' | string, weight: AppearanceWeight) => void;
     onDeleteMediumBanner: (bannerId: string, section: 'home-medium' | string) => void;
     onEditRoute: (sectionId: string, type: 'medium') => void;
     onDeleteSection: (sectionId: string, type: 'medium') => void;
+    onSaveSchedule: (bannerId: string, startsAt: string, endsAt: string) => void;
 }
 
 const MiddleBannersTab: FC<MiddleBannersTabProps> = ({
@@ -38,10 +40,12 @@ const MiddleBannersTab: FC<MiddleBannersTabProps> = ({
     onAddBannerToSection,
     onChangeImage,
     onChangeRedirection,
+    onEditSchedule,
     onChangeAppearanceWeight,
     onDeleteMediumBanner,
     onEditRoute,
     onDeleteSection,
+    onSaveSchedule,
 }) => {
     const sortedGeneralMedium = useMemo(
         () => [...generalMediumBanners].sort((a, b) => a.position - b.position),
@@ -74,6 +78,8 @@ const MiddleBannersTab: FC<MiddleBannersTabProps> = ({
                                         showArrows={false}
                                         onChangeImage={() => onChangeImage(banner.id, 'home-medium')}
                                         onChangeRedirection={() => onChangeRedirection(banner.id, 'home-medium')}
+                                        onEditSchedule={() => onEditSchedule(banner.id)}
+                                        onSaveSchedule={(s, e) => onSaveSchedule(banner.id, s, e)}
                                     />
                                     <div className="flex flex-row items-center gap-2 flex-shrink-0">
                                         <label className="text-sm text-gray-600">Probability weight:</label>
@@ -161,6 +167,8 @@ const MiddleBannersTab: FC<MiddleBannersTabProps> = ({
                                                     showArrows={false}
                                                     onChangeImage={() => onChangeImage(banner.id, section.id, 'medium')}
                                                     onChangeRedirection={() => onChangeRedirection(banner.id, section.id, 'medium')}
+                                                    onEditSchedule={() => onEditSchedule(banner.id)}
+                                                    onSaveSchedule={(s, e) => onSaveSchedule(banner.id, s, e)}
                                                 />
                                                 <div className="flex flex-row items-center gap-2 flex-shrink-0">
                                                     <label className="text-sm text-gray-600">Probability weight:</label>

@@ -32,4 +32,19 @@ export class ContactService {
     );
     return response.data;
   }
+
+  static async getContactComments(idContact) {
+    const response = await apiClient.get(
+      `/api/v1/contacts/${encodeURIComponent(idContact)}/comments`
+    );
+    return response.data;
+  }
+
+  static async addContactComment(idContact, data) {
+    const response = await apiClient.post(
+      `/api/v1/contacts/${encodeURIComponent(idContact)}/comments`,
+      data
+    );
+    return response.data;
+  }
 }

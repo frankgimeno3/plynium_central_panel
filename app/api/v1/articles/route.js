@@ -28,6 +28,8 @@ const postSchema = Joi.object({
     articleSubtitle: Joi.string().optional(),
     article_main_image_url: Joi.string().optional(),
     company: Joi.string().optional().allow(""),
+    article_company_names_array: Joi.array().items(Joi.string()).min(1).required(),
+    article_company_id_array: Joi.array().items(Joi.string().allow("")).optional(),
     date: Joi.string().required(),
     article_tags_array: Joi.array().items(Joi.string()).optional(),
     contents_array: Joi.array().items(Joi.string()).optional(),

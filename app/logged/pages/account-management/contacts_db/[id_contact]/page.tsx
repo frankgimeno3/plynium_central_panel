@@ -1,13 +1,20 @@
 "use client";
 
-import React, { FC, use, useState, useEffect } from "react";
+import React, { FC, use, useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { ContactService } from "@/app/service/ContactService";
 
-type CommentItem = { id?: string; text: string; date?: string; author?: string };
+type CommentItem = {
+  contact_comment_id: string;
+  contact_id: string;
+  agent_id: string | null;
+  contact_comment_content: string;
+  contact_comment_created_at: string | null;
+  contact_comment_updated_at: string | null;
+};
 
 type Contact = {
   id_contact: string;
@@ -21,7 +28,6 @@ type Contact = {
   id_user?: string;
   /** Optional LinkedIn profile URL */
   linkedin_profile?: string;
-  comments: CommentItem[];
 };
 
 type TabKey = "main" | "comments";
@@ -51,21 +57,32 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
   const [comments, setComments] = useState<CommentItem[]>([]);
   const [newComment, setNewComment] = useState("");
 
-  useEffect(() => {
-    if (contact?.comments) setComments([...contact.comments]);
-    else setComments([]);
-  }, [id_contact, contact?.comments]);
+  const loadComments = useCallback(async () => {
+    try {
+      const list = await ContactService.getContactComments(id_contact);
+      setComments(Array.isArray(list) ? (list as CommentItem[]) : []);
+    } catch {
+      setComments([]);
+    }
+  }, [id_contact]);
 
-  const handleAddComment = () => {
+  useEffect(() => {
+    loadComments();
+  }, [loadComments]);
+
+  const handleAddComment = async () => {
     const text = newComment.trim();
     if (!text) return;
-    const comment: CommentItem = {
-      text,
-      date: new Date().toISOString().slice(0, 10),
-      author: "Usuario",
-    };
-    setComments((prev) => [comment, ...prev]);
-    setNewComment("");
+    try {
+      await ContactService.addContactComment(id_contact, {
+        agent_id: null,
+        contact_comment_content: text,
+      });
+      setNewComment("");
+      await loadComments();
+    } catch {
+      // If API fails, keep UX consistent by not mutating local list.
+    }
   };
 
   const { setPageMeta } = usePageContent();
@@ -226,14 +243,17 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
                 <p className="text-gray-500 text-sm py-4">No comments yet. Add the first one above.</p>
               ) : (
                 <ul className="space-y-3 w-full max-w-2xl">
-                  {comments.map((cmt, i) => (
+                  {comments.map((cmt) => (
                     <li
-                      key={i}
+                      key={cmt.contact_comment_id}
                       className="p-4 bg-gray-50 rounded-lg border border-gray-100 text-gray-800 text-sm w-full"
                     >
-                      <p className="whitespace-pre-wrap">{cmt.text}</p>
+                      <p className="whitespace-pre-wrap">{cmt.contact_comment_content}</p>
                       <p className="mt-2 text-xs text-gray-500">
-                        {cmt.author ?? "—"} {cmt.date ? ` · ${cmt.date}` : ""}
+                        {cmt.agent_id ?? "—"}{" "}
+                        {cmt.contact_comment_created_at
+                          ? ` · ${String(cmt.contact_comment_created_at).slice(0, 10)}`
+                          : ""}
                       </p>
                     </li>
                   ))}

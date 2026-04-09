@@ -1,5 +1,5 @@
 /**
- * FolderService – mediateca folders. Persists to RDS table `folders`.
+ * FolderService – mediateca folders. Persists to RDS table `mediateca_folders`.
  */
 
 import { Op } from "sequelize";

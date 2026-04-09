@@ -38,6 +38,13 @@ export const POST = createEndpoint(
         pageType: Joi.string().valid("home", "custom").required(),
         position: Joi.number().integer().min(0).optional().default(0),
         appearanceWeight: Joi.string().valid("low", "medium", "high").optional(),
+        startsAt: Joi.string()
+            .pattern(/^\d{4}-\d{2}-\d{2}$/)
+            .required(),
+        endsAt: Joi.string()
+            .pattern(/^\d{4}-\d{2}-\d{2}$/)
+            .required(),
+        imageAlt: Joi.string().allow("").optional(),
     }),
     true
 );

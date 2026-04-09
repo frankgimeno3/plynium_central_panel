@@ -2,54 +2,105 @@ import Database from "../../database/database.js";
 
 const STATUS_VALUES = ["calendarized", "pending", "published", "cancelled"];
 
+const NEWSLETTER_ROW_SQL = `
+  n.newsletter_id,
+  n.newsletter_campaign_id,
+  p.portal_name_key AS portal_code,
+  n.newsletter_estimated_publication_date,
+  n.newsletter_real_publication_date,
+  n.newsletter_topic,
+  n.newsletter_status,
+  n.newsletter_user_list_id_array,
+  n.newsletter_created_at,
+  n.newsletter_updated_at
+`;
+
+function plannedPublicationDatesToApi(value) {
+  if (!Array.isArray(value) || value.length === 0) return [];
+  return value.map((d) => {
+    if (d == null) return "";
+    if (d instanceof Date) return d.toISOString().split("T")[0];
+    const s = String(d);
+    return s.includes("T") ? s.split("T")[0] : s.slice(0, 10);
+  });
+}
+
 function toApiCampaign(row) {
+  const start =
+    row.newsletter_campaign_start_date ?? row.start_date;
+  const end = row.newsletter_campaign_end_date ?? row.end_date;
+  const created = row.newsletter_campaign_created_at ?? row.created_at;
+  const updated = row.newsletter_campaign_updated_at ?? row.updated_at;
   return {
-    id: row.id_campaign,
-    name: row.name ?? "",
-    description: row.description ?? "",
+    id: row.newsletter_campaign_id ?? row.id_campaign,
+    name: row.newsletter_campaign_name ?? row.name ?? "",
+    description: row.newsletter_campaign_description ?? row.description ?? "",
     portalCode: row.portal_code ?? "",
+    newsletterCampaign: row.newsletter_campaign ?? "",
     contentTheme: row.content_theme ?? "",
-    frequency: row.frequency ?? "",
-    startDate: row.start_date ? new Date(row.start_date).toISOString().split("T")[0] : "",
-    endDate: row.end_date ? new Date(row.end_date).toISOString().split("T")[0] : "",
-    status: row.status ?? "",
-    createdAt: row.created_at ? new Date(row.created_at).toISOString() : "",
-    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : "",
+    frequency: row.newsletter_campaign_publication_frequency ?? row.frequency ?? "",
+    startDate: start ? new Date(start).toISOString().split("T")[0] : "",
+    endDate: end ? new Date(end).toISOString().split("T")[0] : "",
+    plannedPublicationDates: plannedPublicationDatesToApi(
+      row.newsletter_campaign_planned_publication_dates_array
+    ),
+    status: row.newsletter_campaign_status ?? row.status ?? "",
+    createdAt: created ? new Date(created).toISOString() : "",
+    updatedAt: updated ? new Date(updated).toISOString() : "",
   };
 }
 
 function toApiNewsletter(row) {
-  let sentToLists = null;
-  if (row.sent_to_lists != null) {
-    // PG returns JSONB already parsed in most configs, but be defensive.
-    const raw = row.sent_to_lists;
-    sentToLists = Array.isArray(raw) ? raw.map(String) : null;
-  }
+  const arr = row.newsletter_user_list_id_array;
+  const ids = Array.isArray(arr) && arr.length ? arr.map((x) => String(x)) : [];
+  const userNewsletterListId = ids[0] ?? null;
+  const sentToLists = ids.length > 1 ? ids.slice(1) : null;
 
   return {
-    id: row.id_newsletter,
-    campaignId: row.id_campaign,
+    id: row.newsletter_id,
+    campaignId: row.newsletter_campaign_id,
     portalCode: row.portal_code ?? "",
-    estimatedPublishDate: row.estimated_publish_date
-      ? new Date(row.estimated_publish_date).toISOString().split("T")[0]
+    estimatedPublishDate: row.newsletter_estimated_publication_date
+      ? new Date(row.newsletter_estimated_publication_date).toISOString().split("T")[0]
       : "",
-    topic: row.topic ?? "",
-    status: row.status,
-    userNewsletterListId: row.user_newsletter_list_id ?? null,
+    realPublicationDate: row.newsletter_real_publication_date
+      ? new Date(row.newsletter_real_publication_date).toISOString().split("T")[0]
+      : "",
+    topic: row.newsletter_topic ?? "",
+    status: row.newsletter_status,
+    userNewsletterListId,
     sentToLists,
-    createdAt: row.created_at ? new Date(row.created_at).toISOString() : "",
-    updatedAt: row.updated_at ? new Date(row.updated_at).toISOString() : "",
+    createdAt: row.newsletter_created_at ? new Date(row.newsletter_created_at).toISOString() : "",
+    updatedAt: row.newsletter_updated_at ? new Date(row.newsletter_updated_at).toISOString() : "",
   };
 }
 
 function toApiBlock(row) {
+  const content = row.newsletter_block_content ?? row.data ?? {};
   return {
-    id: row.id_block,
-    newsletterId: row.id_newsletter,
-    type: row.block_type,
-    order: row.block_order,
-    data: row.data ?? {},
+    id: row.newsletter_block_id ?? row.id_block,
+    newsletterId: row.newsletter_id ?? row.id_newsletter,
+    type: row.newsletter_block_type ?? row.block_type,
+    order: row.newsletter_block_position ?? row.block_order,
+    data: content,
   };
+}
+
+async function resolvePortalId(sequelize, portalCode) {
+  const code = portalCode != null ? String(portalCode).trim() : "";
+  if (!code) {
+    throw new Error("portalCode is required");
+  }
+  const [rows] = await sequelize.query(
+    `SELECT portal_id FROM portals_id
+     WHERE portal_name_key = :code OR portal_name = :code OR CAST(portal_id AS TEXT) = :code
+     LIMIT 1`,
+    { replacements: { code } }
+  );
+  if (!rows || rows.length === 0) {
+    throw new Error(`Unknown portal: ${portalCode}`);
+  }
+  return rows[0].portal_id;
 }
 
 export async function getNewsletterCampaigns() {
@@ -57,7 +108,23 @@ export async function getNewsletterCampaigns() {
   if (!db.isConfigured()) return [];
   const sequelize = db.getSequelize();
   const [rows] = await sequelize.query(
-    "SELECT id_campaign, name, description, portal_code, content_theme, frequency, start_date, end_date, status, created_at, updated_at FROM newsletter_campaigns ORDER BY created_at DESC"
+    `SELECT
+      c.newsletter_campaign_id,
+      c.newsletter_campaign_name,
+      c.newsletter_campaign_description,
+      p.portal_name_key AS portal_code,
+      c.newsletter_campaign,
+      c.content_theme,
+      c.newsletter_campaign_publication_frequency,
+      c.newsletter_campaign_start_date,
+      c.newsletter_campaign_end_date,
+      c.newsletter_campaign_planned_publication_dates_array,
+      c.newsletter_campaign_status,
+      c.newsletter_campaign_created_at,
+      c.newsletter_campaign_updated_at
+     FROM newsletter_campaigns c
+     LEFT JOIN portals_id p ON p.portal_id = c.portal_id
+     ORDER BY c.newsletter_campaign_created_at DESC`
   );
   return (Array.isArray(rows) ? rows : []).map(toApiCampaign);
 }
@@ -67,7 +134,10 @@ export async function getNewsletters() {
   if (!db.isConfigured()) return [];
   const sequelize = db.getSequelize();
   const [rows] = await sequelize.query(
-    "SELECT id_newsletter, id_campaign, portal_code, estimated_publish_date, topic, status, user_newsletter_list_id, sent_to_lists, created_at, updated_at FROM newsletters ORDER BY estimated_publish_date DESC NULLS LAST, created_at DESC"
+    `SELECT ${NEWSLETTER_ROW_SQL}
+     FROM newsletters_db n
+     LEFT JOIN portals_id p ON p.portal_id = n.portal_id
+     ORDER BY n.newsletter_estimated_publication_date DESC NULLS LAST, n.newsletter_created_at DESC`
   );
   return (Array.isArray(rows) ? rows : []).map(toApiNewsletter);
 }
@@ -77,7 +147,10 @@ export async function getNewsletterById(idNewsletter) {
   if (!db.isConfigured()) throw new Error("Database not configured");
   const sequelize = db.getSequelize();
   const [rows] = await sequelize.query(
-    "SELECT id_newsletter, id_campaign, portal_code, estimated_publish_date, topic, status, user_newsletter_list_id, sent_to_lists, created_at, updated_at FROM newsletters WHERE id_newsletter = :id_newsletter LIMIT 1",
+    `SELECT ${NEWSLETTER_ROW_SQL}
+     FROM newsletters_db n
+     LEFT JOIN portals_id p ON p.portal_id = n.portal_id
+     WHERE n.newsletter_id = :id_newsletter LIMIT 1`,
     { replacements: { id_newsletter: idNewsletter } }
   );
   if (!rows || rows.length === 0) return null;
@@ -89,7 +162,10 @@ export async function getNewsletterBlocks(idNewsletter) {
   if (!db.isConfigured()) return [];
   const sequelize = db.getSequelize();
   const [rows] = await sequelize.query(
-    "SELECT id_block, id_newsletter, block_type, block_order, data FROM newsletter_content_blocks WHERE id_newsletter = :id_newsletter ORDER BY block_order ASC",
+    `SELECT newsletter_block_id, newsletter_id, newsletter_block_type, newsletter_block_position, newsletter_block_content
+     FROM newsletter_content_blocks
+     WHERE newsletter_id = :id_newsletter
+     ORDER BY newsletter_block_position ASC`,
     { replacements: { id_newsletter: idNewsletter } }
   );
   return (Array.isArray(rows) ? rows : []).map(toApiBlock);
@@ -104,24 +180,36 @@ export async function updateNewsletterStatus(idNewsletter, { status, userNewslet
   if (!db.isConfigured()) throw new Error("Database not configured");
   const sequelize = db.getSequelize();
 
+  const patchList = userNewsletterListId !== undefined;
+  const listValue = userNewsletterListId == null || userNewsletterListId === "" ? null : String(userNewsletterListId).trim();
+
   const replacements = {
     id_newsletter: idNewsletter,
     status,
-    user_newsletter_list_id: userNewsletterListId ?? null,
+    patch_list: patchList,
+    user_newsletter_list_id: listValue,
   };
 
   const sql = `
-    UPDATE newsletters
-    SET status = :status,
-        user_newsletter_list_id = :user_newsletter_list_id,
-        updated_at = NOW()
-    WHERE id_newsletter = :id_newsletter
-    RETURNING id_newsletter, id_campaign, portal_code, estimated_publish_date, topic, status, user_newsletter_list_id, sent_to_lists, created_at, updated_at
+    UPDATE newsletters_db n
+    SET newsletter_status = :status,
+        newsletter_user_list_id_array = CASE
+          WHEN NOT :patch_list THEN n.newsletter_user_list_id_array
+          WHEN :user_newsletter_list_id IS NULL OR CAST(:user_newsletter_list_id AS TEXT) = '' THEN NULL
+          ELSE ARRAY[CAST(:user_newsletter_list_id AS UUID)]
+        END,
+        newsletter_real_publication_date = CASE
+          WHEN :status = 'published' AND n.newsletter_real_publication_date IS NULL THEN CURRENT_DATE
+          ELSE n.newsletter_real_publication_date
+        END,
+        newsletter_updated_at = NOW()
+    WHERE n.newsletter_id = :id_newsletter
+    RETURNING n.newsletter_id
   `;
 
   const [rows] = await sequelize.query(sql, { replacements });
   if (!rows || rows.length === 0) throw new Error(`Newsletter ${idNewsletter} not found`);
-  return toApiNewsletter(rows[0]);
+  return getNewsletterById(idNewsletter);
 }
 
 export async function updateNewsletterContentBlock(idNewsletter, idBlock, { blockType, order, data }) {
@@ -139,12 +227,11 @@ export async function updateNewsletterContentBlock(idNewsletter, idBlock, { bloc
 
   const sql = `
     UPDATE newsletter_content_blocks
-    SET block_type = :block_type,
-        block_order = :block_order,
-        data = :data,
-        updated_at = NOW()
-    WHERE id_newsletter = :id_newsletter AND id_block = :id_block
-    RETURNING id_block, id_newsletter, block_type, block_order, data
+    SET newsletter_block_type = :block_type,
+        newsletter_block_position = :block_order,
+        newsletter_block_content = :data
+    WHERE newsletter_id = :id_newsletter AND newsletter_block_id = :id_block
+    RETURNING newsletter_block_id, newsletter_id, newsletter_block_type, newsletter_block_position, newsletter_block_content
   `;
 
   const [rows] = await sequelize.query(sql, { replacements });
@@ -157,32 +244,46 @@ export async function createNewsletter(idNewsletter, { idCampaign, portalCode, e
   if (!db.isConfigured()) throw new Error("Database not configured");
   const sequelize = db.getSequelize();
 
+  const portal_id = await resolvePortalId(sequelize, portalCode);
+  const listTrim =
+    userNewsletterListId == null || userNewsletterListId === "" ? null : String(userNewsletterListId).trim();
+
   const replacements = {
     id_newsletter: idNewsletter,
     id_campaign: idCampaign,
-    portal_code: portalCode,
+    portal_id,
     estimated_publish_date: estimatedPublishDate ?? null,
     topic: topic ?? "",
     status,
-    user_newsletter_list_id: userNewsletterListId ?? null,
+    user_newsletter_list_id: listTrim,
   };
 
   const sql = `
-    INSERT INTO newsletters (id_newsletter, id_campaign, portal_code, estimated_publish_date, topic, status, user_newsletter_list_id, sent_to_lists, created_at, updated_at)
-    VALUES (:id_newsletter, :id_campaign, :portal_code, :estimated_publish_date, :topic, :status, :user_newsletter_list_id, NULL, NOW(), NOW())
-    ON CONFLICT (id_newsletter) DO UPDATE SET
-      id_campaign = EXCLUDED.id_campaign,
-      portal_code = EXCLUDED.portal_code,
-      estimated_publish_date = EXCLUDED.estimated_publish_date,
-      topic = EXCLUDED.topic,
-      status = EXCLUDED.status,
-      user_newsletter_list_id = EXCLUDED.user_newsletter_list_id,
-      updated_at = NOW()
-    RETURNING id_newsletter, id_campaign, portal_code, estimated_publish_date, topic, status, user_newsletter_list_id, sent_to_lists, created_at, updated_at
+    INSERT INTO newsletters_db (
+      newsletter_id, newsletter_campaign_id, portal_id,
+      newsletter_estimated_publication_date, newsletter_topic, newsletter_status,
+      newsletter_user_list_id_array, newsletter_created_at, newsletter_updated_at
+    )
+    VALUES (
+      :id_newsletter, :id_campaign, :portal_id,
+      :estimated_publish_date, :topic, :status,
+      CASE
+        WHEN :user_newsletter_list_id IS NULL OR CAST(:user_newsletter_list_id AS TEXT) = '' THEN NULL
+        ELSE ARRAY[CAST(:user_newsletter_list_id AS UUID)]
+      END,
+      NOW(), NOW()
+    )
+    ON CONFLICT (newsletter_id) DO UPDATE SET
+      newsletter_campaign_id = EXCLUDED.newsletter_campaign_id,
+      portal_id = EXCLUDED.portal_id,
+      newsletter_estimated_publication_date = EXCLUDED.newsletter_estimated_publication_date,
+      newsletter_topic = EXCLUDED.newsletter_topic,
+      newsletter_status = EXCLUDED.newsletter_status,
+      newsletter_user_list_id_array = EXCLUDED.newsletter_user_list_id_array,
+      newsletter_updated_at = NOW()
+    RETURNING newsletter_id
   `;
 
-  const [rows] = await sequelize.query(sql, { replacements });
-  if (!rows || rows.length === 0) throw new Error(`Unable to create newsletter ${idNewsletter}`);
-  return toApiNewsletter(rows[0]);
+  await sequelize.query(sql, { replacements });
+  return getNewsletterById(idNewsletter);
 }
-

@@ -33,7 +33,7 @@ export default function CreateArticlePage() {
   const [articleTitle, setArticleTitle] = useState("");
   const [articleSubtitle, setArticleSubtitle] = useState("");
   const [articleMainImageUrl, setArticleMainImageUrl] = useState("");
-  const [company, setCompany] = useState("");
+  const [companyPairs, setCompanyPairs] = useState<{ name: string; id: string }[]>([]);
   const [date, setDate] = useState(getTodayDate());
   const [highlitedPosition, setHighlitedPosition] = useState("");
   const [isArticleEvent, setIsArticleEvent] = useState(false);
@@ -138,6 +138,14 @@ export default function CreateArticlePage() {
 
   const handleRemoveTag = (index: number) => {
     setTagsArray(tagsArray.filter((_, i) => i !== index));
+  };
+
+  const handleAddCompanyPair = (name: string, id: string) => {
+    setCompanyPairs((prev) => [...prev, { name, id }]);
+  };
+
+  const handleRemoveCompanyPair = (index: number) => {
+    setCompanyPairs((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handlePhase1Next = async () => {
@@ -264,7 +272,8 @@ export default function CreateArticlePage() {
         articleTitle,
         articleSubtitle,
         article_main_image_url: articleMainImageUrl,
-        company,
+        article_company_names_array: companyPairs.map((p) => p.name.trim()).filter(Boolean),
+        article_company_id_array: companyPairs.map((p) => p.id.trim()),
         date,
         article_tags_array: tagsArray,
         contents_array: [],
@@ -354,8 +363,9 @@ export default function CreateArticlePage() {
             articleMainImageUrl={articleMainImageUrl}
             setArticleMainImageUrl={setArticleMainImageUrl}
             onOpenMediaLibrary={() => setMediatecaModalOpen(true)}
-            company={company}
-            setCompany={setCompany}
+            companyPairs={companyPairs}
+            onAddCompanyPair={handleAddCompanyPair}
+            onRemoveCompanyPair={handleRemoveCompanyPair}
             date={date}
             setDate={setDate}
             highlitedPosition={highlitedPosition}
@@ -408,7 +418,7 @@ export default function CreateArticlePage() {
             idArticle={idArticle}
             articleTitle={articleTitle}
             articleSubtitle={articleSubtitle}
-            company={company}
+            companySummary={companyPairs.map((p) => p.name).join(", ")}
             date={date}
             tagsArray={tagsArray}
             articleMainImageUrl={articleMainImageUrl}

@@ -24,8 +24,9 @@ interface ArticlePhase1Props {
   articleMainImageUrl: string;
   setArticleMainImageUrl: (v: string) => void;
   onOpenMediaLibrary: () => void;
-  company: string;
-  setCompany: (v: string) => void;
+  companyPairs: { name: string; id: string }[];
+  onAddCompanyPair: (name: string, id: string) => void;
+  onRemoveCompanyPair: (index: number) => void;
   date: string;
   setDate: (v: string) => void;
   highlitedPosition: string;
@@ -56,8 +57,9 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
   articleMainImageUrl,
   setArticleMainImageUrl,
   onOpenMediaLibrary,
-  company,
-  setCompany,
+  companyPairs,
+  onAddCompanyPair,
+  onRemoveCompanyPair,
   date,
   setDate,
   highlitedPosition,
@@ -78,6 +80,8 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
   onNext,
 }) => {
   const router = useRouter();
+  const [companyNameInput, setCompanyNameInput] = useState("");
+  const [companyIdInput, setCompanyIdInput] = useState("");
   const [dateDay, setDateDay] = useState("");
   const [dateMonth, setDateMonth] = useState("");
   const [dateYear, setDateYear] = useState("");
@@ -96,7 +100,13 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
     setDate(buildDateStr(day, month, year));
   };
 
-  const canGoNext = !isGeneratingId && !!articleTitle?.trim() && !!date && !!company?.trim() && selectedPortalIds.length >= 1;
+  const canGoNext =
+    !isGeneratingId &&
+    !!articleTitle?.trim() &&
+    !!date &&
+    companyPairs.length >= 1 &&
+    companyPairs.every((p) => p.name.trim()) &&
+    selectedPortalIds.length >= 1;
 
   return (
     <div className="flex flex-col gap-6">
@@ -175,14 +185,60 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
       </div>
 
       <div className="space-y-2">
-        <label className="font-bold text-lg">Company</label>
-        <input
-          type="text"
-          value={company}
-          onChange={(e) => setCompany(e.target.value)}
-          className="w-full px-4 py-2 border rounded-xl"
-          placeholder="Company"
-        />
+        <label className="font-bold text-lg">Companies *</label>
+        <p className="text-sm text-gray-600">Add at least one company (name required; ID optional).</p>
+        <div className="flex flex-wrap gap-2 min-h-[2rem]">
+          {companyPairs.map((p, i) => (
+            <span
+              key={`${p.name}-${i}`}
+              className="inline-flex items-center gap-1 pl-3 pr-1 py-1 rounded-full bg-gray-100 border border-gray-200 text-sm"
+            >
+              <span>
+                {p.name}
+                {p.id ? <span className="text-gray-500 font-mono text-xs ml-1">({p.id})</span> : null}
+              </span>
+              <button
+                type="button"
+                disabled={companyPairs.length <= 1}
+                onClick={() => onRemoveCompanyPair(i)}
+                className="p-1 rounded-full hover:bg-gray-200 text-gray-600 disabled:opacity-40"
+                aria-label="Remove company"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
+          <input
+            type="text"
+            value={companyNameInput}
+            onChange={(e) => setCompanyNameInput(e.target.value)}
+            className="flex-1 px-4 py-2 border rounded-xl"
+            placeholder="Company name"
+          />
+          <input
+            type="text"
+            value={companyIdInput}
+            onChange={(e) => setCompanyIdInput(e.target.value)}
+            className="flex-1 px-4 py-2 border rounded-xl font-mono text-sm"
+            placeholder="Company ID (optional)"
+          />
+          <button
+            type="button"
+            onClick={() => {
+              const n = companyNameInput.trim();
+              if (!n) return;
+              onAddCompanyPair(n, companyIdInput.trim());
+              setCompanyNameInput("");
+              setCompanyIdInput("");
+            }}
+            disabled={!companyNameInput.trim()}
+            className="px-4 py-2 rounded-xl bg-blue-950 text-white disabled:opacity-50"
+          >
+            Add
+          </button>
+        </div>
       </div>
 
       <div className="space-y-2">

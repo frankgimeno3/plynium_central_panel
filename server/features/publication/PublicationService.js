@@ -1,69 +1,62 @@
 import PublicationModel from "./PublicationModel.js";
-import { createPublicationPortals } from "./PublicationPortalService.js";
 // Ensure models are initialized by importing models.js
 import "../../database/models.js";
 
+function toApiShape(p) {
+    const row = p && typeof p.get === "function" ? p.get({ plain: true }) : p;
+    if (!row) return null;
+    return {
+        id_publication: row.publication_id,
+        redirectionLink: "",
+        date: row.real_publication_month_date
+            ? new Date(row.real_publication_month_date).toISOString().split("T")[0]
+            : null,
+        revista: row.publication_theme || "",
+        número:
+            row.magazine_this_year_issue != null ? String(row.magazine_this_year_issue) : "",
+        publication_main_image_url: row.publication_main_image_url || ""
+    };
+}
+
 /**
- * @param {{ portalNames?: string[] }} opts - If portalNames is non-empty, only publications visible in at least one of those portals (by name) are returned.
+ * @param {{ portalNames?: string[] }} opts - portalNames is ignored (legacy); kept for call-site compatibility.
  */
 export async function getAllPublications(opts = {}) {
     try {
-        // Check if model is initialized
         if (!PublicationModel.sequelize) {
-            console.warn('PublicationModel not initialized, returning empty array');
+            console.warn("PublicationModel not initialized, returning empty array");
             return [];
         }
 
-        const portalNames = Array.isArray(opts?.portalNames) ? opts.portalNames.filter(Boolean).map((n) => String(n).trim()) : [];
-
-        const transformPub = (p) => ({
-            id_publication: p.id_publication,
-            redirectionLink: p.redirection_link,
-            date: p.date ? new Date(p.date).toISOString().split('T')[0] : null,
-            revista: p.revista,
-            número: p.número,
-            publication_main_image_url: p.publication_main_image_url || ""
-        });
-
-        if (portalNames.length > 0) {
-            const placeholders = portalNames.map((_, i) => `:p${i}`).join(", ");
-            const replacements = Object.fromEntries(portalNames.map((n, i) => [`p${i}`, n]));
-            const [rows] = await PublicationModel.sequelize.query(
-                `SELECT DISTINCT p.id_publication, p.redirection_link, p.date, p.revista, p.número, p.publication_main_image_url
-                 FROM publications p
-                 INNER JOIN publication_portals pp ON pp.publication_id = p.id_publication
-                 INNER JOIN portals port ON port.id = pp.portal_id
-                 WHERE port.name IN (${placeholders})
-                 ORDER BY p.date DESC`,
-                { replacements }
-            );
-            return (rows || []).map(transformPub);
-        }
+        void opts?.portalNames;
 
         const publications = await PublicationModel.findAll({
-            order: [['date', 'DESC']]
+            order: [
+                ["real_publication_month_date", "DESC"],
+                ["publication_year", "DESC"],
+                ["publication_id", "DESC"]
+            ]
         });
 
-        return publications.map(transformPub);
+        return publications.map((p) => toApiShape(p)).filter(Boolean);
     } catch (error) {
-        console.error('Error fetching publications from database:', error);
-        console.error('Error name:', error.name);
-        console.error('Error message:', error.message);
-        
-        // If it's a connection error, table doesn't exist, or model not initialized, 
-        // return empty array instead of throwing to prevent frontend crashes
-        if (error.name === 'SequelizeConnectionError' || 
-            error.name === 'SequelizeDatabaseError' ||
-            error.name === 'SequelizeConnectionRefusedError' ||
-            error.message?.includes('ETIMEDOUT') ||
-            error.message?.includes('ECONNREFUSED') ||
-            (error.message?.includes('relation') && error.message?.includes('does not exist')) ||
-            error.message?.includes('not initialized') ||
-            error.message?.includes('Model not found')) {
-            console.warn('Database connection issue, returning empty array');
+        console.error("Error fetching publications from database:", error);
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+
+        if (
+            error.name === "SequelizeConnectionError" ||
+            error.name === "SequelizeDatabaseError" ||
+            error.name === "SequelizeConnectionRefusedError" ||
+            error.message?.includes("ETIMEDOUT") ||
+            error.message?.includes("ECONNREFUSED") ||
+            (error.message?.includes("relation") && error.message?.includes("does not exist")) ||
+            error.message?.includes("not initialized") ||
+            error.message?.includes("Model not found")
+        ) {
+            console.warn("Database connection issue, returning empty array");
             return [];
         }
-        // For other errors, still throw to maintain error visibility
         throw error;
     }
 }
@@ -74,164 +67,105 @@ export async function getPublicationById(idPublication) {
         if (!publication) {
             throw new Error(`Publication with id ${idPublication} not found`);
         }
-        
-        // Transform database format to API format
-        return {
-            id_publication: publication.id_publication,
-            redirectionLink: publication.redirection_link,
-            date: publication.date ? new Date(publication.date).toISOString().split('T')[0] : null,
-            revista: publication.revista,
-            número: publication.número,
-            publication_main_image_url: publication.publication_main_image_url || ""
-        };
+        return toApiShape(publication);
     } catch (error) {
-        console.error('Error fetching publication from database:', error);
+        console.error("Error fetching publication from database:", error);
         throw error;
     }
+}
+
+function parseMonth(v) {
+    if (v == null || v === "") return null;
+    const n = Number(v);
+    if (!Number.isInteger(n) || n < 1 || n > 12) return null;
+    return n;
 }
 
 export async function createPublication(publicationData) {
     const requestId = `publication_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     console.log(`[PublicationService] [${requestId}] Starting createPublication`);
-    
+
     try {
-        // Check if model is initialized
         if (!PublicationModel.sequelize) {
             console.error(`[PublicationService] [${requestId}] PublicationModel not initialized`);
-            throw new Error('PublicationModel not initialized');
+            throw new Error("PublicationModel not initialized");
         }
 
         const dbConfig = PublicationModel.sequelize.config;
         console.log(`[PublicationService] [${requestId}] Database: ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
         console.log(`[PublicationService] [${requestId}] Creating publication with data:`, JSON.stringify(publicationData, null, 2));
-        
-        // Check if publication_main_image_url column exists, if not, add it
-        try {
-            const [results] = await PublicationModel.sequelize.query(`
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'publications' 
-                AND column_name = 'publication_main_image_url'
-            `);
-            
-            if (results.length === 0) {
-                console.log(`[PublicationService] [${requestId}] Column 'publication_main_image_url' does not exist, adding it...`);
-                await PublicationModel.sequelize.query(`
-                    ALTER TABLE publications 
-                    ADD COLUMN publication_main_image_url VARCHAR(255)
-                `);
-                console.log(`[PublicationService] [${requestId}] Column 'publication_main_image_url' added successfully`);
-            }
-        } catch (migrationError) {
-            // If migration fails, log but continue - the column might already exist or there's a different issue
-            console.warn(`[PublicationService] [${requestId}] Could not check/add column:`, migrationError.message);
-        }
-        
-        // Transform API format to database format (magazine → revista, número as number)
+
+        const format =
+            publicationData.publication_format === "informer" || publicationData.publication_format === "flipbook"
+                ? publicationData.publication_format
+                : "flipbook";
+
         const publication = await PublicationModel.create({
-            id_publication: publicationData.id_publication,
-            redirection_link: publicationData.redirectionLink,
-            date: publicationData.date,
-            revista: publicationData.magazine,
-            número: publicationData.número != null ? String(publicationData.número) : publicationData.número,
-            publication_main_image_url: publicationData.publication_main_image_url || ""
+            publication_id: publicationData.id_publication,
+            magazine_id: publicationData.magazine_id ?? publicationData.id_magazine ?? null,
+            magazine_general_issue_number:
+                publicationData.magazine_general_issue_number != null
+                    ? Number(publicationData.magazine_general_issue_number)
+                    : null,
+            publication_year:
+                publicationData.publication_year != null ? Number(publicationData.publication_year) : null,
+            magazine_this_year_issue:
+                publicationData.magazine_this_year_issue != null
+                    ? Number(publicationData.magazine_this_year_issue)
+                    : publicationData.número != null
+                      ? Number(publicationData.número)
+                      : null,
+            publication_expected_publication_month: parseMonth(
+                publicationData.publication_expected_publication_month
+            ),
+            real_publication_month_date:
+                publicationData.real_publication_month_date ?? publicationData.date ?? null,
+            publication_materials_deadline: publicationData.publication_materials_deadline ?? null,
+            publication_main_image_url: publicationData.publication_main_image_url || "",
+            publication_edition_name: publicationData.publication_edition_name ?? "",
+            is_special_edition: Boolean(publicationData.is_special_edition),
+            publication_theme:
+                publicationData.publication_theme ??
+                publicationData.revista ??
+                publicationData.magazine ??
+                "",
+            publication_status: publicationData.publication_status != null ? String(publicationData.publication_status) : "draft",
+            publication_format: format
         });
 
-        const portalIds = Array.isArray(publicationData.portalIds)
-            ? publicationData.portalIds.filter((id) => Number.isInteger(Number(id))).map(Number)
-            : [];
-        if (portalIds.length > 0) {
-            await createPublicationPortals(
-                publication.id_publication,
-                portalIds,
-                publicationData.redirectionLink ?? "",
-                publicationData.id_publication
-            );
-        }
-
         console.log(`[PublicationService] [${requestId}] Publication created successfully:`, publication.toJSON());
-        
-        // Transform database format to API format
-        return {
-            id_publication: publication.id_publication,
-            redirectionLink: publication.redirection_link,
-            date: publication.date ? new Date(publication.date).toISOString().split('T')[0] : null,
-            revista: publication.revista,
-            número: publication.número,
-            publication_main_image_url: publication.publication_main_image_url || ""
-        };
+
+        return toApiShape(publication);
     } catch (error) {
         console.error(`[PublicationService] [${requestId}] Error creating publication in database`);
         console.error(`[PublicationService] [${requestId}] Error name:`, error.name);
         console.error(`[PublicationService] [${requestId}] Error message:`, error.message);
         console.error(`[PublicationService] [${requestId}] Error stack:`, error.stack);
-        
-        // Check if error is about missing publication_main_image_url column
-        if (error.message?.includes('publication_main_image_url') && error.message?.includes('does not exist')) {
-            console.log(`[PublicationService] [${requestId}] Column missing, attempting to add it...`);
-            try {
-                await PublicationModel.sequelize.query(`
-                    ALTER TABLE publications 
-                    ADD COLUMN publication_main_image_url VARCHAR(255)
-                `);
-                console.log(`[PublicationService] [${requestId}] Column added, retrying publication creation...`);
-                
-                // Retry creating the publication
-                const publication = await PublicationModel.create({
-                    id_publication: publicationData.id_publication,
-                    redirection_link: publicationData.redirectionLink,
-                    date: publicationData.date,
-                    revista: publicationData.revista,
-                    número: publicationData.número,
-                    publication_main_image_url: publicationData.publication_main_image_url || ""
-                });
-                
-                console.log(`[PublicationService] [${requestId}] Publication created successfully after migration:`, publication.toJSON());
-                
-                // Transform database format to API format
-                return {
-                    id_publication: publication.id_publication,
-                    redirectionLink: publication.redirection_link,
-                    date: publication.date ? new Date(publication.date).toISOString().split('T')[0] : null,
-                    revista: publication.revista,
-                    número: publication.número,
-                    publication_main_image_url: publication.publication_main_image_url || ""
-                };
-            } catch (retryError) {
-                console.error(`[PublicationService] [${requestId}] Failed to add column or retry:`, retryError.message);
-                throw new Error(`Database error: Could not add missing column. ${retryError.message}`);
-            }
-        }
-        
-        // Log connection details if it's a connection error
-        if (error.name === 'SequelizeConnectionError' || error.message?.includes('ETIMEDOUT')) {
+
+        if (
+            error.name === "SequelizeConnectionError" ||
+            error.name === "SequelizeDatabaseError" ||
+            error.name === "SequelizeConnectionRefusedError" ||
+            error.message?.includes("ETIMEDOUT") ||
+            error.message?.includes("ECONNREFUSED")
+        ) {
             const dbConfig = PublicationModel.sequelize?.config;
             if (dbConfig) {
                 console.error(`[PublicationService] [${requestId}] Attempted connection to: ${dbConfig.host}:${dbConfig.port}`);
             }
-        }
-        
-        // Provide more detailed error information for connection errors
-        if (error.name === 'SequelizeConnectionError' || 
-            error.name === 'SequelizeDatabaseError' ||
-            error.name === 'SequelizeConnectionRefusedError' ||
-            error.message?.includes('ETIMEDOUT') ||
-            error.message?.includes('ECONNREFUSED')) {
-            const errorMsg = error.message || '';
+            const errorMsg = error.message || "";
             let helpfulMsg = `Database connection error: ${errorMsg}`;
-            
-            if (errorMsg.includes('ETIMEDOUT') || errorMsg.includes('ECONNREFUSED')) {
-                helpfulMsg += '\n\nPossible solutions:\n';
-                helpfulMsg += '1. Check if your IP is allowed in RDS Security Group\n';
-                helpfulMsg += '2. Verify DATABASE_HOST, DATABASE_PORT in .env file\n';
-                helpfulMsg += '3. Ensure RDS instance is running and publicly accessible\n';
-                helpfulMsg += '4. Check your network/firewall settings\n';
-                helpfulMsg += '5. Consider using SSH tunnel for secure connection';
+            if (errorMsg.includes("ETIMEDOUT") || errorMsg.includes("ECONNREFUSED")) {
+                helpfulMsg += "\n\nPossible solutions:\n";
+                helpfulMsg += "1. Check if your IP is allowed in RDS Security Group\n";
+                helpfulMsg += "2. Verify DATABASE_HOST, DATABASE_PORT in .env file\n";
+                helpfulMsg += "3. Ensure RDS instance is running and publicly accessible\n";
+                helpfulMsg += "4. Check your network/firewall settings\n";
+                helpfulMsg += "5. Consider using SSH tunnel for secure connection";
             }
-            
             throw new Error(helpfulMsg);
         }
-        
+
         throw error;
     }
 }
@@ -242,27 +176,45 @@ export async function updatePublication(idPublication, publicationData) {
         if (!publication) {
             throw new Error(`Publication with id ${idPublication} not found`);
         }
-        
-        // Update fields
-        if (publicationData.redirectionLink !== undefined) publication.redirection_link = publicationData.redirectionLink;
-        if (publicationData.date !== undefined) publication.date = publicationData.date;
-        if (publicationData.revista !== undefined) publication.revista = publicationData.revista;
-        if (publicationData.número !== undefined) publication.número = publicationData.número;
-        if (publicationData.publication_main_image_url !== undefined) publication.publication_main_image_url = publicationData.publication_main_image_url;
-        
+
+        const d = publicationData;
+        if (d.redirectionLink !== undefined) void d.redirectionLink;
+        if (d.real_publication_month_date !== undefined || d.date !== undefined) {
+            publication.real_publication_month_date = d.real_publication_month_date ?? d.date ?? publication.real_publication_month_date;
+        }
+        if (d.publication_theme !== undefined || d.revista !== undefined) {
+            publication.publication_theme = d.publication_theme ?? d.revista ?? publication.publication_theme;
+        }
+        if (d.magazine_this_year_issue !== undefined || d.número !== undefined) {
+            const n = d.magazine_this_year_issue ?? d.número;
+            publication.magazine_this_year_issue = n != null ? Number(n) : null;
+        }
+        if (d.publication_main_image_url !== undefined) publication.publication_main_image_url = d.publication_main_image_url;
+        if (d.magazine_id !== undefined) publication.magazine_id = d.magazine_id;
+        if (d.magazine_general_issue_number !== undefined) {
+            publication.magazine_general_issue_number =
+                d.magazine_general_issue_number != null ? Number(d.magazine_general_issue_number) : null;
+        }
+        if (d.publication_year !== undefined) {
+            publication.publication_year = d.publication_year != null ? Number(d.publication_year) : null;
+        }
+        if (d.publication_expected_publication_month !== undefined) {
+            publication.publication_expected_publication_month = parseMonth(d.publication_expected_publication_month);
+        }
+        if (d.publication_materials_deadline !== undefined) publication.publication_materials_deadline = d.publication_materials_deadline;
+        if (d.publication_edition_name !== undefined) publication.publication_edition_name = d.publication_edition_name;
+        if (d.is_special_edition !== undefined) publication.is_special_edition = Boolean(d.is_special_edition);
+        if (d.publication_status !== undefined) publication.publication_status = String(d.publication_status);
+        if (d.publication_format !== undefined) {
+            publication.publication_format =
+                d.publication_format === "informer" || d.publication_format === "flipbook" ? d.publication_format : publication.publication_format;
+        }
+
         await publication.save();
-        
-        // Transform database format to API format
-        return {
-            id_publication: publication.id_publication,
-            redirectionLink: publication.redirection_link,
-            date: publication.date ? new Date(publication.date).toISOString().split('T')[0] : null,
-            revista: publication.revista,
-            número: publication.número,
-            publication_main_image_url: publication.publication_main_image_url || ""
-        };
+
+        return toApiShape(publication);
     } catch (error) {
-        console.error('Error updating publication in database:', error);
+        console.error("Error updating publication in database:", error);
         throw error;
     }
 }
@@ -273,23 +225,12 @@ export async function deletePublication(idPublication) {
         if (!publication) {
             throw new Error(`Publication with id ${idPublication} not found`);
         }
-        
+
         await publication.destroy();
-        
-        // Transform database format to API format
-        return {
-            id_publication: publication.id_publication,
-            redirectionLink: publication.redirection_link,
-            date: publication.date ? new Date(publication.date).toISOString().split('T')[0] : null,
-            revista: publication.revista,
-            número: publication.número,
-            publication_main_image_url: publication.publication_main_image_url || ""
-        };
+
+        return toApiShape(publication);
     } catch (error) {
-        console.error('Error deleting publication from database:', error);
+        console.error("Error deleting publication in database:", error);
         throw error;
     }
 }
-
-
-

@@ -41,6 +41,13 @@ export const PUT = createEndpoint(
         bannerRedirection: Joi.string().uri().optional(),
         position: Joi.number().integer().min(0).optional(),
         appearanceWeight: Joi.string().valid("low", "medium", "high").optional(),
+        startsAt: Joi.string()
+            .pattern(/^\d{4}-\d{2}-\d{2}$/)
+            .optional(),
+        endsAt: Joi.string()
+            .pattern(/^\d{4}-\d{2}-\d{2}$/)
+            .optional(),
+        imageAlt: Joi.string().allow("").optional(),
     }),
     true
 );

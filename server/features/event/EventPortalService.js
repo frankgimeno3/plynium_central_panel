@@ -2,7 +2,7 @@ import Database from "../../database/database.js";
 
 /**
  * Get portals where an event is published.
- * @param {string} eventId - events.id_fair
+ * @param {string} eventId - events.event_id (API name: id_fair)
  * @returns {Promise<Array<{ portalId: number, portalName: string, slug: string, status: string }>>}
  */
 export async function getPortalsByEventId(eventId) {
@@ -10,11 +10,11 @@ export async function getPortalsByEventId(eventId) {
     if (!db.isConfigured()) return [];
     const sequelize = db.getSequelize();
     const [rows] = await sequelize.query(
-        `SELECT ep.portal_id AS "portalId", p.name AS "portalName", ep.slug, ep.status
+        `SELECT ep.portal_id AS "portalId", p.portal_name AS "portalName", ep.event_portal_slug AS slug, ep.event_portal_status AS status
          FROM event_portals ep
-         JOIN portals p ON p.id = ep.portal_id
+         JOIN portals_id p ON p.portal_id = ep.portal_id
          WHERE ep.event_id = :eventId
-         ORDER BY p.name`,
+         ORDER BY p.portal_name`,
         { replacements: { eventId } }
     );
     return (rows || []).map((r) => ({
@@ -52,14 +52,14 @@ export async function addEventToPortal(eventId, portalId, eventName = "") {
     let suffix = 0;
     for (;;) {
         const [collision] = await sequelize.query(
-            `SELECT 1 FROM event_portals WHERE portal_id = :portalId AND slug = :slug`,
+            `SELECT 1 FROM event_portals WHERE portal_id = :portalId AND event_portal_slug = :slug`,
             { replacements: { portalId, slug: finalSlug } }
         );
         if (!collision || collision.length === 0) break;
         finalSlug = `${baseSlug}-${++suffix}`;
     }
     await sequelize.query(
-        `INSERT INTO event_portals (event_id, portal_id, slug, status)
+        `INSERT INTO event_portals (event_id, portal_id, event_portal_slug, event_portal_status)
          VALUES (:eventId, :portalId, :slug, 'active')`,
         { replacements: { eventId, portalId, slug: finalSlug } }
     );
@@ -99,14 +99,14 @@ export async function createEventPortals(eventId, portalIds, eventName = "") {
         let suffix = 0;
         for (;;) {
             const [collision] = await sequelize.query(
-                `SELECT 1 FROM event_portals WHERE portal_id = :portalId AND slug = :slug`,
+                `SELECT 1 FROM event_portals WHERE portal_id = :portalId AND event_portal_slug = :slug`,
                 { replacements: { portalId, slug: finalSlug } }
             );
             if (!collision || collision.length === 0) break;
             finalSlug = `${baseSlug}-${++suffix}`;
         }
         await sequelize.query(
-            `INSERT INTO event_portals (event_id, portal_id, slug, status)
+            `INSERT INTO event_portals (event_id, portal_id, event_portal_slug, event_portal_status)
              VALUES (:eventId, :portalId, :slug, 'active')
              ON CONFLICT (event_id, portal_id) DO NOTHING`,
             { replacements: { eventId, portalId, slug: finalSlug } }

@@ -28,6 +28,8 @@ export const PUT = createEndpoint(async (request, body) => {
     articleSubtitle: Joi.string().optional(),
     article_main_image_url: Joi.string().optional(),
     company: Joi.string().optional(),
+    article_company_names_array: Joi.array().items(Joi.string()).min(1).optional(),
+    article_company_id_array: Joi.array().items(Joi.string().allow("")).optional(),
     date: Joi.string().optional(),
     article_tags_array: Joi.array().items(Joi.string()).optional(),
     contents_array: Joi.array().items(Joi.string()).optional(),

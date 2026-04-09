@@ -30,7 +30,7 @@ interface ArticlePhase3Props {
   idArticle: string;
   articleTitle: string;
   articleSubtitle: string;
-  company: string;
+  companySummary: string;
   date: string;
   tagsArray: string[];
   articleMainImageUrl: string;
@@ -44,7 +44,7 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
   idArticle,
   articleTitle,
   articleSubtitle,
-  company,
+  companySummary,
   date,
   tagsArray,
   articleMainImageUrl,
@@ -63,7 +63,7 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
           <p><strong>ID:</strong> {idArticle}</p>
           <p><strong>Title:</strong> {articleTitle}</p>
           <p><strong>Subtitle:</strong> {articleSubtitle || "N/A"}</p>
-          <p><strong>Company:</strong> {company || "N/A"}</p>
+          <p><strong>Companies:</strong> {companySummary || "N/A"}</p>
           <p><strong>Date:</strong> {date}</p>
           <p><strong>Tags:</strong> {tagsArray.length > 0 ? tagsArray.join(", ") : "None"}</p>
           <div className="mt-4">

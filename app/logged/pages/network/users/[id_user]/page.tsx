@@ -18,9 +18,7 @@ interface UserDetail {
   user_role: string;
   user_description: string;
   user_main_image_src?: string;
-  user_current_company?: { id_company?: string; userPosition?: string } | null;
   linkedin_profile?: string | null;
-  experience_array?: unknown[];
   preferences?: unknown;
   enabled?: boolean;
 }
@@ -164,11 +162,6 @@ const UserDetailPage: FC = () => {
     );
   }
 
-  const company = user.user_current_company;
-  const companyStr = company
-    ? [company.id_company, company.userPosition].filter(Boolean).join(' · ')
-    : '-';
-
   return (
     <>
       <PageContentSection>
@@ -219,10 +212,6 @@ const UserDetailPage: FC = () => {
               <label className="text-sm font-medium text-gray-500">Description</label>
               <p className="text-base text-gray-900">{user.user_description || '-'}</p>
             </div>
-            <div>
-              <label className="text-sm font-medium text-gray-500">Empresa actual</label>
-              <p className="text-base text-gray-900">{companyStr}</p>
-            </div>
             {user.linkedin_profile && (
               <div className="md:col-span-2">
                 <label className="text-sm font-medium text-gray-500">Link to LinkedIn profile</label>
@@ -257,15 +246,6 @@ const UserDetailPage: FC = () => {
               <p className="text-sm text-gray-500">No contact linked to this Plynium user.</p>
             )}
           </div>
-
-          {user.experience_array && Array.isArray(user.experience_array) && user.experience_array.length > 0 && (
-            <div className="mt-6 pt-6 border-t border-gray-200">
-              <label className="text-sm font-medium text-gray-500">Experiencia</label>
-              <pre className="mt-2 text-sm text-gray-900 bg-gray-50 p-4 rounded overflow-x-auto">
-                {JSON.stringify(user.experience_array, null, 2)}
-              </pre>
-            </div>
-          )}
 
           {user.preferences != null && user.preferences !== undefined && (
             <div className="mt-6 pt-6 border-t border-gray-200">

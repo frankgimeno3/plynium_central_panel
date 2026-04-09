@@ -17,13 +17,16 @@ function toApiProvider(row) {
 
 function toApiProviderInvoice(row) {
     if (!row) return null;
+    const ref = row.invoice_provider_reference_number ?? row.label ?? "";
     return {
-        id: row.id,
-        id_provider: row.id_provider,
-        provider_name: row.provider_name ?? "",
-        label: row.label ?? "",
-        amount_eur: row.amount_eur != null ? Number(row.amount_eur) : 0,
-        payment_date: row.payment_date
+        id: row.id ?? row.provider_invoice_id,
+        id_provider: row.id_provider ?? row.provider_id,
+        provider_name: row.provider_company_name ?? row.provider_name ?? "",
+        label: ref,
+        invoice_provider_reference_number: ref,
+        amount_eur: row.invoice_amount_eur != null ? Number(row.invoice_amount_eur) : (row.amount_eur != null ? Number(row.amount_eur) : 0),
+        payment_date: row.invoice_payment_date ?? row.payment_date,
+        invoice_issue_date: row.invoice_issue_date ?? null,
     };
 }
 
@@ -70,7 +73,7 @@ export async function getAllProviderInvoices() {
             return [];
         }
         const rows = await ProviderInvoiceDbModel.findAll({
-            order: [["payment_date", "DESC"]],
+            order: [["invoice_payment_date", "DESC"]],
         });
         return rows.map((r) => toApiProviderInvoice(r.get({ plain: true })));
     } catch (error) {
@@ -108,17 +111,23 @@ export async function updateProviderInvoice(idInvoice, patch) {
     }
     const updates = {};
     if (patch.amount_eur !== undefined && patch.amount_eur !== null) {
-        updates.amount_eur = patch.amount_eur;
+        updates.invoice_amount_eur = patch.amount_eur;
     }
     if (
         patch.payment_date !== undefined &&
         patch.payment_date !== null &&
         String(patch.payment_date).trim() !== ""
     ) {
-        updates.payment_date = String(patch.payment_date).trim().slice(0, 10);
+        updates.invoice_payment_date = String(patch.payment_date).trim().slice(0, 10);
+    }
+    if (patch.invoice_issue_date !== undefined && patch.invoice_issue_date !== null && String(patch.invoice_issue_date).trim() !== "") {
+        updates.invoice_issue_date = String(patch.invoice_issue_date).trim().slice(0, 10);
     }
     if (patch.label !== undefined && patch.label !== null) {
-        updates.label = String(patch.label).slice(0, 512);
+        updates.invoice_provider_reference_number = String(patch.label).slice(0, 512);
+    }
+    if (patch.invoice_provider_reference_number !== undefined && patch.invoice_provider_reference_number !== null) {
+        updates.invoice_provider_reference_number = String(patch.invoice_provider_reference_number).slice(0, 512);
     }
     if (patch.id_provider !== undefined && patch.id_provider !== null) {
         const idProv = String(patch.id_provider).trim();
@@ -136,11 +145,11 @@ export async function updateProviderInvoice(idInvoice, patch) {
         updates.id_provider = idProv;
         if (patch.provider_name === undefined) {
             const plain = provRow.get({ plain: true });
-            updates.provider_name = plain.name ?? "";
+            updates.provider_company_name = plain.name ?? "";
         }
     }
     if (patch.provider_name !== undefined && patch.provider_name !== null) {
-        updates.provider_name = String(patch.provider_name).slice(0, 512);
+        updates.provider_company_name = String(patch.provider_name).slice(0, 512);
     }
     if (Object.keys(updates).length === 0) {
         return toApiProviderInvoice(row.get({ plain: true }));
@@ -157,7 +166,7 @@ export async function getProviderInvoicesByProvider(idProvider) {
     }
     const rows = await ProviderInvoiceDbModel.findAll({
         where: { id_provider: idProvider },
-        order: [["payment_date", "DESC"]],
+        order: [["invoice_payment_date", "DESC"]],
     });
     return rows.map((r) => toApiProviderInvoice(r.get({ plain: true })));
 }

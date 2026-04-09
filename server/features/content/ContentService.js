@@ -6,7 +6,7 @@ import "../../database/models.js";
 export async function getAllContents() {
     try {
         const contents = await ContentModel.findAll({
-            order: [['created_at', 'DESC']]
+            order: [['createdAt', 'DESC']]
         });
         
         // Transform database format to API format

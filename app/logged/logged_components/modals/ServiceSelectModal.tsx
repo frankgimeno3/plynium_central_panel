@@ -48,7 +48,7 @@ function isSlotSold(pub: PlannedPublication, slotKey: string): boolean {
   const slot = pub[slotKey];
   if (!slot || typeof slot !== "object") return false;
   const o = slot as Record<string, unknown>;
-  return o.state === "sold" || "id_advertiser" in o;
+  return o.slot_state === "sold" || "customer_id" in o;
 }
 
 function monthsBetween(start: string, end: string): number {
