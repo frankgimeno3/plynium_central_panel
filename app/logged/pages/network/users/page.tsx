@@ -2,6 +2,7 @@
 
 import React, { FC, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from "next/navigation";
 import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { useUsers } from './hooks/useUsers';
@@ -43,6 +44,7 @@ const USERS_BASE = '/logged/pages/network/users';
 const LISTS_BASE = `${USERS_BASE}/lists`;
 
 const Users: FC<UsersProps> = () => {
+  const router = useRouter();
   const { users, loading, error, refetch } = useUsers();
   const [userLists, setUserLists] = useState<UserList[]>([]);
   const [currentTab, setCurrentTab] = useState<UsersTabKey>('all');
@@ -152,7 +154,7 @@ const Users: FC<UsersProps> = () => {
     <>
       <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
         <div className="mt-12 flex flex-col w-full">
-        <p className="text-2xl font-bold pb-5">My user: <span>{currentUser?.user_name ?? '…'}</span></p>
+        
 
         <div className="flex border-b border-gray-200">
             {tabs.map((tab) => (
@@ -183,7 +185,7 @@ const Users: FC<UsersProps> = () => {
               onClick={() => refetch()}
               className="ml-2 underline"
             >
-              Reintentar
+              Retry
             </button>
           </div>
         )}
@@ -203,7 +205,7 @@ const Users: FC<UsersProps> = () => {
                       value={usersFilter.id_user}
                       onChange={(e) => setUsersFilter((f) => ({ ...f, id_user: e.target.value }))}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Filtrar por id"
+                      placeholder="Filter by id"
                     />
                   </div>
                   <div className="min-w-0">
@@ -213,7 +215,7 @@ const Users: FC<UsersProps> = () => {
                       value={usersFilter.user_full_name}
                       onChange={(e) => setUsersFilter((f) => ({ ...f, user_full_name: e.target.value }))}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Filtrar por nombre"
+                      placeholder="Filter by name"
                     />
                   </div>
                   <div className="min-w-0">
@@ -223,7 +225,7 @@ const Users: FC<UsersProps> = () => {
                       value={usersFilter.user_role}
                       onChange={(e) => setUsersFilter((f) => ({ ...f, user_role: e.target.value }))}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Filtrar por tipo"
+                      placeholder="Filter by type"
                     />
                   </div>
                   <div className="min-w-0">
@@ -233,7 +235,7 @@ const Users: FC<UsersProps> = () => {
                       value={usersFilter.user_description}
                       onChange={(e) => setUsersFilter((f) => ({ ...f, user_description: e.target.value }))}
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="Filtrar por descripción"
+                      placeholder="Filter by description"
                     />
                   </div>
                 </div>
@@ -241,7 +243,7 @@ const Users: FC<UsersProps> = () => {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
-                        id_usuario
+                        User ID
                       </th>
                       <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
                         Full name
@@ -258,22 +260,39 @@ const Users: FC<UsersProps> = () => {
                     {filteredUsers.map((user) => {
                       const userSlug = (user as UserContent).id ?? user.id_user;
                       const href = `${USERS_BASE}/${encodeURIComponent(userSlug)}`;
-                      const linkClass = "block w-full text-left text-gray-900 group-hover:text-white py-1 -my-1";
                       return (
-                        <tr key={user.id_user} className="group hover:bg-gray-700 transition-colors">
+                        <tr
+                          key={user.id_user}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => router.push(href)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              router.push(href);
+                            }
+                          }}
+                          className="group hover:bg-gray-700 transition-colors cursor-pointer"
+                        >
                           <td className="px-6 py-3 text-sm border-b border-gray-200">
-                            <Link href={href} className={`${linkClass} hover:underline whitespace-nowrap`} aria-label={`Ver usuario ${user.user_full_name}`}>
+                            <span className="block w-full text-left text-white py-1 -my-1 whitespace-nowrap">
                               {user.id_user}
-                            </Link>
+                            </span>
                           </td>
                           <td className="px-6 py-3 text-sm border-b border-gray-200 whitespace-nowrap">
-                            <Link href={href} className={linkClass} tabIndex={-1} aria-hidden>{user.user_full_name}</Link>
+                            <span className="block w-full text-left text-white py-1 -my-1 whitespace-nowrap">
+                              {user.user_full_name}
+                            </span>
                           </td>
                           <td className="px-6 py-3 text-sm border-b border-gray-200 whitespace-nowrap">
-                            <Link href={href} className={linkClass} tabIndex={-1} aria-hidden>{user.user_role}</Link>
+                            <span className="block w-full text-left text-white py-1 -my-1 whitespace-nowrap">
+                              {user.user_role}
+                            </span>
                           </td>
                           <td className="px-6 py-3 text-sm border-b border-gray-200">
-                            <Link href={href} className={linkClass} tabIndex={-1} aria-hidden>{user.user_description}</Link>
+                            <span className="block w-full text-left text-white py-1 -my-1">
+                              {user.user_description}
+                            </span>
                           </td>
                         </tr>
                       );
@@ -281,7 +300,7 @@ const Users: FC<UsersProps> = () => {
                     {users.length > 0 && filteredUsers.length === 0 && (
                       <tr>
                         <td colSpan={4} className="px-6 py-4 text-sm text-gray-500">
-                          No hay resultados que coincidan con el filtro.
+                          No results match the current filters.
                         </td>
                       </tr>
                     )}
@@ -294,17 +313,19 @@ const Users: FC<UsersProps> = () => {
 
         {currentTab === 'lists' && !error && (
           <div className="p-6 flex flex-col flex-1 min-h-0">
-            <p className="text-sm text-gray-600 mb-4">Listas de envío de newsletters. Haz clic en una fila para ver los users y contacts asignados.</p>
+            <p className="text-sm text-gray-600 mb-4">
+              Newsletter sending lists. Click a row to see assigned users and contacts.
+            </p>
             <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6 w-full">
               <div className="min-w-0">
-                <label className="block text-xs text-gray-600 mb-1">Lista</label>
+                <label className="block text-xs text-gray-600 mb-1">List</label>
                 <input
                   type="text"
                   value={listsFilter.userListName}
                   onChange={(e) => setListsFilter((f) => ({ ...f, userListName: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Filtrar por nombre de lista"
+                  placeholder="Filter by list name"
                 />
               </div>
               <div className="min-w-0">
@@ -314,7 +335,7 @@ const Users: FC<UsersProps> = () => {
                   value={listsFilter.userList_id}
                   onChange={(e) => setListsFilter((f) => ({ ...f, userList_id: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Filtrar por ID"
+                  placeholder="Filter by ID"
                 />
               </div>
               <div className="min-w-0">
@@ -324,17 +345,17 @@ const Users: FC<UsersProps> = () => {
                   value={listsFilter.userListPortal}
                   onChange={(e) => setListsFilter((f) => ({ ...f, userListPortal: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Filtrar por portal"
+                  placeholder="Filter by portal"
                 />
               </div>
               <div className="min-w-0">
-                <label className="block text-xs text-gray-600 mb-1">Tema</label>
+                <label className="block text-xs text-gray-600 mb-1">Topic</label>
                 <input
                   type="text"
                   value={listsFilter.userListTopic}
                   onChange={(e) => setListsFilter((f) => ({ ...f, userListTopic: e.target.value }))}
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Filtrar por tema"
+                  placeholder="Filter by topic"
                 />
               </div>
             </div>
@@ -343,7 +364,7 @@ const Users: FC<UsersProps> = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
-                      Lista
+                      List
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
                       ID
@@ -352,7 +373,7 @@ const Users: FC<UsersProps> = () => {
                       Portal
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
-                      Tema
+                      Topic
                     </th>
                   </tr>
                 </thead>
@@ -360,28 +381,45 @@ const Users: FC<UsersProps> = () => {
                   {userLists.length === 0 ? (
                     <tr>
                       <td colSpan={4} className="px-6 py-4 text-sm text-gray-200">
-                        No hay listas de envío de newsletters configuradas.
+                        No newsletter lists configured.
                       </td>
                     </tr>
                   ) : (
                     filteredUserLists.map((list) => {
                       const href = `${LISTS_BASE}/${encodeURIComponent(list.userList_id)}`;
-                      const rowLinkClass = "block w-full text-left py-1 -my-1 text-gray-900 group-hover:text-white";
                       return (  
-                        <tr key={list.userList_id} className="group hover:bg-gray-700 transition-colors">
+                        <tr
+                          key={list.userList_id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => router.push(href)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              router.push(href);
+                            }
+                          }}
+                          className="group hover:bg-gray-700 transition-colors cursor-pointer"
+                        >
                           <td className="px-6 py-3 text-sm border-b border-gray-200">
-                            <Link href={href} className={`${rowLinkClass} font-medium`} aria-label={`Ver lista ${list.userListName}`}>
+                            <span className="block w-full text-left text-white py-1 -my-1">
                               {list.userListName}
-                            </Link>
+                            </span>
                           </td>
                           <td className="px-6 py-3 text-sm border-b border-gray-200 font-mono">
-                            <Link href={href} className={rowLinkClass} tabIndex={-1} aria-hidden>{list.userList_id}</Link>
+                            <span className="block w-full text-left text-white py-1 -my-1 whitespace-nowrap">
+                              {list.userList_id}
+                            </span>
                           </td>
                           <td className="px-6 py-3 text-sm border-b border-gray-200">
-                            <Link href={href} className={rowLinkClass} tabIndex={-1} aria-hidden>{list.userListPortal}</Link>
+                            <span className="block w-full text-left text-white py-1 -my-1 whitespace-nowrap">
+                              {list.userListPortal}
+                            </span>
                           </td>
                           <td className="px-6 py-3 text-sm border-b border-gray-200">
-                            <Link href={href} className={rowLinkClass} tabIndex={-1} aria-hidden>{list.userListTopic}</Link>
+                            <span className="block w-full text-left text-white py-1 -my-1 whitespace-nowrap">
+                              {list.userListTopic}
+                            </span>
                           </td>
                         </tr>
                       );
@@ -390,7 +428,7 @@ const Users: FC<UsersProps> = () => {
                   {userLists.length > 0 && filteredUserLists.length === 0 && (
                     <tr>
                       <td colSpan={4} className="px-6 py-4 text-sm text-gray-500">
-                        No hay resultados que coincidan con el filtro.
+                        No results match the current filters.
                       </td>
                     </tr>
                   )}

@@ -6,10 +6,19 @@ import { getAllCategories, createCategory } from "../../../../server/features/co
 export const runtime = "nodejs";
 
 const postSchema = Joi.object({
-  name: Joi.string().required().trim().min(1),
+  category_name: Joi.string().trim().min(1),
+  category_description: Joi.string().allow("").optional(),
+  // Backward-compatible payload keys
+  name: Joi.string().trim().min(1),
   description: Joi.string().allow("").optional(),
-  // Relations moved to company_categories_portal table; create category without portal binding here.
-});
+  // Bridge table: company_categories_portal (category_id, portal_id)
+  // Note: portal_id can be 0 in portals_db
+  portal_ids: Joi.array().items(Joi.number().integer().min(0)).optional(),
+  // Backward-compatible key (old UI sent portal names; ignored by backend now)
+  portals_array: Joi.array().items(Joi.string().trim().min(1)).optional(),
+})
+  .or("category_name", "name")
+  .unknown(true);
 
 export const GET = createEndpoint(
   async () => {

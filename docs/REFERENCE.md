@@ -138,6 +138,10 @@ Single entry for the Next app: API routes, client services, static contents, and
 
 Contract and decisions for the DB layer.
 
+### RDS schema (read-only reference)
+
+- **Schema reference:** `docs/RDS_SCHEMA.md` (tables/columns/types/null/default for the `public` schema).
+
 ### Propósito y ownership
 
 - **Propósito:** Exponer una única instancia de Sequelize (Postgres), registrar modelos y asociaciones, y definir **toda** la evolución del schema mediante migraciones SQL. Permitir arrancar sin DB en desarrollo (env incompleto).

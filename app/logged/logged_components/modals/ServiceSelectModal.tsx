@@ -33,7 +33,9 @@ type PlannedPublication = {
   [slotKey: string]: unknown;
 };
 
-const plannedPublications = (getPlanned(publicationsData as PublicationUnified[]).map(unifiedToPlannedSlots)) as PlannedPublication[];
+const plannedPublications = (
+  getPlanned(publicationsData as unknown as PublicationUnified[]).map(unifiedToPlannedSlots)
+) as PlannedPublication[];
 
 /** Extra data per service type, passed on confirm */
 export type ServiceExtra =

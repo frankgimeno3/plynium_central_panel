@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FC, useMemo, useEffect, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
@@ -30,6 +30,7 @@ type ProposalRecord = {
 
 const AgentDetailPage: FC = () => {
   const params = useParams();
+  const router = useRouter();
   const idAgent =
     typeof params?.id_agent === "string"
       ? decodeURIComponent(params.id_agent)
@@ -219,14 +220,29 @@ const AgentDetailPage: FC = () => {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {customers.map((c) => (
-                    <tr key={c.id_customer} className="hover:bg-gray-50">
+                    <tr
+                      key={c.id_customer}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() =>
+                        router.push(
+                          `/logged/pages/account-management/customers_db/${encodeURIComponent(c.id_customer)}`
+                        )
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          router.push(
+                            `/logged/pages/account-management/customers_db/${encodeURIComponent(c.id_customer)}`
+                          );
+                        }
+                      }}
+                      className="hover:bg-gray-50 cursor-pointer"
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        <Link
-                          href={`/logged/pages/account-management/customers_db/${encodeURIComponent(c.id_customer)}`}
-                          className="text-blue-600 hover:text-blue-800 hover:underline"
-                        >
-                          {c.id_customer}
-                        </Link>
+                        <span className="text-gray-400 select-none" aria-hidden>
+                          &nbsp;
+                        </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {c.name}

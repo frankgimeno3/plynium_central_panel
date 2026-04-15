@@ -1,6 +1,8 @@
 import axios from "axios";
 
-const apiClient = axios.create();
+const apiClient = axios.create({
+    timeout: 90000,
+});
 
 apiClient.interceptors.request.use(config => {
     config.withCredentials = true;

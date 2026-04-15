@@ -36,7 +36,9 @@ const postSchema = Joi.object({
     highlited_position: Joi.string().allow("").optional(),
     is_article_event: Joi.boolean().optional(),
     event_id: Joi.string().allow("").optional(),
-    portalIds: Joi.array().items(Joi.number().integer().min(1)).min(1).required()
+    portalIds: Joi.array().items(Joi.number().integer().min(0)).min(1).required(),
+    topic_ids_array: Joi.array().items(Joi.number().integer().positive()).optional(),
+    topicIdsArray: Joi.array().items(Joi.number().integer().positive()).optional(),
 });
 
 export const POST = createEndpoint(async (request, body) => {

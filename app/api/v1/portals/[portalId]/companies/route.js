@@ -1,6 +1,6 @@
-import { createEndpoint } from "../../../../../server/createEndpoint.js";
+import { createEndpoint } from "../../../../../../server/createEndpoint.js";
 import { NextResponse } from "next/server";
-import { getCompaniesByPortalId } from "../../../../../server/features/company/CompanyPortalService.js";
+import { getCompaniesByPortalId } from "../../../../../../server/features/company/CompanyPortalService.js";
 
 export const runtime = "nodejs";
 

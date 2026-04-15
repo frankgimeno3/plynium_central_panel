@@ -13,6 +13,7 @@ export const NAV_ROUTE_LABELS: Record<string, string> = {
   [`${BASE}/network/contents/articles`]: "Articles",
   [`${BASE}/network/contents/banners`]: "Banners",
   [`${BASE}/network/contents/events`]: "Events",
+  [`${BASE}/network/contents/topics`]: "Content Topics",
   // Communications (Topnav)
   [`${BASE}/communications`]: "Communications",
   [`${BASE}/communications/company`]: "Company Creation Requests",
@@ -35,8 +36,7 @@ export const NAV_ROUTE_LABELS: Record<string, string> = {
   [`${BASE}/production/newsletters/create`]: "Create newsletter campaign",
   [`${BASE}/production/publications`]: "Publications",
   [`${BASE}/production/publications/magazines`]: "Magazines",
-  [`${BASE}/production/publications/flatplans`]: "Flatplans",
-  [`${BASE}/production/publications/published`]: "Published Issues",
+  [`${BASE}/production/publications/issues`]: "Issues",
   // Administration
   [`${BASE}/administration`]: "Orders",
   [`${BASE}/administration/banks`]: "Banks",
@@ -70,6 +70,7 @@ export const PLYNIUM_NETWORK_LINKS = [
   { href: `${BASE}/network/contents/articles`, label: "Articles" },
   { href: `${BASE}/network/contents/banners`, label: "Banners" },
   { href: `${BASE}/network/contents/events`, label: "Events" },
+  { href: `${BASE}/network/contents/topics`, label: "Content Topics" },
   // Directory & rest (no Requests – moved to Communications in Topnav)
   { href: `${BASE}/network/directory/companies`, label: "Published Companies" },
   { href: `${BASE}/network/directory/products`, label: "Published Products" },
@@ -79,5 +80,5 @@ export const PLYNIUM_NETWORK_LINKS = [
 
 /** Grouping for left nav: path prefix that starts a sub-section (Contents only; Requests removed) */
 export const PLYNIUM_NETWORK_GROUPS = [
-  { pathPrefix: `${BASE}/network/contents`, label: "Contents", linkStart: 0, linkEnd: 3 },
+  { pathPrefix: `${BASE}/network/contents`, label: "Contents", linkStart: 0, linkEnd: 4 },
 ] as const;

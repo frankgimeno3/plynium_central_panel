@@ -63,6 +63,7 @@ const NavLink: FC<{
 }> = ({ href, label, active }) => (
   <Link
     href={href}
+    prefetch={false}
     className={`flex min-h-[36px] items-center rounded-r-md border-l-2 py-2 pl-3 pr-4 text-sm uppercase transition-colors ${
       active
         ? "border-blue-500 bg-blue-950/40 font-medium text-blue-300"
@@ -227,14 +228,9 @@ const Leftnav: FC<LeftnavProps> = () => {
                       active={pathname.startsWith("/logged/pages/production/publications/magazines")}
                     />
                     <NavLink
-                      href="/logged/pages/production/publications/flatplans"
-                      label="Flatplans"
-                      active={pathname.startsWith("/logged/pages/production/publications/flatplans")}
-                    />
-                    <NavLink
-                      href="/logged/pages/production/publications/published"
-                      label="Published Issues"
-                      active={pathname.startsWith("/logged/pages/production/publications/published")}
+                      href="/logged/pages/production/publications/issues"
+                      label="Issues"
+                      active={pathname.startsWith("/logged/pages/production/publications/issues")}
                     />
                   </div>
                 )}

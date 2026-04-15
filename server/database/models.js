@@ -10,6 +10,7 @@ import BannerModel from "../features/banner/BannerModel.js";
 import FolderModel from "../features/folder/FolderModel.js";
 import MediaModel from "../features/media/MediaModel.js";
 import CompanyCategoryModel from "../features/company_category/CompanyCategoryModel.js";
+import TopicDbModel from "../features/topic_db/TopicDbModel.js";
 import CustomerDbModel from "../features/customer_db/CustomerDbModel.js";
 import ContactDbModel from "../features/contact_db/ContactDbModel.js";
 import ContactCommentDbModel from "../features/contact_comment_db/ContactCommentDbModel.js";
@@ -86,6 +87,11 @@ ArticleModel.init({
         allowNull: true,
         defaultValue: "",
         field: "article_event_id"
+    },
+    topic_ids_array: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        allowNull: false,
+        defaultValue: []
     }
 }, {
     sequelize,
@@ -167,6 +173,8 @@ PublicationModel.init({
     modelName: 'publication',
     underscored: true,
     tableName: "publications_db",
+    // publications_db does not have created_at/updated_at columns
+    timestamps: false,
     indexes: [
         { fields: ["magazine_id"] },
         { fields: ["publication_year"] },
@@ -289,6 +297,9 @@ ProductModel.init({
     modelName: "product",
     underscored: true,
     tableName: "products_db",
+    timestamps: true,
+    createdAt: "product_created_at",
+    updatedAt: "product_updated_at",
     indexes: [
         { fields: ["product_name"] },
         { fields: ["company_id"] }
@@ -517,6 +528,37 @@ CompanyCategoryModel.init({
     updatedAt: "category_updated_at",
     indexes: [
         { fields: ["name"] }
+    ]
+});
+
+TopicDbModel.init({
+    topic_id: {
+        type: DataTypes.INTEGER,
+        primaryKey: true,
+        autoIncrement: true,
+        allowNull: false
+    },
+    topic_name: {
+        type: DataTypes.STRING(255),
+        allowNull: false
+    },
+    topic_description: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+        defaultValue: ""
+    }
+}, {
+    sequelize,
+    modelName: "topic_db",
+    underscored: true,
+    tableName: "topics_db",
+    timestamps: true,
+    createdAt: "topic_created_at",
+    updatedAt: "topic_updated_at",
+    indexes: [
+        { fields: ["topic_name"] },
+        // Nota: antes era unique por (topic_portal, topic_name).
+        // Con topic_portals (many-to-many) no se puede expresar sin desnormalizar.
     ]
 });
 
@@ -936,24 +978,28 @@ ProjectDbModel.init({
 });
 
 PmEventDbModel.init({
-    id_event: { type: DataTypes.STRING(64), primaryKey: true, unique: true },
-    id_project: { type: DataTypes.STRING(64), allowNull: false },
-    id_customer: { type: DataTypes.STRING(64), allowNull: false },
-    event_type: { type: DataTypes.STRING(64), allowNull: false },
-    date: { type: DataTypes.DATEONLY, allowNull: false },
-    event_description: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
-    event_state: { type: DataTypes.STRING(64), allowNull: false, defaultValue: "pending" }
+    // Map API-friendly names to canonical RDS columns (pm_events_db)
+    id_event: { type: DataTypes.STRING(64), primaryKey: true, unique: true, field: "pm_event_id" },
+    id_project: { type: DataTypes.STRING(64), allowNull: false, field: "project_id" },
+    id_customer: { type: DataTypes.STRING(64), allowNull: false, field: "customer_id" },
+    event_type: { type: DataTypes.STRING(64), allowNull: false, field: "pm_event_type" },
+    date: { type: DataTypes.DATEONLY, allowNull: false, field: "pm_event_date" },
+    event_description: { type: DataTypes.TEXT, allowNull: false, defaultValue: "", field: "pm_event_description" },
+    event_state: { type: DataTypes.STRING(64), allowNull: false, defaultValue: "pending", field: "pm_event_state" }
 }, {
     sequelize,
     modelName: "pm_event_db",
     underscored: true,
     tableName: "pm_events_db",
+    timestamps: true,
+    createdAt: "pm_event_created_at",
+    updatedAt: "pm_event_updated_at",
     indexes: [
-        { fields: ["id_project"] },
-        { fields: ["id_customer"] },
-        { fields: ["event_type"] },
-        { fields: ["date"] },
-        { fields: ["event_state"] }
+        { fields: ["project_id"] },
+        { fields: ["customer_id"] },
+        { fields: ["pm_event_type"] },
+        { fields: ["pm_event_date"] },
+        { fields: ["pm_event_state"] }
     ]
 });
 
@@ -1177,5 +1223,5 @@ PublicationSlotContentDbModel.belongsTo(PublicationModel, { foreignKey: "publica
 defineAssociations();
 }
 
-export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, PublicationSlotDbModel, PublicationSlotContentDbModel, OfferedPreferentialPageDbModel };
+export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, PublicationSlotDbModel, PublicationSlotContentDbModel, OfferedPreferentialPageDbModel };
 

@@ -12,12 +12,6 @@ import { Company } from '@/app/contents/interfaces';
 import MediatecaModal from '@/app/logged/logged_components/modals/MediatecaModal';
 import CategoriesModal from '@/app/logged/logged_components/modals/CategoriesModal';
 
-/** Mock data for "Articles about this company" - replace with real API later */
-const MOCK_ARTICLES_ABOUT_COMPANY = [
-  { id_article: 'article_25_000000003', articleTitle: 'Company spotlight: GlassTech', articleSubtitle: 'An overview', article_main_image_url: '' },
-  { id_article: 'article_25_000000004', articleTitle: 'Industry trends and this company', articleSubtitle: 'Market analysis', article_main_image_url: '' },
-];
-
 const IdCompany: FC = () => {
   const params = useParams();
   const router = useRouter();
@@ -568,44 +562,13 @@ const IdCompany: FC = () => {
         <h2 className="text-xl font-bold text-gray-900 mb-4">
           Articles about this company
         </h2>
-        <div className="flex flex-row flex-wrap gap-4">
-          {MOCK_ARTICLES_ABOUT_COMPANY.map((article) => (
-            <Link
-              key={article.id_article}
-              href={`/logged/pages/network/contents/articles/${encodeURIComponent(article.id_article)}`}
-              className="flex flex-col w-40 rounded-xl border border-gray-200 shadow-sm overflow-hidden bg-white hover:border-blue-950/50 hover:shadow transition-colors"
-            >
-              <div className="w-full aspect-[4/3] bg-gray-100 flex items-center justify-center overflow-hidden">
-                {article.article_main_image_url ? (
-                  <img
-                    src={article.article_main_image_url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                      (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                    }}
-                  />
-                ) : null}
-                <span
-                  className={`text-gray-400 text-xs ${article.article_main_image_url ? 'hidden' : ''}`}
-                  aria-hidden
-                >
-                  No image
-                </span>
-              </div>
-              <div className="p-3 flex flex-col gap-0.5 min-w-0">
-                <span className="font-medium text-gray-900 text-sm truncate" title={article.articleTitle}>
-                  {article.articleTitle}
-                </span>
-                {article.articleSubtitle ? (
-                  <span className="text-xs text-gray-500 truncate" title={article.articleSubtitle}>
-                    {article.articleSubtitle}
-                  </span>
-                ) : null}
-              </div>
-            </Link>
-          ))}
+        <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+          <p className="text-gray-600 text-sm">
+            No related articles yet.
+          </p>
+          <p className="text-gray-500 text-xs mt-1">
+            This section will be populated once the related-articles API is connected.
+          </p>
         </div>
       </PageContentSection>
 

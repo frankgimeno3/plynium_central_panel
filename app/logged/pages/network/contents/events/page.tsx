@@ -88,6 +88,19 @@ const IndustryEvents: FC = () => {
     setFilterParams((prev) => ({ ...prev, portalNames }));
   };
 
+  const togglePortalFilter = (portalName: string) => {
+    const name = (portalName ?? "").trim();
+    if (!name) return;
+    setFilterParams((prev) => {
+      const current = Array.isArray(prev.portalNames) ? prev.portalNames : [];
+      const exists = current.includes(name);
+      return {
+        ...prev,
+        portalNames: exists ? current.filter((n) => n !== name) : [...current, name],
+      };
+    });
+  };
+
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentMonth((prev) => {
       const newDate = new Date(prev);
@@ -206,7 +219,7 @@ const IndustryEvents: FC = () => {
       }
 
       return (
-        <div className="flex flex-col">
+        <div className="flex flex-col w-full">
           <div className="text-center mb-4">
             <h3 className="text-lg font-semibold">
               {monthNames[monthIndex]} {year}
@@ -234,7 +247,7 @@ const IndustryEvents: FC = () => {
                   <div
                     key={dayIndex}
                     onClick={() => handleDayClick(date)}
-                    className={`aspect-square border rounded-lg p-1.5 text-xs flex flex-col gap-1 min-h-0 cursor-pointer transition-all hover:shadow-md ${
+                    className={`aspect-square border rounded-lg p-2 text-xs flex flex-col gap-1 min-h-0 cursor-pointer transition-all hover:shadow-md ${
                       isSelected
                         ? 'bg-blue-900 border-blue-900 text-white'
                         : hasEvents
@@ -276,20 +289,13 @@ const IndustryEvents: FC = () => {
       );
     };
 
-    const month1 = new Date(currentMonth);
-    const month2 = new Date(currentMonth);
-    month2.setMonth(month2.getMonth() + 1);
-
     const monthNames = [
       'January', 'February', 'March', 'April', 'May', 'June',
       'July', 'August', 'September', 'October', 'November', 'December'
     ];
-    const name1 = monthNames[month1.getMonth()];
-    const name2 = monthNames[month2.getMonth()];
-    const year1 = month1.getFullYear();
-    const year2 = month2.getFullYear();
-    const yearStr = year1 === year2 ? String(year1) : `${year1} & ${year2}`;
-    const calendarTitle = `Events for months ${name1} and ${name2}, ${yearStr}`;
+    const name = monthNames[currentMonth.getMonth()];
+    const year = currentMonth.getFullYear();
+    const calendarTitle = `Events for ${name}, ${year}`;
 
     return (
       <div className="flex flex-col gap-2">
@@ -310,13 +316,8 @@ const IndustryEvents: FC = () => {
             →
           </button>
         </div>
-        <div className="flex gap-4">
-          <div className="flex-1">
-            {renderMonth(month1)}
-          </div>
-          <div className="flex-1">
-            {renderMonth(month2)}
-          </div>
+        <div className="w-full">
+          {renderMonth(new Date(currentMonth))}
         </div>
       </div>
     );
@@ -386,12 +387,12 @@ const IndustryEvents: FC = () => {
                 All Portals
               </button>
               {portals.map((p) => {
-                const isSelected = filterParams.portalNames.length === 1 && filterParams.portalNames[0] === p.name;
+                const isSelected = filterParams.portalNames.includes(p.name);
                 return (
                   <button
                     key={p.id}
                     type="button"
-                    onClick={() => setPortalFilter([p.name])}
+                    onClick={() => togglePortalFilter(p.name)}
                     className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                       isSelected
                         ? 'bg-blue-950 text-white'

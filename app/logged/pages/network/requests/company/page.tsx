@@ -174,7 +174,6 @@ const CompanyRequestsPage: FC = () => {
               </div>
             </div>
           )}
-            </div>
           </div>
         </div>
       </PageContentSection>

@@ -5,9 +5,9 @@ import { PortalService } from "@/app/service/PortalService";
 import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
 
 export interface CompanyCategory {
-  id_category: string;
-  name: string;
-  description?: string;
+  category_id: string;
+  category_name: string;
+  category_description?: string;
   portals_array: string[];
 }
 
@@ -26,16 +26,16 @@ const CreateCompanyCategoryModal: FC<CreateCompanyCategoryModalProps> = ({
 }) => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [selectedPortals, setSelectedPortals] = useState<string[]>([]);
+  const [selectedPortals, setSelectedPortals] = useState<number[]>([]);
   const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const modalRef = useRef<HTMLDivElement>(null);
 
   const nameTrimmed = name.trim();
-  const nameExists = existingNames.some(
-    (n) => n.toLowerCase() === nameTrimmed.toLowerCase()
-  );
+  const nameExists = (Array.isArray(existingNames) ? existingNames : [])
+    .filter((n): n is string => typeof n === "string" && n.trim().length > 0)
+    .some((n) => n.toLowerCase() === nameTrimmed.toLowerCase());
   const canConfirm =
     nameTrimmed.length > 0 &&
     !nameExists &&
@@ -75,9 +75,9 @@ const CreateCompanyCategoryModal: FC<CreateCompanyCategoryModalProps> = ({
     setSubmitting(true);
     try {
       await CompanyCategoryService.createCategory({
-        name: nameTrimmed,
-        description: description.trim(),
-        portals_array: selectedPortals,
+        category_name: nameTrimmed,
+        category_description: description.trim(),
+        portal_ids: selectedPortals,
       });
       setName("");
       setDescription("");
@@ -85,10 +85,18 @@ const CreateCompanyCategoryModal: FC<CreateCompanyCategoryModalProps> = ({
       onCreated();
       onClose();
     } catch (err: unknown) {
-      const axErr = err as { response?: { data?: { message?: string } } };
-      setError(
-        axErr?.response?.data?.message ?? "Failed to create company category"
-      );
+      const axErr = err as {
+        message?: string;
+        response?: { data?: unknown; status?: number };
+      };
+      const data = axErr?.response?.data;
+      const message =
+        (typeof data === "object" && data && "message" in data
+          ? String((data as { message?: unknown }).message ?? "")
+          : typeof data === "string"
+            ? data
+            : axErr?.message) || "Failed to create company category";
+      setError(message);
     } finally {
       setSubmitting(false);
     }
@@ -104,11 +112,11 @@ const CreateCompanyCategoryModal: FC<CreateCompanyCategoryModalProps> = ({
     }
   };
 
-  const togglePortal = (portalName: string) => {
+  const togglePortal = (portalId: number) => {
     setSelectedPortals((prev) =>
-      prev.includes(portalName)
-        ? prev.filter((p) => p !== portalName)
-        : [...prev, portalName]
+      prev.includes(portalId)
+        ? prev.filter((p) => p !== portalId)
+        : [...prev, portalId]
     );
   };
 
@@ -181,8 +189,8 @@ const CreateCompanyCategoryModal: FC<CreateCompanyCategoryModalProps> = ({
                 >
                   <input
                     type="checkbox"
-                    checked={selectedPortals.includes(p.name)}
-                    onChange={() => togglePortal(p.name)}
+                    checked={selectedPortals.includes(p.id)}
+                    onChange={() => togglePortal(p.id)}
                     className="rounded border-gray-300"
                   />
                   <span>{p.name}</span>

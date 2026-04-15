@@ -36,7 +36,9 @@ export const PUT = createEndpoint(async (request, body) => {
     highlited_position: Joi.string().allow("").optional(),
     portalId: Joi.number().integer().optional(),
     is_article_event: Joi.boolean().optional(),
-    event_id: Joi.string().allow("").optional()
+    event_id: Joi.string().allow("").optional(),
+    topic_ids_array: Joi.array().items(Joi.number().integer().positive()).optional(),
+    topicIdsArray: Joi.array().items(Joi.number().integer().positive()).optional(),
 }), true);
 
 export const DELETE = createEndpoint(async (request) => {

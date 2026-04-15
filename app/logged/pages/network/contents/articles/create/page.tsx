@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
@@ -8,6 +8,7 @@ import { ArticleService } from "@/app/service/ArticleService";
 import { ContentService } from "@/app/service/ContentService";
 import { EventsService } from "@/app/service/EventsService";
 import { PortalService } from "@/app/service/PortalService";
+import { ContentTopicService } from "@/app/service/ContentTopicService";
 import type { Content, ArticleData } from "./types";
 import ArticlePhase1 from "./ArticlePhase1";
 import ArticlePhase2 from "./ArticlePhase2";
@@ -34,7 +35,8 @@ export default function CreateArticlePage() {
   const [articleSubtitle, setArticleSubtitle] = useState("");
   const [articleMainImageUrl, setArticleMainImageUrl] = useState("");
   const [companyPairs, setCompanyPairs] = useState<{ name: string; id: string }[]>([]);
-  const [date, setDate] = useState(getTodayDate());
+  const [isArticleRelatedToCompany, setIsArticleRelatedToCompany] = useState(false);
+    const [date, setDate] = useState(getTodayDate());
   const [highlitedPosition, setHighlitedPosition] = useState("");
   const [isArticleEvent, setIsArticleEvent] = useState(false);
   const [eventId, setEventId] = useState("");
@@ -62,22 +64,39 @@ export default function CreateArticlePage() {
   const [isGeneratingId, setIsGeneratingId] = useState(true);
   const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
   const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
+  const [portalTopics, setPortalTopics] = useState<{ topic_id: number; topic_name: string }[]>([]);
+  const [topicsLoading, setTopicsLoading] = useState(false);
+  const [selectedTopicIds, setSelectedTopicIds] = useState<number[]>([]);
 
   useEffect(() => {
     PortalService.getAllPortals().then((list: any[]) => {
-      setPortals(
-        Array.isArray(list) ? list.map((p) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) })) : []
-      );
+      const rows = Array.isArray(list) ? list : [];
+      const normalized = rows
+        .map((p) => {
+          const raw = p?.id ?? p?.portal_id;
+          const id =
+            typeof raw === "number" && Number.isFinite(raw)
+              ? raw
+              : parseInt(String(raw ?? ""), 10);
+          return {
+            id,
+            name: p?.name != null ? String(p.name) : String(p?.key ?? raw ?? ""),
+          };
+        })
+        .filter((p) => Number.isInteger(p.id));
+      setPortals(normalized);
     }).catch(() => setPortals([]));
   }, []);
 
   const handleTogglePortal = (portalId: number) => {
+    const id = Number(portalId);
+    if (!Number.isInteger(id)) return;
     if (highlitedPosition) {
       // When highlighted position is set, only one portal allowed
-      setSelectedPortalIds((prev) => (prev.includes(portalId) ? prev : [portalId]));
+      setSelectedPortalIds((prev) => (prev.includes(id) ? prev : [id]));
     } else {
       setSelectedPortalIds((prev) =>
-        prev.includes(portalId) ? prev.filter((id) => id !== portalId) : [...prev, portalId]
+        prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
       );
     }
   };
@@ -88,6 +107,62 @@ export default function CreateArticlePage() {
       setSelectedPortalIds((prev) => [prev[0]]);
     }
   }, [highlitedPosition, selectedPortalIds.length]);
+
+  useEffect(() => {
+    if (selectedPortalIds.length === 0) {
+      setPortalTopics([]);
+      setTopicsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setTopicsLoading(true);
+    (async () => {
+      try {
+        const merged = new Map<number, { topic_id: number; topic_name: string }>();
+        for (const pid of selectedPortalIds) {
+          const list = await ContentTopicService.getTopics(pid);
+          if (!Array.isArray(list)) continue;
+          for (const row of list) {
+            if (row && typeof row.topic_id === "number" && !merged.has(row.topic_id)) {
+              merged.set(row.topic_id, {
+                topic_id: row.topic_id,
+                topic_name: typeof row.topic_name === "string" ? row.topic_name : String(row.topic_id),
+              });
+            }
+          }
+        }
+        if (!cancelled) {
+          setPortalTopics([...merged.values()].sort((a, b) => a.topic_name.localeCompare(b.topic_name)));
+        }
+      } catch {
+        if (!cancelled) setPortalTopics([]);
+      } finally {
+        if (!cancelled) setTopicsLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedPortalIds]);
+
+  useEffect(() => {
+    const valid = new Set(portalTopics.map((t) => t.topic_id));
+    setSelectedTopicIds((prev) => prev.filter((id) => valid.has(id)));
+  }, [portalTopics]);
+
+  const handleToggleTopic = (topicId: number) => {
+    setSelectedTopicIds((prev) =>
+      prev.includes(topicId) ? prev.filter((id) => id !== topicId) : [...prev, topicId]
+    );
+  };
+
+  const topicSummary = useMemo(() => {
+    const map = new Map(portalTopics.map((t) => [t.topic_id, t.topic_name]));
+    return selectedTopicIds
+      .map((id) => map.get(id))
+      .filter((n): n is string => typeof n === "string" && n.length > 0)
+      .join(", ");
+  }, [selectedTopicIds, portalTopics]);
 
   const generateArticleId = useCallback(async (): Promise<string> => {
     try {
@@ -120,13 +195,20 @@ export default function CreateArticlePage() {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
     const loadArticleId = async () => {
       setIsGeneratingId(true);
-      const generatedId = await generateArticleId();
-      setIdArticle(generatedId);
-      setIsGeneratingId(false);
+      try {
+        const generatedId = await generateArticleId();
+        if (!cancelled) setIdArticle(generatedId);
+      } finally {
+        if (!cancelled) setIsGeneratingId(false);
+      }
     };
     loadArticleId();
+    return () => {
+      cancelled = true;
+    };
   }, [generateArticleId]);
 
   const handleAddTag = () => {
@@ -148,8 +230,14 @@ export default function CreateArticlePage() {
     setCompanyPairs((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const handlePhase1Next = async () => {
-    if (!articleTitle || !date) return;
+  const handlePhase1Next = async (resolvedDate: string) => {
+    const d = (resolvedDate ?? "").trim();
+    if (!articleTitle?.trim() || !d) return;
+    if (isArticleRelatedToCompany && companyPairs.length < 1) {
+      alert("Please add at least one company (Companies).");
+      return;
+    }
+    setDate(d);
     if (isArticleEvent && eventId.trim()) {
       try {
         await EventsService.getEventById(eventId.trim());
@@ -266,14 +354,23 @@ export default function CreateArticlePage() {
         setIsSubmitting(false);
         return;
       }
+      if (isArticleRelatedToCompany && companyPairs.length === 0) {
+        alert("Please add at least one company (Companies).");
+        setIsSubmitting(false);
+        return;
+      }
       // Create article first (contents require article_id)
       const articleData: ArticleData = {
         id_article: idArticle,
         articleTitle,
         articleSubtitle,
         article_main_image_url: articleMainImageUrl,
-        article_company_names_array: companyPairs.map((p) => p.name.trim()).filter(Boolean),
-        article_company_id_array: companyPairs.map((p) => p.id.trim()),
+        article_company_names_array: isArticleRelatedToCompany
+          ? companyPairs.map((p) => p.name.trim()).filter(Boolean)
+          : [],
+        article_company_id_array: isArticleRelatedToCompany
+          ? companyPairs.map((p) => p.id.trim())
+          : [],
         date,
         article_tags_array: tagsArray,
         contents_array: [],
@@ -281,6 +378,7 @@ export default function CreateArticlePage() {
         is_article_event: isArticleEvent,
         event_id: isArticleEvent ? eventId.trim() : "",
         portalIds: selectedPortalIds,
+        topic_ids_array: selectedTopicIds,
       };
       await ArticleService.createArticle(articleData);
 
@@ -351,7 +449,7 @@ export default function CreateArticlePage() {
   return (
     <>
       <PageContentSection>
-      <div className="flex flex-col max-w-4xl mx-auto w-full">
+      <div className="flex flex-col max-w-4xl mx-auto w-full py-12">
         {currentPhase === 1 && (
           <ArticlePhase1
             idArticle={idArticle}
@@ -366,6 +464,11 @@ export default function CreateArticlePage() {
             companyPairs={companyPairs}
             onAddCompanyPair={handleAddCompanyPair}
             onRemoveCompanyPair={handleRemoveCompanyPair}
+            isArticleRelatedToCompany={isArticleRelatedToCompany}
+            setIsArticleRelatedToCompany={(v) => {
+              setIsArticleRelatedToCompany(v);
+              if (!v) setCompanyPairs([]);
+            }}
             date={date}
             setDate={setDate}
             highlitedPosition={highlitedPosition}
@@ -381,6 +484,10 @@ export default function CreateArticlePage() {
             portals={portals}
             selectedPortalIds={selectedPortalIds}
             onTogglePortal={handleTogglePortal}
+            portalTopics={portalTopics}
+            topicsLoading={topicsLoading}
+            selectedTopicIds={selectedTopicIds}
+            onToggleTopic={handleToggleTopic}
             onAddTag={handleAddTag}
             onRemoveTag={handleRemoveTag}
             onNext={handlePhase1Next}
@@ -421,6 +528,7 @@ export default function CreateArticlePage() {
             companySummary={companyPairs.map((p) => p.name).join(", ")}
             date={date}
             tagsArray={tagsArray}
+            topicSummary={topicSummary}
             articleMainImageUrl={articleMainImageUrl}
             contents={contents}
             isSubmitting={isSubmitting}

@@ -77,12 +77,94 @@ function mapRowToUserDetail(row) {
     user_name: row.user_name ?? base.user_name ?? "",
     user_surnames: row.user_surnames ?? "",
     user_main_image_src: row.user_main_image_src ?? "",
+    contact_id_array: Array.isArray(row.contact_id_array) ? row.contact_id_array.map((x) => String(x)) : [],
     user_employee_relations_array: Array.isArray(row.user_employee_relations_array)
       ? row.user_employee_relations_array
       : (Array.isArray(row.employee_relations_array) ? row.employee_relations_array : []),
     linkedin_profile: row.user_linkedin_profile ?? row.linkedin_profile ?? null,
     preferences: row.user_preferences ?? row.preferences ?? null,
   };
+}
+
+export async function setUserContactIdsInRds(idOrEmail, contactIds = []) {
+  const user = await getUserByIdFromRds(idOrEmail);
+  if (!user?.id) {
+    throw new Error("User not found");
+  }
+
+  const db = Database.getInstance();
+  if (!db.isConfigured()) {
+    throw new Error("Database not configured");
+  }
+  const sequelize = db.getSequelize();
+  const ids = Array.isArray(contactIds) ? contactIds.map((x) => String(x)).filter(Boolean) : [];
+
+  // Ensure column exists (migration 115)
+  const hasColumn = await sequelize.query(
+    "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users_db' AND column_name = 'contact_id_array' LIMIT 1",
+    { type: sequelize.QueryTypes.SELECT }
+  );
+  if (!Array.isArray(hasColumn) || hasColumn.length === 0) {
+    throw new Error("users_db.contact_id_array does not exist (run migration 115_users_db_contact_id_array.sql)");
+  }
+
+  await sequelize.query(
+    "UPDATE public.users_db SET contact_id_array = :arr::text[] WHERE user_id = :id",
+    { replacements: { arr: ids, id: String(user.id) } }
+  );
+
+  return await getUserByIdFromRds(String(user.id));
+}
+
+export async function setUserLinkedinProfileInRds(idOrEmail, linkedinProfile) {
+  const user = await getUserByIdFromRds(idOrEmail);
+  if (!user?.id) throw new Error("User not found");
+
+  const db = Database.getInstance();
+  if (!db.isConfigured()) throw new Error("Database not configured");
+  const sequelize = db.getSequelize();
+
+  // Ensure column exists
+  const hasColumn = await sequelize.query(
+    "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users_db' AND column_name = 'user_linkedin_profile' LIMIT 1",
+    { type: sequelize.QueryTypes.SELECT }
+  );
+  if (!Array.isArray(hasColumn) || hasColumn.length === 0) {
+    throw new Error("users_db.user_linkedin_profile does not exist");
+  }
+
+  const val = typeof linkedinProfile === "string" ? linkedinProfile.trim() : "";
+  await sequelize.query(
+    "UPDATE public.users_db SET user_linkedin_profile = :val WHERE user_id = :id",
+    { replacements: { val: val || null, id: String(user.id) } }
+  );
+
+  return await getUserByIdFromRds(String(user.id));
+}
+
+export async function setUserNewsletterListsInRds(idOrEmail, listIds = []) {
+  const user = await getUserByIdFromRds(idOrEmail);
+  if (!user?.id) throw new Error("User not found");
+
+  const db = Database.getInstance();
+  if (!db.isConfigured()) throw new Error("Database not configured");
+  const sequelize = db.getSequelize();
+
+  const hasColumn = await sequelize.query(
+    "SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'users_db' AND column_name = 'newsletter_user_lists_id_array' LIMIT 1",
+    { type: sequelize.QueryTypes.SELECT }
+  );
+  if (!Array.isArray(hasColumn) || hasColumn.length === 0) {
+    throw new Error("users_db.newsletter_user_lists_id_array does not exist (run migration 085_users_db_newsletter_user_lists_id_array.sql)");
+  }
+
+  const ids = Array.isArray(listIds) ? listIds.map((x) => String(x)).filter(Boolean) : [];
+  await sequelize.query(
+    "UPDATE public.users_db SET newsletter_user_lists_id_array = :arr::uuid[] WHERE user_id = :id",
+    { replacements: { arr: ids, id: String(user.id) } }
+  );
+
+  return await getUserByIdFromRds(String(user.id));
 }
 
 /**
@@ -161,7 +243,7 @@ export async function getUserListsFromRds() {
         (
           SELECT string_agg(p.portal_name_key, ', ' ORDER BY u.ord)
           FROM unnest(nul.newsletter_user_list_portals_array_id) WITH ORDINALITY AS u(pid, ord)
-          JOIN portals_id p ON p.portal_id = u.pid
+          JOIN portals_db p ON p.portal_id = u.pid
         ) AS portal_label
        FROM newsletter_user_lists nul
        ORDER BY nul.newsletter_user_list_name ASC NULLS LAST, nul.newsletter_user_list_id`

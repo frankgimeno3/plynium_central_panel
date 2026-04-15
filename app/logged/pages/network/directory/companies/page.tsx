@@ -10,8 +10,8 @@ import CreateCompanyCategoryModal from '@/app/logged/logged_components/modals/Cr
 import { CompanyCategoryService } from '@/app/service/CompanyCategoryService';
 
 interface CompanyCategory {
-  id_category: string;
-  name: string;
+  category_id: string;
+  category_name: string;
   portals_array: string[];
 }
 
@@ -90,8 +90,13 @@ const Companies: FC<CompaniesProps> = ({ }) => {
   useEffect(() => {
     if (createCategoryModalOpen) {
       CompanyCategoryService.getAllCategories()
-        .then((list: CompanyCategory[]) => {
-          setCompanyCategoryNames(Array.isArray(list) ? list.map((c) => c.name) : []);
+        .then((list) => {
+          const raw = Array.isArray(list) ? list : [];
+          setCompanyCategoryNames(
+            raw
+              .filter((c) => c != null && typeof c === "object")
+              .map((c) => String((c as { category_name?: unknown }).category_name ?? ""))
+          );
         })
         .catch(() => setCompanyCategoryNames([]));
     }
@@ -267,8 +272,13 @@ const Companies: FC<CompaniesProps> = ({ }) => {
         existingNames={companyCategoryNames}
         onCreated={() => {
           CompanyCategoryService.getAllCategories()
-            .then((list: CompanyCategory[]) => {
-              setCompanyCategoryNames(Array.isArray(list) ? list.map((c) => c.name) : []);
+            .then((list) => {
+              const raw = Array.isArray(list) ? list : [];
+              setCompanyCategoryNames(
+                raw
+                  .filter((c) => c != null && typeof c === "object")
+                  .map((c) => String((c as { category_name?: unknown }).category_name ?? ""))
+              );
             })
             .catch(() => {});
         }}

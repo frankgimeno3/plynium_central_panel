@@ -65,7 +65,10 @@ export async function fetchNotifications(filters?: {
   if (filters?.state) params.set('state', filters.state);
   
   const url = `/api/v1/notifications${params.toString() ? `?${params.toString()}` : ''}`;
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    credentials: 'include',
+    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(45000) : undefined,
+  });
   if (!res.ok) {
     let details = '';
     try {

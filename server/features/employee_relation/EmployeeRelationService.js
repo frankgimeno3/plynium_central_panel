@@ -45,7 +45,10 @@ export async function getEmployeeRelations({ companyId, userId, status } = {}) {
   const selects = ["er.*"];
   if (hasUsersDb) {
     joins.push("LEFT JOIN public.users_db u ON u.user_id = er.employee_user_id");
-    selects.push("u.user_full_name AS user_full_name", "u.user_email AS user_email");
+    selects.push(
+      "concat_ws(' ', u.user_name, u.user_surnames) AS user_full_name",
+      "u.user_email AS user_email"
+    );
   }
   if (hasCompaniesDb) {
     joins.push("LEFT JOIN public.companies_db c ON c.company_id = er.employee_company_id");

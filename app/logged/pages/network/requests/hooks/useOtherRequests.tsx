@@ -3,7 +3,7 @@
 import { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import { fetchNotifications, updateNotificationApi, addNotificationComment, unifiedToOther, type NotificationComment } from '@/app/contents/notifications.types';
 
-export type RequestState = 'Pending' | 'In Process' | 'Other';
+export type RequestState = 'Pending' | 'In Process' | 'Other' | 'Done';
 
 export interface OtherRequest {
   id: string;
@@ -40,7 +40,8 @@ export function OtherRequestsProvider({ children }: { children: ReactNode }) {
     const stateMap: Record<RequestState, string> = {
       'Pending': 'pending',
       'In Process': 'in_process',
-      'Other': 'other'
+      'Other': 'other',
+      'Done': 'solved',
     };
     updateNotificationApi(id, { state: stateMap[newState] as any })
       .then(() => {

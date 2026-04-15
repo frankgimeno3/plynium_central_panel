@@ -8,9 +8,9 @@ import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
 import CreateCompanyCategoryModal from "@/app/logged/logged_components/modals/CreateCompanyCategoryModal";
 
 interface CompanyCategory {
-  id_category: string;
-  name: string;
-  description?: string;
+  category_id: string;
+  category_name: string;
+  category_description?: string;
   portals_array: string[];
 }
 
@@ -26,7 +26,20 @@ const CompanyCategoriesPage: FC = () => {
   const loadCategories = useCallback(async () => {
     try {
       const list = await CompanyCategoryService.getAllCategories();
-      setCategories(Array.isArray(list) ? list : []);
+      const raw = Array.isArray(list) ? list : [];
+      setCategories(
+        raw
+          .filter((c) => c != null && typeof c === "object")
+          .map((c) => {
+            const row = c as CompanyCategory;
+            return {
+              category_id: String(row.category_id ?? ""),
+              category_name: String(row.category_name ?? ""),
+              category_description: row.category_description,
+              portals_array: Array.isArray(row.portals_array) ? row.portals_array : [],
+            };
+          })
+      );
     } catch {
       setCategories([]);
     } finally {
@@ -87,20 +100,20 @@ const CompanyCategoriesPage: FC = () => {
             ) : (
               categories.map((cat) => (
                 <tr
-                  key={cat.id_category}
+                  key={cat.category_id}
                   role="button"
                   tabIndex={0}
-                  onClick={() => router.push(categoryHref(cat.id_category))}
+                  onClick={() => router.push(categoryHref(cat.category_id))}
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       e.preventDefault();
-                      router.push(categoryHref(cat.id_category));
+                      router.push(categoryHref(cat.category_id));
                     }
                   }}
                   className="cursor-pointer hover:bg-gray-50 transition-colors"
                 >
                   <td className="px-4 py-3 font-medium text-gray-900">
-                    {cat.name}
+                    {cat.category_name}
                   </td>
                   <td className="px-4 py-3 text-sm text-gray-600">
                     {(cat.portals_array || []).join(", ") || "—"}
@@ -119,7 +132,7 @@ const CompanyCategoriesPage: FC = () => {
       <CreateCompanyCategoryModal
         open={modalOpen}
         onClose={() => setModalOpen(false)}
-        existingNames={categories.map((c) => c.name)}
+        existingNames={categories.map((c) => c.category_name)}
         onCreated={loadCategories}
       />
     </>

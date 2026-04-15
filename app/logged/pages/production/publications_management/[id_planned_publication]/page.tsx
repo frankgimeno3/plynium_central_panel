@@ -52,7 +52,7 @@ const SLOT_ORDER: string[] = ["cover", "inside_cover", "1", "2", "3", "4", "5", 
 const PublicationDetailPage: FC<{ params: Promise<{ id_planned_publication: string }> }> = ({ params }) => {
   const router = useRouter();
   const { id_planned_publication } = use(params);
-  const list = getPlanned(publicationsData as PublicationUnified[]);
+  const list = getPlanned(publicationsData as unknown as PublicationUnified[]);
   const pub = list.find((p) => p.id_planned_publication === id_planned_publication);
   const publication = pub ? plannedFromUnified(pub) : undefined;
   const { setPageMeta } = usePageContent();

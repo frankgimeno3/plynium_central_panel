@@ -145,7 +145,6 @@ const OtherRequestsPage: FC = () => {
               </div>
             </div>
           )}
-            </div>
           </div>
         </div>
       </PageContentSection>

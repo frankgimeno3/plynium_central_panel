@@ -22,4 +22,6 @@ export interface ArticleData {
   is_article_event?: boolean;
   event_id?: string;
   portalIds: number[];
+  /** IDs from public.topics_db for the selected portal(s) */
+  topic_ids_array?: number[];
 }

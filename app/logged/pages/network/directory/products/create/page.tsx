@@ -1,6 +1,6 @@
 'use client';
 
-import React, { FC, useState, useEffect } from 'react';
+import React, { FC, useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
@@ -37,7 +37,7 @@ function generateProductId(): string {
   return `prod_${t}_${r}`;
 }
 
-const CreateProduct: FC = () => {
+const CreateProductInner: FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState<ProductForm>(initialForm);
@@ -440,4 +440,16 @@ const CreateProduct: FC = () => {
   );
 };
 
-export default CreateProduct;
+const CreateProductPage: FC = () => (
+  <Suspense
+    fallback={
+      <div className="flex flex-col w-full bg-white p-8">
+        <p className="text-center text-gray-500">Loading…</p>
+      </div>
+    }
+  >
+    <CreateProductInner />
+  </Suspense>
+);
+
+export default CreateProductPage;

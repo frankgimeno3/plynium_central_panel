@@ -42,7 +42,7 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
     let cancelled = false;
     ContactService.getContactById(id_contact)
       .then((data: Contact) => {
-        if (!cancelled) setContact({ ...data, comments: data.comments ?? [] });
+        if (!cancelled) setContact(data);
       })
       .catch(() => {
         if (!cancelled) setContact(null);

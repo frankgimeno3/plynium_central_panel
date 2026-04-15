@@ -213,6 +213,7 @@ const Banners: FC = () => {
                                 onAddBannerToSection={handleAddCustomTopBanner}
                                 onChangeImage={openChangeImageModal}
                                 onChangeRedirection={openChangeRedirectionModal}
+                                onEditSchedule={openEditScheduleForBanner}
                                 onChangeAppearanceWeight={handleChangeAppearanceWeight}
                                 onDeleteTopBanner={handleDeleteTopBanner}
                                 onEditRoute={openEditRouteModal}

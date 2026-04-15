@@ -146,8 +146,19 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
 
   useEffect(() => {
     CompanyCategoryService.getAllCategories()
-      .then((list: { id_category: string; name: string }[]) => {
-        setCompanyCategoriesList(Array.isArray(list) ? list : []);
+      .then((list) => {
+        const raw = Array.isArray(list) ? list : [];
+        setCompanyCategoriesList(
+          raw
+            .filter((c) => c != null && typeof c === "object")
+            .map((c) => {
+              const row = c as { category_id?: unknown; category_name?: unknown };
+              return {
+                id_category: String(row.category_id ?? ""),
+                name: String(row.category_name ?? ""),
+              };
+            })
+        );
       })
       .catch(() => setCompanyCategoriesList([]));
   }, []);

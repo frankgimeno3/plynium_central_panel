@@ -10,6 +10,7 @@ import { CustomerService } from "@/app/service/CustomerService";
 import { ContactService } from "@/app/service/ContactService";
 import publicationsData from "@/app/contents/publications.json";
 import { getPlanned } from "@/app/contents/publicationsHelpers";
+import type { PublicationUnified } from "@/app/contents/interfaces";
 import { ContractService } from "@/app/service/ContractService";
 
 type ServiceLine = {
@@ -88,7 +89,9 @@ type Customer = { id_customer: string; name: string; country?: string };
 type Contact = { id_contact: string; name: string; email?: string; id_customer?: string };
 type PlannedPublication = { id_planned_publication: string; edition_name: string };
 
-const plannedPublications = getPlanned(publicationsData as import("@/app/contents/interfaces").PublicationUnified[]) as PlannedPublication[];
+const plannedPublications = getPlanned(
+  publicationsData as unknown as PublicationUnified[]
+) as PlannedPublication[];
 
 const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ params }) => {
   const router = useRouter();

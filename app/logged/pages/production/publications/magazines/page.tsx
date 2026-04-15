@@ -26,7 +26,7 @@ const MagazinesPage: FC = () => {
         setAll(list);
       })
       .catch((err) => {
-        const message = err?.message ?? (typeof err === "string" ? err : "Error al cargar las revistas");
+        const message = err?.message ?? (typeof err === "string" ? err : "Failed to load magazines");
         setFetchError(message);
         setAll([]);
       })
@@ -86,7 +86,7 @@ const MagazinesPage: FC = () => {
                 onClick={loadMagazines}
                 className="px-3 py-1.5 text-sm font-medium text-red-700 bg-white border border-red-300 rounded-lg hover:bg-red-50"
               >
-                Reintentar
+                Retry
               </button>
             </div>
           )}

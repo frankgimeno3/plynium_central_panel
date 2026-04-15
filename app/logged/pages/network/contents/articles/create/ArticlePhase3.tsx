@@ -33,6 +33,7 @@ interface ArticlePhase3Props {
   companySummary: string;
   date: string;
   tagsArray: string[];
+  topicSummary: string;
   articleMainImageUrl: string;
   contents: Content[];
   isSubmitting: boolean;
@@ -47,6 +48,7 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
   companySummary,
   date,
   tagsArray,
+  topicSummary,
   articleMainImageUrl,
   contents,
   isSubmitting,
@@ -66,6 +68,9 @@ const ArticlePhase3: React.FC<ArticlePhase3Props> = ({
           <p><strong>Companies:</strong> {companySummary || "N/A"}</p>
           <p><strong>Date:</strong> {date}</p>
           <p><strong>Tags:</strong> {tagsArray.length > 0 ? tagsArray.join(", ") : "None"}</p>
+          <p>
+            <strong>Content topics:</strong> {topicSummary.trim() ? topicSummary : "None"}
+          </p>
           <div className="mt-4">
             <p className="font-semibold mb-2">Main Image:</p>
             {articleMainImageUrl ? (

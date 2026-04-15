@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DateInputs, parseDateFields, buildDateStr } from "@/app/logged/logged_components/date_components/DateInputs";
+import CompaniesDbSelectModal from "@/app/logged/logged_components/modals/CompaniesDbSelectModal";
 
 const HIGHLITED_POSITION_OPTIONS = [
   { value: "", label: "(None)" },
@@ -27,6 +28,8 @@ interface ArticlePhase1Props {
   companyPairs: { name: string; id: string }[];
   onAddCompanyPair: (name: string, id: string) => void;
   onRemoveCompanyPair: (index: number) => void;
+  isArticleRelatedToCompany: boolean;
+  setIsArticleRelatedToCompany: (v: boolean) => void;
   date: string;
   setDate: (v: string) => void;
   highlitedPosition: string;
@@ -42,9 +45,14 @@ interface ArticlePhase1Props {
   portals: { id: number; name: string }[];
   selectedPortalIds: number[];
   onTogglePortal: (portalId: number) => void;
+  portalTopics: { topic_id: number; topic_name: string }[];
+  topicsLoading: boolean;
+  selectedTopicIds: number[];
+  onToggleTopic: (topicId: number) => void;
   onAddTag: () => void;
   onRemoveTag: (index: number) => void;
-  onNext: () => void;
+  /** ISO date yyyy-mm-dd from fields (must match what user sees in Day/Month/Year) */
+  onNext: (resolvedDate: string) => void;
 }
 
 const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
@@ -60,6 +68,8 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
   companyPairs,
   onAddCompanyPair,
   onRemoveCompanyPair,
+  isArticleRelatedToCompany,
+  setIsArticleRelatedToCompany,
   date,
   setDate,
   highlitedPosition,
@@ -75,13 +85,18 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
   portals,
   selectedPortalIds,
   onTogglePortal,
+  portalTopics,
+  topicsLoading,
+  selectedTopicIds,
+  onToggleTopic,
   onAddTag,
   onRemoveTag,
   onNext,
 }) => {
   const router = useRouter();
-  const [companyNameInput, setCompanyNameInput] = useState("");
-  const [companyIdInput, setCompanyIdInput] = useState("");
+  const [companiesDbModalOpen, setCompaniesDbModalOpen] = useState(false);
+  const [manualAddOpen, setManualAddOpen] = useState(false);
+  const [manualCompanyName, setManualCompanyName] = useState("");
   const [dateDay, setDateDay] = useState("");
   const [dateMonth, setDateMonth] = useState("");
   const [dateYear, setDateYear] = useState("");
@@ -97,15 +112,25 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
     setDateDay(day);
     setDateMonth(month);
     setDateYear(year);
-    setDate(buildDateStr(day, month, year));
+    const built = buildDateStr(day, month, year);
+    setDate(built);
+  };
+
+  /** Single source for “is date OK?” — avoids parent `date` lagging behind the three inputs on Next click */
+  const resolvedArticleDate =
+    buildDateStr(dateDay, dateMonth, dateYear) || (typeof date === "string" ? date.trim() : "");
+
+  const portalId = (p: { id: number }) => {
+    const n = Number(p.id);
+    return Number.isFinite(n) ? n : NaN;
   };
 
   const canGoNext =
     !isGeneratingId &&
     !!articleTitle?.trim() &&
-    !!date &&
-    companyPairs.length >= 1 &&
-    companyPairs.every((p) => p.name.trim()) &&
+    !!resolvedArticleDate &&
+    (!isArticleRelatedToCompany ||
+      (companyPairs.length >= 1 && companyPairs.every((p) => p.name.trim()))) &&
     selectedPortalIds.length >= 1;
 
   return (
@@ -185,59 +210,138 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
       </div>
 
       <div className="space-y-2">
-        <label className="font-bold text-lg">Companies *</label>
-        <p className="text-sm text-gray-600">Add at least one company (name required; ID optional).</p>
-        <div className="flex flex-wrap gap-2 min-h-[2rem]">
-          {companyPairs.map((p, i) => (
-            <span
-              key={`${p.name}-${i}`}
-              className="inline-flex items-center gap-1 pl-3 pr-1 py-1 rounded-full bg-gray-100 border border-gray-200 text-sm"
+        <label className="font-bold text-lg">Companies</label>
+        <div className="flex flex-col gap-2">
+          <span className="text-sm text-gray-600">Is this article related to a company?</span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                const next = !isArticleRelatedToCompany;
+                setIsArticleRelatedToCompany(next);
+                if (!next) setManualAddOpen(false);
+              }}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                isArticleRelatedToCompany ? "bg-blue-950" : "bg-gray-300"
+              }`}
+              role="switch"
+              aria-checked={isArticleRelatedToCompany}
+              aria-label="Is this article related to a company?"
             >
-              <span>
-                {p.name}
-                {p.id ? <span className="text-gray-500 font-mono text-xs ml-1">({p.id})</span> : null}
-              </span>
-              <button
-                type="button"
-                disabled={companyPairs.length <= 1}
-                onClick={() => onRemoveCompanyPair(i)}
-                className="p-1 rounded-full hover:bg-gray-200 text-gray-600 disabled:opacity-40"
-                aria-label="Remove company"
-              >
-                ×
-              </button>
+              <span
+                className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${
+                  isArticleRelatedToCompany ? "translate-x-5" : "translate-x-1"
+                }`}
+              />
+            </button>
+            <span className="text-sm font-medium text-gray-800">
+              {isArticleRelatedToCompany ? "Yes" : "No"}
             </span>
-          ))}
-        </div>
-        <div className="flex flex-col sm:flex-row gap-2">
-          <input
-            type="text"
-            value={companyNameInput}
-            onChange={(e) => setCompanyNameInput(e.target.value)}
-            className="flex-1 px-4 py-2 border rounded-xl"
-            placeholder="Company name"
-          />
-          <input
-            type="text"
-            value={companyIdInput}
-            onChange={(e) => setCompanyIdInput(e.target.value)}
-            className="flex-1 px-4 py-2 border rounded-xl font-mono text-sm"
-            placeholder="Company ID (optional)"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              const n = companyNameInput.trim();
-              if (!n) return;
-              onAddCompanyPair(n, companyIdInput.trim());
-              setCompanyNameInput("");
-              setCompanyIdInput("");
-            }}
-            disabled={!companyNameInput.trim()}
-            className="px-4 py-2 rounded-xl bg-blue-950 text-white disabled:opacity-50"
-          >
-            Add
-          </button>
+          </div>
+
+          {isArticleRelatedToCompany && (
+            <>
+              <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setCompaniesDbModalOpen(true)}
+                  className="flex-1 px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-800 font-medium hover:bg-gray-50"
+                >
+                  [+] Add a company from the companies DB
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setManualAddOpen((v) => !v)}
+                  className="flex-1 px-4 py-2 rounded-xl border border-gray-300 bg-white text-gray-800 font-medium hover:bg-gray-50"
+                >
+                  [+] Add a company name with no redirection
+                </button>
+              </div>
+
+              {manualAddOpen && (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={manualCompanyName}
+                    onChange={(e) => setManualCompanyName(e.target.value)}
+                    className="flex-1 px-4 py-2 border rounded-xl"
+                    placeholder="Company name"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const n = manualCompanyName.trim();
+                      if (!n) return;
+                      const already = companyPairs.some(
+                        (p) => !p.id && p.name.trim().toLowerCase() === n.toLowerCase()
+                      );
+                      if (!already) onAddCompanyPair(n, "");
+                      setManualCompanyName("");
+                      setManualAddOpen(false);
+                    }}
+                    disabled={!manualCompanyName.trim()}
+                    className="px-4 py-2 rounded-xl bg-blue-950 text-white disabled:opacity-50"
+                  >
+                    Add
+                  </button>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 gap-3 pt-2">
+                {companyPairs.length === 0 ? (
+                  <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl p-3">
+                    Add at least one company to continue.
+                  </div>
+                ) : (
+                  companyPairs.map((p, i) => {
+                    const fromDb = !!p.id?.trim();
+                    return (
+                      <div
+                        key={`${p.name}-${p.id}-${i}`}
+                        className="flex items-start justify-between gap-3 rounded-xl border border-gray-200 bg-white p-4"
+                      >
+                        <div className="min-w-0">
+                          <div className="font-semibold text-gray-900 truncate">{p.name}</div>
+                          <div className="text-sm text-gray-600">
+                            {fromDb ? (
+                              <>
+                                From companies DB ·{" "}
+                                <span className="font-mono text-xs text-gray-700">ID: {p.id}</span>
+                              </>
+                            ) : (
+                              "Manually added"
+                            )}
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onRemoveCompanyPair(i)}
+                          className="shrink-0 px-3 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                          aria-label="Remove company"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <CompaniesDbSelectModal
+                open={companiesDbModalOpen}
+                onClose={() => setCompaniesDbModalOpen(false)}
+                onSelectCompany={({ companyId, commercialName }) => {
+                  const id = (companyId ?? "").trim();
+                  const name = (commercialName ?? "").trim() || id;
+                  if (!id || !name) return;
+                  const already = companyPairs.some(
+                    (p) => p.id.trim().toLowerCase() === id.toLowerCase()
+                  );
+                  if (!already) onAddCompanyPair(name, id);
+                }}
+              />
+            </>
+          )}
         </div>
       </div>
 
@@ -322,26 +426,66 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
           {portals.length === 0 ? (
             <p className="text-sm text-gray-500">Loading portals...</p>
           ) : (
-            portals.map((p) => (
+            portals.map((p, idx) => {
+              const pid = portalId(p);
+              return (
               <label
-                key={p.id}
+                key={Number.isFinite(pid) ? `portal-${pid}` : `portal-${idx}-${p.name}`}
                 className="flex items-center gap-2 cursor-pointer text-sm border border-gray-200 rounded-lg px-3 py-2 hover:bg-gray-50"
               >
                 <input
                   type="checkbox"
-                  checked={selectedPortalIds.includes(p.id)}
-                  onChange={() => onTogglePortal(p.id)}
+                  checked={Number.isFinite(pid) && selectedPortalIds.includes(pid)}
+                  onChange={() => {
+                    if (Number.isFinite(pid)) onTogglePortal(pid);
+                  }}
                   className="rounded border-gray-300"
                 />
                 <span>{p.name}</span>
               </label>
-            ))
+            );
+            })
           )}
         </div>
         {selectedPortalIds.length === 0 && portals.length > 0 && (
           <p className="text-sm text-amber-600">Select at least one portal to continue.</p>
         )}
       </div>
+
+      {selectedPortalIds.length > 0 && (
+        <div className="space-y-2">
+          <label className="font-bold text-lg">Content topics (optional)</label>
+          <p className="text-sm text-gray-600">
+            Tags from <span className="font-medium">topics_db</span> for the portal(s) you selected. Each topic
+            belongs to one portal; only topics for your selection are listed.
+          </p>
+          {topicsLoading ? (
+            <p className="text-sm text-gray-500">Loading topics…</p>
+          ) : portalTopics.length === 0 ? (
+            <p className="text-sm text-gray-500">
+              No topics configured for the selected portal(s) in the database.
+            </p>
+          ) : (
+            <div className="flex flex-wrap gap-2 rounded-xl border border-gray-200 bg-gray-50/80 p-3">
+              {portalTopics.map((t) => (
+                <label
+                  key={t.topic_id}
+                  className="flex items-center gap-2 cursor-pointer text-sm border border-gray-200 rounded-lg px-3 py-2 bg-white hover:bg-gray-50"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedTopicIds.includes(t.topic_id)}
+                    onChange={() => onToggleTopic(t.topic_id)}
+                    className="rounded border-gray-300"
+                  />
+                  <span>{t.topic_name}</span>
+                  <span className="text-xs text-gray-400 font-mono">#{t.topic_id}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="space-y-2">
         <label className="font-bold text-lg">Tags</label>
@@ -381,13 +525,15 @@ const ArticlePhase1: React.FC<ArticlePhase1Props> = ({
 
       <div className="flex gap-2 pt-4">
         <button
+          type="button"
           onClick={() => router.push("/logged/pages/account-management/contents/articles")}
           className="flex-1 bg-gray-300 py-2 rounded-xl"
         >
           Cancel
         </button>
         <button
-          onClick={onNext}
+          type="button"
+          onClick={() => onNext(resolvedArticleDate)}
           disabled={!canGoNext}
           className={`flex-1 py-2 rounded-xl ${
             canGoNext ? "bg-blue-950 text-white" : "bg-gray-300 text-gray-500"

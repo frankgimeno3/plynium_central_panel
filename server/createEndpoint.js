@@ -86,7 +86,7 @@ export function createEndpoint(callback, schema = null, isProtected = false, rol
         try {
             body = await validate(request, schema);
         } catch (e) {
-            return new Response(e.message, {status: 400});
+            return NextResponse.json({ message: e.message || "Bad Request" }, { status: 400 });
         }
         let username, sub, email, isRefreshed, accessToken, idToken, cookieKeys, cookieExpiresIn, tokenPayload;
         if (isProtected) {
@@ -98,7 +98,7 @@ export function createEndpoint(callback, schema = null, isProtected = false, rol
             } catch (error) {
                 console.error(error);
 
-                return new Response(error.message, {status: 400});
+                return NextResponse.json({ message: error.message || "Bad Request" }, { status: 400 });
             }
         }
 

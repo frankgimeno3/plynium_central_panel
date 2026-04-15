@@ -33,7 +33,22 @@ const CategoriesModal: FC<CategoriesModalProps> = ({
     setLoading(true);
     try {
       const list = await CompanyCategoryService.getAllCategories();
-      setCategories(Array.isArray(list) ? list : []);
+      const raw = Array.isArray(list) ? list : [];
+      const normalized: CategoryItem[] = raw
+        .filter((c) => c != null && typeof c === "object")
+        .map((c) => {
+          const row = c as {
+            category_id?: unknown;
+            category_name?: unknown;
+            portals_array?: unknown;
+          };
+          return {
+            id_category: String(row.category_id ?? ""),
+            name: String(row.category_name ?? ""),
+            portals_array: Array.isArray(row.portals_array) ? row.portals_array : [],
+          };
+        });
+      setCategories(normalized);
     } catch {
       setCategories([]);
     } finally {

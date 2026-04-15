@@ -19,7 +19,7 @@ const ITEMS_PER_PAGE = 12;
 
 const PublicationsManagementPage: FC = () => {
   const router = useRouter();
-  const all = getPlanned(publicationsData as PublicationUnified[]) as PlannedPublication[];
+  const all = getPlanned(publicationsData as unknown as PublicationUnified[]) as PlannedPublication[];
   const [filter, setFilter] = useState({ id: "", edition: "", theme: "" });
 
   const filtered = useMemo(() => {

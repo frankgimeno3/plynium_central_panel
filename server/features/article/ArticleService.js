@@ -1,10 +1,12 @@
 import { Op } from "sequelize";
 import ArticleModel from "./ArticleModel.js";
+import TopicDbModel from "../topic_db/TopicDbModel.js";
 import { createArticlePublications, setHighlightPositionInPortal, getPublicationsByArticleId, getEffectiveHighlightPosition } from "./ArticlePublicationService.js";
 import { getContentsByArticleId } from "../content/ContentService.js";
 // Ensure models are initialized by importing models.js
 import "../../database/models.js";
 
+/** Explicit attribute list when article_highlited_position column is missing — omit topic_ids_array so legacy DBs without 068 still work */
 const ARTICLE_ATTRIBUTES_WITHOUT_HIGHLITED = [
     "id_article", "article_title", "article_subtitle", "article_main_image_url",
     "article_company_names_array", "article_company_id_array", "date", "is_article_event", "event_id",
@@ -30,6 +32,68 @@ async function ensureArticleEventColumns() {
     await ArticleModel.sequelize.query(
         `ALTER TABLE "${tableName}" ADD COLUMN IF NOT EXISTS article_event_id VARCHAR(255) DEFAULT ''`
     );
+}
+
+function isTopicIdsArrayMissingError(error) {
+    const msg = (error?.message || "") + (error?.original?.message || "");
+    return msg.includes("topic_ids_array") && msg.includes("does not exist");
+}
+
+async function ensureTopicIdsArrayColumn() {
+    if (!ArticleModel.sequelize) return;
+    const tableName = ArticleModel.tableName || "articles_db";
+    await ArticleModel.sequelize.query(
+        `ALTER TABLE "${tableName}" ADD COLUMN IF NOT EXISTS topic_ids_array INTEGER[] NOT NULL DEFAULT ARRAY[]::integer[]`
+    );
+}
+
+function normalizeTopicIdsFromPayload(articleData) {
+    const raw = articleData?.topic_ids_array ?? articleData?.topicIdsArray;
+    if (!Array.isArray(raw)) return [];
+    const out = [];
+    const seen = new Set();
+    for (const x of raw) {
+        const n = typeof x === "number" ? x : parseInt(String(x), 10);
+        if (!Number.isInteger(n) || n < 1 || seen.has(n)) continue;
+        seen.add(n);
+        out.push(n);
+    }
+    return out;
+}
+
+async function assertTopicIdsAllowedForPortals(topicIds, portalIds) {
+    if (topicIds.length === 0) return;
+    if (!TopicDbModel.sequelize) {
+        throw new Error("TopicDbModel not initialized");
+    }
+    const portals = [...new Set(portalIds.map(Number).filter((n) => Number.isInteger(n) && n >= 0))];
+    if (portals.length === 0) {
+        throw new Error("Select at least one portal to assign content topics.");
+    }
+    const sequelize = TopicDbModel.sequelize;
+    const [rows] = await sequelize.query(
+        `SELECT tp.topic_id, tp.portal_id
+         FROM topic_portals tp
+         WHERE tp.topic_id = ANY(:topicIds)`,
+        { replacements: { topicIds } }
+    );
+    const allowedByTopic = new Map();
+    if (Array.isArray(rows)) {
+        for (const r of rows) {
+            const tid = r?.topic_id;
+            const pid = r?.portal_id;
+            if (!Number.isInteger(tid) || !Number.isInteger(pid) || pid < 0) continue;
+            if (!allowedByTopic.has(tid)) allowedByTopic.set(tid, new Set());
+            allowedByTopic.get(tid).add(pid);
+        }
+    }
+    for (const tid of topicIds) {
+        const set = allowedByTopic.get(tid);
+        const ok = set && portals.some((p) => set.has(p));
+        if (!ok) {
+            throw new Error(`Topic id ${tid} is not defined for the selected portal(s).`);
+        }
+    }
 }
 
 /** Format a string array as PostgreSQL array literal for text[] columns */
@@ -63,6 +127,10 @@ function toApiArticle(article, contentsArray = []) {
     const ids = article.article_company_id_array ?? [];
     const nameList = Array.isArray(names) ? names : [];
     const idList = Array.isArray(ids) ? ids : [];
+    const topicIds = article.topic_ids_array;
+    const topicList = Array.isArray(topicIds)
+        ? topicIds.map((n) => Number(n)).filter((n) => Number.isInteger(n) && n > 0)
+        : [];
     return {
         id_article: article.id_article,
         articleTitle: article.article_title,
@@ -73,6 +141,7 @@ function toApiArticle(article, contentsArray = []) {
         article_company_id_array: idList,
         date: article.date ? new Date(article.date).toISOString().split("T")[0] : null,
         article_tags_array: [],
+        topic_ids_array: topicList,
         contents_array: contentsArray,
         highlited_position: article.highlited_position ?? "",
         is_article_event: article.is_article_event === true,
@@ -96,6 +165,7 @@ export async function getAllArticlesWithHighlightInfo(opts = {}) {
         const [rows] = await sequelize.query(
             `SELECT a.id_article, a.article_title, a.article_subtitle, a.article_main_image_url,
                     a.article_company_names_array, a.article_company_id_array, a.article_date, a.is_article_event, a.article_event_id,
+                    a.topic_ids_array,
                     (SELECT COALESCE(json_agg(json_build_object('portalName', p2.portal_name, 'highlightPosition', TRIM(ap2.article_highlight_position))), '[]'::json)
                      FROM article_portals ap2
                      JOIN portals_id p2 ON p2.portal_id = ap2.article_portal_ref_id
@@ -104,7 +174,7 @@ export async function getAllArticlesWithHighlightInfo(opts = {}) {
              LEFT JOIN article_portals ap ON ap.article_id = a.id_article
              LEFT JOIN portals_id p ON p.portal_id = ap.article_portal_ref_id
              WHERE 1=1 ${portalFilter}
-             GROUP BY a.id_article, a.article_title, a.article_subtitle, a.article_main_image_url, a.article_company_names_array, a.article_company_id_array, a.article_date, a.is_article_event, a.article_event_id
+             GROUP BY a.id_article, a.article_title, a.article_subtitle, a.article_main_image_url, a.article_company_names_array, a.article_company_id_array, a.article_date, a.is_article_event, a.article_event_id, a.topic_ids_array
              ORDER BY a.article_date DESC`,
             { replacements }
         );
@@ -117,6 +187,7 @@ export async function getAllArticlesWithHighlightInfo(opts = {}) {
                 article_company_names_array: r.article_company_names_array,
                 article_company_id_array: r.article_company_id_array,
                 date: r.article_date ?? r.date,
+                topic_ids_array: r.topic_ids_array,
                 highlited_position: "",
                 is_article_event: r.is_article_event,
                 event_id: r.article_event_id,
@@ -130,6 +201,14 @@ export async function getAllArticlesWithHighlightInfo(opts = {}) {
             return { ...base, highlightByPortal };
         });
     } catch (error) {
+        if (isTopicIdsArrayMissingError(error)) {
+            try {
+                await ensureTopicIdsArrayColumn();
+                return getAllArticlesWithHighlightInfo(opts);
+            } catch (retryErr) {
+                console.error("Error in getAllArticlesWithHighlightInfo after topic_ids_array:", retryErr);
+            }
+        }
         console.error("Error in getAllArticlesWithHighlightInfo:", error);
         return [];
     }
@@ -152,6 +231,7 @@ export async function getAllArticles(opts = {}) {
             const [rows] = await ArticleModel.sequelize.query(
                 `SELECT DISTINCT ON (a.id_article) a.id_article, a.article_title, a.article_subtitle, a.article_main_image_url,
                         a.article_company_names_array, a.article_company_id_array, a.article_date AS date,
+                        a.topic_ids_array,
                         COALESCE(NULLIF(trim(ap.article_highlight_position), ''), a.article_highlited_position) AS highlited_position,
                         a.is_article_event AS is_article_event, a.article_event_id AS event_id, a.article_created_at AS created_at, a.article_updated_at AS updated_at
                  FROM articles_db a
@@ -176,6 +256,16 @@ export async function getAllArticles(opts = {}) {
                 return getAllArticles(opts);
             } catch (retryError) {
                 console.error('Error in getAllArticles after adding columns:', retryError);
+                throw retryError;
+            }
+        }
+        if (isTopicIdsArrayMissingError(error)) {
+            console.warn('[ArticleService] Column topic_ids_array missing, adding...');
+            try {
+                await ensureTopicIdsArrayColumn();
+                return getAllArticles(opts);
+            } catch (retryError) {
+                console.error('Error in getAllArticles after topic_ids_array:', retryError);
                 throw retryError;
             }
         }
@@ -248,6 +338,16 @@ export async function getArticleById(idArticle) {
                 console.error('Error in getArticleById fallback:', fallbackError);
             }
         }
+        if (isTopicIdsArrayMissingError(error)) {
+            try {
+                await ensureTopicIdsArrayColumn();
+                return getArticleById(idArticle);
+            } catch (retryError) {
+                if (retryError.message?.includes('not found')) throw retryError;
+                console.error('Error in getArticleById after topic_ids_array:', retryError);
+                throw retryError;
+            }
+        }
         console.error('Error fetching article from database:', error);
         throw error;
     }
@@ -255,6 +355,7 @@ export async function getArticleById(idArticle) {
 
 function buildCreatePayload(articleData, includeHighlitedPosition = true) {
     const { names, ids } = normalizeCompanyArraysFromPayload(articleData);
+    const topic_ids_array = normalizeTopicIdsFromPayload(articleData);
     const base = {
         id_article: articleData.id_article,
         article_title: articleData.articleTitle,
@@ -264,7 +365,8 @@ function buildCreatePayload(articleData, includeHighlitedPosition = true) {
         article_company_id_array: ids,
         date: articleData.date,
         is_article_event: articleData.is_article_event === true,
-        event_id: (articleData.is_article_event === true && articleData.event_id) ? String(articleData.event_id).trim() : ""
+        event_id: (articleData.is_article_event === true && articleData.event_id) ? String(articleData.event_id).trim() : "",
+        topic_ids_array,
     };
     return base;
 }
@@ -288,8 +390,12 @@ export async function createArticle(articleData) {
         if (names.length < 1) {
             throw new Error("At least one company is required (article_company_names_array).");
         }
-        const article = await ArticleModel.create(buildCreatePayload(articleData, true));
         const portalIds = Array.isArray(articleData.portalIds) ? articleData.portalIds.filter((id) => Number.isInteger(Number(id))) : [];
+        const topicIds = normalizeTopicIdsFromPayload(articleData);
+        if (topicIds.length > 0) {
+            await assertTopicIdsAllowedForPortals(topicIds, portalIds.map(Number));
+        }
+        const article = await ArticleModel.create(buildCreatePayload(articleData, true));
         if (portalIds.length > 0) {
             await createArticlePublications(article.id_article, portalIds.map(Number), articleData.articleTitle);
             // Set highlight per-portal (only when single portal selected)
@@ -306,8 +412,12 @@ export async function createArticle(articleData) {
                 await ensureArticleEventColumns();
                 const { names: n2 } = normalizeCompanyArraysFromPayload(articleData);
                 if (n2.length < 1) throw new Error("At least one company is required (article_company_names_array).");
-                const article = await ArticleModel.create(buildCreatePayload(articleData, true));
                 const portalIds = Array.isArray(articleData.portalIds) ? articleData.portalIds.filter((id) => Number.isInteger(Number(id))) : [];
+                const topicIds = normalizeTopicIdsFromPayload(articleData);
+                if (topicIds.length > 0) {
+                    await assertTopicIdsAllowedForPortals(topicIds, portalIds.map(Number));
+                }
+                const article = await ArticleModel.create(buildCreatePayload(articleData, true));
                 if (portalIds.length > 0) {
                     await createArticlePublications(article.id_article, portalIds.map(Number), articleData.articleTitle);
                 }
@@ -317,13 +427,28 @@ export async function createArticle(articleData) {
                 throw retryError;
             }
         }
+        if (isTopicIdsArrayMissingError(error)) {
+            console.warn(`[ArticleService] [${requestId}] Column topic_ids_array missing, adding it...`);
+            try {
+                await ensureTopicIdsArrayColumn();
+                return createArticle(articleData);
+            } catch (retryError) {
+                console.error(`[ArticleService] [${requestId}] Create failed after adding topic_ids_array:`, retryError);
+                throw retryError;
+            }
+        }
         if (isHighlitedPositionMissingError(error)) {
             try {
                 const payload = buildCreatePayload(articleData, false);
                 const tableName = ArticleModel.tableName || "articles_db";
+                const portalIdsFb = Array.isArray(articleData.portalIds) ? articleData.portalIds.filter((id) => Number.isInteger(Number(id))) : [];
+                const topicIdsFb = normalizeTopicIdsFromPayload(articleData);
+                if (topicIdsFb.length > 0) {
+                    await assertTopicIdsAllowedForPortals(topicIdsFb, portalIdsFb.map(Number));
+                }
                 await ArticleModel.sequelize.query(
-                    `INSERT INTO "${tableName}" (id_article, article_title, article_subtitle, article_main_image_url, article_company_names_array, article_company_id_array, article_date, article_created_at, article_updated_at, is_article_event, article_event_id)
-                     VALUES ($1, $2, $3, $4, $5::text[], $6::text[], $7, NOW(), NOW(), $8, $9)`,
+                    `INSERT INTO "${tableName}" (id_article, article_title, article_subtitle, article_main_image_url, article_company_names_array, article_company_id_array, article_date, article_created_at, article_updated_at, is_article_event, article_event_id, topic_ids_array)
+                     VALUES ($1, $2, $3, $4, $5::text[], $6::text[], $7, NOW(), NOW(), $8, $9, $10::integer[])`,
                     {
                         bind: [
                             payload.id_article,
@@ -334,7 +459,8 @@ export async function createArticle(articleData) {
                             payload.article_company_id_array,
                             payload.date,
                             payload.is_article_event ?? false,
-                            payload.event_id ?? ""
+                            payload.event_id ?? "",
+                            payload.topic_ids_array ?? [],
                         ]
                     }
                 );
@@ -421,6 +547,24 @@ export async function updateArticle(idArticle, articleData) {
             }
         }
         const payload = buildUpdatePayload(article, articleData);
+        if (articleData.topic_ids_array !== undefined || articleData.topicIdsArray !== undefined) {
+            const topic_ids_array = normalizeTopicIdsFromPayload({
+                topic_ids_array: articleData.topic_ids_array ?? articleData.topicIdsArray,
+            });
+            const publications = await getPublicationsByArticleId(idArticle);
+            const portalIdsFromPubs = [
+                ...new Set(
+                    (publications || []).map((p) => p.portalId).filter((n) => Number.isInteger(n) && n >= 0)
+                ),
+            ];
+            if (topic_ids_array.length > 0 && portalIdsFromPubs.length < 1) {
+                throw new Error("Assign the article to at least one portal before setting content topics.");
+            }
+            if (topic_ids_array.length > 0) {
+                await assertTopicIdsAllowedForPortals(topic_ids_array, portalIdsFromPubs);
+            }
+            payload.topic_ids_array = topic_ids_array;
+        }
         if (payload.article_company_names_array !== undefined && (!Array.isArray(payload.article_company_names_array) || payload.article_company_names_array.length < 1)) {
             throw new Error("At least one company is required (article_company_names_array).");
         }
@@ -429,6 +573,14 @@ export async function updateArticle(idArticle, articleData) {
         }
         return getArticleById(idArticle);
     } catch (error) {
+        if (isTopicIdsArrayMissingError(error)) {
+            try {
+                await ensureTopicIdsArrayColumn();
+                return updateArticle(idArticle, articleData);
+            } catch (retryError) {
+                throw retryError;
+            }
+        }
         if (isArticleEventColumnsMissingError(error)) {
             try {
                 await ensureArticleEventColumns();

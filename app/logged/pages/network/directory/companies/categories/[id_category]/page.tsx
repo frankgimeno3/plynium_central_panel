@@ -9,13 +9,17 @@ import { CompanyService } from "@/app/service/CompanyService";
 import { Company } from "@/app/contents/interfaces";
 import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
 import { CustomerService } from "@/app/service/CustomerService";
+import { PortalService } from "@/app/service/PortalService";
 
 interface CompanyCategory {
-  id_category: string;
-  name: string;
-  description?: string;
+  category_id: string;
+  category_name: string;
+  category_description?: string;
   portals_array: string[];
+  portal_ids?: number[];
 }
+
+type PortalOption = { id: number; name: string };
 
 type CustomerRow = {
   id_customer: string;
@@ -107,6 +111,11 @@ const CategoryDetailPage: FC = () => {
     label: string;
   } | null>(null);
   const [unlinkLoading, setUnlinkLoading] = useState(false);
+  const [editPortalsOpen, setEditPortalsOpen] = useState(false);
+  const [allPortals, setAllPortals] = useState<PortalOption[]>([]);
+  const [portalIdsDraft, setPortalIdsDraft] = useState<number[]>([]);
+  const [savingPortals, setSavingPortals] = useState(false);
+  const [portalsError, setPortalsError] = useState("");
 
   const fetchCategory = useCallback(async () => {
     if (!id_category) return;
@@ -126,6 +135,51 @@ const CategoryDetailPage: FC = () => {
   }, [fetchCategory]);
 
   useEffect(() => {
+    if (!editPortalsOpen) return;
+    setPortalsError("");
+    PortalService.getAllPortals()
+      .then((list: { id: number; name?: string; key?: string }[]) => {
+        setAllPortals(
+          Array.isArray(list)
+            ? list.map((p) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
+            : []
+        );
+      })
+      .catch(() => setAllPortals([]));
+  }, [editPortalsOpen]);
+
+  useEffect(() => {
+    if (!editPortalsOpen || !category) return;
+    setPortalIdsDraft(
+      Array.isArray(category.portal_ids)
+        ? category.portal_ids.filter((x) => Number.isInteger(x) && x >= 0)
+        : []
+    );
+  }, [editPortalsOpen, category]);
+
+  const togglePortalIdDraft = (portalId: number) => {
+    setPortalIdsDraft((prev) =>
+      prev.includes(portalId) ? prev.filter((p) => p !== portalId) : [...prev, portalId]
+    );
+  };
+
+  const savePortals = async () => {
+    if (!id_category) return;
+    setSavingPortals(true);
+    setPortalsError("");
+    try {
+      await CompanyCategoryService.updateCategoryPortals(id_category, portalIdsDraft);
+      await fetchCategory();
+      setEditPortalsOpen(false);
+    } catch (e: unknown) {
+      const err = e as { message?: string };
+      setPortalsError(err?.message ?? "Failed to update portals");
+    } finally {
+      setSavingPortals(false);
+    }
+  };
+
+  useEffect(() => {
     if (!id_category || !category) return;
     let cancelled = false;
     (async () => {
@@ -134,7 +188,7 @@ const CategoryDetailPage: FC = () => {
         const allCompanies = await CompanyService.getAllCompanies();
         if (cancelled || !category) return;
         const list = Array.isArray(allCompanies) ? allCompanies : [];
-        const nameMatch = (category.name || "").trim().toLowerCase();
+        const nameMatch = (category.category_name || "").trim().toLowerCase();
         setCompanies(
           list.filter((c: Company) => {
             const mainMatch = (c.category || "").trim().toLowerCase() === nameMatch;
@@ -218,7 +272,9 @@ const CategoryDetailPage: FC = () => {
     if (!company) return;
     setUnlinkLoading(true);
     try {
-      const nameMatch = (category.name || "").trim().toLowerCase() === (company.category || "").trim().toLowerCase();
+      const nameMatch =
+        (category.category_name || "").trim().toLowerCase() ===
+        (company.category || "").trim().toLowerCase();
       const newCategoriesArray = (company.categoriesArray || []).filter(
         (id) => String(id) !== String(id_category)
       );
@@ -262,16 +318,16 @@ const CategoryDetailPage: FC = () => {
       label: "Company Categories",
       href: "/logged/pages/network/directory/companies/categories",
     },
-    { label: category?.name ?? "Category" },
+    { label: category?.category_name ?? "Category" },
   ];
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     setPageMeta({
-      pageTitle: category ? `${category.name} – Category` : "Category",
+      pageTitle: category ? `${category.category_name} – Category` : "Category",
       breadcrumbs,
     });
-  }, [setPageMeta, category?.name]);
+  }, [setPageMeta, category?.category_name]);
 
   if (categoryLoading && !category) {
     return (
@@ -316,20 +372,97 @@ const CategoryDetailPage: FC = () => {
             Delete category
           </button>
         </div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-2">{category.name}</h2>
-        {category.description && (
-          <p className="text-sm text-gray-600 mb-3 whitespace-pre-wrap">{category.description}</p>
+        <h2 className="text-xl font-semibold text-gray-900 mb-2">{category.category_name}</h2>
+        {category.category_description && (
+          <p className="text-sm text-gray-600 mb-3 whitespace-pre-wrap">
+            {category.category_description}
+          </p>
         )}
-        <div className="text-sm text-gray-600">
-          <span className="font-medium">Portals: </span>
-          {(category.portals_array || []).length > 0
-            ? category.portals_array.join(", ")
-            : "—"}
+        <div className="text-sm text-gray-600 flex flex-wrap items-center gap-2">
+          <span className="font-medium">Portals:</span>
+          <span>
+            {(category.portals_array || []).length > 0
+              ? category.portals_array.join(", ")
+              : "—"}
+          </span>
+          <button
+            type="button"
+            onClick={() => setEditPortalsOpen(true)}
+            className="ml-auto text-sm px-3 py-1.5 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50"
+          >
+            Edit portals
+          </button>
         </div>
             </div>
           </div>
         </div>
       </PageContentSection>
+
+      {editPortalsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4 max-h-[90vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b">
+              <h3 className="text-lg font-semibold text-gray-900">Edit portals</h3>
+              <button
+                type="button"
+                onClick={() => (savingPortals ? null : setEditPortalsOpen(false))}
+                disabled={savingPortals}
+                className="text-gray-400 hover:text-gray-600 p-1 disabled:opacity-50"
+                aria-label="Close"
+              >
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path
+                    fillRule="evenodd"
+                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                    clipRule="evenodd"
+                  />
+                </svg>
+              </button>
+            </div>
+            <div className="p-4 overflow-y-auto space-y-3">
+              <p className="text-sm text-gray-600">
+                Select the portals that this category belongs to.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {allPortals.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      checked={portalIdsDraft.includes(p.id)}
+                      onChange={() => togglePortalIdDraft(p.id)}
+                      className="rounded border-gray-300"
+                      disabled={savingPortals}
+                    />
+                    <span>{p.name}</span>
+                  </label>
+                ))}
+              </div>
+              {portalsError && <p className="text-sm text-red-600">{portalsError}</p>}
+            </div>
+            <div className="flex justify-end gap-2 p-4 border-t">
+              <button
+                type="button"
+                onClick={() => setEditPortalsOpen(false)}
+                disabled={savingPortals}
+                className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={savePortals}
+                disabled={savingPortals || portalIdsDraft.length === 0}
+                className="px-4 py-2 text-sm rounded-lg bg-blue-950 text-white hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {savingPortals ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <PageContentSection>
         <div className="flex flex-col w-full">
@@ -566,7 +699,7 @@ const CategoryDetailPage: FC = () => {
           <div className="bg-white rounded-lg shadow-xl max-w-sm w-full mx-4 p-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete category</h3>
             <p className="text-sm text-gray-600 mb-4">
-              Are you sure you want to delete &quot;{category.name}&quot;? This action cannot be undone.
+              Are you sure you want to delete &quot;{category.category_name}&quot;? This action cannot be undone.
             </p>
             <div className="flex justify-end gap-2">
               <button type="button" onClick={() => !deleteLoading && setDeleteModalOpen(false)} disabled={deleteLoading} className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50">Cancel</button>
