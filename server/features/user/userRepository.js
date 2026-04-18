@@ -7,7 +7,23 @@ const ROLE_DESCRIPTIONS = {
   admin: "All of the above plus role management",
 };
 
-const VALID_ROLES = ["only articles", "articles and publications", "admin"];
+const USER_ROLE_MAX_LEN = 512;
+
+/** Trim and cap length for users_db.user_role (free text). */
+function sanitizeUserRoleForStorage(raw) {
+  if (raw == null) return "";
+  const s = String(raw).trim();
+  if (s.length <= USER_ROLE_MAX_LEN) return s;
+  return s.slice(0, USER_ROLE_MAX_LEN);
+}
+
+function userRoleFromRow(row) {
+  const v = row.user_role ?? row.role;
+  if (v == null) return "";
+  const s = String(v).trim();
+  if (s.length <= USER_ROLE_MAX_LEN) return s;
+  return s.slice(0, USER_ROLE_MAX_LEN);
+}
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -66,9 +82,7 @@ function sqlUuidArrayExpr(validatedIds) {
 }
 
 function mapRowToUser(row) {
-  const role =
-    row.user_role ?? row.role ?? "only articles";
-  const validRole = VALID_ROLES.includes(role) ? role : "only articles";
+  const user_role = userRoleFromRow(row);
   const fullName = row.user_full_name ?? row.name ?? ([row.user_name, row.user_surnames].filter(Boolean).join(" ") || "");
   let userListArray = [];
   if (Array.isArray(row.user_list_array) && row.user_list_array.length > 0) {
@@ -85,8 +99,8 @@ function mapRowToUser(row) {
     id_user: String(email || (uid ? String(uid) : "")),
     user_full_name: fullName,
     user_name: row.user_name ?? row.email ?? row.username ?? "",
-    user_role: validRole,
-    user_description: row.user_description ?? ROLE_DESCRIPTIONS[validRole],
+    user_role,
+    user_description: row.user_description ?? ROLE_DESCRIPTIONS[user_role] ?? "",
     enabled: row.enabled !== undefined ? Boolean(row.enabled) : true,
     userListArray,
   };
@@ -228,10 +242,11 @@ export async function updateUserProfileFieldsInRds(idOrEmail, fields = {}) {
   const user_surnames = fields.user_surnames != null ? String(fields.user_surnames) : "";
   const user_description = fields.user_description != null ? String(fields.user_description) : "";
 
-  const rawRole = fields.user_role != null ? String(fields.user_role) : "only articles";
-  const user_role = VALID_ROLES.includes(rawRole) ? rawRole : "only articles";
+  const user_role = sanitizeUserRoleForStorage(fields.user_role);
 
   const hasUserRoleCol = await usersDbColumnExists(sequelize, "user_role");
+  const hasLegacyRoleCol =
+    !hasUserRoleCol && (await usersDbColumnExists(sequelize, "role"));
   const id = String(user.id);
 
   if (hasUserRoleCol) {
@@ -241,7 +256,17 @@ export async function updateUserProfileFieldsInRds(idOrEmail, fields = {}) {
            user_surnames = :user_surnames,
            user_description = :user_description,
            user_role = :user_role
-       WHERE user_id = :id::uuid`,
+       WHERE user_id = CAST(:id AS uuid)`,
+      { replacements: { user_name, user_surnames, user_description, user_role, id } }
+    );
+  } else if (hasLegacyRoleCol) {
+    await sequelize.query(
+      `UPDATE public.users_db
+       SET user_name = :user_name,
+           user_surnames = :user_surnames,
+           user_description = :user_description,
+           "role" = :user_role
+       WHERE user_id = CAST(:id AS uuid)`,
       { replacements: { user_name, user_surnames, user_description, user_role, id } }
     );
   } else {
@@ -250,7 +275,7 @@ export async function updateUserProfileFieldsInRds(idOrEmail, fields = {}) {
        SET user_name = :user_name,
            user_surnames = :user_surnames,
            user_description = :user_description
-       WHERE user_id = :id::uuid`,
+       WHERE user_id = CAST(:id AS uuid)`,
       { replacements: { user_name, user_surnames, user_description, id } }
     );
   }

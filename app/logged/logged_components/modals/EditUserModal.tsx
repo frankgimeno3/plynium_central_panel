@@ -6,8 +6,19 @@ interface User {
   id_user: string;
   user_full_name: string;
   user_name: string;
-  user_role: "only articles" | "articles and publications" | "admin";
+  user_role: string;
   user_description: string;
+}
+
+const KNOWN_ROLE_DESCRIPTIONS: Record<string, string> = {
+  "only articles": "Access to edit and create articles",
+  "articles and publications": "Access to edit and create articles and publications",
+  admin: "All of the above plus role editing",
+};
+
+function descriptionForSavedRole(role: string, fallbackDescription: string): string {
+  const preset = KNOWN_ROLE_DESCRIPTIONS[role];
+  return preset !== undefined ? preset : fallbackDescription;
 }
 
 interface EditUserModalProps {
@@ -27,7 +38,7 @@ const EditUserModal: FC<EditUserModalProps> = ({
 }) => {
   const [userFullName, setUserFullName] = useState<string>(initialUser.user_full_name);
   const [userName, setUserName] = useState<string>(initialUser.user_name);
-  const [userRole, setUserRole] = useState<"only articles" | "articles and publications" | "admin">(initialUser.user_role);
+  const [userRole, setUserRole] = useState<string>(initialUser.user_role);
 
   useEffect(() => {
     if (isOpen) {
@@ -49,17 +60,12 @@ const EditUserModal: FC<EditUserModalProps> = ({
           userRole !== initialUser.user_role;
         if (hasChanged) {
           event.preventDefault();
-          const roleDescriptions = {
-            "only articles": "Access to edit and create articles",
-            "articles and publications": "Access to edit and create articles and publications",
-            "admin": "All of the above plus role editing"
-          };
           const updatedUser: User = {
             ...initialUser,
             user_full_name: userFullName,
             user_name: userName,
             user_role: userRole,
-            user_description: roleDescriptions[userRole]
+            user_description: descriptionForSavedRole(userRole, initialUser.user_description),
           };
           onSave(updatedUser);
         }
@@ -97,18 +103,12 @@ const EditUserModal: FC<EditUserModalProps> = ({
       return;
     }
 
-    const roleDescriptions = {
-      "only articles": "Access to edit and create articles",
-      "articles and publications": "Access to edit and create articles and publications",
-      "admin": "All of the above plus role editing"
-    };
-
     const updatedUser: User = {
       ...initialUser,
       user_full_name: userFullName,
       user_name: userName,
       user_role: userRole,
-      user_description: roleDescriptions[userRole]
+      user_description: descriptionForSavedRole(userRole, initialUser.user_description),
     };
 
     onSave(updatedUser);
@@ -172,15 +172,12 @@ const EditUserModal: FC<EditUserModalProps> = ({
             <label className="mb-2 block text-sm font-medium text-gray-700">
               Rol
             </label>
-            <select
+            <input
+              type="text"
               className="w-full rounded-md border border-gray-300 p-2 text-sm text-gray-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               value={userRole}
-              onChange={(event) => setUserRole(event.target.value as "only articles" | "articles and publications" | "admin")}
-            >
-              <option value="only articles">only articles</option>
-              <option value="articles and publications">articles and publications</option>
-              <option value="admin">admin</option>
-            </select>
+              onChange={(event) => setUserRole(event.target.value)}
+            />
           </div>
         </div>
 

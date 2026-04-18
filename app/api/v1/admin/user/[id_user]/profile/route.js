@@ -50,7 +50,7 @@ export const PATCH = createEndpoint(
     user_full_name: Joi.string().allow("").optional(),
     user_name: Joi.string().allow("").optional(),
     user_surnames: Joi.string().allow("").optional(),
-    user_role: Joi.string().allow("").optional(),
+    user_role: Joi.string().max(512).allow("").optional(),
     user_description: Joi.string().allow("").optional(),
   }),
   true,

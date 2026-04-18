@@ -1,4 +1,4 @@
-"use client";
+  "use client";
 
 import React, { FC, useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
@@ -72,6 +72,29 @@ type UserFeedPreferenceRow = {
   /** Portal from `topic_portals`; null if topic has no portal rows (shown under Other). */
   portal_id?: number | null;
 };
+
+/** Sort: very interested → not interested → neutral → anything else. */
+function feedPreferenceStateSortRank(preferenceState: string | null | undefined): number {
+  const s = String(preferenceState ?? "").trim().toLowerCase();
+  if (s === "very interested") return 0;
+  if (s === "not interested") return 1;
+  if (s === "neutral") return 2;
+  return 3;
+}
+
+function feedPreferenceRowClassName(preferenceState: string | null | undefined): string {
+  const s = String(preferenceState ?? "").trim().toLowerCase();
+  if (s === "very interested") {
+    return "bg-emerald-50 hover:bg-emerald-100/90 transition-colors";
+  }
+  if (s === "not interested") {
+    return "bg-red-50 hover:bg-red-100/90 transition-colors";
+  }
+  if (s === "neutral") {
+    return "bg-sky-50 hover:bg-sky-100/90 transition-colors";
+  }
+  return "bg-white hover:bg-gray-50 transition-colors";
+}
 
 const USER_LIST_DETAIL_BASE = "/logged/pages/network/users/lists";
 const TOPICS_PAGE_HREF = "/logged/pages/network/contents/topics";
@@ -565,6 +588,9 @@ const UserDetailPage: FC = () => {
   const sortedFeedPrefRowsInView = useMemo(
     () =>
       [...rowsInActiveFeedPrefView].sort((a, b) => {
+        const ra = feedPreferenceStateSortRank(a.preference_state);
+        const rb = feedPreferenceStateSortRank(b.preference_state);
+        if (ra !== rb) return ra - rb;
         const na = String(a.topic_name ?? "").toLowerCase();
         const nb = String(b.topic_name ?? "").toLowerCase();
         if (na !== nb) return na.localeCompare(nb, undefined, { sensitivity: "base" });
@@ -1516,7 +1542,7 @@ const UserDetailPage: FC = () => {
                       return (
                         <tr
                           key={`${row.user_feed_preference_id}-${pid ?? "none"}`}
-                          className="hover:bg-gray-50"
+                          className={feedPreferenceRowClassName(row.preference_state)}
                         >
                           <td className="px-4 py-3 text-sm text-gray-700">{portalLabel}</td>
                           <td className="px-4 py-3 text-sm text-gray-900">
@@ -1601,7 +1627,10 @@ const UserDetailPage: FC = () => {
                               ? Number(row.portal_id)
                               : null;
                           return (
-                            <tr key={`${row.user_feed_preference_id}-${pid ?? "none"}`} className="hover:bg-gray-50">
+                            <tr
+                              key={`${row.user_feed_preference_id}-${pid ?? "none"}`}
+                              className={feedPreferenceRowClassName(row.preference_state)}
+                            >
                               <td className="px-4 py-3 text-sm text-gray-900">
                                 {row.topic_name?.trim() || `Topic ${row.topic_id}`}
                               </td>

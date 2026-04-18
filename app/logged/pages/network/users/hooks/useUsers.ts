@@ -1,20 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import UserService from '@/app/service/UserSerivce.js';
 
-export type UserRole = 'only articles' | 'articles and publications' | 'admin';
-
-const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
-  'only articles': 'Access to edit and create articles',
-  'articles and publications': 'Access to edit and create articles and publications',
-  admin: 'All of the above plus role editing',
-};
-
 export interface User {
   id?: string;
   id_user: string;
   user_full_name: string;
   user_name: string;
-  user_role: UserRole;
+  user_role: string;
   user_description: string;
   enabled?: boolean;
   userListArray?: string[];
@@ -47,7 +39,7 @@ export function useUsers() {
 
   const updateUser = useCallback(async (
     user: User,
-    updates: { user_full_name?: string; user_name?: string; user_role?: UserRole; password?: string }
+    updates: { user_full_name?: string; user_name?: string; user_role?: string; password?: string }
   ) => {
     try {
       await UserService.updateUser(
