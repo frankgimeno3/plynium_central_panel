@@ -23,6 +23,8 @@ export const NAV_ROUTE_LABELS: Record<string, string> = {
   [`${BASE}/network/directory/companies`]: "Published Companies",
   [`${BASE}/network/directory/products`]: "Published Products",
   [`${BASE}/network/portals`]: "Published Portals",
+  [`${BASE}/network/users/lists`]: "User Lists",
+  [`${BASE}/network/user_lists`]: "User Lists",
   [`${BASE}/network/users`]: "Registered Users",
   // Account Management
   [`${BASE}/account-management/customers_db`]: "Customers DB",
@@ -35,7 +37,7 @@ export const NAV_ROUTE_LABELS: Record<string, string> = {
   [`${BASE}/production/newsletters`]: "Newsletters",
   [`${BASE}/production/newsletters/create`]: "Create newsletter campaign",
   [`${BASE}/production/publications`]: "Publications",
-  [`${BASE}/production/publications/magazines`]: "Magazines",
+  [`${BASE}/production/publications/magazines`]: "Magazine titles",
   [`${BASE}/production/publications/issues`]: "Issues",
   // Administration
   [`${BASE}/administration`]: "Orders",
@@ -64,6 +66,24 @@ export function getNavLabelForPath(path: string): string | undefined {
   return undefined;
 }
 
+const USERS_INDEX = `${BASE}/network/users` as const;
+const USER_LISTS_INDEX = `${BASE}/network/user_lists` as const;
+const USER_LISTS_DETAIL_PREFIX = `${BASE}/network/users/lists` as const;
+
+/**
+ * Active state for directory leaf links under Plynium Network.
+ * Detail URLs live under `/network/users/lists/:id` but belong to User Lists, not Registered Users.
+ */
+export function isPlyniumNetworkDirectoryLeafActive(href: string, pathname: string): boolean {
+  if (href === USERS_INDEX) {
+    return pathname.startsWith(USERS_INDEX) && !pathname.startsWith(USER_LISTS_DETAIL_PREFIX);
+  }
+  if (href === USER_LISTS_INDEX) {
+    return pathname.startsWith(USER_LISTS_INDEX) || pathname.startsWith(USER_LISTS_DETAIL_PREFIX);
+  }
+  return pathname.startsWith(href);
+}
+
 /** Plynium Network section: link items (href + label) for left nav and for building the labels map */
 export const PLYNIUM_NETWORK_LINKS = [
   // Contents (expandable) – sub-items
@@ -76,6 +96,7 @@ export const PLYNIUM_NETWORK_LINKS = [
   { href: `${BASE}/network/directory/products`, label: "Published Products" },
   { href: `${BASE}/network/portals`, label: "Published Portals" },
   { href: `${BASE}/network/users`, label: "Registered Users" },
+  { href: `${BASE}/network/user_lists`, label: "User Lists" },
 ] as const;
 
 /** Grouping for left nav: path prefix that starts a sub-section (Contents only; Requests removed) */

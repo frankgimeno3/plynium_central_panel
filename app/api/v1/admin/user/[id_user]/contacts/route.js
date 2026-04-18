@@ -23,6 +23,6 @@ export const PATCH = createEndpoint(
     contact_id_array: Joi.array().items(Joi.string().trim().min(1)).required(),
   }),
   true,
-  ["admin"]
+  []
 );
 

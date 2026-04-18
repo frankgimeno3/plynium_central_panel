@@ -54,13 +54,13 @@ const MagazinesPage: FC = () => {
   const breadcrumbs = [
     { label: "Production", href: "/logged/pages/production/services" },
     { label: "Publications", href: "/logged/pages/production/publications/magazines" },
-    { label: "Magazines" },
+    { label: "Magazine titles" },
   ];
 
   const { setPageMeta } = usePageContent();
   useEffect(() => {
     setPageMeta({
-      pageTitle: "Magazines",
+      pageTitle: "Magazine titles",
       breadcrumbs,
       buttons: [{ label: "Create magazine", href: "/logged/pages/production/publications/magazines/create" }],
     });

@@ -6,6 +6,59 @@ export class NewsletterService {
     return response.data;
   }
 
+  static async updateNewsletterCampaign(idCampaign, patch) {
+    const response = await apiClient.put(
+      `/api/v1/newsletter-campaigns/${encodeURIComponent(idCampaign)}`,
+      patch ?? {}
+    );
+    return response.data;
+  }
+
+  static async getNewslettersByCampaign(idCampaign) {
+    const response = await apiClient.get(
+      `/api/v1/newsletter-campaigns/${encodeURIComponent(idCampaign)}/newsletters`
+    );
+    return response.data;
+  }
+
+  static async deleteNewsletterCampaign(idCampaign) {
+    const response = await apiClient.delete(
+      `/api/v1/newsletter-campaigns/${encodeURIComponent(idCampaign)}`,
+      { params: { confirm: "true" } }
+    );
+    return response.data;
+  }
+
+  static async getNewsletterCampaignPortals(idCampaign) {
+    const response = await apiClient.get(
+      `/api/v1/newsletter-campaigns/${encodeURIComponent(idCampaign)}/portals`
+    );
+    return response.data;
+  }
+
+  static async addNewsletterCampaignPortals(idCampaign, portalIds) {
+    const response = await apiClient.post(
+      `/api/v1/newsletter-campaigns/${encodeURIComponent(idCampaign)}/portals`,
+      { portalIds }
+    );
+    return response.data;
+  }
+
+  static async getRelatedNewslettersForCampaignPortal(idCampaign, portalId) {
+    const response = await apiClient.get(
+      `/api/v1/newsletter-campaigns/${encodeURIComponent(idCampaign)}/portals/${encodeURIComponent(portalId)}`
+    );
+    return response.data;
+  }
+
+  static async removeNewsletterCampaignPortal(idCampaign, portalId) {
+    const response = await apiClient.delete(
+      `/api/v1/newsletter-campaigns/${encodeURIComponent(idCampaign)}/portals/${encodeURIComponent(portalId)}`,
+      { params: { confirm: "true" } }
+    );
+    return response.data;
+  }
+
   static async getNewsletters() {
     const response = await apiClient.get("/api/v1/newsletters");
     return response.data;

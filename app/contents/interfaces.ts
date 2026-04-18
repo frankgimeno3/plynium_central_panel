@@ -118,6 +118,10 @@ export interface MagazineIssue {
   special_topic?: string;
   /** Forecasted publication month (1-12). Required when creating/editing; unique per magazine/year. */
   forecasted_publication_month?: number;
+  /** publications_db.publication_id when row exists in RDS */
+  publication_id?: string;
+  /** publications_db.publication_format */
+  publication_format?: "informer" | "flipbook" | "both";
 }
 
 /** Magazine: container for years and issues (each issue can become a Published publication). */
@@ -274,14 +278,9 @@ export interface NewsletterCampaign {
   name: string;
   description: string;
   portalCode: string;
-  /** DB column newsletter_campaign (free text). */
-  newsletterCampaign?: string;
+  newsletterType: string;
   contentTheme: string;
   frequency: string;
-  startDate: string;
-  endDate: string;
-  /** DB: newsletter_campaign_planned_publication_dates_array (ISO date strings). */
-  plannedPublicationDates?: string[];
   status: string;
   createdAt: string;
   updatedAt: string;

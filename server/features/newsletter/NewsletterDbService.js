@@ -15,20 +15,7 @@ const NEWSLETTER_ROW_SQL = `
   n.newsletter_updated_at
 `;
 
-function plannedPublicationDatesToApi(value) {
-  if (!Array.isArray(value) || value.length === 0) return [];
-  return value.map((d) => {
-    if (d == null) return "";
-    if (d instanceof Date) return d.toISOString().split("T")[0];
-    const s = String(d);
-    return s.includes("T") ? s.split("T")[0] : s.slice(0, 10);
-  });
-}
-
 function toApiCampaign(row) {
-  const start =
-    row.newsletter_campaign_start_date ?? row.start_date;
-  const end = row.newsletter_campaign_end_date ?? row.end_date;
   const created = row.newsletter_campaign_created_at ?? row.created_at;
   const updated = row.newsletter_campaign_updated_at ?? row.updated_at;
   return {
@@ -36,14 +23,9 @@ function toApiCampaign(row) {
     name: row.newsletter_campaign_name ?? row.name ?? "",
     description: row.newsletter_campaign_description ?? row.description ?? "",
     portalCode: row.portal_code ?? "",
-    newsletterCampaign: row.newsletter_campaign ?? "",
+    newsletterType: row.newsletter_type ?? "main",
     contentTheme: row.content_theme ?? "",
     frequency: row.newsletter_campaign_publication_frequency ?? row.frequency ?? "",
-    startDate: start ? new Date(start).toISOString().split("T")[0] : "",
-    endDate: end ? new Date(end).toISOString().split("T")[0] : "",
-    plannedPublicationDates: plannedPublicationDatesToApi(
-      row.newsletter_campaign_planned_publication_dates_array
-    ),
     status: row.newsletter_campaign_status ?? row.status ?? "",
     createdAt: created ? new Date(created).toISOString() : "",
     updatedAt: updated ? new Date(updated).toISOString() : "",
@@ -113,12 +95,9 @@ export async function getNewsletterCampaigns() {
       c.newsletter_campaign_name,
       c.newsletter_campaign_description,
       p.portal_name_key AS portal_code,
-      c.newsletter_campaign,
+      c.newsletter_type,
       c.content_theme,
       c.newsletter_campaign_publication_frequency,
-      c.newsletter_campaign_start_date,
-      c.newsletter_campaign_end_date,
-      c.newsletter_campaign_planned_publication_dates_array,
       c.newsletter_campaign_status,
       c.newsletter_campaign_created_at,
       c.newsletter_campaign_updated_at
@@ -127,6 +106,276 @@ export async function getNewsletterCampaigns() {
      ORDER BY c.newsletter_campaign_created_at DESC`
   );
   return (Array.isArray(rows) ? rows : []).map(toApiCampaign);
+}
+
+export async function updateNewsletterCampaign(idCampaign, patch) {
+  const db = Database.getInstance();
+  if (!db.isConfigured()) throw new Error("Database not configured");
+  const sequelize = db.getSequelize();
+
+  const name = patch?.name !== undefined ? String(patch.name) : undefined;
+  const description = patch?.description !== undefined ? String(patch.description) : undefined;
+  const newsletterType =
+    patch?.newsletterType !== undefined ? String(patch.newsletterType).trim().toLowerCase() : undefined;
+  const contentTheme = patch?.contentTheme !== undefined ? String(patch.contentTheme) : undefined;
+  const frequency = patch?.frequency !== undefined ? String(patch.frequency) : undefined;
+  const status = patch?.status !== undefined ? String(patch.status) : undefined;
+
+  const hasAny =
+    name !== undefined ||
+    description !== undefined ||
+    newsletterType !== undefined ||
+    contentTheme !== undefined ||
+    frequency !== undefined ||
+    status !== undefined;
+  if (!hasAny) throw new Error("No fields to update");
+
+  if (newsletterType !== undefined && newsletterType !== "main" && newsletterType !== "specific") {
+    throw new Error(`Invalid newsletterType: ${newsletterType}`);
+  }
+
+  const replacements = {
+    id_campaign: idCampaign,
+    patch_name: name !== undefined,
+    patch_description: description !== undefined,
+    patch_type: newsletterType !== undefined,
+    patch_theme: contentTheme !== undefined,
+    patch_frequency: frequency !== undefined,
+    patch_status: status !== undefined,
+    name,
+    description,
+    newsletter_type: newsletterType,
+    content_theme: contentTheme,
+    frequency,
+    status,
+  };
+
+  const sql = `
+    UPDATE newsletter_campaigns c
+    SET newsletter_campaign_name = CASE WHEN :patch_name THEN :name ELSE c.newsletter_campaign_name END,
+        newsletter_campaign_description = CASE WHEN :patch_description THEN :description ELSE c.newsletter_campaign_description END,
+        newsletter_type = CASE WHEN :patch_type THEN :newsletter_type ELSE c.newsletter_type END,
+        content_theme = CASE WHEN :patch_theme THEN :content_theme ELSE c.content_theme END,
+        newsletter_campaign_publication_frequency = CASE WHEN :patch_frequency THEN :frequency ELSE c.newsletter_campaign_publication_frequency END,
+        newsletter_campaign_status = CASE WHEN :patch_status THEN :status ELSE c.newsletter_campaign_status END,
+        newsletter_campaign_updated_at = NOW()
+    WHERE c.newsletter_campaign_id = :id_campaign
+    RETURNING c.newsletter_campaign_id
+  `;
+
+  const [rows] = await sequelize.query(sql, { replacements });
+  if (!rows || rows.length === 0) throw new Error(`Campaign ${idCampaign} not found`);
+
+  const [outRows] = await sequelize.query(
+    `SELECT
+      c.newsletter_campaign_id,
+      c.newsletter_campaign_name,
+      c.newsletter_campaign_description,
+      p.portal_name_key AS portal_code,
+      c.newsletter_type,
+      c.content_theme,
+      c.newsletter_campaign_publication_frequency,
+      c.newsletter_campaign_status,
+      c.newsletter_campaign_created_at,
+      c.newsletter_campaign_updated_at
+     FROM newsletter_campaigns c
+     LEFT JOIN portals_id p ON p.portal_id = c.portal_id
+     WHERE c.newsletter_campaign_id = :id_campaign
+     LIMIT 1`,
+    { replacements: { id_campaign: idCampaign } }
+  );
+  if (!outRows || outRows.length === 0) throw new Error(`Campaign ${idCampaign} not found`);
+  return toApiCampaign(outRows[0]);
+}
+
+export async function getNewsletterCampaignPortals(idCampaign) {
+  const db = Database.getInstance();
+  if (!db.isConfigured()) throw new Error("Database not configured");
+  const sequelize = db.getSequelize();
+
+  const [rows] = await sequelize.query(
+    `SELECT p.portal_id AS id, p.portal_name_key AS key, p.portal_name AS name
+     FROM newsletter_campaign_portals cp
+     INNER JOIN portals_db p ON p.portal_id = cp.portal_id
+     WHERE cp.newsletter_campaign_id = :id_campaign
+     ORDER BY p.portal_id ASC`,
+    { replacements: { id_campaign: idCampaign } }
+  );
+
+  return Array.isArray(rows) ? rows.map((r) => ({ id: r.id, key: r.key, name: r.name })) : [];
+}
+
+export async function addNewsletterCampaignPortals(idCampaign, portalIds) {
+  const db = Database.getInstance();
+  if (!db.isConfigured()) throw new Error("Database not configured");
+  const sequelize = db.getSequelize();
+
+  const ids = Array.isArray(portalIds)
+    ? portalIds
+        .map((x) => Number(x))
+        .filter((x) => Number.isFinite(x))
+        .map((x) => Math.trunc(x))
+    : [];
+  if (ids.length === 0) throw new Error("portalIds must include at least one portal");
+
+  // Ensure campaign exists and fetch primary portal_id
+  const [campRows] = await sequelize.query(
+    `SELECT portal_id FROM newsletter_campaigns WHERE newsletter_campaign_id = :id_campaign LIMIT 1`,
+    { replacements: { id_campaign: idCampaign } }
+  );
+  if (!campRows || campRows.length === 0) throw new Error(`Campaign ${idCampaign} not found`);
+  const primaryPortalId = campRows[0].portal_id;
+
+  // Always ensure the primary portal exists in the bridge
+  const all = Array.from(new Set([primaryPortalId, ...ids]));
+  const valuesSql = all.map((_, i) => `(:id_campaign, :p${i})`).join(", ");
+  const replacements = { id_campaign: idCampaign };
+  all.forEach((p, i) => {
+    replacements[`p${i}`] = p;
+  });
+
+  await sequelize.query(
+    `INSERT INTO newsletter_campaign_portals (newsletter_campaign_id, portal_id)
+     VALUES ${valuesSql}
+     ON CONFLICT (newsletter_campaign_id, portal_id) DO NOTHING`,
+    { replacements }
+  );
+
+  return getNewsletterCampaignPortals(idCampaign);
+}
+
+export async function removeNewsletterCampaignPortal(idCampaign, portalId) {
+  const db = Database.getInstance();
+  if (!db.isConfigured()) throw new Error("Database not configured");
+  const sequelize = db.getSequelize();
+
+  const pid = Number(portalId);
+  if (!Number.isFinite(pid)) throw new Error("portalId must be a number");
+
+  // Confirm campaign exists and current primary portal_id
+  const [campRows] = await sequelize.query(
+    `SELECT portal_id FROM newsletter_campaigns WHERE newsletter_campaign_id = :id_campaign LIMIT 1`,
+    { replacements: { id_campaign: idCampaign } }
+  );
+  if (!campRows || campRows.length === 0) throw new Error(`Campaign ${idCampaign} not found`);
+  const currentPrimary = campRows[0].portal_id;
+
+  await sequelize.query(
+    `DELETE FROM newsletter_campaign_portals
+     WHERE newsletter_campaign_id = :id_campaign AND portal_id = :portal_id`,
+    { replacements: { id_campaign: idCampaign, portal_id: pid } }
+  );
+
+  const remaining = await getNewsletterCampaignPortals(idCampaign);
+  if (remaining.length === 0) {
+    // restore at least one (rollback-friendly via explicit insert)
+    await sequelize.query(
+      `INSERT INTO newsletter_campaign_portals (newsletter_campaign_id, portal_id)
+       VALUES (:id_campaign, :portal_id)
+       ON CONFLICT (newsletter_campaign_id, portal_id) DO NOTHING`,
+      { replacements: { id_campaign: idCampaign, portal_id: currentPrimary } }
+    );
+    throw new Error("A campaign must have at least one portal");
+  }
+
+  // If we removed the primary portal, move primary to the smallest remaining portal_id
+  if (pid === currentPrimary) {
+    const nextPrimary = remaining[0].id;
+    await sequelize.query(
+      `UPDATE newsletter_campaigns
+       SET portal_id = :portal_id, newsletter_campaign_updated_at = NOW()
+       WHERE newsletter_campaign_id = :id_campaign`,
+      { replacements: { id_campaign: idCampaign, portal_id: nextPrimary } }
+    );
+  }
+
+  return remaining;
+}
+
+export async function getNewslettersByCampaignAndPortal(idCampaign, portalId) {
+  const db = Database.getInstance();
+  if (!db.isConfigured()) throw new Error("Database not configured");
+  const sequelize = db.getSequelize();
+
+  const pid = Number(portalId);
+  if (!Number.isFinite(pid)) throw new Error("portalId must be a number");
+
+  const [rows] = await sequelize.query(
+    `SELECT ${NEWSLETTER_ROW_SQL}
+     FROM newsletters_db n
+     LEFT JOIN portals_id p ON p.portal_id = n.portal_id
+     WHERE n.newsletter_campaign_id = :id_campaign
+       AND n.portal_id = :portal_id
+     ORDER BY n.newsletter_estimated_publication_date DESC NULLS LAST, n.newsletter_created_at DESC`,
+    { replacements: { id_campaign: idCampaign, portal_id: pid } }
+  );
+  return (Array.isArray(rows) ? rows : []).map(toApiNewsletter);
+}
+
+export async function getNewslettersByCampaign(idCampaign) {
+  const db = Database.getInstance();
+  if (!db.isConfigured()) throw new Error("Database not configured");
+  const sequelize = db.getSequelize();
+
+  const [rows] = await sequelize.query(
+    `SELECT ${NEWSLETTER_ROW_SQL}
+     FROM newsletters_db n
+     LEFT JOIN portals_id p ON p.portal_id = n.portal_id
+     WHERE n.newsletter_campaign_id = :id_campaign
+     ORDER BY n.newsletter_estimated_publication_date DESC NULLS LAST, n.newsletter_created_at DESC`,
+    { replacements: { id_campaign: idCampaign } }
+  );
+  return (Array.isArray(rows) ? rows : []).map(toApiNewsletter);
+}
+
+export async function deleteNewsletterCampaign(idCampaign) {
+  const db = Database.getInstance();
+  if (!db.isConfigured()) throw new Error("Database not configured");
+  const sequelize = db.getSequelize();
+
+  const transaction = await sequelize.transaction();
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT newsletter_campaign_id FROM newsletter_campaigns WHERE newsletter_campaign_id = :id_campaign LIMIT 1`,
+      { replacements: { id_campaign: idCampaign }, transaction }
+    );
+    if (!rows || rows.length === 0) {
+      throw new Error(`Campaign ${idCampaign} not found`);
+    }
+
+    // Delete content blocks for newsletters in this campaign
+    await sequelize.query(
+      `DELETE FROM newsletter_content_blocks b
+       USING newsletters_db n
+       WHERE b.newsletter_id = n.newsletter_id
+         AND n.newsletter_campaign_id = :id_campaign`,
+      { replacements: { id_campaign: idCampaign }, transaction }
+    );
+
+    // Delete newsletters for this campaign
+    await sequelize.query(
+      `DELETE FROM newsletters_db WHERE newsletter_campaign_id = :id_campaign`,
+      { replacements: { id_campaign: idCampaign }, transaction }
+    );
+
+    // Delete portal associations
+    await sequelize.query(
+      `DELETE FROM newsletter_campaign_portals WHERE newsletter_campaign_id = :id_campaign`,
+      { replacements: { id_campaign: idCampaign }, transaction }
+    );
+
+    // Delete campaign
+    await sequelize.query(
+      `DELETE FROM newsletter_campaigns WHERE newsletter_campaign_id = :id_campaign`,
+      { replacements: { id_campaign: idCampaign }, transaction }
+    );
+
+    await transaction.commit();
+    return { ok: true };
+  } catch (e) {
+    await transaction.rollback();
+    throw e;
+  }
 }
 
 export async function getNewsletters() {

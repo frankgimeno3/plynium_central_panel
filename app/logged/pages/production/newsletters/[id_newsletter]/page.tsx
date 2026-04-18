@@ -8,6 +8,7 @@ import NewsletterContentBlockRenderer from "../components/NewsletterContentBlock
 import NewsletterBlockEditModal from "../components/NewsletterBlockEditModal";
 import { newsletterBlocksToHtml } from "../utils/newsletterToHtml";
 import { NewsletterService } from "@/app/service/NewsletterService";
+import apiClient from "@/app/apiClient";
 
 const BASE = "/logged/pages/production/newsletters";
 
@@ -22,6 +23,7 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
   const [isSavingStatus, setIsSavingStatus] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
   const [editingBlock, setEditingBlock] = useState<NewsletterContentBlock | null>(null);
+  const [listSubscriberCount, setListSubscriberCount] = useState<number | null>(null);
 
   const campaign = useMemo(() => {
     if (!newsletter) return null;
@@ -54,6 +56,31 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
   useEffect(() => {
     reload();
   }, [reload]);
+
+  useEffect(() => {
+    const lid = newsletter?.userNewsletterListId;
+    if (!lid) {
+      setListSubscriberCount(null);
+      return;
+    }
+    let cancelled = false;
+    apiClient
+      .get<Array<{ userList_id?: string; listUserIdsArray?: string[] }>>("/api/v1/user-lists")
+      .then((res) => {
+        if (cancelled) return;
+        const lists = Array.isArray(res.data) ? res.data : [];
+        const row = lists.find((l) => String(l.userList_id) === String(lid));
+        setListSubscriberCount(
+          Array.isArray(row?.listUserIdsArray) ? row.listUserIdsArray.length : null
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setListSubscriberCount(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [newsletter?.userNewsletterListId]);
 
   const { setPageMeta } = usePageContent();
 
@@ -198,6 +225,11 @@ const NewsletterDetailPage: FC<{ params: Promise<{ id_newsletter: string }> }> =
           <div>
             <p className="text-xs text-gray-500 uppercase">User newsletter list</p>
             <p className="font-medium text-gray-900">{newsletter.userNewsletterListId ?? "—"}</p>
+            {listSubscriberCount != null ? (
+              <p className="mt-1 text-sm text-gray-600">
+                Subscribers on this list: <span className="font-semibold text-gray-900">{listSubscriberCount}</span>
+              </p>
+            ) : null}
           </div>
           <div>
             <p className="text-xs text-gray-500 uppercase">Status</p>

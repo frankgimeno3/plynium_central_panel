@@ -386,7 +386,20 @@ This document is a **read-only reference** of the current Postgres RDS schema (s
 | newsletter_user_list_topic | character varying | YES |  |
 | newsletter_user_list_created_at | timestamp with time zone | NO | `now()` |
 | newsletter_user_list_description | text | YES | `''::text` |
-| newsletter_user_list_portals_array_id | ARRAY | NO | `'{}'::integer[]` |
+| user_list_portal | integer | YES | FK to `portals_db.portal_id` (migration 078) |
+
+Membership is stored in **`user_list_subscriptions`** (not on this table). Migration `080_user_list_subscriptions.sql` removed `list_user_ids_array` if it existed.
+
+## user_list_subscriptions
+
+| column | type | null | default |
+|---|---|---:|---|
+| user_list_subscription_id | uuid | NO | `gen_random_uuid()` |
+| user_id | uuid | NO | FK → `users_db.user_id` |
+| newsletter_user_list_id | uuid | NO | FK → `newsletter_user_lists.newsletter_user_list_id` |
+| created_at | timestamp with time zone | NO | `now()` |
+
+Unique `(user_id, newsletter_user_list_id)`. Replaces the former `newsletter_user_lists.list_user_ids_array` array.
 
 ## newsletters_db
 
@@ -764,13 +777,23 @@ This document is a **read-only reference** of the current Postgres RDS schema (s
 | column | type | null | default |
 |---|---|---:|---|
 | topic_id | integer | NO | identity |
-| topic_portal | integer | NO |  |
 | topic_name | character varying | NO |  |
 | topic_description | text | NO | `''::text` |
 | topic_created_at | timestamp with time zone | NO | `now()` |
 | topic_updated_at | timestamp with time zone | NO | `now()` |
 
-FK: `topic_portal` → `portals_db.portal_id`.
+Note: topics are associated to portals via `topic_portals` (bridge table).
+
+## topic_portals
+
+| column | type | null | default |
+|---|---|---:|---|
+| topic_id | integer | NO |  |
+| portal_id | integer | NO |  |
+| topic_portal_created_at | timestamp with time zone | NO | `now()` |
+
+FK: `topic_id` → `topics_db.topic_id`; `portal_id` → `portals_db.portal_id`.  
+PK `(topic_id, portal_id)`.
 
 ## user_feed_preferences
 

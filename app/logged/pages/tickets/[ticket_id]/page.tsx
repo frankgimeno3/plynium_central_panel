@@ -26,7 +26,7 @@ interface Notification {
   notification_description: string;
 }
 
-/** Parses notification description and returns redirection link when applicable. */
+/** Parses `panel_ticket_full_description` and returns a related in-app link when applicable. */
 function getRedirectionLink(
   description: string,
   customers: { id_customer: string; name: string; contact?: { name: string } }[],
@@ -57,7 +57,7 @@ function getRedirectionLink(
     }
     if (oreqId) {
       return {
-        href: `/logged/pages/network/requests/other/${encodeURIComponent(oreqId)}`,
+        href: `/logged/pages/tickets/other/${encodeURIComponent(oreqId)}`,
         label: `Ver solicitud Other: ${oreqId}`,
       };
     }
@@ -66,14 +66,14 @@ function getRedirectionLink(
   if (creqMatch) {
     const id = creqMatch[1].trim();
     return {
-      href: `/logged/pages/network/requests/company/${encodeURIComponent(id)}`,
+      href: `/logged/pages/tickets/company/${encodeURIComponent(id)}`,
       label: `Ver solicitud de empresa: ${id}`,
     };
   }
   if (advMatch) {
     const id = advMatch[1].trim();
     return {
-      href: `/logged/pages/network/requests/quotations/${encodeURIComponent(id)}`,
+      href: `/logged/pages/tickets/quotations/${encodeURIComponent(id)}`,
       label: `Ver solicitud de publicidad: ${id}`,
     };
   }
@@ -81,7 +81,7 @@ function getRedirectionLink(
     const id = (oreqMatch[1] || '').trim();
     if (id) {
       return {
-        href: `/logged/pages/network/requests/other/${encodeURIComponent(id)}`,
+        href: `/logged/pages/tickets/other/${encodeURIComponent(id)}`,
         label: `Ver solicitud Other: ${id}`,
       };
     }
@@ -195,7 +195,7 @@ const NotificationDetailPage: FC = () => {
         <div className="flex flex-col w-full">
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6 text-center">
-              <p className="text-red-500 text-lg">Notification not found.</p>
+              <p className="text-red-500 text-lg">Ticket not found.</p>
               <Link href="/logged/pages/tickets" className="mt-4 inline-block text-blue-950 hover:underline">
                 Back to Tickets
               </Link>
@@ -251,7 +251,7 @@ const NotificationDetailPage: FC = () => {
             <div className="p-6">
         <div className="space-y-4 mb-6">
             <div>
-              <label className='text-sm font-medium text-gray-500'>Notification ID</label>
+              <label className='text-sm font-medium text-gray-500'>Ticket ID</label>
               <p className='text-lg text-gray-900 font-mono'>{notification.notification_id}</p>
             </div>
             <div>
@@ -283,7 +283,7 @@ const NotificationDetailPage: FC = () => {
                   </Link>
                 </p>
               ) : (
-                <p className='text-base text-gray-500 mt-1'>There is no link for this notification.</p>
+                <p className='text-base text-gray-500 mt-1'>There is no link for this ticket.</p>
               )}
             </div>
           </div>

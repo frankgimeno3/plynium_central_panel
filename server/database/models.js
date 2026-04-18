@@ -1095,7 +1095,7 @@ NotificationDbModel.init({
     underscored: true,
     tableName: "panel_tickets",
     createdAt: "panel_ticket_created_at",
-    updatedAt: false,
+    updatedAt: "updated_at",
     indexes: [
         { fields: ["panel_ticket_type"] },
         { fields: ["panel_ticket_state"] },

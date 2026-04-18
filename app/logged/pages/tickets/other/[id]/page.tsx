@@ -5,11 +5,11 @@ import { useParams, useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { useOtherRequests, RequestState } from "@/app/logged/pages/network/requests/hooks/useOtherRequests";
-import type { NotificationComment } from "@/app/contents/notifications.types";
+import type { NotificationComment as PanelTicketComment } from "@/app/contents/notifications.types";
 
 const BASE = "/logged/pages/tickets";
 
-const stateOptions: RequestState[] = ["Pending", "In Process", "Other"];
+const stateOptions: RequestState[] = ["Pending", "In Process", "Other", "Done"];
 
 const OtherRequestDetailPage: FC = () => {
   const params = useParams();
@@ -60,7 +60,7 @@ const OtherRequestDetailPage: FC = () => {
     setRequest({ ...request, request_state: newState });
   };
 
-  const sortedComments: NotificationComment[] = useMemo(() => {
+  const sortedComments: PanelTicketComment[] = useMemo(() => {
     const list = request?.commentsArray ?? [];
     return [...list].sort((a, b) => {
       const ta = Date.parse(a.date || "") || 0;

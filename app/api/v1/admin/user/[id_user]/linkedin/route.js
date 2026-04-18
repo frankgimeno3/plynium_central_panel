@@ -23,6 +23,6 @@ export const PATCH = createEndpoint(
     linkedin_profile: Joi.string().allow("").required(),
   }),
   true,
-  ["admin"]
+  []
 );
 

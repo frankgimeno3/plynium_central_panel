@@ -1,9 +1,12 @@
 "use client";
 
-import React, { FC, useEffect, useMemo, useState } from "react";
+import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
+import { PortalService } from "@/app/service/PortalService";
+
+type PortalRow = { id: number; key: string; name: string };
 
 type PublicationDbRow = {
   publication_id: string;
@@ -22,7 +25,8 @@ type PublicationDbRow = {
   publication_main_image_url: string;
 };
 
-type TabId = "development" | "forecasted" | "published";
+type TabId = "development" | "forecasted" | "expired";
+type ExpiredStatus = "published" | "cancelled";
 
 const BASE = "/logged/pages/production/publications";
 
@@ -36,30 +40,79 @@ const IssuesPage: FC = () => {
   const { setPageMeta } = usePageContent();
 
   const [activeTab, setActiveTab] = useState<TabId>("development");
+  const [portals, setPortals] = useState<PortalRow[]>([]);
+  const [activePortalId, setActivePortalId] = useState<number | null>(null);
+  const [portalsReady, setPortalsReady] = useState(false);
   const [all, setAll] = useState<PublicationDbRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [filter, setFilter] = useState({ id: "", edition: "", magazine: "" });
+  const [expiredStatus, setExpiredStatus] = useState<ExpiredStatus>("published");
 
-  const load = React.useCallback(async () => {
+  const portalTabs = useMemo(
+    () => [...portals].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0)),
+    [portals]
+  );
+
+  const fetchPublicationsForPortal = useCallback(async (portalId: number | null) => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/v1/publications-db", {
+      const params = new URLSearchParams();
+      if (portalId != null) params.set("portal_id", String(portalId));
+      const qs = params.toString();
+      const res = await fetch(`/api/v1/publications-db${qs ? `?${qs}` : ""}`, {
         cache: "no-store",
         credentials: "include",
       });
       if (!res.ok) throw new Error("Failed to load issues");
       const data = (await res.json()) as PublicationDbRow[];
       setAll(Array.isArray(data) ? data : []);
-    } catch (e: any) {
+    } catch (e: unknown) {
       setAll([]);
-      setError(e?.message ?? "Failed to load issues");
+      setError(e instanceof Error ? e.message : "Failed to load issues");
     } finally {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const plist = await PortalService.getAllPortals();
+        if (cancelled) return;
+        const sorted = [...(Array.isArray(plist) ? plist : [])].sort(
+          (a, b) => (Number(a.id) || 0) - (Number(b.id) || 0)
+        ) as PortalRow[];
+        setPortals(sorted);
+        setActivePortalId((prev) => {
+          if (prev != null && sorted.some((p) => Number(p.id) === prev)) return prev;
+          return sorted[0]?.id != null ? Number(sorted[0].id) : null;
+        });
+      } catch {
+        if (!cancelled) {
+          setPortals([]);
+          setActivePortalId(null);
+        }
+      } finally {
+        if (!cancelled) setPortalsReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!portalsReady) return;
+    void fetchPublicationsForPortal(activePortalId);
+  }, [portalsReady, activePortalId, fetchPublicationsForPortal]);
+
+  const load = useCallback(() => {
+    void fetchPublicationsForPortal(activePortalId);
+  }, [activePortalId, fetchPublicationsForPortal]);
 
   useEffect(() => {
     setPageMeta({
@@ -72,10 +125,6 @@ const IssuesPage: FC = () => {
     });
   }, [setPageMeta]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
-
   const inDevelopment = useMemo(
     () => all.filter((p) => p.publication_status === "draft"),
     [all]
@@ -84,16 +133,21 @@ const IssuesPage: FC = () => {
     () => all.filter((p) => p.publication_status === "planned"),
     [all]
   );
-  const published = useMemo(
-    () => all.filter((p) => p.publication_status === "published"),
+  const expiredPublished = useMemo(
+    () => all.filter((p) => String(p.publication_status ?? "").trim().toLowerCase() === "published"),
     [all]
   );
+  const expiredCancelled = useMemo(
+    () => all.filter((p) => String(p.publication_status ?? "").trim().toLowerCase() === "cancelled"),
+    [all]
+  );
+  const expiredTotalCount = expiredPublished.length + expiredCancelled.length;
 
   const listForTab = useMemo(() => {
     if (activeTab === "development") return inDevelopment;
     if (activeTab === "forecasted") return forecasted;
-    return published;
-  }, [activeTab, inDevelopment, forecasted, published]);
+    return expiredStatus === "published" ? expiredPublished : expiredCancelled;
+  }, [activeTab, inDevelopment, forecasted, expiredPublished, expiredCancelled, expiredStatus]);
 
   const filtered = useMemo(() => {
     let list = [...listForTab];
@@ -137,15 +191,15 @@ const IssuesPage: FC = () => {
           </button>
           <button
             type="button"
-            onClick={() => setActiveTab("published")}
+            onClick={() => setActiveTab("expired")}
             className={`px-6 py-3 text-sm font-medium transition-colors ${
-              activeTab === "published"
+              activeTab === "expired"
                 ? "text-blue-950 border-b-2 border-blue-950 bg-white"
                 : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             }`}
           >
-            Published
-            <span className="ml-2 text-xs text-gray-500">({published.length})</span>
+            Expired
+            <span className="ml-2 text-xs text-gray-500">({expiredTotalCount})</span>
           </button>
           <div className="flex-1" />
           <button
@@ -158,6 +212,26 @@ const IssuesPage: FC = () => {
         </div>
 
         <div className="bg-white rounded-b-lg overflow-hidden">
+          <div className="flex border-b border-gray-200 px-2">
+            {portalTabs.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => setActivePortalId(Number(p.id))}
+                className={`relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${
+                  activePortalId === Number(p.id)
+                    ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                }`}
+              >
+                {p.key}
+              </button>
+            ))}
+            {portalTabs.length === 0 && (
+              <span className="text-sm text-gray-500 py-3 px-2">No portals configured.</span>
+            )}
+          </div>
+
           <div className="p-6">
             {error && (
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between gap-4">
@@ -173,7 +247,20 @@ const IssuesPage: FC = () => {
             )}
 
             <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {activeTab === "expired" && (
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Status</label>
+                  <select
+                    value={expiredStatus}
+                    onChange={(e) => setExpiredStatus(e.target.value as ExpiredStatus)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                  >
+                    <option value="published">published</option>
+                    <option value="cancelled">cancelled</option>
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-xs text-gray-600 mb-1">Publication ID</label>
                 <input

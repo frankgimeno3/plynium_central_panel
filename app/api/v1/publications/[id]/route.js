@@ -31,7 +31,17 @@ export const PUT = createEndpoint(async (request, body) => {
     date: Joi.string().optional(),
     revista: Joi.string().optional(),
     número: Joi.string().optional(),
-    publication_main_image_url: Joi.string().optional().allow("")
+    publication_main_image_url: Joi.string().optional().allow(""),
+    publication_theme: Joi.string().allow("").optional(),
+    publication_expected_publication_month: Joi.number().integer().min(1).max(12).allow(null).optional(),
+    publication_year: Joi.number().integer().optional(),
+    magazine_this_year_issue: Joi.number().integer().optional(),
+    magazine_general_issue_number: Joi.number().integer().allow(null).optional(),
+    publication_edition_name: Joi.string().allow("").optional(),
+    is_special_edition: Joi.boolean().optional(),
+    publication_status: Joi.string().optional(),
+    publication_format: Joi.string().valid("informer", "flipbook", "both").optional(),
+    real_publication_month_date: Joi.string().allow(null, "").optional(),
 }), true);
 
 export const DELETE = createEndpoint(async (request) => {

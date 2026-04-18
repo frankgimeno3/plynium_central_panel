@@ -1,8 +1,9 @@
 /**
- * Unified notifications schema: all notification/request types share the same fields.
+ * Unified panel ticket schema (RDS `panel_tickets` + related tables).
+ * All ticket kinds (`notification`, `advertisement`, `company`, `other`) share the same fields.
  * Fields not applicable for a type are empty string, empty array, or null.
- * 
- * Data is now fetched from RDS via /api/v1/notifications
+ *
+ * HTTP routes remain `/api/v1/notifications` for backward compatibility; handlers map to `panel_*` columns.
  */
 export type NotificationType = 'notification' | 'advertisement' | 'company' | 'other';
 
@@ -83,32 +84,71 @@ export async function fetchNotifications(filters?: {
   return res.json();
 }
 
-/** Fetch a single notification by ID */
+const ticketFetchInit: RequestInit = {
+  credentials: 'include',
+  signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(45000) : undefined,
+};
+
+/** Fetch a single panel ticket by id (`panel_ticket_id`) */
 export async function fetchNotificationById(id: string): Promise<UnifiedNotification> {
-  const res = await fetch(`/api/v1/notifications/${encodeURIComponent(id)}`);
-  if (!res.ok) throw new Error(`Failed to fetch notification ${id}`);
+  const res = await fetch(`/api/v1/notifications/${encodeURIComponent(id)}`, ticketFetchInit);
+  if (!res.ok) {
+    let details = '';
+    try {
+      details = (await res.text())?.trim();
+    } catch {
+      // ignore
+    }
+    throw new Error(
+      `Failed to fetch ticket ${id} (${res.status} ${res.statusText})${details ? `: ${details}` : ''}`
+    );
+  }
   return res.json();
 }
 
-/** Update a notification */
+/** Update a panel ticket row (e.g. `panel_ticket_state`) */
 export async function updateNotificationApi(id: string, data: Partial<UnifiedNotification>): Promise<UnifiedNotification> {
   const res = await fetch(`/api/v1/notifications/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(data)
+    credentials: 'include',
+    body: JSON.stringify(data),
+    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(45000) : undefined,
   });
-  if (!res.ok) throw new Error(`Failed to update notification ${id}`);
+  if (!res.ok) {
+    let details = '';
+    try {
+      details = (await res.text())?.trim();
+    } catch {
+      // ignore
+    }
+    throw new Error(
+      `Failed to update ticket ${id} (${res.status} ${res.statusText})${details ? `: ${details}` : ''}`
+    );
+  }
   return res.json();
 }
 
-/** Add a comment to a notification */
+/** Append a row to `panel_ticket_comments` for this ticket */
 export async function addNotificationComment(id: string, content: string): Promise<UnifiedNotification> {
   const res = await fetch(`/api/v1/notifications/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ add_comment: content })
+    credentials: 'include',
+    body: JSON.stringify({ add_comment: content }),
+    signal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout ? AbortSignal.timeout(45000) : undefined,
   });
-  if (!res.ok) throw new Error(`Failed to add comment to notification ${id}`);
+  if (!res.ok) {
+    let details = '';
+    try {
+      details = (await res.text())?.trim();
+    } catch {
+      // ignore
+    }
+    throw new Error(
+      `Failed to add comment on ticket ${id} (${res.status} ${res.statusText})${details ? `: ${details}` : ''}`
+    );
+  }
   return res.json();
 }
 
@@ -136,6 +176,7 @@ function stateToCompanyDisplay(state: NotificationState): RequestStateDisplay {
   if (state === 'pending') return 'Pending';
   if (state === 'in_process') return 'In Process';
   if (state === 'other') return 'Other';
+  if (state === 'solved') return 'Done';
   return 'Pending';
 }
 

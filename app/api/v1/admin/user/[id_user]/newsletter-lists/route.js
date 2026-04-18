@@ -23,6 +23,7 @@ export const PATCH = createEndpoint(
     newsletter_user_lists_id_array: Joi.array().items(Joi.string().trim().min(1)).required(),
   }),
   true,
-  ["admin"]
+  // Authenticated panel users only (matches GET /api/v1/admin/user/[id], not Cognito admin group).
+  []
 );
 

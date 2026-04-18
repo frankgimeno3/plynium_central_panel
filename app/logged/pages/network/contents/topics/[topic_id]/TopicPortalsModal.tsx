@@ -26,7 +26,7 @@ export const TopicPortalsModal: FC<{
   initialSelectedIds: number[];
   onClose: () => void;
   onApply: (selectedIds: number[]) => void;
-}> = ({ open, title = "Seleccionar portales", initialSelectedIds, onClose, onApply }) => {
+}> = ({ open, title = "Select portals", initialSelectedIds, onClose, onApply }) => {
   const [loading, setLoading] = useState(false);
   const [portals, setPortals] = useState<PortalRow[]>([]);
   const [selected, setSelected] = useState<number[]>([]);
@@ -87,9 +87,9 @@ export const TopicPortalsModal: FC<{
 
         <div className="max-h-[60vh] overflow-auto px-5 py-4">
           {loading ? (
-            <p className="text-sm text-gray-500">Cargando portales…</p>
+            <p className="text-sm text-gray-500">Loading portals…</p>
           ) : portals.length === 0 ? (
-            <p className="text-sm text-gray-600">No hay portales disponibles.</p>
+            <p className="text-sm text-gray-600">No portals available.</p>
           ) : (
             <div className="space-y-2">
               {portals.map((p) => {

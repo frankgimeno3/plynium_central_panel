@@ -31,7 +31,24 @@ export class PublicationService{
         return response.data;
     }
 
-    static async getPublicationPortals(idPublication) {
+    /** All publications_db rows for a magazine (admin). */
+    static async listPublicationsForMagazine(magazineId) {
+        const response = await apiClient.get(
+            `/api/v1/magazines/${encodeURIComponent(magazineId)}/publications`
+        );
+        return response.data;
+    }
+
+    /** Creates a draft row in publications_db for a planned issue. */
+    static async createMagazinePublication(magazineId, body) {
+        const response = await apiClient.post(
+            `/api/v1/magazines/${encodeURIComponent(magazineId)}/publications`,
+            body
+        );
+        return response.data;
+    }
+
+     static async getPublicationPortals(idPublication) {
         const response = await apiClient.get(`/api/v1/publications/${idPublication}/portals`);
         return response.data;
     }

@@ -5,7 +5,11 @@ import { usePathname } from "next/navigation";
 import { FC, useState, useEffect } from "react";
 import ChevronDownSvg from "../svg/ChevronDownSvg";
 import ChevronRightSvg from "../svg/ChevronRightSvg";
-import { PLYNIUM_NETWORK_LINKS, PLYNIUM_NETWORK_GROUPS } from "./navRouteIndex";
+import {
+  PLYNIUM_NETWORK_LINKS,
+  PLYNIUM_NETWORK_GROUPS,
+  isPlyniumNetworkDirectoryLeafActive,
+} from "./navRouteIndex";
 
 interface LeftnavProps {}
 
@@ -146,7 +150,7 @@ const Leftnav: FC<LeftnavProps> = () => {
                     key={item.href}
                     href={item.href}
                     label={item.label}
-                    active={pathname.startsWith(item.href)}
+                    active={isPlyniumNetworkDirectoryLeafActive(item.href, pathname)}
                   />
                 ))}
               </div>
@@ -224,7 +228,7 @@ const Leftnav: FC<LeftnavProps> = () => {
                   <div className="ml-2 flex flex-col gap-0.5 border-l border-gray-600 pl-2">
                     <NavLink
                       href="/logged/pages/production/publications/magazines"
-                      label="Magazines"
+                      label="Magazine titles"
                       active={pathname.startsWith("/logged/pages/production/publications/magazines")}
                     />
                     <NavLink

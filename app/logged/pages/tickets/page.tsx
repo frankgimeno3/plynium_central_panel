@@ -56,6 +56,7 @@ const TicketsPage: FC = () => {
   const { counts: advCounts } = useAdvertisements();
 
   useEffect(() => {
+    // `notification_type` query → `panel_ticket_type` in RDS (inbox-style tickets).
     fetchNotifications({ notification_type: 'notification' })
       .then(setAllData)
       .catch(() => setAllData([]));
@@ -257,7 +258,7 @@ const TicketsPage: FC = () => {
   );
 };
 
-function NotificationsPageWithSuspense() {
+function TicketsPageWithSuspense() {
   return (
     <Suspense fallback={<div className='p-12 text-gray-600'>Loading...</div>}>
       <TicketsPage />
@@ -265,4 +266,4 @@ function NotificationsPageWithSuspense() {
   );
 }
 
-export default NotificationsPageWithSuspense;
+export default TicketsPageWithSuspense;

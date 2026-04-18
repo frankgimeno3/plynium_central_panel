@@ -1,6 +1,8 @@
 import { createEndpoint } from "../../../../server/createEndpoint.js";
 import { NextResponse } from "next/server";
 import Joi from "joi";
+import { Op } from "sequelize";
+import { QueryTypes } from "sequelize";
 import { PublicationModel } from "../../../../server/database/models.js";
 import "../../../../server/database/models.js";
 
@@ -11,6 +13,7 @@ const getSchema = Joi.object({
   magazine_id: Joi.string().optional(),
   publication_year: Joi.number().integer().optional(),
   publication_format: Joi.string().optional(), // flipbook | informer
+  portal_id: Joi.number().integer().optional(),
 });
 
 function toPlain(row) {
@@ -59,6 +62,38 @@ export const GET = createEndpoint(
         where.publication_status = statuses[0];
       } else if (statuses.length > 1) {
         where.publication_status = statuses;
+      }
+    }
+
+    if (query?.portal_id != null && query.portal_id !== "") {
+      const pid = Number(query.portal_id);
+      if (Number.isInteger(pid) && pid >= 0) {
+        try {
+          const magRows = await PublicationModel.sequelize.query(
+            `SELECT magazine_id::text AS magazine_id
+             FROM public.magazine_portals
+             WHERE portal_id = :pid`,
+            { replacements: { pid }, type: QueryTypes.SELECT }
+          );
+          const ids = [
+            ...new Set(
+              (magRows || [])
+                .map((r) => String(r.magazine_id ?? "").trim())
+                .filter(Boolean)
+            ),
+          ];
+          if (ids.length === 0) {
+            return NextResponse.json([]);
+          }
+          where.magazine_id = { [Op.in]: ids };
+        } catch (e) {
+          const msg = String(e?.message || "");
+          if (msg.includes("magazine_portals") && msg.includes("does not exist")) {
+            console.warn("[publications-db] magazine_portals missing; ignoring portal_id filter");
+          } else {
+            throw e;
+          }
+        }
       }
     }
 

@@ -6,18 +6,28 @@ import apiClient from "@/app/apiClient";
 export type NewsletterListRow = {
   userList_id: string;
   userListName?: string;
+  /** Short summary from the API, e.g. "3 users" */
   userListPortal?: string;
   userListTopic?: string;
+  /** Member user UUIDs (aggregated from user_list_subscriptions in the API). */
+  listUserIdsArray?: string[];
+  portalId?: number | null;
+  /** From newsletter_campaigns linked to this list */
+  newsletterListType?: "main" | "specific" | string;
+  userListDescription?: string;
 };
 
 export default function SelectNewsletterListModal({
   open,
   onClose,
   onConfirm,
+  portalIdFilter = null,
 }: {
   open: boolean;
   onClose: () => void;
   onConfirm: (list: NewsletterListRow) => void;
+  /** When set, only lists for that portal are loaded (API `portal_id`). */
+  portalIdFilter?: number | null;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +37,7 @@ export default function SelectNewsletterListModal({
   const [filter, setFilter] = useState({
     id: "",
     name: "",
-    portal: "",
+    usersSummary: "",
     topic: "",
   });
 
@@ -36,8 +46,12 @@ export default function SelectNewsletterListModal({
     setLoading(true);
     setError(null);
     setSelectedId("");
+    const params =
+      portalIdFilter != null && Number.isFinite(Number(portalIdFilter))
+        ? { portal_id: Number(portalIdFilter) }
+        : {};
     apiClient
-      .get("/api/v1/user-lists")
+      .get("/api/v1/user-lists", { params })
       .then((res) => setLists(Array.isArray(res.data) ? (res.data as NewsletterListRow[]) : []))
       .catch((e: unknown) => {
         const message =
@@ -48,7 +62,7 @@ export default function SelectNewsletterListModal({
         setLists([]);
       })
       .finally(() => setLoading(false));
-  }, [open]);
+  }, [open, portalIdFilter]);
 
   useEffect(() => {
     if (!open) return;
@@ -62,17 +76,17 @@ export default function SelectNewsletterListModal({
   const filtered = useMemo(() => {
     const idQ = filter.id.trim().toLowerCase();
     const nameQ = filter.name.trim().toLowerCase();
-    const portalQ = filter.portal.trim().toLowerCase();
+    const usersQ = filter.usersSummary.trim().toLowerCase();
     const topicQ = filter.topic.trim().toLowerCase();
     return lists.filter((l) => {
       const id = String(l.userList_id ?? "").toLowerCase();
       const nm = String(l.userListName ?? "").toLowerCase();
-      const portal = String(l.userListPortal ?? "").toLowerCase();
+      const usersSummary = String(l.userListPortal ?? "").toLowerCase();
       const topic = String(l.userListTopic ?? "").toLowerCase();
       return (
         (!idQ || id.includes(idQ)) &&
         (!nameQ || nm.includes(nameQ)) &&
-        (!portalQ || portal.includes(portalQ)) &&
+        (!usersQ || usersSummary.includes(usersQ)) &&
         (!topicQ || topic.includes(topicQ))
       );
     });
@@ -130,12 +144,12 @@ export default function SelectNewsletterListModal({
               />
             </div>
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Portal</label>
+              <label className="block text-xs text-gray-600 mb-1">Users</label>
               <input
-                value={filter.portal}
-                onChange={(e) => setFilter((f) => ({ ...f, portal: e.target.value }))}
+                value={filter.usersSummary}
+                onChange={(e) => setFilter((f) => ({ ...f, usersSummary: e.target.value }))}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Filter by portal"
+                placeholder="Filter by user count"
               />
             </div>
             <div>
@@ -161,7 +175,7 @@ export default function SelectNewsletterListModal({
                       Name
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                      Portal
+                      Users
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
                       Topic

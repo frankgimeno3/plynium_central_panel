@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { useCompanyRequests, RequestState } from "@/app/logged/pages/network/requests/hooks/useCompanyRequests";
-import type { NotificationComment } from "@/app/contents/notifications.types";
+import type { NotificationComment as PanelTicketComment } from "@/app/contents/notifications.types";
 
 const BASE = "/logged/pages/tickets";
 
@@ -25,7 +25,8 @@ const formatDate = (dateString: string): string => {
   }
 };
 
-const stateOptions: RequestState[] = ["Pending", "In Process", "Other"];
+/** Matches list tabs; maps to `panel_ticket_state` (e.g. Done → solved). */
+const stateOptions: RequestState[] = ["Pending", "In Process", "Other", "Done"];
 
 const CompanyRequestDetailPage: FC = () => {
   const params = useParams();
@@ -76,7 +77,7 @@ const CompanyRequestDetailPage: FC = () => {
     setRequest({ ...request, request_state: newState });
   };
 
-  const sortedComments: NotificationComment[] = useMemo(() => {
+  const sortedComments: PanelTicketComment[] = useMemo(() => {
     const list = request?.commentsArray ?? [];
     return [...list].sort((a, b) => {
       const ta = Date.parse(a.date || "") || 0;

@@ -119,11 +119,9 @@ CREATE TABLE IF NOT EXISTS public.users_db (
   user_surnames VARCHAR(255) NULL,
   user_description TEXT NULL,
   user_main_image_src VARCHAR(255) NULL,
-  user_preferences JSONB NULL,
   user_cognito_sub VARCHAR(255) NULL,
   user_linkedin_profile VARCHAR(255) NULL,
-  user_employee_relations_array TEXT[] NOT NULL DEFAULT '{}'::text[],
-  newsletter_user_lists_id_array UUID[] NOT NULL DEFAULT '{}'::uuid[],
+  user_hasslogged_array INTEGER[] NOT NULL DEFAULT '{}'::integer[],
   CONSTRAINT users_db_pkey PRIMARY KEY (user_id),
   CONSTRAINT users_db_user_email_key UNIQUE (user_email)
 );
@@ -1013,6 +1011,7 @@ CREATE TABLE IF NOT EXISTS public.panel_tickets (
   panel_ticket_full_description TEXT NOT NULL DEFAULT ''::text,
   panel_ticket_related_to_user_id_array TEXT[] NOT NULL DEFAULT '{}'::text[],
   panel_ticket_created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   panel_ticket_updates_array JSONB NOT NULL DEFAULT '[]'::jsonb,
   CONSTRAINT panel_tickets_pkey PRIMARY KEY (panel_ticket_id)
 );
@@ -1050,6 +1049,7 @@ CREATE TABLE IF NOT EXISTS public.panel_ticket_company_data (
 CREATE TABLE IF NOT EXISTS public.user_notifications (
   user_notification_id UUID NOT NULL DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users_db (user_id) ON DELETE CASCADE,
+  portal_id INTEGER NULL REFERENCES public.portals_db (portal_id) ON DELETE SET NULL,
   notification_type VARCHAR(255) NOT NULL DEFAULT ''::character varying,
   notification_content TEXT NOT NULL DEFAULT ''::text,
   notification_date TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -1059,6 +1059,7 @@ CREATE TABLE IF NOT EXISTS public.user_notifications (
 );
 
 CREATE INDEX IF NOT EXISTS user_notifications_user_id_idx ON public.user_notifications (user_id);
+CREATE INDEX IF NOT EXISTS user_notifications_portal_id_idx ON public.user_notifications (portal_id);
 CREATE INDEX IF NOT EXISTS user_notifications_notification_date_idx ON public.user_notifications (notification_date DESC);
 CREATE INDEX IF NOT EXISTS user_notifications_notification_status_idx ON public.user_notifications (notification_status);
 CREATE INDEX IF NOT EXISTS user_notifications_notification_type_idx ON public.user_notifications (notification_type);
@@ -1129,7 +1130,7 @@ CREATE INDEX IF NOT EXISTS offered_preferential_pages_proposal_id_idx ON public.
 CREATE TABLE IF NOT EXISTS public.newsletter_user_lists (
   newsletter_user_list_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   newsletter_user_list_name VARCHAR(255) NULL,
-  newsletter_user_list_portals_array_id INTEGER[] NOT NULL DEFAULT '{}'::INTEGER[],
+  list_user_ids_array UUID[] NOT NULL DEFAULT '{}'::uuid[],
   newsletter_user_list_topic VARCHAR(255) NULL,
   newsletter_user_list_description TEXT NULL DEFAULT ''::text,
   newsletter_user_list_created_at TIMESTAMPTZ NOT NULL DEFAULT now()
@@ -1151,21 +1152,34 @@ CREATE TABLE IF NOT EXISTS public.newsletter_campaigns (
   newsletter_campaign_name VARCHAR(255) NOT NULL,
   newsletter_campaign_description TEXT NULL DEFAULT ''::text,
   portal_id INTEGER NOT NULL REFERENCES public.portals_db(portal_id) ON DELETE RESTRICT,
-  newsletter_campaign TEXT NULL DEFAULT ''::text,
+  newsletter_type VARCHAR(255) NOT NULL DEFAULT 'main'::character varying,
   content_theme VARCHAR(255) NULL DEFAULT ''::character varying,
+  newsletter_user_lists_id_array UUID[] NOT NULL DEFAULT '{}'::uuid[],
   newsletter_campaign_publication_frequency VARCHAR(255) NOT NULL,
-  newsletter_campaign_start_date DATE NULL,
-  newsletter_campaign_end_date DATE NULL,
-  newsletter_campaign_planned_publication_dates_array DATE[] NOT NULL DEFAULT '{}'::date[],
   newsletter_campaign_status VARCHAR(255) NOT NULL DEFAULT 'draft'::character varying,
   newsletter_campaign_created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  newsletter_campaign_updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+  newsletter_campaign_updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT newsletter_campaigns_newsletter_type_check
+    CHECK (newsletter_type IN ('main', 'specific'))
 );
 
 DROP TRIGGER IF EXISTS newsletter_campaigns_updated_at ON public.newsletter_campaigns;
 CREATE TRIGGER newsletter_campaigns_updated_at
   BEFORE UPDATE ON public.newsletter_campaigns
   FOR EACH ROW EXECUTE FUNCTION public.set_newsletter_campaigns_updated_at();
+
+-- Portal associations for campaigns (multi-portal support)
+CREATE TABLE IF NOT EXISTS public.newsletter_campaign_portals (
+  newsletter_campaign_id VARCHAR(255) NOT NULL REFERENCES public.newsletter_campaigns(newsletter_campaign_id) ON DELETE CASCADE,
+  portal_id INTEGER NOT NULL REFERENCES public.portals_db(portal_id) ON DELETE CASCADE,
+  newsletter_campaign_portal_created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  PRIMARY KEY (newsletter_campaign_id, portal_id)
+);
+
+CREATE INDEX IF NOT EXISTS newsletter_campaign_portals_campaign_idx
+  ON public.newsletter_campaign_portals (newsletter_campaign_id);
+CREATE INDEX IF NOT EXISTS newsletter_campaign_portals_portal_idx
+  ON public.newsletter_campaign_portals (portal_id);
 
 CREATE OR REPLACE FUNCTION public.set_newsletters_db_updated_at()
 RETURNS TRIGGER

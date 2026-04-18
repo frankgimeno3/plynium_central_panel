@@ -40,6 +40,7 @@ const OtherCommunicationsTab: FC = () => {
   const tabs: { key: TabFilter; label: string }[] = [
     { key: "Pending", label: "Pending" },
     { key: "In Process", label: "In Process" },
+    { key: "Done", label: "Done" },
     { key: "Other", label: "Other" },
   ];
 

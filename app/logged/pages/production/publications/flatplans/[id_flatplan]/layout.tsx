@@ -38,7 +38,7 @@ export default function FlatplanByIdLayout({
 
   useEffect(() => {
     const navButton = isFlatplanSlotPage
-      ? { label: "Volver al planillo", href: detailPath }
+      ? { label: "Back to flatplan", href: detailPath }
       : { label: "Back to Flatplans", href: BASE };
 
     setPageMeta({

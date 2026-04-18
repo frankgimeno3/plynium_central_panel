@@ -6,9 +6,22 @@ import { usePageContent } from "@/app/logged/logged_components/context_content/P
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import type { NewsletterCampaign, Newsletter } from "@/app/contents/interfaces";
 import AddScheduledNewsletterModal, { type AddScheduledNewsletterForm } from "../../components/AddScheduledNewsletterModal";
+import AddCampaignPortalsModal from "../../components/AddCampaignPortalsModal";
+import ConfirmRemoveCampaignPortalModal from "../../components/ConfirmRemoveCampaignPortalModal";
 import { NewsletterService } from "@/app/service/NewsletterService";
 
 const BASE = "/logged/pages/production/newsletters";
+
+const FREQUENCY_OPTIONS = [
+  { value: "daily", label: "Daily" },
+  { value: "weekly", label: "Weekly" },
+  { value: "biweekly", label: "Biweekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "bimonthly", label: "Bimonthly" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "biannual", label: "Biannual" },
+  { value: "annual", label: "Yearly" },
+];
 
 function nextNewsletterId(existing: Newsletter[]): string {
   const nums = existing
@@ -16,6 +29,29 @@ function nextNewsletterId(existing: Newsletter[]): string {
     .filter((n) => !Number.isNaN(n));
   const max = nums.length ? Math.max(...nums) : 0;
   return `nl-${String(max + 1).padStart(3, "0")}`;
+}
+
+type CampaignFormState = {
+  name: string;
+  description: string;
+  newsletterType: "main" | "specific";
+  contentTheme: string;
+  frequency: string;
+  status: string;
+};
+
+type PortalTag = { id: number; key: string; name: string };
+
+function toFormState(c: NewsletterCampaign): CampaignFormState {
+  const t = String(c.newsletterType ?? "main").trim().toLowerCase();
+  return {
+    name: c.name ?? "",
+    description: c.description ?? "",
+    newsletterType: (t === "specific" ? "specific" : "main") as "main" | "specific",
+    contentTheme: c.contentTheme ?? "",
+    frequency: c.frequency ?? "",
+    status: c.status ?? "",
+  };
 }
 
 const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ params }) => {
@@ -47,6 +83,151 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
     setNewsletters(Array.isArray(newslettersRes) ? newslettersRes : []);
     setLoading(false);
   }, []);
+
+  const [form, setForm] = useState<CampaignFormState | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [campaignPortals, setCampaignPortals] = useState<PortalTag[]>([]);
+  const [portalsModalOpen, setPortalsModalOpen] = useState(false);
+  const [removeModalOpen, setRemoveModalOpen] = useState(false);
+  const [confirmMode, setConfirmMode] = useState<"portal" | "campaign">("portal");
+  const [removePortal, setRemovePortal] = useState<PortalTag | null>(null);
+  const [relatedLoading, setRelatedLoading] = useState(false);
+  const [relatedError, setRelatedError] = useState<string | null>(null);
+  const [relatedNewsletters, setRelatedNewsletters] = useState<Newsletter[]>([]);
+  const [removing, setRemoving] = useState(false);
+
+  const resetConfirmModal = useCallback(() => {
+    setRemoveModalOpen(false);
+    setConfirmMode("portal");
+    setRemovePortal(null);
+    setRelatedError(null);
+    setRelatedNewsletters([]);
+    setRelatedLoading(false);
+    setRemoving(false);
+  }, []);
+
+  useEffect(() => {
+    if (!campaign) return;
+    setForm(toFormState(campaign));
+    setSaveError(null);
+  }, [campaign?.id]);
+
+  useEffect(() => {
+    if (!campaign) return;
+    NewsletterService.getNewsletterCampaignPortals(campaign.id)
+      .then((list) => setCampaignPortals(Array.isArray(list) ? list : []))
+      .catch(() => setCampaignPortals([]));
+  }, [campaign?.id]);
+
+  const isDirty = useMemo(() => {
+    if (!campaign || !form) return false;
+    const original = toFormState(campaign);
+    return JSON.stringify(original) !== JSON.stringify(form);
+  }, [campaign, form]);
+
+  const handleSave = useCallback(async () => {
+    if (!campaign || !form || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      await NewsletterService.updateNewsletterCampaign(id_campaign, {
+        name: form.name,
+        description: form.description,
+        newsletterType: form.newsletterType,
+        contentTheme: form.contentTheme,
+        frequency: form.frequency,
+        status: form.status,
+      });
+      await reload();
+    } catch (e: unknown) {
+      setSaveError(e instanceof Error ? e.message : "Failed to save campaign");
+    } finally {
+      setSaving(false);
+    }
+  }, [campaign, form, id_campaign, reload, saving]);
+
+  const handleCancelEdit = useCallback(() => {
+    if (!campaign) return;
+    setForm(toFormState(campaign));
+    setSaveError(null);
+  }, [campaign]);
+
+  const handleAddPortals = useCallback(
+    async (portalIds: number[]) => {
+      if (!campaign) return;
+      await NewsletterService.addNewsletterCampaignPortals(campaign.id, portalIds);
+      const list = await NewsletterService.getNewsletterCampaignPortals(campaign.id);
+      setCampaignPortals(Array.isArray(list) ? list : []);
+      setPortalsModalOpen(false);
+      await reload();
+    },
+    [campaign, reload]
+  );
+
+  const openRemovePortal = useCallback(
+    async (portal: PortalTag) => {
+      if (!campaign) return;
+      setConfirmMode("portal");
+      setRemovePortal(portal);
+      setRemoveModalOpen(true);
+      setRelatedLoading(true);
+      setRelatedError(null);
+      setRelatedNewsletters([]);
+      try {
+        const list = await NewsletterService.getRelatedNewslettersForCampaignPortal(campaign.id, portal.id);
+        setRelatedNewsletters(Array.isArray(list) ? list : []);
+      } catch (e: unknown) {
+        setRelatedError(e instanceof Error ? e.message : "Failed to load related newsletters");
+      } finally {
+        setRelatedLoading(false);
+      }
+    },
+    [campaign]
+  );
+
+  const openDeleteCampaign = useCallback(async () => {
+    if (!campaign) return;
+    setConfirmMode("campaign");
+    setRemovePortal(null);
+    setRemoveModalOpen(true);
+    setRelatedLoading(true);
+    setRelatedError(null);
+    setRelatedNewsletters([]);
+    try {
+      const list = await NewsletterService.getNewslettersByCampaign(campaign.id);
+      setRelatedNewsletters(Array.isArray(list) ? list : []);
+    } catch (e: unknown) {
+      setRelatedError(e instanceof Error ? e.message : "Failed to load newsletters");
+    } finally {
+      setRelatedLoading(false);
+    }
+  }, [campaign]);
+
+  const handleConfirmModal = useCallback(async () => {
+    if (!campaign) return;
+    if (confirmMode === "portal" && !removePortal) return;
+    setRemoving(true);
+    try {
+      if (confirmMode === "portal") {
+        if (!removePortal) return;
+        await NewsletterService.removeNewsletterCampaignPortal(campaign.id, removePortal.id);
+        const list = await NewsletterService.getNewsletterCampaignPortals(campaign.id);
+        setCampaignPortals(Array.isArray(list) ? list : []);
+        resetConfirmModal();
+        await reload();
+        return;
+      }
+
+      await NewsletterService.deleteNewsletterCampaign(campaign.id);
+      resetConfirmModal();
+      router.push(BASE);
+    } catch (e: unknown) {
+      setRelatedError(e instanceof Error ? e.message : "Action failed");
+    } finally {
+      setRemoving(false);
+    }
+  }, [BASE, campaign, confirmMode, removePortal, reload, resetConfirmModal, router]);
 
   const [modalOpen, setModalOpen] = useState(false);
   const handleAddScheduled = useCallback(
@@ -140,35 +321,159 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
         <div className="flex flex-col w-full">
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Campaign data</h2>
+        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">Campaign data</h2>
+            <p className="text-sm text-gray-500">Edit and save campaign fields.</p>
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={openDeleteCampaign}
+              disabled={saving || removing || relatedLoading}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+            >
+              Delete Newsletter Campaign
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelEdit}
+              disabled={!isDirty || saving}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={!isDirty || saving || !form?.name.trim() || !form?.frequency.trim()}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {saving ? "Saving…" : "Save"}
+            </button>
+          </div>
+        </div>
+
+        {saveError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {saveError}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <p className="text-xs text-gray-500 uppercase">Name</p>
-            <p className="font-medium text-gray-900">{campaign.name}</p>
+            <label className="block text-xs text-gray-500 uppercase mb-1">Name</label>
+            <input
+              type="text"
+              value={form?.name ?? ""}
+              onChange={(e) => setForm((f) => (f ? { ...f, name: e.target.value } : f))}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              disabled={saving}
+              required
+            />
           </div>
           <div>
-            <p className="text-xs text-gray-500 uppercase">Portal</p>
-            <p className="font-medium text-gray-900">{campaign.portalCode}</p>
+            <label className="block text-xs text-gray-500 uppercase mb-1">Portal</label>
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+              {campaignPortals.map((p) => (
+                <span
+                  key={p.id}
+                  className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-medium text-gray-800 border border-gray-200"
+                >
+                  {p.key}
+                  <button
+                    type="button"
+                    onClick={() => openRemovePortal(p)}
+                    className="text-gray-500 hover:text-gray-800"
+                    aria-label={`Remove ${p.key}`}
+                    disabled={saving}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {campaignPortals.length === 0 && (
+                <span className="text-sm text-gray-500">No portals</span>
+              )}
+              <button
+                type="button"
+                onClick={() => setPortalsModalOpen(true)}
+                className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700"
+                aria-label="Add portal"
+                disabled={saving}
+              >
+                +
+              </button>
+            </div>
           </div>
           <div>
-            <p className="text-xs text-gray-500 uppercase">Content theme</p>
-            <p className="font-medium text-gray-900">{campaign.contentTheme}</p>
+            <label className="block text-xs text-gray-500 uppercase mb-1">Type</label>
+            <select
+              value={form?.newsletterType ?? "main"}
+              onChange={(e) =>
+                setForm((f) =>
+                  f
+                    ? { ...f, newsletterType: (e.target.value === "specific" ? "specific" : "main") }
+                    : f
+                )
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              disabled={saving}
+            >
+              <option value="main">main</option>
+              <option value="specific">specific</option>
+            </select>
           </div>
           <div>
-            <p className="text-xs text-gray-500 uppercase">Frequency</p>
-            <p className="font-medium text-gray-900">{campaign.frequency}</p>
+            <label className="block text-xs text-gray-500 uppercase mb-1">Status</label>
+            <input
+              type="text"
+              value={form?.status ?? ""}
+              onChange={(e) => setForm((f) => (f ? { ...f, status: e.target.value } : f))}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              disabled={saving}
+            />
           </div>
           <div>
-            <p className="text-xs text-gray-500 uppercase">Period</p>
-            <p className="font-medium text-gray-900">{campaign.startDate} – {campaign.endDate}</p>
+            <label className="block text-xs text-gray-500 uppercase mb-1">Content theme</label>
+            <input
+              type="text"
+              value={form?.contentTheme ?? ""}
+              onChange={(e) => setForm((f) => (f ? { ...f, contentTheme: e.target.value } : f))}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              disabled={saving}
+            />
           </div>
           <div>
-            <p className="text-xs text-gray-500 uppercase">Status</p>
-            <p className="font-medium text-gray-900">{campaign.status}</p>
+            <label className="block text-xs text-gray-500 uppercase mb-1">Frequency</label>
+            <select
+              value={form?.frequency ?? ""}
+              onChange={(e) => setForm((f) => (f ? { ...f, frequency: e.target.value } : f))}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              disabled={saving}
+              required
+            >
+              <option value="">Select frequency</option>
+              {FREQUENCY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+              {form?.frequency &&
+                !FREQUENCY_OPTIONS.some((opt) => opt.value === form.frequency) && (
+                  <option value={form.frequency}>{form.frequency}</option>
+                )}
+            </select>
           </div>
           <div className="md:col-span-2">
-            <p className="text-xs text-gray-500 uppercase">Description</p>
-            <p className="text-gray-700">{campaign.description}</p>
+            <label className="block text-xs text-gray-500 uppercase mb-1">Description</label>
+            <textarea
+              value={form?.description ?? ""}
+              onChange={(e) => setForm((f) => (f ? { ...f, description: e.target.value } : f))}
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              rows={4}
+              disabled={saving}
+            />
           </div>
         </div>
             </div>
@@ -230,6 +535,29 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         onSubmit={handleAddScheduled}
+      />
+
+      <AddCampaignPortalsModal
+        open={portalsModalOpen}
+        existingPortalIds={campaignPortals.map((p) => p.id)}
+        onClose={() => setPortalsModalOpen(false)}
+        onAdd={handleAddPortals}
+      />
+
+      <ConfirmRemoveCampaignPortalModal
+        open={removeModalOpen}
+        mode={confirmMode}
+        portal={removePortal}
+        campaignName={form?.name ?? campaign.name}
+        loading={relatedLoading}
+        newsletters={relatedNewsletters}
+        error={relatedError}
+        confirming={removing}
+        onClose={() => {
+          if (removing) return;
+          resetConfirmModal();
+        }}
+        onConfirm={handleConfirmModal}
       />
     </>
   );

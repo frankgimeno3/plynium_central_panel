@@ -56,7 +56,8 @@ WITH expected(table_name) AS (
     ('newsletter_content_blocks'),
     ('revenues_db'),
     ('payments_db'),
-    ('newsletter_user_lists')
+    ('newsletter_user_lists'),
+    ('user_list_subscriptions')
 ),
 actual AS (
   SELECT table_name

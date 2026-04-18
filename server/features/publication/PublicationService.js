@@ -1,6 +1,7 @@
 import PublicationModel from "./PublicationModel.js";
 // Ensure models are initialized by importing models.js
 import "../../database/models.js";
+import { QueryTypes } from "sequelize";
 
 function toApiShape(p) {
     const row = p && typeof p.get === "function" ? p.get({ plain: true }) : p;
@@ -81,6 +82,118 @@ function parseMonth(v) {
     return n;
 }
 
+function normalizePublicationFormat(v) {
+    const s = String(v ?? "").trim().toLowerCase();
+    if (s === "informer" || s === "flipbook" || s === "both") return s;
+    return "flipbook";
+}
+
+/** API row for magazine admin (planned issues + publication lists). */
+export function toPublicationMagazineAdminApi(p) {
+    const row = p && typeof p.get === "function" ? p.get({ plain: true }) : p;
+    if (!row) return null;
+    return {
+        id_publication: row.publication_id,
+        publication_status: row.publication_status ?? "draft",
+        publication_format: row.publication_format ?? "flipbook",
+        magazine_id: row.magazine_id ?? "",
+        publication_year: row.publication_year ?? null,
+        magazine_this_year_issue: row.magazine_this_year_issue ?? null,
+        magazine_general_issue_number: row.magazine_general_issue_number ?? null,
+        publication_expected_publication_month: row.publication_expected_publication_month ?? null,
+        publication_theme: row.publication_theme ?? "",
+        is_special_edition: Boolean(row.is_special_edition),
+        publication_edition_name: row.publication_edition_name ?? "",
+        real_publication_month_date: row.real_publication_month_date ?? null,
+    };
+}
+
+export async function listPublicationsForMagazineId(magazineId) {
+    if (!PublicationModel.sequelize) return [];
+    const mid = String(magazineId || "").trim();
+    if (!mid) return [];
+    const rows = await PublicationModel.findAll({
+        where: { magazine_id: mid },
+        order: [
+            ["publication_year", "DESC"],
+            ["magazine_this_year_issue", "ASC"],
+            ["publication_id", "ASC"],
+        ],
+    });
+    return rows.map((r) => toPublicationMagazineAdminApi(r)).filter(Boolean);
+}
+
+async function nextMagazineGeneralIssueNumber(magazineId) {
+    const mid = String(magazineId || "").trim();
+    if (!mid || !PublicationModel.sequelize) return 1;
+    const rows = await PublicationModel.sequelize.query(
+        `SELECT COALESCE(MAX(magazine_general_issue_number), 0) + 1 AS n
+     FROM publications_db WHERE magazine_id = :mid`,
+        { replacements: { mid }, type: QueryTypes.SELECT }
+    );
+    const n = Array.isArray(rows) && rows[0] ? rows[0].n : 1;
+    return Number.isInteger(Number(n)) && Number(n) > 0 ? Number(n) : 1;
+}
+
+function lastDayOfMonthIso(year, month1to12) {
+    const y = Number(year);
+    const m = Number(month1to12);
+    if (!Number.isInteger(y) || !Number.isInteger(m) || m < 1 || m > 12) return null;
+    const d = new Date(y, m, 0);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${d.getFullYear()}-${mm}-${dd}`;
+}
+
+/**
+ * Creates a publications_db row for a planned magazine issue (draft).
+ */
+export async function createMagazineIssuePublication({
+    magazineId,
+    magazineName,
+    publication_year,
+    magazine_this_year_issue,
+    publication_expected_publication_month,
+    is_special_edition,
+    publication_theme,
+    publication_format,
+}) {
+    if (!PublicationModel.sequelize) throw new Error("PublicationModel not initialized");
+    const mid = String(magazineId || "").trim();
+    const y = Number(publication_year);
+    const issueInYear = Number(magazine_this_year_issue);
+    if (!mid || !Number.isInteger(y) || !Number.isInteger(issueInYear) || issueInYear < 1) {
+        throw new Error("Invalid magazine issue payload");
+    }
+    const gen = await nextMagazineGeneralIssueNumber(mid);
+    const yy = String(y).slice(-2);
+    const id = `publication_${yy}_${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
+    const name = String(magazineName || "").trim() || "Magazine";
+    const edition = `${name} ${y} - ${String(issueInYear).padStart(3, "0")}`;
+    const month = parseMonth(publication_expected_publication_month);
+    const realDate = month != null ? lastDayOfMonthIso(y, month) : null;
+    const format = normalizePublicationFormat(publication_format);
+
+    const row = await PublicationModel.create({
+        publication_id: id,
+        magazine_id: mid,
+        magazine_general_issue_number: gen,
+        publication_year: y,
+        magazine_this_year_issue: issueInYear,
+        publication_expected_publication_month: month,
+        real_publication_month_date: realDate,
+        publication_materials_deadline: null,
+        publication_main_image_url: "",
+        publication_edition_name: edition,
+        is_special_edition: Boolean(is_special_edition),
+        publication_theme: String(publication_theme ?? "").trim(),
+        publication_status: "draft",
+        publication_format: format,
+    });
+
+    return toPublicationMagazineAdminApi(row);
+}
+
 export async function createPublication(publicationData) {
     const requestId = `publication_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
     console.log(`[PublicationService] [${requestId}] Starting createPublication`);
@@ -95,10 +208,7 @@ export async function createPublication(publicationData) {
         console.log(`[PublicationService] [${requestId}] Database: ${dbConfig.host}:${dbConfig.port}/${dbConfig.database}`);
         console.log(`[PublicationService] [${requestId}] Creating publication with data:`, JSON.stringify(publicationData, null, 2));
 
-        const format =
-            publicationData.publication_format === "informer" || publicationData.publication_format === "flipbook"
-                ? publicationData.publication_format
-                : "flipbook";
+        const format = normalizePublicationFormat(publicationData.publication_format);
 
         const publication = await PublicationModel.create({
             publication_id: publicationData.id_publication,
@@ -200,14 +310,32 @@ export async function updatePublication(idPublication, publicationData) {
         }
         if (d.publication_expected_publication_month !== undefined) {
             publication.publication_expected_publication_month = parseMonth(d.publication_expected_publication_month);
+            if (publication.publication_expected_publication_month == null) {
+                publication.real_publication_month_date = null;
+            }
+        }
+        if (
+            (d.publication_expected_publication_month !== undefined || d.publication_year !== undefined) &&
+            d.real_publication_month_date === undefined &&
+            d.date === undefined
+        ) {
+            const y =
+                d.publication_year != null ? Number(d.publication_year) : Number(publication.publication_year);
+            const m = parseMonth(
+                d.publication_expected_publication_month !== undefined
+                    ? d.publication_expected_publication_month
+                    : publication.publication_expected_publication_month
+            );
+            if (Number.isInteger(y) && m != null) {
+                publication.real_publication_month_date = lastDayOfMonthIso(y, m);
+            }
         }
         if (d.publication_materials_deadline !== undefined) publication.publication_materials_deadline = d.publication_materials_deadline;
         if (d.publication_edition_name !== undefined) publication.publication_edition_name = d.publication_edition_name;
         if (d.is_special_edition !== undefined) publication.is_special_edition = Boolean(d.is_special_edition);
         if (d.publication_status !== undefined) publication.publication_status = String(d.publication_status);
         if (d.publication_format !== undefined) {
-            publication.publication_format =
-                d.publication_format === "informer" || d.publication_format === "flipbook" ? d.publication_format : publication.publication_format;
+            publication.publication_format = normalizePublicationFormat(d.publication_format);
         }
 
         await publication.save();
