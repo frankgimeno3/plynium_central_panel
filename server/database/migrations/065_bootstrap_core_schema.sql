@@ -983,12 +983,40 @@ CREATE TRIGGER orders_db_updated_at
   BEFORE UPDATE ON public.orders_db
   FOR EACH ROW EXECUTE FUNCTION public.set_orders_db_updated_at();
 
--- ===== Services catalog (canonical: service_* schema; see 096_services_db_rename_columns.sql) =====
+-- ===== Service groups (FK target for services_db.service_group_id; see also 087_service_groups.sql) =====
+CREATE TABLE IF NOT EXISTS public.service_groups (
+  service_group_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  service_group_name VARCHAR(255) NOT NULL,
+  service_group_channel VARCHAR(255) NOT NULL DEFAULT ''::character varying
+);
+
+INSERT INTO public.service_groups (service_group_name, service_group_channel)
+SELECT v.service_group_name, v.service_group_channel
+FROM (
+  VALUES
+    ('newsletter_banner'::varchar(255), 'dem'::varchar(255)),
+    ('newsletter_sponsored_space', 'dem'),
+    ('portal_highlited_company', 'portal'),
+    ('portal_premium_company', 'portal'),
+    ('portal_web_banner', 'portal'),
+    ('magazine_single_advert', 'magazine'),
+    ('magazine_double_advert', 'magazine'),
+    ('magazine_sponsored_article', 'magazine'),
+    ('magazine_cover_page', 'magazine'),
+    ('magazine_end_page', 'magazine'),
+    ('magazine_premium_page', 'magazine')
+) AS v(service_group_name, service_group_channel)
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM public.service_groups sg
+  WHERE sg.service_group_name = v.service_group_name
+);
+
+-- ===== Services catalog =====
 CREATE TABLE IF NOT EXISTS public.services_db (
   service_id VARCHAR(255) PRIMARY KEY,
   service_full_name VARCHAR(512) NULL,
-  service_channel VARCHAR(64) NOT NULL DEFAULT ''::character varying,
-  service_product VARCHAR(255) NOT NULL DEFAULT ''::character varying,
+  service_group_id UUID NOT NULL REFERENCES public.service_groups(service_group_id) ON DELETE RESTRICT,
   service_format VARCHAR(512) NOT NULL DEFAULT ''::character varying,
   service_description TEXT NOT NULL DEFAULT ''::text,
   service_unit VARCHAR(255) NOT NULL DEFAULT ''::character varying,
@@ -997,8 +1025,7 @@ CREATE TABLE IF NOT EXISTS public.services_db (
 );
 
 CREATE INDEX IF NOT EXISTS services_db_service_full_name_idx ON public.services_db (service_full_name);
-CREATE INDEX IF NOT EXISTS services_db_service_channel_idx ON public.services_db (service_channel);
-CREATE INDEX IF NOT EXISTS services_db_service_product_idx ON public.services_db (service_product);
+CREATE INDEX IF NOT EXISTS services_db_service_group_id_idx ON public.services_db (service_group_id);
 
 -- ===== Panel tickets (NotificationDbModel / Comment / CompanyContent); tabla RDS: panel_tickets =====
 CREATE TABLE IF NOT EXISTS public.panel_tickets (

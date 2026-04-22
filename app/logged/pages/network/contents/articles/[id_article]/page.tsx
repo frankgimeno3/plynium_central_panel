@@ -20,6 +20,9 @@ import ArticlePublicationPortalsSection from "./id_article_components/ArticlePub
 import ContentModal from "./id_article_components/ContentModal";
 import { useArticlePage } from "./hooks/useArticlePage";
 
+const ARTICLES_MEDIA_LIBRARY_PATH =
+  "Structural media/Network media/content media/articles media";
+
 export default function IdArticlePage() {
   const params = useParams();
   const router = useRouter();
@@ -336,6 +339,7 @@ export default function IdArticlePage() {
         onSelectImage={(imageSrc) => {
           handleSaveEditChanges(imageSrc);
         }}
+        initialPath={ARTICLES_MEDIA_LIBRARY_PATH}
       />
 
       <EventSelectModal

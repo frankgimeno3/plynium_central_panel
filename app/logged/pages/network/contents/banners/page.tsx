@@ -8,6 +8,8 @@ import DeleteSectionModal from './banner_components/DeleteSectionModal';
 import EditRouteModal from './banner_components/EditRouteModal';
 import ChangeImageModal from './banner_components/ChangeImageModal';
 import ChangeRedirectionModal from './banner_components/ChangeRedirectionModal';
+import AddBannerModal from './banner_components/AddBannerModal';
+import DeleteBannerModal from './banner_components/DeleteBannerModal';
 import TopBannersTab from './banner_tabs/TopBannersTab';
 import MiddleBannersTab from './banner_tabs/MiddleBannersTab';
 import RightBannersTab from './banner_tabs/RightBannersTab';
@@ -63,6 +65,7 @@ const Banners: FC = () => {
         customRightSections,
         customMediumSections,
         expiredBanners,
+        addBannerModalOpen,
         bannerScheduleModalOpen,
         bannerScheduleModalMode,
         bannerScheduleDefaults,
@@ -71,6 +74,8 @@ const Banners: FC = () => {
         showEditRouteModal,
         showChangeImageModal,
         showChangeRedirectionModal,
+        deleteBannerModalOpen,
+        deleteBannerId,
         adSectionType,
         setShowAdSectionModal,
         setShowDeleteModal,
@@ -80,6 +85,8 @@ const Banners: FC = () => {
         setDeleteSectionId,
         setEditSectionId,
         setAdSectionType,
+        confirmDeleteBanner,
+        cancelDeleteBanner,
         handleAddHomePageTopBanner,
         handleAddCustomTopBanner,
         handleChangeAppearanceWeight,
@@ -104,6 +111,8 @@ const Banners: FC = () => {
         getCurrentBannerRedirection,
         handleBannerScheduleConfirm,
         handleBannerScheduleCancel,
+        handleAddBannerDetailsConfirm,
+        handleAddBannerDetailsCancel,
         openEditScheduleForBanner,
         saveBannerScheduleInline,
         resolveSectionForBanner,
@@ -310,6 +319,12 @@ const Banners: FC = () => {
                                 setDeleteSectionId(null);
                             }}
                         />
+                        <DeleteBannerModal
+                            isOpen={deleteBannerModalOpen}
+                            bannerId={deleteBannerId}
+                            onConfirm={confirmDeleteBanner}
+                            onCancel={cancelDeleteBanner}
+                        />
                         <EditRouteModal
                             isOpen={showEditRouteModal}
                             currentRoute={getCurrentRoute()}
@@ -330,6 +345,12 @@ const Banners: FC = () => {
                             currentRedirection={getCurrentBannerRedirection()}
                             onConfirm={handleChangeRedirection}
                             onCancel={() => setShowChangeRedirectionModal(false)}
+                        />
+                        <AddBannerModal
+                            isOpen={addBannerModalOpen}
+                            defaultRedirection="https://www.vidrioperfil.com"
+                            onConfirm={handleAddBannerDetailsConfirm}
+                            onCancel={handleAddBannerDetailsCancel}
                         />
                         <BannerScheduleModal
                             isOpen={bannerScheduleModalOpen}

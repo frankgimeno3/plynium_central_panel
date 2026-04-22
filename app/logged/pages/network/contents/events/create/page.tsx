@@ -9,6 +9,9 @@ import CustomerSelectModal, { type CustomerRow } from '@/app/logged/logged_compo
 import { EventsService } from '@/app/service/EventsService';
 import { PortalService } from '@/app/service/PortalService';
 
+const EVENTS_MEDIA_LIBRARY_PATH =
+  'Structural media/Network media/content media/events media';
+
 const REGIONS = [
   'EUROPE',
   'AFRICA',
@@ -624,6 +627,7 @@ const CreateEvent: FC = () => {
           setImageLoadError(false);
           setMediatecaModalOpen(false);
         }}
+        initialPath={EVENTS_MEDIA_LIBRARY_PATH}
       />
       <CustomerSelectModal
         open={customerModalOpen}

@@ -28,6 +28,7 @@ import PmEventDbModel from "../features/pm_event_db/PmEventDbModel.js";
 import IssuedInvoiceDbModel from "../features/billing_db/IssuedInvoiceDbModel.js";
 import OrderDbModel from "../features/billing_db/OrderDbModel.js";
 import ServiceDbModel from "../features/service_db/ServiceDbModel.js";
+import ServiceGroupDbModel from "../features/service_db/ServiceGroupDbModel.js";
 import NotificationDbModel from "../features/notification_db/NotificationDbModel.js";
 import NotificationCommentDbModel from "../features/notification_db/NotificationCommentDbModel.js";
 import NotificationCompanyContentDbModel from "../features/notification_db/NotificationCompanyContentDbModel.js";
@@ -1056,11 +1057,22 @@ OrderDbModel.init({
     ]
 });
 
+ServiceGroupDbModel.init({
+    service_group_id: { type: DataTypes.UUID, primaryKey: true },
+    service_group_name: { type: DataTypes.STRING(255), allowNull: false },
+    service_group_channel: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" }
+}, {
+    sequelize,
+    modelName: "service_group",
+    underscored: true,
+    tableName: "service_groups",
+    timestamps: false
+});
+
 ServiceDbModel.init({
     service_id: { type: DataTypes.STRING(64), primaryKey: true, unique: true },
     service_full_name: { type: DataTypes.STRING(512), allowNull: false, defaultValue: "" },
-    service_channel: { type: DataTypes.STRING(64), allowNull: false, defaultValue: "" },
-    service_product: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" },
+    service_group_id: { type: DataTypes.UUID, allowNull: false },
     service_format: { type: DataTypes.STRING(512), allowNull: false, defaultValue: "" },
     service_description: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
     service_unit: { type: DataTypes.STRING(128), allowNull: false, defaultValue: "" },
@@ -1074,8 +1086,7 @@ ServiceDbModel.init({
     timestamps: false,
     indexes: [
         { fields: ["service_full_name"] },
-        { fields: ["service_channel"] },
-        { fields: ["service_product"] }
+        { fields: ["service_group_id"] }
     ]
 });
 
@@ -1223,5 +1234,5 @@ PublicationSlotContentDbModel.belongsTo(PublicationModel, { foreignKey: "publica
 defineAssociations();
 }
 
-export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, PublicationSlotDbModel, PublicationSlotContentDbModel, OfferedPreferentialPageDbModel };
+export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceGroupDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, PublicationSlotDbModel, PublicationSlotContentDbModel, OfferedPreferentialPageDbModel };
 

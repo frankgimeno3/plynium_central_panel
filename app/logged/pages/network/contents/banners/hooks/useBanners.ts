@@ -82,6 +82,11 @@ type PendingAddKind =
     | { type: 'custom-medium'; sectionId: string }
     | { type: 'custom-right'; sectionId: string };
 
+type PendingAddDetails = {
+    src: string;
+    bannerRedirection: string;
+} | null;
+
 export interface CustomSection {
     id: string;
     name: string;
@@ -114,6 +119,8 @@ export const useBanners = (portalId: number | null) => {
     const [bannerScheduleModalMode, setBannerScheduleModalMode] = useState<'add' | 'edit'>('add');
     const [bannerScheduleDefaults, setBannerScheduleDefaults] = useState<{ start: string; end: string } | null>(null);
     const [pendingAddKind, setPendingAddKind] = useState<PendingAddKind | null>(null);
+    const [pendingAddDetails, setPendingAddDetails] = useState<PendingAddDetails>(null);
+    const [addBannerModalOpen, setAddBannerModalOpen] = useState(false);
     const [editScheduleBannerId, setEditScheduleBannerId] = useState<string | null>(null);
 
     // Modal states
@@ -125,6 +132,8 @@ export const useBanners = (portalId: number | null) => {
     const [editSectionId, setEditSectionId] = useState<string | null>(null);
     const [editSectionType, setEditSectionType] = useState<'top' | 'right' | 'medium'>('top');
     const [adSectionType, setAdSectionType] = useState<'top' | 'right' | 'medium'>('top');
+    const [deleteBannerModalOpen, setDeleteBannerModalOpen] = useState(false);
+    const [deleteBannerId, setDeleteBannerId] = useState<string | null>(null);
     const [changeImageBannerId, setChangeImageBannerId] = useState<string | null>(null);
     const [changeImageBannerSection, setChangeImageBannerSection] = useState<'home' | 'home-top' | 'home-medium' | string | null>(null);
     const [changeImageBannerType, setChangeImageBannerType] = useState<'top' | 'right' | 'medium' | 'home' | 'home-top' | 'home-medium' | null>(null);
@@ -321,9 +330,15 @@ export const useBanners = (portalId: number | null) => {
             setBannerScheduleModalOpen(false);
             setEditScheduleBannerId(null);
             setPendingAddKind(null);
+            setPendingAddDetails(null);
             return;
         }
         if (!pendingAddKind) return;
+
+        const draftSrc = pendingAddDetails?.src?.trim() ? pendingAddDetails.src.trim() : DEFAULT_BANNER_IMAGE;
+        const draftRedirection = pendingAddDetails?.bannerRedirection?.trim()
+            ? pendingAddDetails.bannerRedirection.trim()
+            : DEFAULT_BANNER_REDIRECTION;
 
         const runCreate = (newBanner: Banner) => {
             BannerService.createBanner({
@@ -334,7 +349,7 @@ export const useBanners = (portalId: number | null) => {
                 imageAlt: newBanner.imageAlt ?? newBanner.id,
             })
                 .then(() => reloadBanners())
-                .catch((err) => console.error('Error persisting banner:', err));
+                .catch((err) => console.error('Error persisting banner:', getErrorDetails(err)));
         };
 
         switch (pendingAddKind.type) {
@@ -342,9 +357,9 @@ export const useBanners = (portalId: number | null) => {
                 const id = generateBannerId('top', 'home');
                 runCreate({
                     id,
-                    src: DEFAULT_BANNER_IMAGE,
+                    src: draftSrc,
                     route: '/',
-                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    bannerRedirection: draftRedirection,
                     positionType: 'top',
                     pageType: 'home',
                     position: homePageTopBanners.length,
@@ -360,9 +375,9 @@ export const useBanners = (portalId: number | null) => {
                 const id = generateBannerId('medium', 'home');
                 runCreate({
                     id,
-                    src: DEFAULT_BANNER_IMAGE,
+                    src: draftSrc,
                     route: '/',
-                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    bannerRedirection: draftRedirection,
                     positionType: 'medium',
                     pageType: 'home',
                     position: generalMediumBanners.length,
@@ -378,9 +393,9 @@ export const useBanners = (portalId: number | null) => {
                 const id = generateBannerId('right', 'home');
                 runCreate({
                     id,
-                    src: DEFAULT_BANNER_IMAGE,
+                    src: draftSrc,
                     route: '/',
-                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    bannerRedirection: draftRedirection,
                     positionType: 'right',
                     pageType: 'home',
                     position: homePageRightBanners.length,
@@ -399,9 +414,9 @@ export const useBanners = (portalId: number | null) => {
                 const id = generateBannerId('top', 'custom');
                 runCreate({
                     id,
-                    src: DEFAULT_BANNER_IMAGE,
+                    src: draftSrc,
                     route: section.route,
-                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    bannerRedirection: draftRedirection,
                     positionType: 'top',
                     pageType: 'custom',
                     position: section.banners.length,
@@ -420,9 +435,9 @@ export const useBanners = (portalId: number | null) => {
                 const id = generateBannerId('medium', 'custom');
                 runCreate({
                     id,
-                    src: DEFAULT_BANNER_IMAGE,
+                    src: draftSrc,
                     route: section.route,
-                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    bannerRedirection: draftRedirection,
                     positionType: 'medium',
                     pageType: 'custom',
                     position: section.banners.length,
@@ -441,9 +456,9 @@ export const useBanners = (portalId: number | null) => {
                 const id = generateBannerId('right', 'custom');
                 runCreate({
                     id,
-                    src: DEFAULT_BANNER_IMAGE,
+                    src: draftSrc,
                     route: section.route,
-                    bannerRedirection: DEFAULT_BANNER_REDIRECTION,
+                    bannerRedirection: draftRedirection,
                     positionType: 'right',
                     pageType: 'custom',
                     position: section.banners.length,
@@ -460,6 +475,7 @@ export const useBanners = (portalId: number | null) => {
         }
         setBannerScheduleModalOpen(false);
         setPendingAddKind(null);
+        setPendingAddDetails(null);
     };
 
     const openEditScheduleForBanner = (bannerId: string) => {
@@ -490,29 +506,50 @@ export const useBanners = (portalId: number | null) => {
         setBannerScheduleModalOpen(true);
     };
 
+    const beginAddBannerDetails = (kind: PendingAddKind) => {
+        if (portalId == null) return;
+        setPendingAddKind(kind);
+        setPendingAddDetails(null);
+        setAddBannerModalOpen(true);
+    };
+
+    const handleAddBannerDetailsCancel = () => {
+        setAddBannerModalOpen(false);
+        setPendingAddKind(null);
+        setPendingAddDetails(null);
+        setEditScheduleBannerId(null);
+    };
+
+    const handleAddBannerDetailsConfirm = (details: { src: string; bannerRedirection: string }) => {
+        if (!pendingAddKind) return;
+        setPendingAddDetails({ src: normalizeBannerSrc(details.src), bannerRedirection: details.bannerRedirection });
+        setAddBannerModalOpen(false);
+        beginAddBannerSchedule(pendingAddKind);
+    };
+
     const handleAddHomePageTopBanner = () => {
         if (portalId == null) return;
-        beginAddBannerSchedule({ type: 'home-top' });
+        beginAddBannerDetails({ type: 'home-top' });
     };
 
     const handleAddGeneralMediumBanner = () => {
         if (portalId == null) return;
-        beginAddBannerSchedule({ type: 'home-medium' });
+        beginAddBannerDetails({ type: 'home-medium' });
     };
 
     const handleAddHomePageRightBanner = () => {
         if (portalId == null) return;
-        beginAddBannerSchedule({ type: 'home-right' });
+        beginAddBannerDetails({ type: 'home-right' });
     };
 
     const handleAddCustomRightBanner = (sectionId: string) => {
         if (portalId == null) return;
-        beginAddBannerSchedule({ type: 'custom-right', sectionId });
+        beginAddBannerDetails({ type: 'custom-right', sectionId });
     };
 
     const handleAddCustomTopBanner = (sectionId: string) => {
         if (portalId == null) return;
-        beginAddBannerSchedule({ type: 'custom-top', sectionId });
+        beginAddBannerDetails({ type: 'custom-top', sectionId });
     };
 
     const handleChangeAppearanceWeight = (
@@ -522,30 +559,44 @@ export const useBanners = (portalId: number | null) => {
     ) => {
         BannerService.updateBanner(bannerId, { appearanceWeight: weight })
             .then(() => reloadBanners())
-            .catch((err) => console.error('Error persisting appearance weight:', err));
+            .catch((err) => console.error('Error persisting appearance weight:', getErrorDetails(err)));
+    };
+
+    const openDeleteBannerModal = (bannerId: string) => {
+        setDeleteBannerId(bannerId);
+        setDeleteBannerModalOpen(true);
+    };
+
+    const cancelDeleteBanner = () => {
+        setDeleteBannerModalOpen(false);
+        setDeleteBannerId(null);
+    };
+
+    const confirmDeleteBanner = () => {
+        if (!deleteBannerId) return;
+        const id = deleteBannerId;
+        setDeleteBannerModalOpen(false);
+        setDeleteBannerId(null);
+        BannerService.deleteBanner(id)
+            .then(() => reloadBanners())
+            .catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
     };
 
     const handleDeleteTopBanner = (bannerId: string, _section: 'home-top' | string) => {
-        BannerService.deleteBanner(bannerId)
-            .then(() => reloadBanners())
-            .catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
+        openDeleteBannerModal(bannerId);
     };
 
     const handleDeleteMediumBanner = (bannerId: string, _section: 'home-medium' | string) => {
-        BannerService.deleteBanner(bannerId)
-            .then(() => reloadBanners())
-            .catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
+        openDeleteBannerModal(bannerId);
     };
 
     const handleDeleteRightBanner = (bannerId: string, _section: 'home' | string) => {
-        BannerService.deleteBanner(bannerId)
-            .then(() => reloadBanners())
-            .catch((err) => console.error('Error deleting banner:', getErrorDetails(err)));
+        openDeleteBannerModal(bannerId);
     };
 
     const handleAddCustomMediumBanner = (sectionId: string) => {
         if (portalId == null) return;
-        beginAddBannerSchedule({ type: 'custom-medium', sectionId });
+        beginAddBannerDetails({ type: 'custom-medium', sectionId });
     };
 
     const handleAddCustomSection = (
@@ -581,7 +632,7 @@ export const useBanners = (portalId: number | null) => {
                 imageAlt: id,
             })
                 .then(() => reloadBanners())
-                .catch((err) => console.error('Error persisting banner:', err));
+                .catch((err) => console.error('Error persisting banner:', getErrorDetails(err)));
             setShowAdSectionModal(false);
             return;
         }
@@ -651,7 +702,8 @@ export const useBanners = (portalId: number | null) => {
         setShowEditRouteModal(false);
         setEditSectionId(null);
         bannersToUpdate.forEach((b) =>
-            BannerService.updateBanner(b.id, { route: newRoute }).catch((err) => console.error('Error updating banner route:', err))
+            BannerService.updateBanner(b.id, { route: newRoute })
+                .catch((err) => console.error('Error updating banner route:', getErrorDetails(err)))
         );
     };
 
@@ -874,7 +926,7 @@ export const useBanners = (portalId: number | null) => {
         }
         BannerService.updateBanner(changeRedirectionBannerId, { bannerRedirection: newUrl })
             .then(() => reloadBanners())
-            .catch((err) => console.error('Error persisting banner redirection:', err));
+            .catch((err) => console.error('Error persisting banner redirection:', getErrorDetails(err)));
         setShowChangeRedirectionModal(false);
         setChangeRedirectionBannerId(null);
         setChangeRedirectionBannerSection(null);
@@ -885,6 +937,7 @@ export const useBanners = (portalId: number | null) => {
         setBannerScheduleModalOpen(false);
         setPendingAddKind(null);
         setEditScheduleBannerId(null);
+        setPendingAddDetails(null);
     };
 
     const saveBannerScheduleInline = useCallback(
@@ -910,6 +963,7 @@ export const useBanners = (portalId: number | null) => {
         customRightSections,
         customMediumSections,
         expiredBanners,
+        addBannerModalOpen,
         bannerScheduleModalOpen,
         bannerScheduleModalMode,
         bannerScheduleDefaults,
@@ -918,6 +972,8 @@ export const useBanners = (portalId: number | null) => {
         showEditRouteModal,
         showChangeImageModal,
         showChangeRedirectionModal,
+        deleteBannerModalOpen,
+        deleteBannerId,
         deleteSectionId,
         editSectionId,
         editSectionType,
@@ -933,6 +989,10 @@ export const useBanners = (portalId: number | null) => {
         setEditSectionType,
         setAdSectionType,
         // Handlers
+        confirmDeleteBanner,
+        cancelDeleteBanner,
+        handleAddBannerDetailsConfirm,
+        handleAddBannerDetailsCancel,
         handleBannerScheduleConfirm,
         handleBannerScheduleCancel,
         openEditScheduleForBanner,

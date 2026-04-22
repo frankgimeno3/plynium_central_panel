@@ -13,6 +13,9 @@ import { PortalService } from '@/app/service/PortalService';
 import { ArticleService } from '@/app/service/ArticleService';
 import { CustomerService } from '@/app/service/CustomerService';
 
+const EVENTS_MEDIA_LIBRARY_PATH =
+  'Structural media/Network media/content media/events media';
+
 const REGIONS = [
   'EUROPE',
   'AFRICA',
@@ -979,6 +982,7 @@ const IdEvent: FC = () => {
           setImageLoadError(false);
           setMediatecaOpen(false);
         }}
+        initialPath={EVENTS_MEDIA_LIBRARY_PATH}
       />
 
       <EventSelectModal

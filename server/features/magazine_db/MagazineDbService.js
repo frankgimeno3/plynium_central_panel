@@ -1,4 +1,5 @@
 import MagazineDbModel from "./MagazineDbModel.js";
+import { createServicesForNewMagazine } from "../service_db/ServiceDbService.js";
 import "../../database/models.js";
 
 function toPlain(row) {
@@ -61,6 +62,10 @@ export async function getMagazineById(idMagazine) {
 
 export async function createMagazine(data) {
   await ensureModels();
+  const sequelize = MagazineDbModel.sequelize;
+  if (!sequelize) {
+    throw new Error("MagazineDbModel sequelize not available");
+  }
   const payload = {
     id_magazine: data.id_magazine,
     name: data.name,
@@ -75,7 +80,13 @@ export async function createMagazine(data) {
   if (payload.subscriber_number != null && Number.isNaN(payload.subscriber_number)) {
     payload.subscriber_number = null;
   }
-  await MagazineDbModel.create(payload);
+  await sequelize.transaction(async (transaction) => {
+    await MagazineDbModel.create(payload, { transaction });
+    await createServicesForNewMagazine(
+      { magazineId: data.id_magazine, magazineName: data.name },
+      { transaction }
+    );
+  });
   return getMagazineById(data.id_magazine);
 }
 

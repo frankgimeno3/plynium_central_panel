@@ -12,7 +12,11 @@ export class BannerService {
     }
 
     static async createBanner(bannerData) {
-        const response = await apiClient.post("/api/v1/banners", bannerData);
+        // UI keeps some derived-only fields (e.g. bannerStatus) that the API rejects.
+        // Strip them to avoid Joi "unknown" validation errors.
+        // eslint-disable-next-line no-unused-vars
+        const { bannerStatus, status, ...payload } = bannerData ?? {};
+        const response = await apiClient.post("/api/v1/banners", payload);
         return response.data;
     }
 

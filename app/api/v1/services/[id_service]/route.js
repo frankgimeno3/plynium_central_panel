@@ -31,10 +31,7 @@ export const GET = createEndpoint(
 
 const patchSchema = Joi.object({
   service_full_name: Joi.string().trim().min(1).optional(),
-  service_channel: Joi.string().valid("dem", "portal", "magazine").optional(),
-  service_product: Joi.string()
-    .valid("newsletter", "magazine", "company directory", "banner")
-    .optional(),
+  service_group_id: Joi.string().uuid().optional(),
   service_format: Joi.string().allow("").optional(),
   service_description: Joi.string().allow("").optional(),
   service_unit: Joi.string().allow("").optional(),

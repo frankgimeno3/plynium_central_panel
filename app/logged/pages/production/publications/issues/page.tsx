@@ -164,7 +164,27 @@ const IssuesPage: FC = () => {
   return (
     <PageContentSection>
       <div className="flex flex-col w-full">
-        <div className="flex border-b border-gray-200 bg-gray-50 rounded-t-lg overflow-hidden">
+        <div className="flex border-b border-gray-200 bg-white rounded-t-lg overflow-hidden px-2">
+          {portalTabs.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setActivePortalId(Number(p.id))}
+              className={`relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${
+                activePortalId === Number(p.id)
+                  ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              {p.key}
+            </button>
+          ))}
+          {portalTabs.length === 0 && (
+            <span className="text-sm text-gray-500 py-3 px-2">No portals configured.</span>
+          )}
+        </div>
+
+        <div className="flex border-b border-gray-200 bg-gray-50 overflow-hidden">
           <button
             type="button"
             onClick={() => setActiveTab("development")}
@@ -212,26 +232,6 @@ const IssuesPage: FC = () => {
         </div>
 
         <div className="bg-white rounded-b-lg overflow-hidden">
-          <div className="flex border-b border-gray-200 px-2">
-            {portalTabs.map((p) => (
-              <button
-                key={p.id}
-                type="button"
-                onClick={() => setActivePortalId(Number(p.id))}
-                className={`relative flex items-center gap-2 px-5 py-3 text-sm font-medium transition-colors ${
-                  activePortalId === Number(p.id)
-                    ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
-                    : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-                }`}
-              >
-                {p.key}
-              </button>
-            ))}
-            {portalTabs.length === 0 && (
-              <span className="text-sm text-gray-500 py-3 px-2">No portals configured.</span>
-            )}
-          </div>
-
           <div className="p-6">
             {error && (
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center justify-between gap-4">

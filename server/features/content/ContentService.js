@@ -5,9 +5,9 @@ import "../../database/models.js";
 
 export async function getAllContents() {
     try {
-        const contents = await ContentModel.findAll({
-            order: [['createdAt', 'DESC']]
-        });
+        // Avoid ordering by Sequelize's createdAt attribute, since some DB snapshots
+        // don't expose it as a selectable column name in the generated SQL.
+        const contents = await ContentModel.findAll();
         
         // Transform database format to API format
         return contents.map(content => ({

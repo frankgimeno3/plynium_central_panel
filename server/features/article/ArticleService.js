@@ -297,20 +297,48 @@ export async function getAllArticles(opts = {}) {
 
 export async function getArticleById(idArticle) {
     try {
-        const article = await ArticleModel.findByPk(idArticle);
+        const rawId = String(idArticle ?? "");
+        const trimmedId = rawId.trim();
+        let article = await ArticleModel.findByPk(trimmedId);
         if (!article) {
-            throw new Error(`Article with id ${idArticle} not found`);
+            // Fallback: tolerate inconsistent zero-padding or whitespace in stored ids.
+            // Expected: article_YY_######### (but some DBs may store different padding length).
+            const m = trimmedId.match(/^article_(\d{2})_(\d+)$/);
+            if (m && ArticleModel.sequelize) {
+                const year = m[1];
+                const ordinalRaw = m[2];
+                const ordinal = ordinalRaw.replace(/^0+/, "") || "0";
+                try {
+                    const [rows] = await ArticleModel.sequelize.query(
+                        `SELECT id_article
+                         FROM articles_db
+                         WHERE id_article LIKE :prefix
+                           AND regexp_replace(split_part(id_article, '_', 3), '^0+', '') = :ord
+                         LIMIT 1`,
+                        { replacements: { prefix: `article_${year}_%`, ord: ordinal } }
+                    );
+                    const resolved = Array.isArray(rows) && rows[0]?.id_article ? String(rows[0].id_article) : "";
+                    if (resolved) {
+                        article = await ArticleModel.findByPk(resolved);
+                    }
+                } catch (e) {
+                    // If fallback lookup fails, keep the original not-found behavior below.
+                }
+            }
+        }
+        if (!article) {
+            throw new Error(`Article with id ${trimmedId} not found`);
         }
         let contentsArray = [];
         try {
-            const contents = await getContentsByArticleId(idArticle);
+            const contents = await getContentsByArticleId(article.id_article);
             contentsArray = contents.map(c => c.content_id);
         } catch (e) {
             // contents table may not have article_id column yet (legacy DB)
         }
         const apiArticle = toApiArticle(article, contentsArray);
         try {
-            const effectiveHighlight = await getEffectiveHighlightPosition(idArticle);
+            const effectiveHighlight = await getEffectiveHighlightPosition(article.id_article);
             if (effectiveHighlight) apiArticle.highlited_position = effectiveHighlight;
         } catch (e) {}
         return apiArticle;
@@ -318,7 +346,7 @@ export async function getArticleById(idArticle) {
         if (isArticleEventColumnsMissingError(error)) {
             try {
                 await ensureArticleEventColumns();
-                const article = await ArticleModel.findByPk(idArticle);
+                const article = await ArticleModel.findByPk(String(idArticle ?? "").trim());
                 if (!article) throw new Error(`Article with id ${idArticle} not found`);
                 return toApiArticle(article);
             } catch (retryError) {
@@ -328,7 +356,7 @@ export async function getArticleById(idArticle) {
         }
         if (isHighlitedPositionMissingError(error)) {
             try {
-                const article = await ArticleModel.findByPk(idArticle, {
+                const article = await ArticleModel.findByPk(String(idArticle ?? "").trim(), {
                     attributes: ARTICLE_ATTRIBUTES_WITHOUT_HIGHLITED
                 });
                 if (!article) throw new Error(`Article with id ${idArticle} not found`);

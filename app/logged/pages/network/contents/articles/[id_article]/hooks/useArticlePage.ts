@@ -118,16 +118,23 @@ export function useArticlePage(id_article: string) {
         const article = normalizeArticle(articleRaw);
         setArticleData(article);
 
-        const [pubs, portalsList] = await Promise.all([
-          ArticleService.getArticlePublications(id_article),
-          PortalService.getAllPortals(),
-        ]);
-        setPublications(Array.isArray(pubs) ? pubs : []);
-        setAllPortals(
-          Array.isArray(portalsList)
-            ? portalsList.map((p: any) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
-            : []
-        );
+        // These are secondary calls. If they fail, we still want to show the article.
+        try {
+          const [pubs, portalsList] = await Promise.all([
+            ArticleService.getArticlePublications(id_article),
+            PortalService.getAllPortals(),
+          ]);
+          setPublications(Array.isArray(pubs) ? pubs : []);
+          setAllPortals(
+            Array.isArray(portalsList)
+              ? portalsList.map((p: any) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
+              : []
+          );
+        } catch (e: any) {
+          console.error("Error loading article publications/portals:", e);
+          setPublications([]);
+          setAllPortals([]);
+        }
 
         const allContents = await ContentService.getAllContents();
         const articleContents = allContents.filter((content: any) =>

@@ -15,7 +15,7 @@ export async function getPublicationsByArticleId(articleId) {
          FROM article_portals ap
          JOIN portals_id p ON p.portal_id = ap.article_portal_ref_id
          WHERE ap.article_id = :articleId
-         ORDER BY p.name`,
+         ORDER BY p.portal_name`,
         { replacements: { articleId } }
     );
     return (rows || []).map((r) => ({

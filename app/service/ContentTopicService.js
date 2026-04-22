@@ -6,11 +6,40 @@ function normalizeTopic(raw) {
   if (topic_id == null || !Number.isFinite(Number(topic_id))) return null;
   const tp = raw.topic_portal ?? raw.topicPortal;
   const portalIdsRaw = raw.topic_portal_ids ?? raw.topicPortalIds ?? raw.portal_ids ?? raw.portalIds;
-  const topic_portal_ids = Array.isArray(portalIdsRaw)
-    ? portalIdsRaw
+  const normalizePortalIdList = (value) => {
+    if (Array.isArray(value)) return value;
+    if (value == null) return null;
+    // allow: "1,2,3" or "{1,2,3}" or "[1,2,3]"
+    if (typeof value === "string") {
+      const s = value.trim();
+      if (!s) return null;
+      if (s.startsWith("[") && s.endsWith("]")) {
+        try {
+          const parsed = JSON.parse(s);
+          return Array.isArray(parsed) ? parsed : null;
+        } catch {
+          return null;
+        }
+      }
+      const cleaned = s.replace(/^\{/, "").replace(/\}$/, "");
+      return cleaned.split(",").map((x) => x.trim()).filter(Boolean);
+    }
+    return null;
+  };
+
+  const parsedPortalIdsRaw = normalizePortalIdList(portalIdsRaw);
+  const topic_portal_ids_from_raw = Array.isArray(parsedPortalIdsRaw)
+    ? parsedPortalIdsRaw
         .map((n) => (Number.isFinite(Number(n)) ? Number(n) : null))
         .filter((n) => Number.isInteger(n) && n >= 0)
     : undefined;
+
+  const topic_portal_ids =
+    topic_portal_ids_from_raw && topic_portal_ids_from_raw.length > 0
+      ? topic_portal_ids_from_raw
+      : tp != null && Number.isFinite(Number(tp))
+        ? [Number(tp)]
+        : undefined;
   return {
     topic_id: Number(topic_id),
     // legacy: topic_portal puede desaparecer; preferir topic_portal_ids

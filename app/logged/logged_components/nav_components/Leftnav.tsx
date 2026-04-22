@@ -208,6 +208,11 @@ const Leftnav: FC<LeftnavProps> = () => {
           {isProductionSelected && (
             <div className="mt-1 flex flex-col gap-0.5 border-l border-gray-700 bg-gray-800/50 pl-2 pr-3 pt-2 pb-3">
               <NavLink
+                href="/logged/pages/production/service_groups"
+                label="Service groups"
+                active={pathname.startsWith("/logged/pages/production/service_groups")}
+              />
+              <NavLink
                 href="/logged/pages/production/services"
                 label="Services"
                 active={pathname.startsWith("/logged/pages/production/services")}
