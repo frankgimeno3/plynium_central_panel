@@ -1,13 +1,21 @@
 /**
  * Unified panel ticket schema (RDS `panel_tickets` + related tables).
- * All ticket kinds (`notification`, `advertisement`, `company`, `other`) share the same fields.
- * Fields not applicable for a type are empty string, empty array, or null.
+ * Inbox tickets previously stored as `panel_ticket_type = notification` + `panel_ticket_category`
+ * are now a single `panel_ticket_type` value: `account_management` | `production` | `administration`.
  *
  * HTTP routes remain `/api/v1/notifications` for backward compatibility; handlers map to `panel_*` columns.
  */
-export type NotificationType = 'notification' | 'advertisement' | 'company' | 'other';
+export type InboxNotificationType = 'account_management' | 'production' | 'administration';
 
-export type NotificationCategory = 'account_management' | 'production' | 'administration';
+export type NotificationType =
+  | InboxNotificationType
+  | 'advertisement'
+  | 'company'
+  | 'product'
+  | 'other';
+
+/** @deprecated Use InboxNotificationType; kept for imports that still name “category”. */
+export type NotificationCategory = InboxNotificationType;
 
 export type NotificationState =
   | 'unread'
@@ -35,16 +43,39 @@ export interface CompanyContent {
   web_empresa: string;
   pais_empresa: string;
   descripcion_empresa: string;
+  list_as_employee?: boolean;
 }
+
+/** One row in `panel_ticket_advertisement` (mediakit / advertise form). */
+export interface AdvertisementRequestPayload {
+  contact_full_name: string;
+  contact_email: string;
+  company_country: string;
+  phone_country_prefix: string;
+  phone_number: string;
+  interest: string;
+  message: string;
+  terms_accepted: boolean;
+  services_array: string[];
+}
+
+/** Entries appended to `panel_ticket_updates_array` (e.g. directory fulfillment). */
+export type PanelTicketUpdateEntry = {
+  action?: string;
+  company_id?: string;
+  fulfilled_at?: string;
+};
 
 export interface UnifiedNotification {
   id: string;
   notification_type: NotificationType;
-  notification_category: NotificationCategory | null;
   state: NotificationState;
   date: string;
   brief_description: string;
   description: string;
+  interest?: string;
+  /** Populated for `advertisement` tickets from `panel_ticket_advertisement.services_array`. */
+  services_array?: string[];
   sender_email: string;
   sender_company: string;
   sender_contact_phone: string;
@@ -52,12 +83,45 @@ export interface UnifiedNotification {
   comments: NotificationComment[];
   user_id: string;
   company_content: CompanyContent | null;
+  product_content?: ProductContent | null;
+  /** Present when joined from `panel_ticket_advertisement` (advertisement tickets). */
+  advertisement_request?: AdvertisementRequestPayload | null;
+  /** RDS `panel_ticket_updates_array`; includes `company_directory_fulfilled` with `company_id`. */
+  panel_ticket_updates_array?: PanelTicketUpdateEntry[];
+}
+
+/** After company directory fulfillment, the new RDS `company_id` is stored on the ticket updates. */
+export function fulfilledCompanyIdFromPanelTicketUpdates(
+  updates: PanelTicketUpdateEntry[] | undefined | null
+): string | null {
+  if (!Array.isArray(updates) || updates.length === 0) return null;
+  for (let i = updates.length - 1; i >= 0; i--) {
+    const e = updates[i];
+    if (!e || typeof e !== 'object') continue;
+    if (String(e.action) === 'company_directory_fulfilled') {
+      const cid = e.company_id;
+      if (typeof cid === 'string' && cid.trim()) return cid.trim();
+    }
+  }
+  return null;
+}
+
+export interface ProductContent {
+  product_id?: string;
+  product_name: string;
+  product_description: string;
+  product_price: number;
+  company_id: string;
+  product_main_image_src: string;
+  product_categories_array: string[];
+  updated_at?: string;
 }
 
 /** Fetch all notifications from the API */
 export async function fetchNotifications(filters?: {
   notification_type?: NotificationType;
-  notification_category?: NotificationCategory;
+  /** Legacy query param: maps to `notification_type` on the server when `notification_type` is omitted. */
+  notification_category?: InboxNotificationType;
   state?: NotificationState;
 }): Promise<UnifiedNotification[]> {
   const params = new URLSearchParams();
@@ -106,8 +170,16 @@ export async function fetchNotificationById(id: string): Promise<UnifiedNotifica
   return res.json();
 }
 
+/** Body for PUT `/api/v1/notifications/:id` (ticket fields plus optional fulfill hint). */
+export type PanelTicketUpdatePayload = Partial<UnifiedNotification> & {
+  fulfill_portal_id?: number;
+  fulfill_portal_ids?: number[];
+  add_comment?: string;
+  fulfill_product?: boolean;
+};
+
 /** Update a panel ticket row (e.g. `panel_ticket_state`) */
-export async function updateNotificationApi(id: string, data: Partial<UnifiedNotification>): Promise<UnifiedNotification> {
+export async function updateNotificationApi(id: string, data: PanelTicketUpdatePayload): Promise<UnifiedNotification> {
   const res = await fetch(`/api/v1/notifications/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
@@ -200,19 +272,21 @@ export function getPendingRequests(data: UnifiedNotification[]) {
   };
 }
 
+const INBOX_TYPES: InboxNotificationType[] = ['account_management', 'production', 'administration'];
+
 export function getNotifications(data: UnifiedNotification[]) {
-  return getByNotificationType(data, 'notification');
+  return data.filter((r) => INBOX_TYPES.includes(r.notification_type as InboxNotificationType));
 }
 
-export function getNotificationsByCategory(data: UnifiedNotification[], category: NotificationCategory) {
-  return getByNotificationType(data, 'notification').filter((r) => r.notification_category === category);
+export function getNotificationsByCategory(data: UnifiedNotification[], category: InboxNotificationType) {
+  return data.filter((r) => r.notification_type === category);
 }
 
 export function getUnreadNotifications(data: UnifiedNotification[]) {
-  return getByNotificationType(data, 'notification').filter((r) => r.state === 'unread');
+  return getNotifications(data).filter((r) => r.state === 'unread');
 }
 
-export function getUnreadNotificationsByCategory(data: UnifiedNotification[], category: NotificationCategory) {
+export function getUnreadNotificationsByCategory(data: UnifiedNotification[], category: InboxNotificationType) {
   return getNotificationsByCategory(data, category).filter((r) => r.state === 'unread');
 }
 
@@ -226,6 +300,8 @@ export function unifiedToAdvertisement(r: UnifiedNotification): {
   requestDescription: string;
   companyCountry: string;
   senderContactPhone: string;
+  interest: string;
+  serviceIds: string[];
   commentsArray: NotificationComment[];
 } {
   return {
@@ -235,8 +311,17 @@ export function unifiedToAdvertisement(r: UnifiedNotification): {
     senderCompany: r.sender_company,
     advReqState: stateToAdvertisementDisplay(r.state),
     requestDescription: r.description,
-    companyCountry: r.country,
+    companyCountry:
+      (r.advertisement_request?.company_country && String(r.advertisement_request.company_country).trim()) ||
+      r.country ||
+      '',
     senderContactPhone: r.sender_contact_phone,
+    interest: r.interest ?? '',
+    serviceIds: Array.isArray(r.advertisement_request?.services_array)
+      ? r.advertisement_request.services_array
+      : Array.isArray(r.services_array)
+        ? r.services_array
+        : [],
     commentsArray: r.comments ?? [],
   };
 }
@@ -258,6 +343,7 @@ export function unifiedToCompany(r: UnifiedNotification): {
     web_empresa: '',
     pais_empresa: '',
     descripcion_empresa: '',
+    list_as_employee: false,
   };
   return {
     companyRequestId: r.id,

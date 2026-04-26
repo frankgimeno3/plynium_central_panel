@@ -2,7 +2,7 @@
 
 import { FC, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { useCompanyRequests, RequestState } from "@/app/logged/pages/network/requests/hooks/useCompanyRequests";
+import { useCompanyRequests, RequestState } from "@/app/logged/pages/tickets/hooks/useCompanyRequests";
 
 const BASE = "/logged/pages/tickets";
 
@@ -52,11 +52,21 @@ const CompanyCreationRequestsTab: FC = () => {
     [requests]
   );
 
+  const counts = useMemo(
+    () => ({
+      Pending: pendingCount,
+      "In Process": requests.filter((r) => r.request_state === "In Process").length,
+      Done: requests.filter((r) => r.request_state === "Done").length,
+      Other: requests.filter((r) => r.request_state === "Other").length,
+    }),
+    [requests, pendingCount]
+  );
+
   const tabs: { key: TabFilter; label: string }[] = [
     { key: "Pending", label: "Pending" },
     { key: "In Process", label: "In Process" },
-    { key: "Done", label: "Done" },
     { key: "Other", label: "Other" },
+    { key: "Done", label: "Done" },
   ];
 
   const handleRowClick = (id: string) => {
@@ -89,6 +99,11 @@ const CompanyCreationRequestsTab: FC = () => {
             {tab.key === "Pending" && pendingCount > 0 && (
               <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-blue-950 rounded-full">
                 {pendingCount}
+              </span>
+            )}
+            {tab.key !== "Pending" && tab.key !== "Done" && counts[tab.key] > 0 && (
+              <span className="inline-flex items-center justify-center rounded px-2 py-0.5 text-xs font-bold leading-none bg-gray-200 text-gray-700">
+                {counts[tab.key]}
               </span>
             )}
           </button>

@@ -4,7 +4,7 @@ import { FC, useMemo, useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import { useOtherRequests, RequestState } from "@/app/logged/pages/network/requests/hooks/useOtherRequests";
+import { useOtherRequests, RequestState } from "@/app/logged/pages/tickets/hooks/useOtherRequests";
 import type { NotificationComment as PanelTicketComment } from "@/app/contents/notifications.types";
 
 const BASE = "/logged/pages/tickets";

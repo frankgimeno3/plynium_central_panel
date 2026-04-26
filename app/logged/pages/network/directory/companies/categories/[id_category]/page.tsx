@@ -188,14 +188,15 @@ const CategoryDetailPage: FC = () => {
         const allCompanies = await CompanyService.getAllCompanies();
         if (cancelled || !category) return;
         const list = Array.isArray(allCompanies) ? allCompanies : [];
-        const nameMatch = (category.category_name || "").trim().toLowerCase();
         setCompanies(
           list.filter((c: Company) => {
-            const mainMatch = (c.category || "").trim().toLowerCase() === nameMatch;
-            const inArray = (c.categoriesArray || []).some(
+            const inRel = (c.categoryIds || []).some(
               (id) => String(id).toLowerCase() === String(id_category).toLowerCase()
             );
-            return mainMatch || inArray;
+            const inLegacyNames = (c.categoriesArray || []).some(
+              (id) => String(id).toLowerCase() === String(id_category).toLowerCase()
+            );
+            return inRel || inLegacyNames;
           })
         );
       } catch {
@@ -272,15 +273,11 @@ const CategoryDetailPage: FC = () => {
     if (!company) return;
     setUnlinkLoading(true);
     try {
-      const nameMatch =
-        (category.category_name || "").trim().toLowerCase() ===
-        (company.category || "").trim().toLowerCase();
-      const newCategoriesArray = (company.categoriesArray || []).filter(
-        (id) => String(id) !== String(id_category)
+      const newIds = (company.categoryIds || []).filter(
+        (id) => String(id).toLowerCase() !== String(id_category).toLowerCase()
       );
       await CompanyService.updateCompany(unlinkModal.id, {
-        category: nameMatch ? "" : company.category,
-        categoriesArray: newCategoriesArray,
+        categoryIds: newIds,
       });
       setCompanies((prev) => prev.filter((c) => c.companyId !== unlinkModal.id));
       setUnlinkModal(null);

@@ -9,7 +9,7 @@ export interface CompaniesDbRow {
   companyId: string;
   commercialName: string;
   country: string;
-  category?: string;
+  region?: string;
 }
 
 interface CompaniesDbSelectModalProps {

@@ -13,6 +13,7 @@ export interface PageButton {
   label: string;
   href?: string;
   onClick?: () => void;
+  variant?: "primary" | "danger";
 }
 
 export interface PageMeta {

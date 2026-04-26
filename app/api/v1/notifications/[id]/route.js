@@ -12,9 +12,10 @@ export const GET = createEndpoint(async (request, body, params) => {
 
 const putSchema = Joi.object({
     state: Joi.string().optional(),
-    notification_category: Joi.string().allow(null).optional(),
+    notification_type: Joi.string().optional(),
     brief_description: Joi.string().allow("").optional(),
     description: Joi.string().allow("").optional(),
+    interest: Joi.string().allow("").optional(),
     sender_email: Joi.string().allow("").optional(),
     sender_company: Joi.string().allow("").optional(),
     sender_contact_phone: Joi.string().allow("").optional(),
@@ -26,9 +27,35 @@ const putSchema = Joi.object({
         cargo_creador: Joi.string().allow("").optional(),
         web_empresa: Joi.string().allow("").optional(),
         pais_empresa: Joi.string().allow("").optional(),
-        descripcion_empresa: Joi.string().allow("").optional()
+        descripcion_empresa: Joi.string().allow("").optional(),
+        list_as_employee: Joi.boolean().optional()
     }).allow(null).optional(),
-    add_comment: Joi.string().allow("").optional()
+    product_content: Joi.object({
+        product_name: Joi.string().allow("").optional(),
+        product_description: Joi.string().allow("").optional(),
+        product_price: Joi.number().min(0).optional(),
+        company_id: Joi.string().allow("").optional(),
+        product_main_image_src: Joi.string().allow("").max(2048).optional(),
+        product_categories_array: Joi.array().items(Joi.string().trim()).optional()
+    }).allow(null).optional(),
+    advertisement_request: Joi.object({
+        contact_full_name: Joi.string().allow("").optional(),
+        contact_email: Joi.string().allow("").optional(),
+        company_country: Joi.string().allow("").optional(),
+        phone_country_prefix: Joi.string().allow("").optional(),
+        phone_number: Joi.string().allow("").optional(),
+        interest: Joi.string().allow("").optional(),
+        message: Joi.string().allow("").optional(),
+        terms_accepted: Joi.boolean().optional(),
+        services_array: Joi.array().items(Joi.string()).optional()
+    }).allow(null).optional(),
+    add_comment: Joi.string().allow("").optional(),
+    /** When resolving a company directory ticket, single portal (legacy). */
+    fulfill_portal_id: Joi.number().integer().min(1).optional(),
+    /** One or more portals: `company_portals` rows and matching `user_notifications` per portal. */
+    fulfill_portal_ids: Joi.array().items(Joi.number().integer().min(1)).min(1).optional(),
+    /** When approving a product ticket: create product + portals + notifications. */
+    fulfill_product: Joi.boolean().optional()
 });
 
 export const PUT = createEndpoint(async (request, body, params) => {

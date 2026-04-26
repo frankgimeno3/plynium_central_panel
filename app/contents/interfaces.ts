@@ -171,10 +171,20 @@ export interface Company {
   companyId: string;
   commercialName: string;
   country: string;
-  category: string;
+  /** Geographic region (from `company_region`, aligned with countries JSON). */
+  region?: string;
+  /** Linked `company_categories.category_id` values. */
+  categoryIds?: string[];
+  /** Display names for linked categories (same order as `categoryIds` when from API). */
+  categoryNames?: string[];
+  /** Comma-joined category names for directory lists. */
+  categoriesSummary?: string;
+  /** @deprecated was misused for region; prefer `region` + `categoryIds`. */
+  category?: string;
   mainDescription: string;
   mainImage: string;
   productsArray: string[];
+  /** Business category display names (chips / modal). */
   categoriesArray: string[];
   mainEmail: string;
   mailTelephone: string;

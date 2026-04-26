@@ -32,6 +32,7 @@ import ServiceGroupDbModel from "../features/service_db/ServiceGroupDbModel.js";
 import NotificationDbModel from "../features/notification_db/NotificationDbModel.js";
 import NotificationCommentDbModel from "../features/notification_db/NotificationCommentDbModel.js";
 import NotificationCompanyContentDbModel from "../features/notification_db/NotificationCompanyContentDbModel.js";
+import NotificationAdvertisementDbModel from "../features/notification_db/NotificationAdvertisementDbModel.js";
 import PublicationSlotDbModel from "../features/publication_workflow/PublicationSlotDbModel.js";
 import PublicationSlotContentDbModel from "../features/publication_workflow/PublicationSlotContentDbModel.js";
 import OfferedPreferentialPageDbModel from "../features/publication_workflow/OfferedPreferentialPageDbModel.js";
@@ -201,11 +202,11 @@ CompanyModel.init({
         defaultValue: "",
         field: "company_country"
     },
-    category: {
+    region: {
         type: DataTypes.STRING,
         allowNull: true,
         defaultValue: "",
-        field: "company_category"
+        field: "company_region"
     },
     main_description: {
         type: DataTypes.TEXT,
@@ -254,7 +255,7 @@ CompanyModel.init({
     indexes: [
         { fields: ["commercial_name"] },
         { fields: ["country"] },
-        { fields: ["category"] }
+        { fields: ["region"] }
     ]
 });
 
@@ -1073,6 +1074,7 @@ ServiceDbModel.init({
     service_id: { type: DataTypes.STRING(64), primaryKey: true, unique: true },
     service_full_name: { type: DataTypes.STRING(512), allowNull: false, defaultValue: "" },
     service_group_id: { type: DataTypes.UUID, allowNull: false },
+    service_portal: { type: DataTypes.INTEGER, allowNull: false },
     service_format: { type: DataTypes.STRING(512), allowNull: false, defaultValue: "" },
     service_description: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
     service_unit: { type: DataTypes.STRING(128), allowNull: false, defaultValue: "" },
@@ -1086,18 +1088,22 @@ ServiceDbModel.init({
     timestamps: false,
     indexes: [
         { fields: ["service_full_name"] },
-        { fields: ["service_group_id"] }
+        { fields: ["service_group_id"] },
+        { fields: ["service_portal"] }
     ]
 });
 
 NotificationDbModel.init({
     panel_ticket_id: { type: DataTypes.STRING(255), primaryKey: true },
     panel_ticket_type: { type: DataTypes.STRING(255), allowNull: false },
-    panel_ticket_category: { type: DataTypes.STRING(255), allowNull: true },
     panel_ticket_state: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "pending" },
     panel_ticket_date: { type: DataTypes.DATE, allowNull: true },
     panel_ticket_brief_description: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
     panel_ticket_full_description: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    panel_ticket_contact_name: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    panel_ticket_contact_email: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    panel_ticket_contact_phone: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    panel_ticket_interest: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
     panel_ticket_related_to_user_id_array: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: false, defaultValue: [] },
     panel_ticket_updates_array: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] }
 }, {
@@ -1110,8 +1116,7 @@ NotificationDbModel.init({
     indexes: [
         { fields: ["panel_ticket_type"] },
         { fields: ["panel_ticket_state"] },
-        { fields: ["panel_ticket_date"] },
-        { fields: ["panel_ticket_category"] }
+        { fields: ["panel_ticket_date"] }
     ]
 });
 
@@ -1134,6 +1139,29 @@ NotificationCommentDbModel.init({
     ]
 });
 
+NotificationAdvertisementDbModel.init({
+    panel_ticket_advertisement_id: { type: DataTypes.UUID, primaryKey: true, defaultValue: DataTypes.UUIDV4 },
+    ticket_id: { type: DataTypes.STRING(255), allowNull: false, unique: true, references: { model: "panel_tickets", key: "panel_ticket_id" } },
+    contact_full_name: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    contact_email: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    company_country: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" },
+    phone_country_prefix: { type: DataTypes.STRING(32), allowNull: false, defaultValue: "" },
+    phone_number: { type: DataTypes.STRING(64), allowNull: false, defaultValue: "" },
+    interest: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    message: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    terms_accepted: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    services_array: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: false, defaultValue: [] }
+}, {
+    sequelize,
+    modelName: "notification_advertisement",
+    underscored: true,
+    tableName: "panel_ticket_advertisement",
+    timestamps: false,
+    indexes: [
+        { fields: ["ticket_id"] }
+    ]
+});
+
 NotificationCompanyContentDbModel.init({
     ticket_company_data_id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
     ticket_id: { type: DataTypes.STRING(255), allowNull: false, unique: true, references: { model: "panel_tickets", key: "panel_ticket_id" } },
@@ -1143,7 +1171,8 @@ NotificationCompanyContentDbModel.init({
     ticket_company_creator_role: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" },
     ticket_company_website: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "" },
     ticket_company_country: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "" },
-    ticket_company_description: { type: DataTypes.TEXT, allowNull: true, defaultValue: "" }
+    ticket_company_description: { type: DataTypes.TEXT, allowNull: true, defaultValue: "" },
+    ticket_company_list_as_employee: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false }
 }, {
     sequelize,
     modelName: "notification_company_content",
@@ -1234,5 +1263,5 @@ PublicationSlotContentDbModel.belongsTo(PublicationModel, { foreignKey: "publica
 defineAssociations();
 }
 
-export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceGroupDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, PublicationSlotDbModel, PublicationSlotContentDbModel, OfferedPreferentialPageDbModel };
+export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceGroupDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, NotificationAdvertisementDbModel, PublicationSlotDbModel, PublicationSlotContentDbModel, OfferedPreferentialPageDbModel };
 

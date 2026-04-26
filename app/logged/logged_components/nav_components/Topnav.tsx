@@ -4,9 +4,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import React, { FC, useMemo, useState, useEffect } from "react";
 import AuthenticationService from "@/app/service/AuthenticationService";
-import { useCompanyRequests } from "@/app/logged/pages/network/requests/hooks/useCompanyRequests";
-import { useOtherRequests } from "@/app/logged/pages/network/requests/hooks/useOtherRequests";
-import { useAdvertisements } from "@/app/logged/pages/network/requests/hooks/useAdvertisements";
+import { useCompanyRequests } from "@/app/logged/pages/tickets/hooks/useCompanyRequests";
+import { useOtherRequests } from "@/app/logged/pages/tickets/hooks/useOtherRequests";
+import { useAdvertisements } from "@/app/logged/pages/tickets/hooks/useAdvertisements";
 import { fetchNotifications, getUnreadNotifications, type UnifiedNotification } from "@/app/contents/notifications.types";
 
 interface TopnavProps {}
@@ -18,7 +18,7 @@ const NotificationsBadge: FC = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   useEffect(() => {
-    fetchNotifications({ notification_type: 'notification' })
+    fetchNotifications({ state: 'unread' })
       .then((data) => {
         const unread = getUnreadNotifications(data).length;
         setUnreadCount(unread);

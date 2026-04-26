@@ -34,8 +34,13 @@ export default function PageContentLayout({ children }: PageContentLayoutProps) 
         {buttons && buttons.length > 0 && (
           <div className="flex flex-wrap gap-2 justify-end pr-12 pt-12">
             {buttons.map((btn, index) => {
-              const linkStyles =
-                "flex min-h-[36px] items-center rounded-md  py-2 px-3 text-sm font-medium uppercase  transition-colors cursor-pointer text-white bg-blue-950/90  hover:bg-blue-900 ";
+              const baseStyles =
+                "flex min-h-[36px] items-center rounded-md py-2 px-3 text-sm font-medium uppercase transition-colors cursor-pointer text-white";
+              const variantStyles =
+                btn.variant === "danger"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : "bg-blue-950/90 hover:bg-blue-900";
+              const linkStyles = `${baseStyles} ${variantStyles}`;
               return btn.onClick ? (
                 <button
                   key={index}

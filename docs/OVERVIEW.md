@@ -45,7 +45,7 @@ Single entry for “where do I look?” and “why is it like this?”. Optimize
 | DB: connection, migrations, models | `server/database/` | [Database](REFERENCE.md#database) |
 | Domain features (one folder per domain) | `server/features/` | [Features index](REFERENCE.md#features-index) |
 | Shared logged UI (modals, RichText, nav) | `app/logged/logged_components/` | [Components contracts](REFERENCE.md#logged-components--contracts) |
-| Requests hooks (static JSON, in-memory) | `app/logged/pages/network/requests/` | [Requests hooks contract](REFERENCE.md#requests-hooks--contract) |
+| Tickets hooks (Notifications-backed) | `app/logged/pages/tickets/hooks/` | [Requests hooks contract](REFERENCE.md#requests-hooks--contract) |
 
 ---
 
@@ -62,7 +62,7 @@ Single entry for “where do I look?” and “why is it like this?”. Optimize
 | **Datos estáticos / tipos** | [REFERENCE: Frontend hub – Contents](REFERENCE.md#contents-contract-appcontents) | `app/contents/interfaces.ts`, `app/contents/*.json` |
 | **Páginas logged / layout** | [REFERENCE: Frontend hub – Logged](REFERENCE.md#logged-area-applogged) | `app/logged/layout.tsx`, `app/logged/pages/` |
 | **UI compartida (modals, RichText, nav)** | [REFERENCE: Components contracts](REFERENCE.md#logged-components--contracts) | Archivo del componente |
-| **Requests (quotations, company, other)** | [REFERENCE: Requests hooks](REFERENCE.md#requests-hooks--contract) | Hooks + JSON en `app/contents/` |
+| **Requests (quotations, company, other)** | [REFERENCE: Requests hooks](REFERENCE.md#requests-hooks--contract) | Hooks in `app/logged/pages/tickets/hooks/` |
 
 ---
 
@@ -71,7 +71,7 @@ Single entry for “where do I look?” and “why is it like this?”. Optimize
 - **API:** Toda lógica vive en `server/`. `app/api/` solo recibe, valida (Joi), autentica (createEndpoint) y delega. No hay acceso directo a DB en rutas.
 - **Auth:** Solo Cognito. Cookies id/access/refresh; login/logout en el browser (Amplify). Las rutas no emiten tokens; solo validan/refrescan.
 - **DB:** Schema **solo** por migraciones SQL (orden por nombre). No `sync()` en producción. Tablas sin modelo → raw SQL en features.
-- **Frontend:** Datos vivos → `app/service/*` → apiClient → `/api/*`. Estático → `app/contents/`. Requests (quotations, company, other) = JSON estático + estado en memoria, sin persistencia.
+- **Frontend:** Datos vivos → `app/service/*` → apiClient → `/api/*`. Estático → `app/contents/`. Requests (quotations, company, other) → `fetchNotifications` + update APIs (persistente), consumidos por Tickets.
 - **Idioma:** Variables, funciones, comentarios y cadenas de UI en **inglés**.
 
 ---
@@ -81,7 +81,7 @@ Single entry for “where do I look?” and “why is it like this?”. Optimize
 - **Auth:** Cognito only. Cookies store id/access/refresh tokens; `proxy.js` (middleware) and `createEndpoint` validate/refresh. Login/logout via Amplify in browser; no API for sign-in.
 - **API surface:** All `/api/v1/*` (except `/api/me`, `/api/validate-token`) use `createEndpoint`. Validation = Joi (query for GET, body for others). Errors go to `errorHandler` (known errors → status/message; unknown → 500 + requestId).
 - **Database:** Postgres via Sequelize. Schema **only** via SQL migrations (filename order). No Sequelize `sync()` for production. Some tables exist only in migrations (e.g. `portals`, `users`, link tables); features use raw SQL or models where registered.
-- **Frontend data:** Live data → `app/service/*` → apiClient → `/api/*`. Static/config → `app/contents/*.json` and `interfaces.ts`. Requests (quotations, company, other) are **static JSON + in-memory state** (no persistence).
+- **Frontend data:** Live data → `app/service/*` → apiClient → `/api/*`. Static/config → `app/contents/*.json` and `interfaces.ts`. Requests (quotations, company, other) are **notifications-backed** via `fetchNotifications` + update APIs, consumed by Tickets.
 - **Naming / language:** All variables, functions, comments, and user-facing strings in **English** (including docs). DoD: behaviour correct + English.
 
 ---

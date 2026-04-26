@@ -25,7 +25,9 @@ export const PUT = createEndpoint(async (request, body) => {
 }, Joi.object({
     commercialName: Joi.string().optional(),
     country: Joi.string().allow("").optional(),
+    region: Joi.string().allow("").optional(),
     category: Joi.string().allow("").optional(),
+    categoryIds: Joi.array().items(Joi.string().trim()).optional(),
     mainDescription: Joi.string().allow("").optional(),
     mainImage: Joi.string().allow("").optional(),
     productsArray: Joi.array().items(Joi.string()).optional(),

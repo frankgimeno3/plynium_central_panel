@@ -80,7 +80,7 @@ This document is a **read-only reference** of the current Postgres RDS schema (s
 | company_id | character varying | NO |  |
 | company_commercial_name | character varying | NO |  |
 | company_country | character varying | YES | `''::character varying` |
-| company_category | character varying | YES | `''::character varying` |
+| company_region | character varying | YES | `''::character varying` |
 | company_main_description | text | YES | `''::text` |
 | company_main_image | character varying | YES | `''::character varying` |
 | company_main_telephone | character varying | YES | `''::character varying` |
@@ -118,6 +118,16 @@ This document is a **read-only reference** of the current Postgres RDS schema (s
 | category_description | text | YES | `''::text` |
 | category_created_at | timestamp with time zone | NO | `now()` |
 | category_updated_at | timestamp with time zone | NO | `now()` |
+
+## company_category_relations
+
+| column | type | null | default |
+|---|---|---:|---|
+| category_relation_id | uuid | NO | `gen_random_uuid()` |
+| company_id | character varying | NO |  |
+| category_id | character varying | NO |  |
+
+Unique constraint on `(company_id, category_id)`. Foreign keys: `company_id` → `companies_db(company_id)` ON DELETE CASCADE; `category_id` → `company_categories(category_id)` ON DELETE CASCADE.
 
 ## company_categories_portal
 
@@ -468,6 +478,42 @@ Unique `(user_id, newsletter_user_list_id)`. Replaces the former `newsletter_use
 | ticket_company_website | character varying | YES | `''::character varying` |
 | ticket_company_country | character varying | YES | `''::character varying` |
 | ticket_company_description | text | YES | `''::text` |
+| ticket_company_list_as_employee | boolean | NO | `false` |
+| updated_at | timestamp with time zone | NO | `now()` |
+
+## panel_ticket_product_data
+
+One row per directory product request ticket (`panel_ticket_type = product`). Stores the requested product fields before approval.
+
+| column | type | null | default |
+|---|---|---:|---|
+| ticket_product_data_id | integer | NO | `nextval('panel_ticket_product_data_ticket_product_data_id_seq'::regclass)` |
+| ticket_id | character varying | NO |  |
+| ticket_product_name | character varying | NO | `''::character varying` |
+| ticket_product_description | text | YES | `''::text` |
+| ticket_product_price | numeric | NO | `0` |
+| ticket_product_company_id | character varying | NO | `''::character varying` |
+| ticket_product_main_image_src | character varying | YES | `''::character varying` |
+| ticket_product_categories_array | ARRAY | YES | `(ARRAY[]::character varying[])::character varying(255)[]` |
+| updated_at | timestamp with time zone | NO | `now()` |
+
+## panel_ticket_advertisement
+
+One row per advertisement / mediakit ticket (`panel_ticket_type = advertisement`). Selected service ids are stored in `services_array`. Migración 094 crea la tabla y elimina `services_array` de `panel_tickets`; migración 095 añade `company_country`.
+
+| column | type | null | default |
+|---|---|---:|---|
+| panel_ticket_advertisement_id | uuid | NO | `gen_random_uuid()` |
+| ticket_id | character varying | NO |  |
+| contact_full_name | text | NO | `''::text` |
+| contact_email | text | NO | `''::text` |
+| company_country | character varying | NO | `''::character varying` |
+| phone_country_prefix | character varying | NO | `''::character varying` |
+| phone_number | character varying | NO | `''::character varying` |
+| interest | text | NO | `''::text` |
+| message | text | NO | `''::text` |
+| terms_accepted | boolean | NO | `false` |
+| services_array | ARRAY | NO | `'{}'::text[]` |
 
 ## panel_tickets
 
@@ -475,14 +521,19 @@ Unique `(user_id, newsletter_user_list_id)`. Replaces the former `newsletter_use
 |---|---|---:|---|
 | panel_ticket_id | character varying | NO |  |
 | panel_ticket_type | character varying | NO |  |
-| panel_ticket_category | character varying | YES | `NULL::character varying` |
 | panel_ticket_state | character varying | NO | `'pending'::character varying` |
 | panel_ticket_date | timestamp with time zone | YES |  |
 | panel_ticket_brief_description | text | NO | `''::text` |
 | panel_ticket_full_description | text | NO | `''::text` |
+| panel_ticket_contact_name | text | NO | `''::text` |
+| panel_ticket_contact_email | text | NO | `''::text` |
+| panel_ticket_contact_phone | text | NO | `''::text` |
+| panel_ticket_interest | text | NO | `''::text` |
 | panel_ticket_created_at | timestamp with time zone | NO | `now()` |
 | panel_ticket_related_to_user_id_array | ARRAY | NO | `'{}'::text[]` |
 | panel_ticket_updates_array | jsonb | NO | `'[]'::jsonb` |
+
+Inbox tickets use `panel_ticket_type` ∈ `account_management`, `production`, `administration` (migración 092 fusiona el antiguo `notification` + `panel_ticket_category`).
 
 ## payments_db
 
@@ -764,13 +815,15 @@ Unique `(user_id, newsletter_user_list_id)`. Replaces the former `newsletter_use
 |---|---|---:|---|
 | service_id | character varying | NO |  |
 | service_full_name | character varying | NO |  |
-| service_channel | character varying | NO | `''::character varying` |
+| service_group_id | uuid | NO |  |
+| service_portal | integer | NO |  |
+| service_format | character varying | NO | `''::character varying` |
 | service_description | text | NO | `''::text` |
 | service_unit_price | numeric | NO | `0` |
 | service_unit | character varying | NO | `''::character varying` |
 | service_unit_specifications | text | NO | `''::text` |
-| service_product | character varying | NO | `''::character varying` |
-| service_format | character varying | NO | `''::character varying` |
+
+FK: `service_group_id` → `service_groups.service_group_id`; `service_portal` → `portals_db.portal_id`.
 
 ## topics_db
 

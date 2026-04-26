@@ -4,16 +4,17 @@ import { FC, useState, useEffect, useMemo, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
-import { fetchNotifications, getNotificationsByCategory, unifiedToNotification, type UnifiedNotification, type NotificationCategory } from '@/app/contents/notifications.types';
-import { useCompanyRequests } from '@/app/logged/pages/network/requests/hooks/useCompanyRequests';
-import { useOtherRequests } from '@/app/logged/pages/network/requests/hooks/useOtherRequests';
-import { useAdvertisements } from '@/app/logged/pages/network/requests/hooks/useAdvertisements';
+import { fetchNotifications, getNotificationsByCategory, unifiedToNotification, type UnifiedNotification } from '@/app/contents/notifications.types';
+import { useCompanyRequests } from '@/app/logged/pages/tickets/hooks/useCompanyRequests';
+import { useOtherRequests } from '@/app/logged/pages/tickets/hooks/useOtherRequests';
+import { useAdvertisements } from '@/app/logged/pages/tickets/hooks/useAdvertisements';
 import CompanyCreationRequestsTab from './components/CompanyCreationRequestsTab';
 import AdvertisementQuotationsTab from './components/AdvertisementQuotationsTab';
 import OtherCommunicationsTab from './components/OtherCommunicationsTab';
+import ProductTicketsTab from './components/ProductTicketsTab';
 
 type NotificationState = 'unread' | 'read' | 'solved';
-type MainTabKey = 'company' | 'quotations' | 'account_management' | 'production' | 'administration' | 'other';
+type MainTabKey = 'company' | 'quotations' | 'product' | 'account_management' | 'production' | 'administration' | 'other';
 type NotificationSubTabKey = NotificationState;
 
 interface MappedNotification {
@@ -44,7 +45,7 @@ const TicketsPage: FC = () => {
   const searchParams = useSearchParams();
   const router = useRouter();
   const tabParam = searchParams.get('tab') as MainTabKey | null;
-  const validTabs: MainTabKey[] = ['company', 'quotations', 'account_management', 'production', 'administration', 'other'];
+  const validTabs: MainTabKey[] = ['company', 'quotations', 'product', 'account_management', 'production', 'administration', 'other'];
   const initialTab: MainTabKey = tabParam && validTabs.includes(tabParam) ? tabParam : 'company';
   
   const [currentMainTab, setCurrentMainTab] = useState<MainTabKey>(initialTab);
@@ -56,8 +57,7 @@ const TicketsPage: FC = () => {
   const { counts: advCounts } = useAdvertisements();
 
   useEffect(() => {
-    // `notification_type` query → `panel_ticket_type` in RDS (inbox-style tickets).
-    fetchNotifications({ notification_type: 'notification' })
+    fetchNotifications()
       .then(setAllData)
       .catch(() => setAllData([]));
   }, []);
@@ -106,6 +106,7 @@ const TicketsPage: FC = () => {
   const mainTabs: { key: MainTabKey; label: string }[] = [
     { key: 'company', label: 'Company Creation Requests' },
     { key: 'quotations', label: 'Advertisement quotations' },
+    { key: 'product', label: 'Product Tickets' },
     { key: 'account_management', label: 'Account Management Tickets' },
     { key: 'production', label: 'Production Tickets' },
     { key: 'administration', label: 'Administration Tickets' },
@@ -184,6 +185,7 @@ const TicketsPage: FC = () => {
           <div className="overflow-hidden">
             {currentMainTab === 'company' && <CompanyCreationRequestsTab />}
             {currentMainTab === 'quotations' && <AdvertisementQuotationsTab />}
+            {currentMainTab === 'product' && <ProductTicketsTab />}
             {currentMainTab === 'other' && <OtherCommunicationsTab />}
             {isNotificationTab && (
               <div className="p-6">

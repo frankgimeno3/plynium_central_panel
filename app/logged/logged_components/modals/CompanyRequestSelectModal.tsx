@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FC, useState, useMemo, useEffect } from "react";
-import { useCompanyRequests, type CompanyRequest } from "@/app/logged/pages/network/requests/hooks/useCompanyRequests";
+import { useCompanyRequests, type CompanyRequest } from "@/app/logged/pages/tickets/hooks/useCompanyRequests";
 
 const formatDate = (dateString: string): string => {
   try {

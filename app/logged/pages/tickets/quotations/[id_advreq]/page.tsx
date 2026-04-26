@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
@@ -8,7 +8,23 @@ import PageContentSection from "@/app/logged/logged_components/context_content/P
 import {
   useAdvertisements,
   AdvertisementState,
-} from "@/app/logged/pages/network/requests/hooks/useAdvertisements";
+} from "@/app/logged/pages/tickets/hooks/useAdvertisements";
+import { ServiceService } from "@/app/service/ServiceService";
+
+type ServiceCatalogRow = {
+  service_id?: string;
+  id_service?: string;
+  service_full_name?: string;
+  name?: string;
+  service_description?: string;
+  service_group_name?: string | null;
+  service_group_channel?: string;
+  service_format?: string;
+  service_unit?: string;
+  tariff_price_eur?: number;
+  service_unit_price?: number;
+  service_portal?: number | null;
+};
 
 const BASE = "/logged/pages/tickets";
 
@@ -34,7 +50,45 @@ export default function AdvertisementDetailPage() {
   const [newComment, setNewComment] = useState("");
   const [isAddingComment, setIsAddingComment] = useState(false);
   const [selectedState, setSelectedState] = useState<AdvertisementState>("pending");
+  const [servicesById, setServicesById] = useState<Record<string, ServiceCatalogRow | null>>({});
+  const [servicesLoading, setServicesLoading] = useState(false);
   const { setPageMeta } = usePageContent();
+
+  const serviceIdsKey = useMemo(
+    () => (advertisement?.serviceIds ?? []).filter(Boolean).join("|"),
+    [advertisement?.serviceIds]
+  );
+
+  useEffect(() => {
+    if (!advertisement?.serviceIds?.length) {
+      setServicesById({});
+      setServicesLoading(false);
+      return;
+    }
+    const ids = advertisement.serviceIds.map((x) => String(x).trim()).filter(Boolean);
+    setServicesLoading(true);
+    ServiceService.getAllServices()
+      .then((list) => {
+        const rows = Array.isArray(list) ? (list as ServiceCatalogRow[]) : [];
+        const map: Record<string, ServiceCatalogRow | null> = {};
+        ids.forEach((id) => {
+          const row = rows.find((s) => {
+            const sid = String(s?.service_id ?? s?.id_service ?? "").trim();
+            return sid === id;
+          });
+          map[id] = row ?? null;
+        });
+        setServicesById(map);
+      })
+      .catch(() => {
+        const empty: Record<string, ServiceCatalogRow | null> = {};
+        ids.forEach((id) => {
+          empty[id] = null;
+        });
+        setServicesById(empty);
+      })
+      .finally(() => setServicesLoading(false));
+  }, [advertisement?.idAdvReq, serviceIdsKey]);
 
   useEffect(() => {
     if (advertisementsLoading) return;
@@ -215,20 +269,24 @@ export default function AdvertisementDetailPage() {
             </select>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-500">Sender Email</label>
-            <p className="text-lg text-gray-900 mt-1">{advertisement.senderEmail}</p>
+            <label className="text-sm font-medium text-gray-500">Contact email</label>
+            <p className="text-lg text-gray-900 mt-1">{advertisement.senderEmail || "—"}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-500">Sender Company</label>
-            <p className="text-lg text-gray-900 mt-1">{advertisement.senderCompany}</p>
+            <label className="text-sm font-medium text-gray-500">Contact name</label>
+            <p className="text-lg text-gray-900 mt-1">{advertisement.senderCompany || "—"}</p>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-500">Company Country</label>
             <p className="text-lg text-gray-900 mt-1">{advertisement.companyCountry}</p>
           </div>
           <div>
-            <label className="text-sm font-medium text-gray-500">Contact Phone</label>
-            <p className="text-lg text-gray-900 mt-1">{advertisement.senderContactPhone}</p>
+            <label className="text-sm font-medium text-gray-500">Contact phone</label>
+            <p className="text-lg text-gray-900 mt-1">{advertisement.senderContactPhone || "—"}</p>
+          </div>
+          <div className="md:col-span-2">
+            <label className="text-sm font-medium text-gray-500">Interest / package</label>
+            <p className="text-lg text-gray-900 mt-1">{advertisement.interest || "—"}</p>
           </div>
           <div>
             <label className="text-sm font-medium text-gray-500">Request Date</label>
@@ -239,11 +297,120 @@ export default function AdvertisementDetailPage() {
         </div>
 
         <div className="mt-6">
-          <label className="text-sm font-medium text-gray-500">Request Description</label>
+          <label className="text-sm font-medium text-gray-500">Message</label>
           <p className="text-base text-gray-900 mt-1 whitespace-pre-wrap">
-            {advertisement.requestDescription}
+            {advertisement.requestDescription || "—"}
           </p>
         </div>
+
+        {advertisement.serviceIds && advertisement.serviceIds.length > 0 && (
+          <div className="mt-8">
+            <label className="text-sm font-medium text-gray-500">Selected services</label>
+            {servicesLoading ? (
+              <p className="mt-3 text-sm text-gray-500">Loading service catalog…</p>
+            ) : (
+            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {advertisement.serviceIds.map((rawId) => {
+                const id = String(rawId).trim();
+                const s = servicesById[id];
+                const title =
+                  (s?.service_full_name && s.service_full_name.trim()) ||
+                  (s?.name && s.name.trim()) ||
+                  `Service ${id}`;
+                const price =
+                  typeof s?.tariff_price_eur === "number" && !Number.isNaN(s.tariff_price_eur)
+                    ? s.tariff_price_eur
+                    : typeof s?.service_unit_price === "number" && !Number.isNaN(s.service_unit_price)
+                      ? s.service_unit_price
+                      : null;
+                const unit = (s?.service_unit ?? "").trim();
+                const channel = (s?.service_group_channel ?? "").trim();
+                const groupName = (s?.service_group_name ?? "").trim();
+                const desc = (s?.service_description ?? "").trim();
+                const format = (s?.service_format ?? "").trim();
+                const portalId =
+                  s?.service_portal != null && !Number.isNaN(Number(s.service_portal))
+                    ? Number(s.service_portal)
+                    : null;
+                const detailHref = `/logged/pages/production/services/${encodeURIComponent(id)}`;
+
+                return (
+                  <div
+                    key={id}
+                    className="flex flex-col rounded-xl border border-gray-200 bg-gray-50/80 p-4 shadow-sm transition-shadow hover:shadow-md"
+                  >
+                    <div className="flex-1">
+                      <h3 className="text-base font-semibold text-gray-900 leading-snug">{title}</h3>
+                      <p className="mt-1 font-mono text-xs text-gray-500 break-all">{id}</p>
+                      {!s && (
+                        <p className="mt-2 text-xs text-amber-800 bg-amber-50 border border-amber-100 rounded-md px-2 py-1.5">
+                          This id is not in the current services catalog.
+                        </p>
+                      )}
+                      {s && (
+                        <dl className="mt-3 space-y-1.5 text-sm text-gray-700">
+                          {groupName ? (
+                            <div>
+                              <dt className="text-xs font-medium text-gray-500">Group</dt>
+                              <dd>{groupName}</dd>
+                            </div>
+                          ) : null}
+                          {channel ? (
+                            <div>
+                              <dt className="text-xs font-medium text-gray-500">Channel</dt>
+                              <dd className="capitalize">{channel}</dd>
+                            </div>
+                          ) : null}
+                          {format ? (
+                            <div>
+                              <dt className="text-xs font-medium text-gray-500">Format</dt>
+                              <dd>{format}</dd>
+                            </div>
+                          ) : null}
+                          {unit ? (
+                            <div>
+                              <dt className="text-xs font-medium text-gray-500">Unit</dt>
+                              <dd>{unit}</dd>
+                            </div>
+                          ) : null}
+                          {portalId != null ? (
+                            <div>
+                              <dt className="text-xs font-medium text-gray-500">Portal id</dt>
+                              <dd>{portalId}</dd>
+                            </div>
+                          ) : null}
+                          {price != null ? (
+                            <div>
+                              <dt className="text-xs font-medium text-gray-500">Unit price</dt>
+                              <dd className="font-medium text-gray-900">
+                                {price.toLocaleString(undefined, { maximumFractionDigits: 2 })} EUR
+                              </dd>
+                            </div>
+                          ) : null}
+                          {desc ? (
+                            <div>
+                              <dt className="text-xs font-medium text-gray-500">Description</dt>
+                              <dd className="line-clamp-3 text-gray-600">{desc}</dd>
+                            </div>
+                          ) : null}
+                        </dl>
+                      )}
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-gray-200">
+                      <Link
+                        href={detailHref}
+                        className="inline-flex text-sm font-medium text-blue-950 hover:text-blue-800 hover:underline"
+                      >
+                        Open service in Production →
+                      </Link>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            )}
+          </div>
+        )}
           </div>
         </div>
       </PageContentSection>

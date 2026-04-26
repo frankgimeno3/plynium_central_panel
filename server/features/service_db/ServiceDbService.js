@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { QueryTypes } from "sequelize";
 import ServiceDbModel from "./ServiceDbModel.js";
 import ServiceGroupDbModel from "./ServiceGroupDbModel.js";
 import "../../database/models.js";
@@ -42,6 +43,7 @@ function toApiService(row) {
     return {
         service_id,
         service_full_name,
+        service_portal: plain.service_portal != null ? Number(plain.service_portal) : null,
         service_group_id: plain.service_group_id ?? group?.service_group_id ?? null,
         service_group_name: group?.service_group_name ?? null,
         service_group_channel: channel,
@@ -168,6 +170,26 @@ export async function createServicesForNewMagazine(params, options = {}) {
     const magazineName = String(params.magazineName ?? "").trim() || magazineId;
     if (!magazineId) return;
 
+    let servicePortal = 0;
+    if (ServiceDbModel.sequelize) {
+        const portalRows = await ServiceDbModel.sequelize.query(
+            `SELECT mp.portal_id AS portal_id
+             FROM public.magazine_portals mp
+             WHERE mp.magazine_id = :magazineId
+             ORDER BY mp.portal_id ASC
+             LIMIT 1`,
+            {
+                replacements: { magazineId },
+                type: QueryTypes.SELECT,
+                transaction: options.transaction,
+            }
+        );
+        const pid = portalRows?.[0]?.portal_id;
+        if (pid != null && !Number.isNaN(Number(pid))) {
+            servicePortal = Number(pid);
+        }
+    }
+
     const groups = await ServiceGroupDbModel.findAll({
         where: { service_group_channel: "magazine" },
         order: [["service_group_name", "ASC"]],
@@ -183,6 +205,7 @@ export async function createServicesForNewMagazine(params, options = {}) {
             defaults: {
                 service_full_name,
                 service_group_id: gid,
+                service_portal: servicePortal,
                 service_format: "",
                 service_description: "",
                 service_unit: "",

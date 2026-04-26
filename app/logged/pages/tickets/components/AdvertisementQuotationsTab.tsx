@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   useAdvertisements,
   TabFilter,
-} from "@/app/logged/pages/network/requests/hooks/useAdvertisements";
+} from "@/app/logged/pages/tickets/hooks/useAdvertisements";
 
 const BASE = "/logged/pages/tickets";
 
@@ -43,6 +43,7 @@ const AdvertisementQuotationsTab: FC = () => {
     setCurrentPage,
     paginatedAdvertisements,
     totalPages,
+    counts,
   } = useAdvertisements();
 
   const tabs: { key: TabFilter; label: string }[] = [
@@ -71,6 +72,16 @@ const AdvertisementQuotationsTab: FC = () => {
             `}
           >
             {tab.label}
+            {tab.key === "pending" && counts.pending > 0 && (
+              <span className="inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-blue-950 rounded-full">
+                {counts.pending}
+              </span>
+            )}
+            {tab.key !== "pending" && counts[tab.key] > 0 && (
+              <span className="inline-flex items-center justify-center rounded px-2 py-0.5 text-xs font-bold leading-none bg-gray-200 text-gray-700">
+                {counts[tab.key]}
+              </span>
+            )}
           </button>
         ))}
       </div>

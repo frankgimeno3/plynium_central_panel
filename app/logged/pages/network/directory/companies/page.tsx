@@ -28,7 +28,8 @@ const Companies: FC<CompaniesProps> = ({ }) => {
     companyId: '',
     commercialName: '',
     country: '',
-    category: ''
+    region: '',
+    categories: '',
   });
 
   const fetchCompanies = async () => {
@@ -71,9 +72,17 @@ const Companies: FC<CompaniesProps> = ({ }) => {
       );
     }
 
-    if (filters.category) {
-      filtered = filtered.filter(company =>
-        company.category.toLowerCase().includes(filters.category.toLowerCase())
+    if (filters.region) {
+      filtered = filtered.filter((company) =>
+        (company.region ?? '').toLowerCase().includes(filters.region.toLowerCase())
+      );
+    }
+    if (filters.categories) {
+      const q = filters.categories.toLowerCase();
+      filtered = filtered.filter((company) =>
+        (company.categoriesSummary ?? (company.categoryNames || []).join(', ') ?? '')
+          .toLowerCase()
+          .includes(q)
       );
     }
 
@@ -126,7 +135,7 @@ const Companies: FC<CompaniesProps> = ({ }) => {
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6">
               <p className="text-sm font-semibold mb-4 text-gray-700">Filter Companies</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Company ID</label>
                   <input
@@ -158,13 +167,23 @@ const Companies: FC<CompaniesProps> = ({ }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Category</label>
+                  <label className="block text-xs text-gray-600 mb-1">Region</label>
                   <input
                     type="text"
-                    value={filters.category}
-                    onChange={(e) => handleFilterChange('category', e.target.value)}
+                    value={filters.region}
+                    onChange={(e) => handleFilterChange('region', e.target.value)}
                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                    placeholder="Search by Category"
+                    placeholder="Search by region"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-gray-600 mb-1">Categories</label>
+                  <input
+                    type="text"
+                    value={filters.categories}
+                    onChange={(e) => handleFilterChange('categories', e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
+                    placeholder="Search by business category"
                   />
                 </div>
               </div>
@@ -191,7 +210,10 @@ const Companies: FC<CompaniesProps> = ({ }) => {
                     Country
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
-                    Category
+                    Region
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
+                    Categories
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
                     Email
@@ -204,7 +226,7 @@ const Companies: FC<CompaniesProps> = ({ }) => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredCompanies.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
                       No companies found matching your filters
                     </td>
                   </tr>
@@ -247,7 +269,10 @@ const Companies: FC<CompaniesProps> = ({ }) => {
                         {company.country}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-gray-200">
-                        {company.category}
+                        {company.region ?? company.category ?? '—'}
+                      </td>
+                      <td className="px-6 py-4 text-sm text-gray-900 border-b border-gray-200 max-w-xs truncate" title={company.categoriesSummary ?? (company.categoryNames || []).join(', ')}>
+                        {company.categoriesSummary || (company.categoryNames || []).join(', ') || '—'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-gray-200">
                         {company.mainEmail}

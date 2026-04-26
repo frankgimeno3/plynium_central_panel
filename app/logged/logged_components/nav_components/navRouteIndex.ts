@@ -14,11 +14,8 @@ export const NAV_ROUTE_LABELS: Record<string, string> = {
   [`${BASE}/network/contents/banners`]: "Banners",
   [`${BASE}/network/contents/events`]: "Events",
   [`${BASE}/network/contents/topics`]: "Content Topics",
-  // Communications (Topnav)
-  [`${BASE}/communications`]: "Communications",
-  [`${BASE}/communications/company`]: "Company Creation Requests",
-  [`${BASE}/communications/quotations`]: "Advertisement quotations",
-  [`${BASE}/communications/other`]: "Other Communications",
+  // Tickets (Topnav)
+  [`${BASE}/tickets`]: "Tickets",
   // Plynium Network – Directory & rest
   [`${BASE}/network/directory/companies`]: "Published Companies",
   [`${BASE}/network/directory/products`]: "Published Products",

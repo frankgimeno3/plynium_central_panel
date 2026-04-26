@@ -1,30 +1,57 @@
 'use client';
 
-import React, { FC, useState, useEffect } from 'react';
+import React, { FC, useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import countriesRegions from '@/app/contents/countries_regions.json';
 import { useRouter } from 'next/navigation';
 import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { CompanyService } from '@/app/service/CompanyService';
 import { PortalService } from '@/app/service/PortalService';
-import { useCompanyRequests } from '@/app/logged/pages/network/requests/hooks/useCompanyRequests';
+import { useCompanyRequests } from '@/app/logged/pages/tickets/hooks/useCompanyRequests';
 import CompanyRequestSelectModal from '@/app/logged/logged_components/modals/CompanyRequestSelectModal';
 import MediatecaModal from '@/app/logged/logged_components/modals/MediatecaModal';
-import CategoriesModal from '@/app/logged/logged_components/modals/CategoriesModal';
+import CategoriesModal, { type CategoryItem } from '@/app/logged/logged_components/modals/CategoriesModal';
 import CustomerSelectModal from '@/app/logged/logged_components/modals/CustomerSelectModal';
 import ContactSelectModal from '@/app/logged/logged_components/modals/ContactSelectModal';
-import type { CompanyRequest } from '@/app/logged/pages/network/requests/hooks/useCompanyRequests';
+import type { CompanyRequest } from '@/app/logged/pages/tickets/hooks/useCompanyRequests';
 import type { CustomerRow } from '@/app/logged/logged_components/modals/CustomerSelectModal';
 import type { ContactRow } from '@/app/logged/logged_components/modals/ContactSelectModal';
+
+type RegionValue =
+  | 'europe'
+  | 'africa'
+  | 'asia'
+  | 'north america'
+  | 'center & south america'
+  | 'oceania';
+
+function normalizeCountryKey(value: string) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’']/g, "'")
+    .replace(/[^a-z0-9\s'()-]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+function toTitleCaseRegion(value: string) {
+  const v = String(value ?? '').trim();
+  if (!v) return '';
+  return v
+    .split(' ')
+    .map((w) => (w === '&' ? '&' : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ');
+}
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
 interface CompanyForm {
   commercialName: string;
   country: string;
-  category: string;
   mainDescription: string;
   mainImage: string;
-  categoriesArray: string;
   mainEmail: string;
   mailTelephone: string;
   fullAddress: string;
@@ -36,10 +63,8 @@ type FormErrors = Partial<Record<keyof CompanyForm | 'portals' | 'customerAccoun
 const initialForm: CompanyForm = {
   commercialName: '',
   country: '',
-  category: '',
   mainDescription: '',
   mainImage: '',
-  categoriesArray: '',
   mainEmail: '',
   mailTelephone: '',
   fullAddress: '',
@@ -82,6 +107,76 @@ const CreateCompanyProfile: FC = () => {
   const [selectedContact, setSelectedContact] = useState<ContactRow | null>(null);
   const [contactSelectModalOpen, setContactSelectModalOpen] = useState(false);
   const [confirmUntagCategory, setConfirmUntagCategory] = useState<string | null>(null);
+  const [pickedCategories, setPickedCategories] = useState<CategoryItem[]>([]);
+  const [countrySuggestOpen, setCountrySuggestOpen] = useState(false);
+  const countryFieldRef = useRef<HTMLDivElement>(null);
+
+  const regionByCountry = useMemo(() => {
+    const map = new Map<string, RegionValue>();
+    const list = Array.isArray(countriesRegions)
+      ? (countriesRegions as { country?: string; region?: string }[])
+      : [];
+    for (const item of list) {
+      const c = normalizeCountryKey(String(item?.country ?? ''));
+      const r = String(item?.region ?? '').trim().toLowerCase() as RegionValue;
+      if (!c || !r) continue;
+      map.set(c, r);
+    }
+    return map;
+  }, []);
+
+  const countrySet = useMemo(() => {
+    const set = new Set<string>();
+    const list = Array.isArray(countriesRegions)
+      ? (countriesRegions as { country?: string }[])
+      : [];
+    for (const item of list) {
+      const c = normalizeCountryKey(String(item?.country ?? ''));
+      if (c) set.add(c);
+    }
+    return set;
+  }, []);
+
+  const sortedCountryNames = useMemo(() => {
+    const list = Array.isArray(countriesRegions)
+      ? (countriesRegions as { country?: string }[])
+      : [];
+    const names = list.map((x) => String(x?.country ?? '').trim()).filter(Boolean);
+    return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b));
+  }, []);
+
+  const filteredCountryOptions = useMemo(() => {
+    const q = normalizeCountryKey(form.country);
+    if (!q) return [];
+    return sortedCountryNames
+      .filter((c) => normalizeCountryKey(c).includes(q))
+      .slice(0, 20);
+  }, [form.country, sortedCountryNames]);
+
+  const derivedRegion = useMemo(() => {
+    const c = normalizeCountryKey(form.country ?? '');
+    const r = regionByCountry.get(c);
+    return r ? toTitleCaseRegion(r) : '';
+  }, [form.country, regionByCountry]);
+
+  const isCountryAllowed = useCallback(
+    (raw: string) => {
+      const v = String(raw ?? '').trim();
+      if (!v) return false;
+      return countrySet.has(normalizeCountryKey(v));
+    },
+    [countrySet]
+  );
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (!countrySuggestOpen) return;
+      const el = countryFieldRef.current;
+      if (el && !el.contains(e.target as Node)) setCountrySuggestOpen(false);
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, [countrySuggestOpen]);
 
   useEffect(() => {
     PortalService.getAllPortals()
@@ -112,7 +207,9 @@ const CreateCompanyProfile: FC = () => {
     const next: FormErrors = {};
     if (!form.commercialName.trim()) next.commercialName = 'Commercial name is required';
     if (!form.country.trim()) next.country = 'Country is required';
-    if (!form.category.trim()) next.category = 'Category is required';
+    else if (!isCountryAllowed(form.country)) {
+      next.country = 'Choose a country from the list (type to search, then pick one option).';
+    }
     if (!form.mainEmail.trim()) next.mainEmail = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.mainEmail)) next.mainEmail = 'Invalid email format';
     if (portals.length > 0 && selectedPortalIds.length === 0) next.portals = 'Select at least one portal';
@@ -163,18 +260,18 @@ const CreateCompanyProfile: FC = () => {
     setIsSubmitting(true);
     try {
       const companyId = generateCompanyId();
-      const categoriesArray = form.categoriesArray
-        ? form.categoriesArray.split(',').map((s) => s.trim()).filter(Boolean)
-        : [];
+      const categoriesArray = pickedCategories.map((c) => c.name);
+      const categoryIds = pickedCategories.map((c) => c.id_category);
       await CompanyService.createCompany({
         companyId,
         commercialName: form.commercialName.trim(),
         country: form.country.trim(),
-        category: form.category.trim(),
+        region: derivedRegion,
         mainDescription: form.mainDescription.trim(),
         mainImage: form.mainImage.trim(),
         productsArray: [],
         categoriesArray,
+        categoryIds,
         mainEmail: form.mainEmail.trim(),
         mailTelephone: form.mailTelephone.trim(),
         fullAddress: form.fullAddress.trim(),
@@ -215,9 +312,10 @@ const CreateCompanyProfile: FC = () => {
 
   return (
     <>
-      <PageContentSection className="p-0">
-        <div className="flex flex-col w-full mt-12">
-          <div className="flex border-b border-gray-200 bg-gray-50 px-6 py-4">
+      <PageContentSection className="!px-0 p-0 bg-gray-50 min-h-[calc(100vh-6rem)] flex justify-center py-8">
+        <div className="flex flex-col w-full max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+          <div className="flex border-b border-gray-200 bg-gray-50 px-4 sm:px-6 py-4">
             <div className="flex items-center gap-4">
               {([1, 2, 3, 4, 5] as Step[]).map((s) => (
                 <React.Fragment key={s}>
@@ -241,7 +339,7 @@ const CreateCompanyProfile: FC = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-b-lg overflow-hidden p-8 md:p-12 w-full max-w-full">
+          <div className="bg-white overflow-hidden p-6 md:p-10 w-full">
             {/* Step 1: Is this associated to a company request? */}
             {step === 1 && (
               <div className="space-y-6">
@@ -322,39 +420,70 @@ const CreateCompanyProfile: FC = () => {
                         <p className="mt-1 text-sm text-red-500">{errors.commercialName}</p>
                       )}
                     </div>
-                    <div>
+                    <div className="relative" ref={countryFieldRef}>
                       <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
                         Country <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
                         value={form.country}
-                        onChange={(e) => update('country', e.target.value)}
-                        placeholder="e.g. United States"
+                        onChange={(e) => {
+                          update('country', e.target.value);
+                          setCountrySuggestOpen(true);
+                        }}
+                        onFocus={() => setCountrySuggestOpen(true)}
+                        onBlur={() => {
+                          window.setTimeout(() => setCountrySuggestOpen(false), 150);
+                        }}
+                        autoComplete="off"
+                        role="combobox"
+                        aria-expanded={countrySuggestOpen}
+                        aria-autocomplete="list"
+                        aria-controls="create-company-country-listbox"
+                        placeholder="Type to search countries…"
                         className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-950 focus:border-blue-950 ${
                           errors.country ? 'border-red-500' : 'border-gray-300'
                         }`}
                       />
+                      {countrySuggestOpen && filteredCountryOptions.length > 0 && (
+                        <ul
+                          id="create-company-country-listbox"
+                          role="listbox"
+                          className="absolute z-50 mt-1 w-full max-h-56 overflow-auto rounded-lg border border-gray-200 bg-white py-1 shadow-lg"
+                        >
+                          {filteredCountryOptions.map((name) => (
+                            <li key={name} role="presentation">
+                              <button
+                                type="button"
+                                role="option"
+                                className="w-full px-4 py-2 text-left text-sm text-gray-900 hover:bg-blue-50"
+                                onMouseDown={(e) => e.preventDefault()}
+                                onClick={() => {
+                                  update('country', name);
+                                  setCountrySuggestOpen(false);
+                                }}
+                              >
+                                {name}
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                       {errors.country && (
                         <p className="mt-1 text-sm text-red-500">{errors.country}</p>
                       )}
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
-                        Category <span className="text-red-500">*</span>
+                        Region
                       </label>
                       <input
                         type="text"
-                        value={form.category}
-                        onChange={(e) => update('category', e.target.value)}
-                        placeholder="e.g. Manufacturing"
-                        className={`w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-950 focus:border-blue-950 ${
-                          errors.category ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        readOnly
+                        value={derivedRegion || '—'}
+                        className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700"
                       />
-                      {errors.category && (
-                        <p className="mt-1 text-sm text-red-500">{errors.category}</p>
-                      )}
+                      <p className="mt-1 text-xs text-gray-500">Set automatically from the country (directory JSON).</p>
                     </div>
                     <div>
                       <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
@@ -489,7 +618,13 @@ const CreateCompanyProfile: FC = () => {
                   <button
                     type="button"
                     onClick={goNext}
-                    disabled={!form.commercialName.trim() || !form.country.trim() || !form.category.trim() || !form.mainEmail.trim() || (portals.length > 0 && selectedPortalIds.length === 0)}
+                    disabled={
+                      !form.commercialName.trim()
+                      || !form.country.trim()
+                      || !isCountryAllowed(form.country)
+                      || !form.mainEmail.trim()
+                      || (portals.length > 0 && selectedPortalIds.length === 0)
+                    }
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next: Categories & description
@@ -514,28 +649,24 @@ const CreateCompanyProfile: FC = () => {
                       >
                         Select categories
                       </button>
-                      {form.categoriesArray && (
+                      {pickedCategories.length > 0 && (
                         <div className="flex flex-wrap gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-                          {form.categoriesArray
-                            .split(',')
-                            .map((s) => s.trim())
-                            .filter(Boolean)
-                            .map((name) => (
-                              <span
-                                key={name}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-900 rounded-lg text-sm font-medium"
+                          {pickedCategories.map((cat) => (
+                            <span
+                              key={cat.id_category}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-900 rounded-lg text-sm font-medium"
+                            >
+                              {cat.name}
+                              <button
+                                type="button"
+                                onClick={() => setConfirmUntagCategory(cat.name)}
+                                className="text-blue-700 hover:text-red-700 font-bold leading-none"
+                                aria-label={`Remove ${cat.name}`}
                               >
-                                {name}
-                                <button
-                                  type="button"
-                                  onClick={() => setConfirmUntagCategory(name)}
-                                  className="text-blue-700 hover:text-red-700 font-bold leading-none"
-                                  aria-label={`Remove ${name}`}
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))}
+                                ×
+                              </button>
+                            </span>
+                          ))}
                         </div>
                       )}
                     </div>
@@ -761,10 +892,12 @@ const CreateCompanyProfile: FC = () => {
                       <dt className="text-gray-500">Country</dt>
                       <dd className="font-medium text-gray-900">{form.country || '—'}</dd>
                     </div>
-                    <div>
-                      <dt className="text-gray-500">Category</dt>
-                      <dd className="font-medium text-gray-900">{form.category || '—'}</dd>
-                    </div>
+                    {derivedRegion && (
+                      <div>
+                        <dt className="text-gray-500">Region</dt>
+                        <dd className="font-medium text-gray-900">{derivedRegion}</dd>
+                      </div>
+                    )}
                     <div>
                       <dt className="text-gray-500">Main email</dt>
                       <dd className="font-medium text-gray-900">{form.mainEmail || '—'}</dd>
@@ -799,22 +932,18 @@ const CreateCompanyProfile: FC = () => {
                           : '—'}
                       </dd>
                     </div>
-                    {form.categoriesArray && (
+                    {pickedCategories.length > 0 && (
                       <div>
                         <dt className="text-gray-500">Categories</dt>
                         <dd className="flex flex-wrap gap-2 mt-1">
-                          {form.categoriesArray
-                            .split(',')
-                            .map((s) => s.trim())
-                            .filter(Boolean)
-                            .map((name) => (
-                              <span
-                                key={name}
-                                className="inline-flex items-center px-2.5 py-1 bg-blue-100 text-blue-800 rounded-md text-sm font-medium"
-                              >
-                                {name}
-                              </span>
-                            ))}
+                          {pickedCategories.map((cat) => (
+                            <span
+                              key={cat.id_category}
+                              className="inline-flex items-center px-2.5 py-1 bg-blue-100 text-blue-800 rounded-md text-sm font-medium"
+                            >
+                              {cat.name}
+                            </span>
+                          ))}
                         </dd>
                       </div>
                     )}
@@ -861,6 +990,7 @@ const CreateCompanyProfile: FC = () => {
               </form>
             )}
           </div>
+          </div>
         </div>
       </PageContentSection>
 
@@ -883,9 +1013,9 @@ const CreateCompanyProfile: FC = () => {
       <CategoriesModal
         open={categoriesModalOpen}
         onClose={() => setCategoriesModalOpen(false)}
-        selectedCategoryNames={form.categoriesArray ? form.categoriesArray.split(',').map((s) => s.trim()).filter(Boolean) : []}
+        selectedCategoryNames={pickedCategories.map((c) => c.name)}
         onSelectCategories={(categories) => {
-          update('categoriesArray', categories.map((c) => c.name).join(', '));
+          setPickedCategories(categories);
           setCategoriesModalOpen(false);
         }}
       />
@@ -917,12 +1047,7 @@ const CreateCompanyProfile: FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  const names = form.categoriesArray
-                    .split(',')
-                    .map((s) => s.trim())
-                    .filter(Boolean)
-                    .filter((n) => n !== confirmUntagCategory);
-                  update('categoriesArray', names.join(', '));
+                  setPickedCategories((prev) => prev.filter((c) => c.name !== confirmUntagCategory));
                   setConfirmUntagCategory(null);
                 }}
                 className="px-4 py-2 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700"

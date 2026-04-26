@@ -1,6 +1,6 @@
 "use client";
+import { FC, useMemo, useState, useEffect } from 'react';
 
-import React, { FC, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
@@ -11,6 +11,35 @@ import { ProductService } from '@/app/service/ProductService';
 import { Company } from '@/app/contents/interfaces';
 import MediatecaModal from '@/app/logged/logged_components/modals/MediatecaModal';
 import CategoriesModal from '@/app/logged/logged_components/modals/CategoriesModal';
+import countriesRegions from '@/app/contents/countries_regions.json';
+
+type RegionValue =
+  | 'europe'
+  | 'africa'
+  | 'asia'
+  | 'north america'
+  | 'center & south america'
+  | 'oceania';
+
+function normalizeCountryKey(value: string) {
+  return String(value ?? '')
+    .trim()
+    .toLowerCase()
+    .normalize('NFKD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[’']/g, "'")
+    .replace(/[^a-z0-9\s'()-]/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+function toTitleCaseRegion(value: string) {
+  const v = String(value ?? '').trim();
+  if (!v) return '';
+  return v
+    .split(' ')
+    .map((w) => (w === '&' ? '&' : w.charAt(0).toUpperCase() + w.slice(1)))
+    .join(' ');
+}
 
 const IdCompany: FC = () => {
   const params = useParams();
@@ -35,7 +64,51 @@ const IdCompany: FC = () => {
   const [confirmUntagCategory, setConfirmUntagCategory] = useState<string | null>(null);
   const [deleteProductConfirm, setDeleteProductConfirm] = useState<{ productId: string; productName: string } | null>(null);
   const [deleteProductLoading, setDeleteProductLoading] = useState(false);
+  const [deleteCompanyConfirmOpen, setDeleteCompanyConfirmOpen] = useState(false);
+  const [deleteCompanyConfirmInput, setDeleteCompanyConfirmInput] = useState('');
+  const [deleteCompanyLoading, setDeleteCompanyLoading] = useState(false);
+  const [countryError, setCountryError] = useState<string | null>(null);
   const { setPageMeta } = usePageContent();
+
+  const availableCountries = useMemo(() => {
+    const list = Array.isArray(countriesRegions) ? (countriesRegions as any[]) : [];
+    const countries = list
+      .map((x) => String(x?.country ?? '').trim())
+      .filter(Boolean);
+    return Array.from(new Set(countries)).sort((a, b) => a.localeCompare(b));
+  }, []);
+
+  const countrySet = useMemo(() => {
+    const set = new Set<string>();
+    availableCountries.forEach((c) => set.add(normalizeCountryKey(c)));
+    return set;
+  }, [availableCountries]);
+
+  const regionByCountry = useMemo(() => {
+    const map = new Map<string, RegionValue>();
+    const list = Array.isArray(countriesRegions) ? (countriesRegions as any[]) : [];
+    for (const item of list) {
+      const c = normalizeCountryKey(String(item?.country ?? ''));
+      const r = String(item?.region ?? '').trim().toLowerCase() as RegionValue;
+      if (!c || !r) continue;
+      map.set(c, r);
+    }
+    return map;
+  }, []);
+
+  const derivedRegion = useMemo(() => {
+    const c = normalizeCountryKey(formData?.country ?? '');
+    const r = regionByCountry.get(c);
+    return r ? toTitleCaseRegion(r) : '';
+  }, [formData?.country, regionByCountry]);
+
+  const validateCountry = (raw: string) => {
+    const v = String(raw ?? '').trim();
+    if (!v) return { ok: true as const, message: null as string | null };
+    const key = normalizeCountryKey(v);
+    if (countrySet.has(key)) return { ok: true as const, message: null as string | null };
+    return { ok: false as const, message: 'Please select a country from the list.' };
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -49,14 +122,20 @@ const IdCompany: FC = () => {
         ]);
         if (!cancelled) {
           setCompany(data);
-          const form = { ...data };
-          if (!Array.isArray(form.categoriesArray) || form.categoriesArray.length === 0) {
-            if (data.category?.trim()) {
-              form.categoriesArray = [data.category.trim()];
-            } else {
-              form.categoriesArray = [];
-            }
-          }
+          const names =
+            Array.isArray(data.categoryNames) && data.categoryNames.length > 0
+              ? [...data.categoryNames]
+              : Array.isArray(data.categoriesArray)
+                ? [...data.categoriesArray]
+                : [];
+          const ids = Array.isArray(data.categoryIds) ? [...data.categoryIds] : [];
+          const form: Company = {
+            ...data,
+            region: data.region ?? data.category ?? '',
+            categoryIds: ids,
+            categoriesArray: names,
+            categoryNames: names,
+          };
           setFormData(form);
           setInitialData({ ...form });
           setAllPortals(
@@ -89,7 +168,18 @@ const IdCompany: FC = () => {
           { label: "Companies", href: "/logged/pages/network/directory/companies" },
           { label: formData.commercialName ?? companyId ?? "Company" },
         ],
-        buttons: [{ label: "Back to Companies", href: "/logged/pages/network/directory/companies" }],
+        buttons: [
+          { label: "Back to Companies", href: "/logged/pages/network/directory/companies", variant: "primary" },
+          {
+            label: deleteCompanyLoading ? "Deleting..." : "Delete company",
+            onClick: () => {
+              if (deleteCompanyLoading) return;
+              setDeleteCompanyConfirmInput('');
+              setDeleteCompanyConfirmOpen(true);
+            },
+            variant: "danger",
+          },
+        ],
       });
     } else {
       setPageMeta({
@@ -97,10 +187,10 @@ const IdCompany: FC = () => {
         breadcrumbs: [
           { label: "Companies", href: "/logged/pages/network/directory/companies" },
         ],
-        buttons: [{ label: "Back to Companies", href: "/logged/pages/network/directory/companies" }],
+        buttons: [{ label: "Back to Companies", href: "/logged/pages/network/directory/companies", variant: "primary" }],
       });
     }
-  }, [setPageMeta, company, formData, companyId]);
+  }, [setPageMeta, company, formData, companyId, deleteCompanyLoading]);
 
   useEffect(() => {
     if (!deleteProductConfirm) return;
@@ -110,6 +200,15 @@ const IdCompany: FC = () => {
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [deleteProductConfirm]);
+
+  useEffect(() => {
+    if (!deleteCompanyConfirmOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDeleteCompanyConfirmOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [deleteCompanyConfirmOpen]);
 
   const handleInputChange = (field: keyof Company, value: string | string[]) => {
     if (!formData) return;
@@ -126,17 +225,24 @@ const IdCompany: FC = () => {
 
   const handleSave = async () => {
     if (!formData || !initialData) return;
+    const countryCheck = validateCountry(formData.country);
+    if (!countryCheck.ok) {
+      setCountryError(countryCheck.message);
+      alert(countryCheck.message);
+      return;
+    }
     setSaving(true);
     try {
       const categoriesArray = formData.categoriesArray ?? [];
       await CompanyService.updateCompany(companyId, {
         commercialName: formData.commercialName,
         country: formData.country,
-        category: categoriesArray[0] ?? formData.category ?? '',
+        region: derivedRegion,
         mainDescription: formData.mainDescription,
         mainImage: formData.mainImage,
         productsArray: formData.productsArray ?? [],
         categoriesArray,
+        categoryIds: formData.categoryIds ?? [],
         mainEmail: formData.mainEmail,
         mailTelephone: formData.mailTelephone,
         fullAddress: formData.fullAddress,
@@ -274,8 +380,40 @@ const IdCompany: FC = () => {
               <input
                 type="text"
                 value={formData.country}
-                onChange={(e) => handleInputChange('country', e.target.value)}
+                onChange={(e) => {
+                  setCountryError(null);
+                  handleInputChange('country', e.target.value);
+                }}
+                onBlur={() => {
+                  const check = validateCountry(formData.country);
+                  setCountryError(check.message);
+                  if (!check.ok) {
+                    // Clear invalid value to prevent persisting a non-catalog country
+                    handleInputChange('country', '');
+                  }
+                }}
+                list="countries-list"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
+              />
+              <datalist id="countries-list">
+                {availableCountries.map((c) => (
+                  <option key={c} value={c} />
+                ))}
+              </datalist>
+              {countryError && (
+                <p className="mt-1 text-sm text-red-700">{countryError}</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Region
+              </label>
+              <input
+                type="text"
+                value={derivedRegion || '—'}
+                readOnly
+                className="w-full px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-700"
               />
             </div>
 
@@ -577,7 +715,17 @@ const IdCompany: FC = () => {
         onClose={() => setCategoriesModalOpen(false)}
         selectedCategoryNames={formData.categoriesArray ?? []}
         onSelectCategories={(categories) => {
-          handleInputChange('categoriesArray', categories.map((c) => c.name));
+          if (!formData) return;
+          const names = categories.map((c) => c.name);
+          const ids = categories.map((c) => c.id_category);
+          const merged: Company = {
+            ...formData,
+            categoriesArray: names,
+            categoryNames: names,
+            categoryIds: ids,
+          };
+          setFormData(merged);
+          setHasChanges(JSON.stringify(merged) !== JSON.stringify(initialData));
           setCategoriesModalOpen(false);
         }}
       />
@@ -609,8 +757,20 @@ const IdCompany: FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  const next = (formData.categoriesArray ?? []).filter((n) => n !== confirmUntagCategory);
-                  handleInputChange('categoriesArray', next);
+                  if (!formData) return;
+                  const names = formData.categoriesArray ?? [];
+                  const ids = formData.categoryIds ?? [];
+                  const idx = names.indexOf(confirmUntagCategory);
+                  const nextNames = idx >= 0 ? names.filter((_, i) => i !== idx) : names.filter((n) => n !== confirmUntagCategory);
+                  const nextIds = idx >= 0 ? ids.filter((_, i) => i !== idx) : ids;
+                  const merged: Company = {
+                    ...formData,
+                    categoriesArray: nextNames,
+                    categoryNames: nextNames,
+                    categoryIds: nextIds,
+                  };
+                  setFormData(merged);
+                  setHasChanges(JSON.stringify(merged) !== JSON.stringify(initialData));
                   setConfirmUntagCategory(null);
                 }}
                 className="px-4 py-2 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700"
@@ -692,6 +852,91 @@ const IdCompany: FC = () => {
                 className="px-4 py-2 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-50"
               >
                 {deleteProductLoading ? 'Deleting...' : 'Yes, delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteCompanyConfirmOpen && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-company-confirm-title"
+          onClick={() => !deleteCompanyLoading && setDeleteCompanyConfirmOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 id="delete-company-confirm-title" className="text-lg font-semibold text-gray-900">
+                Delete company
+              </h3>
+              <button
+                type="button"
+                onClick={() => setDeleteCompanyConfirmOpen(false)}
+                disabled={deleteCompanyLoading}
+                className="text-gray-500 hover:text-gray-700 text-2xl leading-none disabled:opacity-50"
+                aria-label="Cancel"
+              >
+                ×
+              </button>
+            </div>
+
+            <p className="text-gray-700 mb-3">
+              This will permanently delete the company and all its products.
+            </p>
+            <p className="text-sm text-gray-500 mb-4">
+              It also removes employee relations, portal visibility, and administrators associated with this company.
+            </p>
+
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Type <span className="font-mono">{companyId}</span> to confirm
+            </label>
+            <input
+              type="text"
+              value={deleteCompanyConfirmInput}
+              onChange={(e) => setDeleteCompanyConfirmInput(e.target.value)}
+              disabled={deleteCompanyLoading}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 disabled:opacity-50"
+              placeholder={companyId}
+              autoFocus
+            />
+
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setDeleteCompanyConfirmOpen(false)}
+                disabled={deleteCompanyLoading}
+                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (deleteCompanyConfirmInput.trim() !== companyId) return;
+                  setDeleteCompanyLoading(true);
+                  try {
+                    await CompanyService.deleteCompany(companyId);
+                    setDeleteCompanyConfirmOpen(false);
+                    router.push("/logged/pages/network/directory/companies");
+                  } catch (e: unknown) {
+                    const msg =
+                      (e as { message?: string })?.message ??
+                      (e as { data?: { message?: string } })?.data?.message ??
+                      "Failed to delete company";
+                    alert(msg);
+                  } finally {
+                    setDeleteCompanyLoading(false);
+                  }
+                }}
+                disabled={deleteCompanyLoading || deleteCompanyConfirmInput.trim() !== companyId}
+                className="px-4 py-2 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteCompanyLoading ? "Deleting..." : "Yes, delete company"}
               </button>
             </div>
           </div>

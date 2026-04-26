@@ -15,6 +15,7 @@ import {
   type NotificationComment,
 } from '@/app/contents/notifications.types';
 import { CustomerService } from '@/app/service/CustomerService';
+import { ServiceService } from '@/app/service/ServiceService';
 
 type NotificationState = 'unread' | 'read' | 'solved';
 
@@ -116,6 +117,7 @@ const NotificationDetailPage: FC = () => {
   const [localState, setLocalState] = useState<NotificationState>('unread');
   const [customers, setCustomers] = useState<{ id_customer: string; name: string; contact?: { name: string } }[]>([]);
   const [otherRequestsData, setOtherRequestsData] = useState<{ id: string; author: string }[]>([]);
+  const [servicesById, setServicesById] = useState<Record<string, { service_full_name?: string; tariff_price_eur?: number }>>({});
   const [commentDraft, setCommentDraft] = useState('');
   const [isSavingComment, setIsSavingComment] = useState(false);
 
@@ -154,6 +156,47 @@ const NotificationDetailPage: FC = () => {
         setLoading(false);
       });
   }, [ticketId]);
+
+  const ticketTypeLower = String(unified?.notification_type ?? '').toLowerCase();
+  const isAdvertisementTicket = ticketTypeLower === 'advertisement';
+  const isCompanyTicket = ticketTypeLower === 'company';
+  const selectedServiceIds = (() => {
+    const fromAdv = unified?.advertisement_request?.services_array;
+    if (isAdvertisementTicket && Array.isArray(fromAdv)) {
+      return fromAdv.filter((x) => typeof x === 'string' && x.trim().length > 0);
+    }
+    const legacy = unified?.services_array ?? [];
+    return legacy.filter((x) => typeof x === 'string' && x.trim().length > 0);
+  })();
+
+  useEffect(() => {
+    if (!isAdvertisementTicket) return;
+    if (selectedServiceIds.length === 0) return;
+    ServiceService.getAllServices()
+      .then((list) => {
+        const map: Record<string, { service_full_name?: string; tariff_price_eur?: number }> = {};
+        (Array.isArray(list) ? list : []).forEach((s: any) => {
+          const id = String(s?.service_id ?? s?.id_service ?? '').trim();
+          if (!id) return;
+          map[id] = {
+            service_full_name: s?.service_full_name ?? s?.name ?? '',
+            tariff_price_eur: s?.tariff_price_eur != null ? Number(s.tariff_price_eur) : undefined,
+          };
+        });
+        setServicesById(map);
+      })
+      .catch(() => setServicesById({}));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAdvertisementTicket, selectedServiceIds.join('|')]);
+
+  const comments: NotificationComment[] = useMemo(() => {
+    const list = unified?.comments ?? [];
+    return [...list].sort((a, b) => {
+      const ta = Date.parse(a.date || '') || 0;
+      const tb = Date.parse(b.date || '') || 0;
+      return ta - tb;
+    });
+  }, [unified?.comments]);
 
   const handleStateChange = (newState: NotificationState) => {
     if (!notification) return;
@@ -217,15 +260,6 @@ const NotificationDetailPage: FC = () => {
       </PageContentSection>
     );
   }
-
-  const comments: NotificationComment[] = useMemo(() => {
-    const list = unified?.comments ?? [];
-    return [...list].sort((a, b) => {
-      const ta = Date.parse(a.date || '') || 0;
-      const tb = Date.parse(b.date || '') || 0;
-      return ta - tb;
-    });
-  }, [unified?.comments]);
 
   const handleAddComment = async () => {
     if (!unified) return;
@@ -292,6 +326,133 @@ const NotificationDetailPage: FC = () => {
             <label className="text-sm font-medium text-gray-500">Full Description</label>
             <p className="text-base text-gray-900 mt-1 whitespace-pre-wrap">{notification.notification_description}</p>
           </div>
+
+          {isCompanyTicket && unified?.company_content && (
+            <div className="border-t pt-6 mt-6">
+              <label className="text-sm font-medium text-gray-500">Company registration data</label>
+              <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm text-gray-900">
+                <div>
+                  <dt className="text-gray-500">Commercial name</dt>
+                  <dd className="mt-0.5 font-medium">{unified.company_content.nombre_comercial || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">Legal name</dt>
+                  <dd className="mt-0.5 font-medium">{unified.company_content.nombre_fiscal || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">Tax ID</dt>
+                  <dd className="mt-0.5 font-mono">{unified.company_content.tax_id || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">Creator role</dt>
+                  <dd className="mt-0.5">{unified.company_content.cargo_creador || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">Website</dt>
+                  <dd className="mt-0.5 break-all">{unified.company_content.web_empresa || '—'}</dd>
+                </div>
+                <div>
+                  <dt className="text-gray-500">Country</dt>
+                  <dd className="mt-0.5">{unified.company_content.pais_empresa || '—'}</dd>
+                </div>
+                <div className="sm:col-span-2">
+                  <dt className="text-gray-500">Company description</dt>
+                  <dd className="mt-0.5 whitespace-pre-wrap">{unified.company_content.descripcion_empresa || '—'}</dd>
+                </div>
+              </dl>
+            </div>
+          )}
+
+          {isAdvertisementTicket && (
+            <div className="border-t pt-6 mt-6 space-y-6">
+              {unified?.advertisement_request && (
+                <div>
+                  <label className="text-sm font-medium text-gray-500">Advertisement inquiry</label>
+                  <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm text-gray-900">
+                    <div>
+                      <dt className="text-gray-500">Contact name</dt>
+                      <dd className="mt-0.5 font-medium">{unified.advertisement_request.contact_full_name || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-500">Email</dt>
+                      <dd className="mt-0.5 break-all">{unified.advertisement_request.contact_email || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-500">Company country</dt>
+                      <dd className="mt-0.5">{unified.advertisement_request.company_country || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-500">Phone prefix</dt>
+                      <dd className="mt-0.5 font-mono">{unified.advertisement_request.phone_country_prefix || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-500">Phone number</dt>
+                      <dd className="mt-0.5 font-mono">{unified.advertisement_request.phone_number || '—'}</dd>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <dt className="text-gray-500">Interest</dt>
+                      <dd className="mt-0.5">{unified.advertisement_request.interest || '—'}</dd>
+                    </div>
+                    <div className="sm:col-span-2">
+                      <dt className="text-gray-500">Message</dt>
+                      <dd className="mt-0.5 whitespace-pre-wrap">{unified.advertisement_request.message || '—'}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-gray-500">Terms accepted</dt>
+                      <dd className="mt-0.5">{unified.advertisement_request.terms_accepted ? 'Yes' : 'No'}</dd>
+                    </div>
+                  </dl>
+                </div>
+              )}
+
+              <div>
+                <label className="text-sm font-medium text-gray-500">Selected services</label>
+                {selectedServiceIds.length === 0 ? (
+                  <p className="mt-2 text-sm text-gray-500">No services were attached to this ticket.</p>
+                ) : (
+                  <ul className="mt-2 space-y-1 text-sm text-gray-900">
+                    {selectedServiceIds.map((id) => {
+                      const s = servicesById[id];
+                      return (
+                        <li key={id} className="flex items-start justify-between gap-3 rounded-md bg-gray-50 px-3 py-2 border border-gray-200">
+                          <span className="flex-1">
+                            {s?.service_full_name ? s.service_full_name : id}
+                            <span className="ml-2 font-mono text-xs text-gray-500">{id}</span>
+                          </span>
+                          {typeof s?.tariff_price_eur === 'number' && !Number.isNaN(s.tariff_price_eur) ? (
+                            <span className="shrink-0 text-sm font-medium text-gray-900">{s.tariff_price_eur.toLocaleString()} EUR</span>
+                          ) : (
+                            <span className="shrink-0 text-xs text-gray-500">—</span>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href="/logged/pages/account-management/customers_db/create"
+                  className="inline-flex items-center rounded-md bg-blue-950 px-3 py-2 text-sm font-medium text-white hover:bg-blue-900"
+                >
+                  Create customer
+                </Link>
+                <Link
+                  href="/logged/pages/account-management/contacts_db/create"
+                  className="inline-flex items-center rounded-md bg-blue-950 px-3 py-2 text-sm font-medium text-white hover:bg-blue-900"
+                >
+                  Create contact
+                </Link>
+                <Link
+                  href="/logged/pages/account-management/proposals/create"
+                  className="inline-flex items-center rounded-md bg-blue-950 px-3 py-2 text-sm font-medium text-white hover:bg-blue-900"
+                >
+                  Create proposal
+                </Link>
+              </div>
+            </div>
+          )}
 
           <div className="border-t pt-6 mt-6">
             <label className="text-sm font-medium text-gray-500">Comments</label>

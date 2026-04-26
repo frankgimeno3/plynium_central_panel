@@ -9,7 +9,7 @@ export interface CompanyRow {
   companyId: string;
   commercialName: string;
   country: string;
-  category: string;
+  region: string;
   mainEmail: string;
 }
 
@@ -79,7 +79,7 @@ const CompanySelectModal: FC<CompanySelectModalProps> = ({
           (c.commercialName ?? "").toLowerCase().includes(q) ||
           (c.companyId ?? "").toLowerCase().includes(q) ||
           (c.country ?? "").toLowerCase().includes(q) ||
-          (c.category ?? "").toLowerCase().includes(q)
+          (c.region ?? "").toLowerCase().includes(q)
       );
     }
     return list;
@@ -205,7 +205,7 @@ const CompanySelectModal: FC<CompanySelectModalProps> = ({
                                 Country
                               </th>
                               <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
-                                Category
+                                Region
                               </th>
                               <th className="px-4 py-2 text-left text-xs font-semibold text-gray-600 uppercase">
                                 Email
@@ -232,7 +232,7 @@ const CompanySelectModal: FC<CompanySelectModalProps> = ({
                                     {c.commercialName || c.companyId || "—"}
                                   </td>
                                   <td className="px-4 py-2 text-sm text-gray-600">{c.country || "—"}</td>
-                                  <td className="px-4 py-2 text-sm text-gray-600">{c.category || "—"}</td>
+                                  <td className="px-4 py-2 text-sm text-gray-600">{c.region || "—"}</td>
                                   <td className="px-4 py-2 text-sm text-gray-600">{c.mainEmail || "—"}</td>
                                 </tr>
                               ))

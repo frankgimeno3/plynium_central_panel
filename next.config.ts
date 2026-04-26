@@ -25,6 +25,7 @@ const nextConfig: NextConfig = {
     // optimizeCss requires 'critters' package; disable if not installed
     experimental: {
         optimizeCss: false,
+        externalDir: true,
     },
     // Headers for caching
     async headers() {

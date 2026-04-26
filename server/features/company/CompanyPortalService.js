@@ -1,27 +1,39 @@
 import Database from "../../database/database.js";
+import "../../database/models.js";
+import CompanyModel from "./CompanyModel.js";
+import { ensureCompanyRegionColumnMapped } from "./companyRegionColumnSync.js";
 
 /**
  * Get companies that are visible on a given portal.
  * @param {number} portalId - portals.id
- * @returns {Promise<Array<{ companyId: string, commercialName: string, country: string, category: string, mainEmail: string }>>}
+ * @returns {Promise<Array<{ companyId: string, commercialName: string, country: string, region: string, mainEmail: string }>>}
  */
 export async function getCompaniesByPortalId(portalId) {
     const db = Database.getInstance();
     if (!db.isConfigured()) return [];
     const sequelize = db.getSequelize();
+    await ensureCompanyRegionColumnMapped(sequelize);
+    const regionCol =
+        CompanyModel.rawAttributes?.region?.field === "company_category"
+            ? "company_category"
+            : "company_region";
     const [rows] = await sequelize.query(
-        `SELECT c.company_id AS "companyId", c.commercial_name AS "commercialName", c.country, c.category, c.main_email AS "mainEmail"
-         FROM company_portals cp
-         JOIN companies_db c ON c.company_id = cp.company_id
+        `SELECT c.company_id AS "companyId",
+                c.company_commercial_name AS "commercialName",
+                c.company_country AS country,
+                c.${regionCol} AS region,
+                ''::text AS "mainEmail"
+         FROM public.company_portals cp
+         JOIN public.companies_db c ON c.company_id = cp.company_id
          WHERE cp.portal_id = :portalId
-         ORDER BY c.commercial_name ASC`,
+         ORDER BY c.company_commercial_name ASC`,
         { replacements: { portalId } }
     );
     return (rows || []).map((r) => ({
         companyId: r.companyId,
         commercialName: r.commercialName ?? "",
         country: r.country ?? "",
-        category: r.category ?? "",
+        region: r.region ?? "",
         mainEmail: r.mainEmail ?? "",
     }));
 }
@@ -37,10 +49,10 @@ export async function getPortalsByCompanyId(companyId) {
     const sequelize = db.getSequelize();
     const [rows] = await sequelize.query(
         `SELECT cp.portal_id AS "portalId", p.portal_name AS "portalName", cp.company_portal_slug AS slug
-         FROM company_portals cp
-         JOIN portals_id p ON p.portal_id = cp.portal_id
+         FROM public.company_portals cp
+         JOIN public.portals_id p ON p.portal_id = cp.portal_id
          WHERE cp.company_id = :companyId
-         ORDER BY p.name`,
+         ORDER BY p.portal_name ASC`,
         { replacements: { companyId } }
     );
     return (rows || []).map((r) => ({
@@ -65,7 +77,7 @@ export async function addCompanyToPortal(companyId, portalId, commercialName = "
             .replace(/\s+/g, "-")
             .replace(/[^a-z0-9-]/g, "") || companyId.replace(/_/g, "-");
     const [existing] = await sequelize.query(
-        `SELECT 1 FROM company_portals WHERE company_id = :companyId AND portal_id = :portalId`,
+        `SELECT 1 FROM public.company_portals WHERE company_id = :companyId AND portal_id = :portalId`,
         { replacements: { companyId, portalId } }
     );
     if (existing && existing.length > 0) {
@@ -75,14 +87,14 @@ export async function addCompanyToPortal(companyId, portalId, commercialName = "
     let suffix = 0;
     for (;;) {
         const [collision] = await sequelize.query(
-            `SELECT 1 FROM company_portals WHERE portal_id = :portalId AND company_portal_slug = :slug`,
+            `SELECT 1 FROM public.company_portals WHERE portal_id = :portalId AND company_portal_slug = :slug`,
             { replacements: { portalId, slug: finalSlug } }
         );
-    if (!collision || collision.length === 0) break;
+        if (!collision || collision.length === 0) break;
         finalSlug = `${baseSlug}-${++suffix}`;
     }
     await sequelize.query(
-        `INSERT INTO company_portals (company_id, portal_id, company_portal_slug)
+        `INSERT INTO public.company_portals (company_id, portal_id, company_portal_slug)
          VALUES (:companyId, :portalId, :slug)`,
         { replacements: { companyId, portalId, slug: finalSlug } }
     );
@@ -97,7 +109,7 @@ export async function removeCompanyFromPortal(companyId, portalId) {
     if (!db.isConfigured()) throw new Error("Database not configured");
     const sequelize = db.getSequelize();
     await sequelize.query(
-        `DELETE FROM company_portals WHERE company_id = :companyId AND portal_id = :portalId`,
+        `DELETE FROM public.company_portals WHERE company_id = :companyId AND portal_id = :portalId`,
         { replacements: { companyId, portalId } }
     );
     return getPortalsByCompanyId(companyId);
@@ -122,14 +134,14 @@ export async function createCompanyPortals(companyId, portalIds, commercialName 
         let suffix = 0;
         for (;;) {
             const [collision] = await sequelize.query(
-                `SELECT 1 FROM company_portals WHERE portal_id = :portalId AND company_portal_slug = :slug`,
+                `SELECT 1 FROM public.company_portals WHERE portal_id = :portalId AND company_portal_slug = :slug`,
                 { replacements: { portalId, slug: finalSlug } }
             );
             if (!collision || collision.length === 0) break;
             finalSlug = `${baseSlug}-${++suffix}`;
         }
         await sequelize.query(
-            `INSERT INTO company_portals (company_id, portal_id, company_portal_slug)
+            `INSERT INTO public.company_portals (company_id, portal_id, company_portal_slug)
              VALUES (:companyId, :portalId, :slug)
              ON CONFLICT (company_id, portal_id) DO NOTHING`,
             { replacements: { companyId, portalId, slug: finalSlug } }
