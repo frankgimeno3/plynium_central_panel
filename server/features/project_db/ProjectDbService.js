@@ -4,12 +4,12 @@ import "../../database/models.js";
 function toApiProject(row) {
   if (!row) return null;
   return {
-    id_project: row.id_project,
-    id_contract: row.id_contract ?? "",
-    title: row.title ?? "",
-    status: row.status ?? "",
-    service: row.service ?? "",
-    publication_date: row.publication_date ?? "",
+    id_project: row.id_project ?? row.project_id ?? "",
+    id_contract: row.id_contract ?? row.contract_id ?? "",
+    title: row.title ?? row.project_title ?? "",
+    status: row.status ?? row.project_status ?? "",
+    service: row.service ?? row.service_id ?? "",
+    publication_date: row.publication_date ?? row.project_publication_date ?? "",
     publication_id: row.publication_id ?? "",
     pm_events_array: Array.isArray(row.pm_events_array) ? row.pm_events_array : [],
   };

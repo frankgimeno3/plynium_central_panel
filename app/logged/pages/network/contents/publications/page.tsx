@@ -182,13 +182,13 @@ const Publications: FC<PublicationsProps> = ({}) => {
           ))}
         </div>
 
-        <div className="flex flex-wrap py-5 gap-12 justify-center">
+        <div className="flex flex-wrap py-5 gap-6 md:gap-4 md:gap-6 justify-center">
           {loading ? (
-            <div className="text-center py-10">
+            <div className="text-center py-6">
               <p className="text-gray-500">Loading publications...</p>
             </div>
           ) : filteredPublications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-12 w-full">
+            <div className="flex flex-col items-center justify-center py-6 md:py-8 w-full">
               <p className="text-gray-500 text-lg">
                 No results found for your query
               </p>

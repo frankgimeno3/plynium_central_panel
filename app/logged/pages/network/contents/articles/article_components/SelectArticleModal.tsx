@@ -292,9 +292,9 @@ export const SelectArticleModal: FC<SelectArticleModalProps> = ({
             {/* Table */}
             <div className="border border-gray-300 rounded-lg overflow-hidden">
               {loading ? (
-                <div className="py-12 text-center text-gray-500">Loading articles...</div>
+                <div className="py-6 md:py-8 text-center text-gray-500">Loading articles...</div>
               ) : filteredAndSorted.length === 0 ? (
-                <div className="py-12 text-center text-gray-500">No articles match the filter.</div>
+                <div className="py-6 md:py-8 text-center text-gray-500">No articles match the filter.</div>
               ) : (
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">

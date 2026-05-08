@@ -48,21 +48,21 @@ export const renderMonth = ({
   }
 
   return (
-    <div className="flex flex-col text-gray-100 w-full">
-      <div className="grid grid-cols-7 gap-x-2 gap-y-4 mb-4">
+    <div className="flex w-full flex-col text-gray-100">
+      <div className="mb-2 grid grid-cols-7 gap-x-1 gap-y-1 md:mb-3 md:gap-x-1.5">
         {weekDays.map((day) => (
           <div
             key={day}
-            className="text-center text-sm font-medium text-slate-400 py-1"
+            className="py-0.5 text-center text-[10px] font-medium text-slate-400 md:text-xs"
           >
             {day}
           </div>
         ))}
       </div>
       {weeks.map((week, weekIndex) => (
-        <div key={weekIndex} className="grid grid-cols-7 gap-x-2 gap-y-4">
+        <div key={weekIndex} className="grid grid-cols-7 gap-x-1 gap-y-1 md:gap-x-1.5 md:gap-y-1.5">
           {week.map((day, dayIndex) => {
-            if (day === null) return <div key={dayIndex} className="aspect-square" />;
+            if (day === null) return <div key={dayIndex} className="h-[5.25rem] md:h-[5.75rem]" />;
 
             const date = new Date(year, monthIndex, day);
             const dayEvents = getPmEventsForDate(date);
@@ -76,25 +76,25 @@ export const renderMonth = ({
               <div
                 key={dayIndex}
                 onClick={() => handleDayClick(date)}
-                className={`aspect-square border rounded-lg p-2 text-sm flex flex-col relative cursor-pointer transition-all bg-slate-800/50 hover:bg-slate-700/50 border-slate-600 ${
+                className={`relative flex h-[5.25rem] cursor-pointer flex-col rounded-md border border-slate-600 bg-slate-800/50 p-1 text-xs transition-all hover:bg-slate-700/50 md:h-[5.75rem] md:p-1.5 md:text-sm ${
                   isToday
-                    ? "ring-2 ring-blue-500 ring-offset-2 ring-offset-slate-900"
+                    ? "ring-2 ring-blue-500 ring-offset-1 ring-offset-slate-900 md:ring-offset-2"
                     : ""
                 }`}
               >
                 <div
-                  className={`font-medium shrink-0 ${
+                  className={`shrink-0 font-medium leading-none ${
                     isToday ? "text-blue-300" : "text-slate-200"
                   }`}
                 >
                   {day}
                 </div>
                 {hasEvents && (
-                  <div className="flex-1 flex flex-col gap-1 mt-1 overflow-hidden overflow-y-auto">
+                  <div className="mt-0.5 flex flex-1 flex-col gap-0.5 overflow-hidden overflow-y-auto md:mt-1 md:gap-1">
                     {dayEvents.map((ev) => (
                       <div
                         key={ev.id_event}
-                        className={`px-1.5 py-0.5 rounded text-base font-medium border truncate ${
+                        className={`truncate rounded border px-1 py-0.5 text-[10px] font-medium leading-tight md:text-xs ${
                           eventTypeCardColor[ev.event_type] ??
                           "bg-slate-600/80 text-slate-100 border-slate-500"
                         }`}

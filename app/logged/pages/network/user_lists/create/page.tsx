@@ -265,7 +265,7 @@ export default function CreateUserListPage() {
 
   return (
     <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
-      <div className="mt-12 flex flex-col w-full max-w-4xl mx-auto px-4 pb-16">
+      <div className="mt-6 md:mt-8 flex flex-col w-full max-w-4xl mx-auto px-4 pb-10 md:pb-12">
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-4">
           <span className={phase >= 1 ? "font-semibold text-blue-950" : ""}>1. Details & portals</span>
           <span aria-hidden>→</span>

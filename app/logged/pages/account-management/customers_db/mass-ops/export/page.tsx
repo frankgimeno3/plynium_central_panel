@@ -291,7 +291,7 @@ const ExportCustomersPage: FC = () => {
         )}
 
         {phase === "loading" && (
-          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+          <div className="bg-white border border-gray-200 rounded-lg p-5 text-center md:p-6">
             <div className="inline-block w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-gray-700">Generando archivo...</p>
             <p className="text-sm text-gray-500 mt-1">Espere un momento.</p>

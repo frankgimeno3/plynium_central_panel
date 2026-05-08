@@ -19,12 +19,12 @@ const CONTACTS_IMPORT_COLUMNS = [
 
 const EXAMPLE_ROW: Record<string, string> = {
   id_contact: "cont-006",
-  name: "Juan Pérez García",
-  role: "Responsable Compras",
-  email: "juan.perez@empresa.com",
-  phone: "+34 600 111 222",
+  name: "Jane Doe",
+  role: "Purchasing",
+  email: "jane.doe@example.com",
+  phone: "+1 555 0100",
   id_customer: "cust-001",
-  company_name: "Mi Empresa S.L.",
+  company_name: "Example Corp Ltd.",
 };
 
 type ImportPhase = "upload" | "processing" | "result";
@@ -87,7 +87,7 @@ function parseFileToRows(file: File): Promise<string[][]> {
       reader.readAsArrayBuffer(file);
     });
   }
-  return Promise.reject(new Error("Formato no soportado. Use CSV o Excel (.xlsx)."));
+  return Promise.reject(new Error("Unsupported format. Use CSV or Excel (.xlsx)."));
 }
 
 function validateRows(rows: string[][]): { valid: boolean; error?: string; count?: number } {
@@ -96,7 +96,10 @@ function validateRows(rows: string[][]): { valid: boolean; error?: string; count
   const normalizedExpected = CONTACTS_IMPORT_COLUMNS.map((c) => c.toLowerCase());
   for (const col of normalizedExpected) {
     if (!header.includes(col)) {
-      return { valid: false, error: `Falta la columna requerida: ${col}. Cabecera encontrada: ${header.join(", ")}` };
+      return {
+        valid: false,
+        error: `Missing required column: ${col}. Header row found: ${header.join(", ")}`,
+      };
     }
   }
   const dataRows = rows.slice(1).filter((row) => row.some((cell) => String(cell).trim() !== ""));
@@ -118,12 +121,14 @@ const ImportContactsPage: FC = () => {
       if (!f) return;
       const ext = f.name.split(".").pop()?.toLowerCase();
       if (ext !== "csv" && ext !== "xlsx" && ext !== "xls") {
-        setValidation({ valid: false, error: "Solo se aceptan archivos CSV o Excel (.xlsx, .xls)." });
+        setValidation({ valid: false, error: "Only CSV or Excel files (.xlsx, .xls) are accepted." });
         return;
       }
       parseFileToRows(f)
         .then((rows) => setValidation(validateRows(rows)))
-        .catch(() => setValidation({ valid: false, error: "No se pudo leer el archivo. Revise el formato." }));
+        .catch(() =>
+          setValidation({ valid: false, error: "Could not read the file. Check the format." })
+        );
     },
     []
   );
@@ -167,16 +172,16 @@ const ImportContactsPage: FC = () => {
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden mb-6">
               <div className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-200/60 px-5 py-4">
                 <h3 className="text-sm font-semibold text-amber-900">
-                  Estructura esperada (Excel o CSV) — Contactos
+                  Expected structure (Excel or CSV) — Contacts
                 </h3>
                 <p className="text-xs text-amber-800/90 mt-1">
-                  La primera fila debe ser la cabecera con exactamente estas columnas (en cualquier orden).
+                  The first row must be the header with exactly these columns (in any order).
                 </p>
               </div>
               <div className="p-5 space-y-5">
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-                    Columnas requeridas
+                    Required columns
                   </p>
                   <div className="flex flex-wrap gap-2">
                     {CONTACTS_IMPORT_COLUMNS.map((col) => (
@@ -191,7 +196,7 @@ const ImportContactsPage: FC = () => {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
-                    Ejemplo
+                    Example
                   </p>
                   <div className="rounded-lg border border-gray-200 overflow-x-auto">
                     <table className="w-full min-w-[600px] text-left text-sm table-fixed">
@@ -236,7 +241,7 @@ const ImportContactsPage: FC = () => {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-lg p-6 space-y-4">
-              <p className="text-sm font-semibold text-gray-700">Subir archivo</p>
+              <p className="text-sm font-semibold text-gray-700">Upload file</p>
               <input
                 type="file"
                 accept=".csv,.xlsx,.xls"
@@ -245,7 +250,7 @@ const ImportContactsPage: FC = () => {
               />
               {file && (
                 <p className="text-xs text-gray-500">
-                  Archivo: <span className="font-medium">{file.name}</span>
+                  File: <span className="font-medium">{file.name}</span>
                 </p>
               )}
               {validation && !validation.valid && (
@@ -262,17 +267,17 @@ const ImportContactsPage: FC = () => {
                 disabled={!validation?.valid}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Continuar
+                Continue
               </button>
             </div>
           </>
         )}
 
         {phase === "processing" && (
-          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+          <div className="bg-white border border-gray-200 rounded-lg p-5 text-center md:p-6">
             <div className="inline-block w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
             <p className="text-gray-700">Processing import...</p>
-            <p className="text-sm text-gray-500 mt-1">Espere un momento.</p>
+            <p className="text-sm text-gray-500 mt-1">Please wait.</p>
           </div>
         )}
 
@@ -283,7 +288,7 @@ const ImportContactsPage: FC = () => {
               Contacts imported: <span className="font-medium text-green-600">{importResult.success}</span>
               {importResult.errors > 0 && (
                 <span className="ml-2">
-                  | Errores: <span className="font-medium text-red-600">{importResult.errors}</span>
+                  | Errors: <span className="font-medium text-red-600">{importResult.errors}</span>
                 </span>
               )}
             </p>

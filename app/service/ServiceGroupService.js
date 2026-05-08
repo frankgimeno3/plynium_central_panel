@@ -17,4 +17,12 @@ export class ServiceGroupService {
         const response = await apiClient.post("/api/v1/service-groups", data);
         return response.data;
     }
+
+    static async updateServiceGroup(serviceGroupId, data) {
+        const response = await apiClient.patch(
+            `/api/v1/service-groups/${encodeURIComponent(serviceGroupId)}`,
+            data
+        );
+        return response.data;
+    }
 }

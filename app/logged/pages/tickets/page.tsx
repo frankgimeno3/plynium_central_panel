@@ -136,7 +136,7 @@ const TicketsPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <div className="flex flex-col w-full mt-12">
+        <div className="flex flex-col w-full mt-6 md:mt-8">
           <div className="flex border-b border-gray-200 flex-wrap">
             {mainTabs.map((tab) => (
               <button
@@ -215,7 +215,7 @@ const TicketsPage: FC = () => {
                   <tbody className='bg-white divide-y divide-gray-200'>
                     {filteredNotifications.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className='px-6 py-8 text-center text-gray-500'>
+                        <td colSpan={4} className='px-4 py-5 text-center text-gray-500'>
                           No tickets in this category.
                         </td>
                       </tr>
@@ -262,7 +262,7 @@ const TicketsPage: FC = () => {
 
 function TicketsPageWithSuspense() {
   return (
-    <Suspense fallback={<div className='p-12 text-gray-600'>Loading...</div>}>
+    <Suspense fallback={<div className='p-6 text-gray-600'>Loading...</div>}>
       <TicketsPage />
     </Suspense>
   );

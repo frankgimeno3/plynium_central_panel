@@ -36,6 +36,8 @@ const putForecastedItemSchema = Joi.object({
   amount_eur: Joi.number().min(0).optional(),
   revenue_expected_amount_eur: Joi.number().min(0).optional(),
   revenue_real_amount_eur: Joi.number().min(0).allow(null).optional(),
+  revenue_payment_status: Joi.string().valid("paid", "pending").optional(),
+  sync_order: Joi.boolean().optional(),
   label: Joi.string().max(512).allow("").optional(),
   customer_name: Joi.string().max(255).allow("").optional(),
   date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
@@ -57,6 +59,7 @@ const putForecastedItemSchema = Joi.object({
   "amount_eur",
   "revenue_expected_amount_eur",
   "revenue_real_amount_eur",
+  "revenue_payment_status",
   "label",
   "customer_name",
   "date",
@@ -67,7 +70,8 @@ const putForecastedItemSchema = Joi.object({
   "payment_expected_amount_eur",
   "payment_real_amount_eur",
   "payment_expected_date",
-  "payment_real_date"
+  "payment_real_date",
+  "sync_order"
 );
 
 export const PUT = createEndpoint(

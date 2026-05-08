@@ -4,6 +4,8 @@ import React, { FC, useState, useMemo, useEffect, useCallback } from "react";
 import { getFolders, getMedia } from "@/app/service/mediatecaService";
 import CreateFolderModal from "@/app/logged/pages/mediateca/CreateFolderModal";
 import AddFileModal from "@/app/logged/pages/mediateca/AddFileModal";
+import RenameMediaModal from "@/app/logged/pages/mediateca/RenameMediaModal";
+import ChangeFolderMediaModal from "@/app/logged/pages/mediateca/ChangeFolderMediaModal";
 
 export type MediatecaFolder = { id: string; name: string; path: string };
 export type MediatecaContent = {
@@ -74,6 +76,13 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
   const [folderContents, setFolderContents] = useState<MediatecaContent[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subfolderNameFilter, setSubfolderNameFilter] = useState("");
+  const [subfolderPathFilter, setSubfolderPathFilter] = useState("");
+  const [contentIdFilter, setContentIdFilter] = useState("");
+  const [contentNameFilter, setContentNameFilter] = useState("");
+  const [contentTypeFilter, setContentTypeFilter] = useState("");
+  const [renameTarget, setRenameTarget] = useState<MediatecaContent | null>(null);
+  const [folderTarget, setFolderTarget] = useState<MediatecaContent | null>(null);
 
   const currentPath = pathSegments.join("/");
   const folderName = useMemo(
@@ -84,6 +93,10 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
     selectedContentId != null
       ? folderContents.find((c) => c.id === selectedContentId) ?? null
       : null;
+
+  const filterInputClass =
+    "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-950/20";
+  const filterLabelClass = "mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500";
   const canUseImage =
     selectedContent != null && selectedContent.content_type === "image";
 
@@ -129,13 +142,77 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
   }, [open, currentPath, hasInitializedPath, loadData]);
 
   useEffect(() => {
+    setSubfolderNameFilter("");
+    setSubfolderPathFilter("");
+    setContentIdFilter("");
+    setContentNameFilter("");
+    setContentTypeFilter("");
+  }, [currentPath]);
+
+  const filteredSubfolders = useMemo(() => {
+    const qName = subfolderNameFilter.trim().toLowerCase();
+    const qPath = subfolderPathFilter.trim().toLowerCase();
+    return subfolders.filter((f) => {
+      if (qName && !(f.name || "").toLowerCase().includes(qName)) return false;
+      if (qPath && !(f.path || "").toLowerCase().includes(qPath)) return false;
+      return true;
+    });
+  }, [subfolders, subfolderNameFilter, subfolderPathFilter]);
+
+  const filteredContents = useMemo(() => {
+    const qId = contentIdFilter.trim().toLowerCase();
+    const qName = contentNameFilter.trim().toLowerCase();
+    const qType = contentTypeFilter.trim().toLowerCase();
+    return folderContents.filter((c) => {
+      if (qId && !(c.id || "").toLowerCase().includes(qId)) return false;
+      if (qName && !(c.name || "").toLowerCase().includes(qName)) return false;
+      if (qType) {
+        // `content_type`: "image" | "json" (pdf). UI displays Image/PDF.
+        const isImage = c.content_type === "image";
+        if (qType === "image" && !isImage) return false;
+        if (qType === "pdf" && isImage) return false;
+      }
+      return true;
+    });
+  }, [folderContents, contentIdFilter, contentNameFilter, contentTypeFilter]);
+
+  useEffect(() => {
+    if (selectedContentId == null) return;
+    if (!filteredContents.some((c) => c.id === selectedContentId)) {
+      setSelectedContentId(null);
+    }
+  }, [filteredContents, selectedContentId]);
+
+  useEffect(() => {
     if (!open) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key !== "Escape") return;
+      // Nested dialogs first (same Escape key): close only the top layer, keep Media Library open.
+      if (folderTarget != null) {
+        e.preventDefault();
+        setFolderTarget(null);
+        return;
+      }
+      if (renameTarget != null) {
+        e.preventDefault();
+        setRenameTarget(null);
+        return;
+      }
+      if (addFileOpen) {
+        e.preventDefault();
+        setAddFileOpen(false);
+        return;
+      }
+      if (createFolderOpen) {
+        e.preventDefault();
+        setCreateFolderOpen(false);
+        return;
+      }
+      onClose();
     };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [open, onClose, folderTarget, renameTarget, addFileOpen, createFolderOpen]);
 
   const handleUseImage = () => {
     if (!selectedContent || selectedContent.content_type !== "image") return;
@@ -274,6 +351,37 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
             {loading ? (
               <p className="text-sm text-gray-500 mb-6">Loading…</p>
             ) : (
+            <>
+              <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="mediateca-subfolder-name" className={filterLabelClass}>
+                    Name
+                  </label>
+                  <input
+                    id="mediateca-subfolder-name"
+                    type="search"
+                    value={subfolderNameFilter}
+                    onChange={(e) => setSubfolderNameFilter(e.target.value)}
+                    placeholder="Filter by name…"
+                    className={filterInputClass}
+                    autoComplete="off"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mediateca-subfolder-path" className={filterLabelClass}>
+                    Path
+                  </label>
+                  <input
+                    id="mediateca-subfolder-path"
+                    type="search"
+                    value={subfolderPathFilter}
+                    onChange={(e) => setSubfolderPathFilter(e.target.value)}
+                    placeholder="Filter by path…"
+                    className={filterInputClass}
+                    autoComplete="off"
+                  />
+                </div>
+              </div>
             <div className="w-full min-w-0 overflow-x-auto mb-6">
               <table className="w-full min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
                 <thead className="bg-gray-50">
@@ -287,17 +395,19 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {subfolders.length === 0 ? (
+                  {filteredSubfolders.length === 0 ? (
                     <tr>
                       <td
                         colSpan={2}
                         className="px-6 py-4 text-sm text-gray-500"
                       >
-                        No subfolders in this folder.
+                        {subfolders.length === 0
+                          ? "No subfolders in this folder."
+                          : "No subfolders match these filters."}
                       </td>
                     </tr>
                   ) : (
-                    subfolders.map((f) => (
+                    filteredSubfolders.map((f) => (
                       <tr
                         key={f.id}
                         onClick={() =>
@@ -317,6 +427,7 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
                 </tbody>
               </table>
             </div>
+            </>
             )}
 
             {/* Contents */}
@@ -326,6 +437,52 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
             {loading ? (
               <p className="text-sm text-gray-500">Loading…</p>
             ) : (
+            <>
+              <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                <div>
+                  <label htmlFor="mediateca-content-id" className={filterLabelClass}>
+                    ID
+                  </label>
+                  <input
+                    id="mediateca-content-id"
+                    type="search"
+                    value={contentIdFilter}
+                    onChange={(e) => setContentIdFilter(e.target.value)}
+                    placeholder="Filter by ID…"
+                    className={filterInputClass}
+                    autoComplete="off"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mediateca-content-name" className={filterLabelClass}>
+                    Content name
+                  </label>
+                  <input
+                    id="mediateca-content-name"
+                    type="search"
+                    value={contentNameFilter}
+                    onChange={(e) => setContentNameFilter(e.target.value)}
+                    placeholder="Filter by file name…"
+                    className={filterInputClass}
+                    autoComplete="off"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="mediateca-content-type" className={filterLabelClass}>
+                    Type
+                  </label>
+                  <select
+                    id="mediateca-content-type"
+                    value={contentTypeFilter}
+                    onChange={(e) => setContentTypeFilter(e.target.value)}
+                    className={filterInputClass}
+                  >
+                    <option value="">All</option>
+                    <option value="image">Image</option>
+                    <option value="pdf">PDF</option>
+                  </select>
+                </div>
+              </div>
             <div className="w-full min-w-0 overflow-x-auto">
               <table className="w-full min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
                 <thead className="bg-gray-50">
@@ -345,20 +502,25 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Type
                     </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Folder
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {folderContents.length === 0 ? (
+                  {filteredContents.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={7}
                         className="px-6 py-4 text-sm text-gray-500"
                       >
-                        No contents in this folder.
+                        {folderContents.length === 0
+                          ? "No contents in this folder."
+                          : "No contents match these filters."}
                       </td>
                     </tr>
                   ) : (
-                    folderContents.map((c) => {
+                    filteredContents.map((c) => {
                       const isImage = c.content_type === "image";
                       const isSelected = selectedContentId === c.id;
                       const isDisabled =
@@ -372,7 +534,7 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
                               : "hover:bg-gray-50"
                           }
                         >
-                          <td className="px-4 py-3 align-top">
+                          <td className="px-4 py-3 align-middle">
                             {isImage ? (
                               <span className="inline-flex items-center gap-1">
                                 <input
@@ -394,7 +556,7 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
                               <span className="text-gray-400 text-xs">—</span>
                             )}
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-3 py-3 align-middle">
                             <div className="w-10 h-10 rounded border border-gray-200 bg-gray-100 flex items-center justify-center overflow-hidden">
                               {c.content_type === "image" && c.src ? (
                                 <img
@@ -409,14 +571,54 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
                               )}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-900 font-mono">
+                          <td className="px-4 py-3 align-middle text-sm text-gray-900 font-mono">
                             {c.id}
                           </td>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                            {c.name}
+                          <td className="px-4 py-3 align-middle text-sm text-gray-900">
+                            <div className="flex items-center gap-2">
+                              <span className="min-w-0 flex-1 truncate font-medium" title={c.name}>
+                                {c.name}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRenameTarget(c);
+                                }}
+                                className="shrink-0 rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-blue-800"
+                                title="Rename"
+                                aria-label="Rename content"
+                              >
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                  />
+                                </svg>
+                              </button>
+                            </div>
                           </td>
-                          <td className="px-4 py-3 text-sm text-gray-500">
+                          <td className="px-4 py-3 align-middle text-sm text-gray-500">
                             {c.content_type === "image" ? "Image" : "PDF"}
+                          </td>
+                          <td className="max-w-[12rem] px-4 py-3 align-middle text-sm text-gray-600">
+                            <div className="flex flex-col justify-center gap-2 sm:max-w-none">
+                              <span className="truncate font-mono text-xs text-gray-500" title={c.folderPath || currentPath}>
+                                {c.folderPath || currentPath || "—"}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setFolderTarget(c);
+                                }}
+                                className="w-fit rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-800 hover:bg-gray-50"
+                              >
+                                Change folder
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -425,6 +627,7 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
                 </tbody>
               </table>
             </div>
+            </>
             )}
 
             {/* Hint when another image is selected */}
@@ -468,6 +671,25 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
         onClose={() => setAddFileOpen(false)}
         folderPath={currentPath}
         onSuccess={handleAddFileSuccess}
+      />
+      <RenameMediaModal
+        open={renameTarget != null}
+        onClose={() => setRenameTarget(null)}
+        item={renameTarget}
+        onSuccess={() => {
+          void loadData(currentPath);
+          setRenameTarget(null);
+        }}
+      />
+      <ChangeFolderMediaModal
+        open={folderTarget != null}
+        onClose={() => setFolderTarget(null)}
+        mediaId={folderTarget?.id ?? ""}
+        fileFolderPath={folderTarget?.folderPath ?? currentPath}
+        onSuccess={() => {
+          void loadData(currentPath);
+          setFolderTarget(null);
+        }}
       />
     </>
   );

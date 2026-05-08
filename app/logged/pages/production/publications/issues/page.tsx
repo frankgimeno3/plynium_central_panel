@@ -294,7 +294,7 @@ const IssuesPage: FC = () => {
             </div>
 
             {loading ? (
-              <div className="py-10 text-center text-gray-500">Loading issues…</div>
+              <div className="py-6 text-center text-gray-500">Loading issues…</div>
             ) : (
               <div className="overflow-x-auto mt-6">
                 <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
@@ -329,7 +329,7 @@ const IssuesPage: FC = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {filtered.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-500">
+                        <td colSpan={8} className="px-4 py-6 text-center text-sm text-gray-500">
                           No issues found for this view.
                         </td>
                       </tr>
@@ -337,7 +337,9 @@ const IssuesPage: FC = () => {
                       filtered.map((p) => (
                         <tr
                           key={p.publication_id}
-                          onClick={() => router.push(`${BASE}/${encodeURIComponent(p.publication_id)}`)}
+                          onClick={() =>
+                            router.push(`${BASE}/issues/${encodeURIComponent(p.publication_id)}`)
+                          }
                           className={rowClass}
                         >
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.publication_id}</td>

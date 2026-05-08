@@ -131,6 +131,47 @@ export async function getMediaById(mediaId) {
  * @param {string} mediaId
  * @returns {Promise<{ deleted: boolean }>}
  */
+/**
+ * Update media display name and/or folder location.
+ * @param {string} mediaId
+ * @param {{ contentName?: string, name?: string, folderPath?: string }} body - folderPath "" = root (null folder_id)
+ * @returns {Promise<{ id: string, name: string, s3Key: string, url?: string, folderPath: string, contentType?: string } | null>}
+ */
+export async function updateMedia(mediaId, body = {}) {
+    const id = String(mediaId ?? "").trim();
+    if (!id) {
+        throw new Error("mediaId is required");
+    }
+    if (!MediaModel.sequelize) {
+        throw new Error("Database not configured");
+    }
+    const row = await MediaModel.findByPk(id);
+    if (!row) {
+        throw new Error("Media not found");
+    }
+    const updates = {};
+    if (body.contentName != null || body.name != null) {
+        const n = String(body.contentName ?? body.name ?? "").trim();
+        if (!n) {
+            throw new Error("contentName cannot be empty");
+        }
+        updates.content_name = n;
+    }
+    if (Object.prototype.hasOwnProperty.call(body, "folderPath")) {
+        const fp = String(body.folderPath ?? "").trim();
+        const folderId = fp ? await getFolderIdByPath(fp) : null;
+        if (fp && folderId == null) {
+            throw new Error("Destination folder not found for path");
+        }
+        updates.folder_id = folderId;
+    }
+    if (Object.keys(updates).length === 0) {
+        throw new Error("No valid updates");
+    }
+    await row.update(updates);
+    return getMediaById(id);
+}
+
 export async function deleteMedia(mediaId) {
     if (!mediaId || typeof mediaId !== "string") {
         throw new Error("mediaId is required");

@@ -85,14 +85,14 @@ Single entry for the Next app: API routes, client services, static contents, and
 | Layout y dashboard logged | `app/logged/layout.tsx`, `app/logged/page.tsx` |
 | Rutas de páginas logged | `app/logged/pages/` (árbol = URL) |
 | Componentes compartidos (modals, RichText, nav) | [Components contracts](#logged-components--contracts) |
-| Hooks de requests (JSON + memoria) | [Requests hooks](#requests-hooks--contract) |
+| Request-type hooks (company / ad / other) | [Requests hooks](#requests-hooks--contract) — `app/logged/pages/tickets/hooks/` |
 
 ### Contratos clave / invariantes globales (frontend)
 
 - **API:** Handlers en `route.js`; protegidos usan createEndpoint. Rutas y métodos deben coincidir con `app/service/*` para no desincronizar cliente/servidor.
 - **Servicios:** Toda llamada a `/api/*` pasa por `apiClient.js` (credenciales, errores normalizados). Login/logout no usan API; usan Amplify/Cognito en el browser.
 - **Contents:** Solo datos estáticos y tipos. Los datos vivos van por services → API.
-- **Logged:** Layout único para todo `/logged` y `/logged/pages/*`; datos vivos vía services, estáticos vía contents; requests = JSON + estado en memoria (sin persistencia).
+- **Logged:** Layout único para todo `/logged` y `/logged/pages/*`; datos vivos vía services, estáticos vía contents; subárbol `tickets/` + hooks en `tickets/hooks` (ver [Requests hooks](#requests-hooks--contract)).
 
 ### API contract (app/api)
 
@@ -122,10 +122,10 @@ Single entry for the Next app: API routes, client services, static contents, and
 ### Logged area (app/logged)
 
 - **Layout:** `layout.tsx` wraps all `/logged` and `/logged/pages/*` with Topnav, Leftnav, and main content. Assumes user is logged in (enforced by root proxy).
-- **Entry:** `page.tsx` at `/logged` = dashboard (user from `/api/me`, notifications from JSON, GA4 preview, links to requests/notifications/ga4).
-- **Routes:** Everything under `app/logged/pages/` maps to URLs. One `page.tsx` per route segment. Contents/, directory/, management/, notifications/, requests/, users/, portals/, ga4/.
+- **Entry:** `page.tsx` at `/logged` = dashboard (user from `/api/me`, notifications from JSON, GA4 preview, links to tickets/notifications/ga4).
+- **Routes:** Everything under `app/logged/pages/` maps to URLs. One `page.tsx` per route segment. Examples: `contents/`, `network/`, `management/`, `notifications/`, `production/`, `tickets/`, `portals/`, and other top-level feature folders (not an exhaustive list).
 
-**Data rule:** Live data → `app/service/` + API. Static/config → `app/contents/` JSON and interfaces. Requests section: static JSON + in-memory hooks (see Requests hooks).
+**Data rule:** Live data → `app/service/` + API. Static/config → `app/contents/` JSON and interfaces. Tickets and request-style UIs: hooks under `app/logged/pages/tickets/hooks/` (see [Requests hooks](#requests-hooks--contract)); production data is notifications-backed where applicable, not the legacy JSON-only paths removed from the tree.
 
 ### Cómo probar / validar (frontend)
 
@@ -306,12 +306,12 @@ Todos los modals son controlados: el padre posee open/close e initial values.
 
 ## Requests hooks — contract
 
-Hooks that provide request data (company, advertisement, other) for the requests section. **Critical:** data is **static JSON + in-memory state only**; there is no persistence.
+Hooks that back company, advertisement, and other request UIs. **Code location:** `app/logged/pages/tickets/hooks/` (useCompanyRequests, useAdvertisements, useOtherRequests). The duplicate route tree that lived under `app/logged/pages/network/requests` has been removed. **Note:** the hooks may still load static JSON in dev; production ticket flows are notifications-backed; do not assume “JSON only” for all paths.
 
 ### Propósito y ownership
 
-- **Propósito:** Exponer la lista y el detalle de “requests” (company, advertisement, other) para las páginas de la sección requests, con operaciones de actualización de estado y comentarios que **solo afectan al estado en memoria**.
-- **Este módulo posee:** useCompanyRequests, useAdvertisements, useOtherRequests y los tipos/estados que exportan. **No posee:** los archivos JSON (viven en app/contents); solo los importa. Tampoco posee las páginas que consumen los hooks (solo las consumen).
+- **Propósito:** Exponer la lista y el detalle de “requests” (company, advertisement, other) para las rutas bajo `app/logged/pages/tickets/`, con operaciones que donde aplique **solo afectan al estado en memoria** o combinan con datos de notificaciones según la página.
+- **Este módulo posee:** useCompanyRequests, useAdvertisements, useOtherRequests y los tipos/estados que exportan. **No posee:** los archivos JSON (viven en app/contents); solo los importa. Las páginas que consumen los hooks viven bajo `tickets/`; no en `network/requests` (eliminado).
 
 ### Contrato (inputs/outputs/side effects)
 
@@ -349,7 +349,7 @@ Hooks that provide request data (company, advertisement, other) for the requests
 
 ### Cómo cambiarlo sin romper (requests hooks)
 
-- **Añadir un tipo de request nuevo:** Añadir JSON en app/contents; crear un hook nuevo siguiendo el mismo patrón (useState + carga desde JSON, setter tipo updateState). Conectar el hub de requests y las páginas list/detail al nuevo hook. No asumir persistencia salvo que se añada API + service.
+- **Añadir un tipo de request nuevo:** Añadir JSON en app/contents; crear un hook nuevo siguiendo el mismo patrón (useState + carga desde JSON, setter tipo updateState). Conectar el índice o tabs en `tickets/` y las páginas list/detail al nuevo hook. No asumir persistencia salvo que se añada API + service.
 - **Añadir persistencia:** Implicaría nuevas rutas API, servicios en app/service, y que estos hooks llamen a la API en lugar de (o además de) cargar JSON. Hoy está fuera de alcance; documentar la decisión si se implementa.
 - **Cambiar el shape del JSON:** Actualizar el hook (mapeo, tipos exportados) y todos los componentes que usen esos tipos (tablas, formularios de detalle). Si el JSON tiene nuevos campos opcionales, el hook puede ignorarlos hasta que la UI los use.
 - **Cambiar nombres de archivo JSON:** Actualizar el import en el hook correspondiente (useCompanyRequests → companyRequest.json, etc.).
@@ -358,7 +358,7 @@ Hooks that provide request data (company, advertisement, other) for the requests
 
 No hay tests automatizados para estos hooks. Validar así:
 
-- **Carga inicial:** Entrar a /logged/pages/requests/quotations, .../company, .../other y comprobar que las listas se muestran sin error y que los datos coinciden con el contenido de advertisementRequest.json, companyRequest.json, otherRequests.json.
+- **Carga inicial:** Entrar a `/logged/pages/tickets` (y, si aplica, rutas de detalle bajo `/logged/pages/tickets/quotations/...`, `/logged/pages/tickets/company/...`, `/logged/pages/tickets/other/...`) y comprobar que la UI carga sin error; donde el hook aún lea JSON estático, comprobar coherencia con advertisementRequest.json, companyRequest.json, otherRequests.json.
 - **Update state / add comment:** En la UI, cambiar el estado de un request o añadir un comentario; comprobar que la lista o el detalle se actualizan en pantalla. Recargar la página y comprobar que los cambios **no** persisten (vuelve el estado del JSON).
 - **Navegación list ↔ detail:** Abrir un request desde la lista, comprobar que el detalle muestra los mismos datos. Si hay Provider, cambiar estado en detalle y volver a la lista y comprobar que la lista refleja el cambio hasta que se recargue.
 - **Cambio de JSON:** Si modificas un JSON, arrancar dev y comprobar que no hay errores de parsing y que la UI muestra los nuevos campos o valores.

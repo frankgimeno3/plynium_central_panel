@@ -29,7 +29,7 @@ const ExpiredBannersTab: FC<ExpiredBannersTabProps> = ({
 
     if (sorted.length === 0) {
         return (
-            <div className="rounded-lg border border-gray-200 bg-gray-50 p-8 text-center text-sm text-gray-600">
+            <div className="rounded-lg border border-gray-200 bg-gray-50 p-5 text-center text-sm text-gray-600 md:p-6">
                 No expired banners for this portal.
             </div>
         );

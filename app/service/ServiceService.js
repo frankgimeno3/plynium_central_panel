@@ -13,6 +13,11 @@ export class ServiceService {
     return response.data;
   }
 
+  static async createService(serviceData) {
+    const response = await apiClient.post("/api/v1/services", serviceData);
+    return response.data;
+  }
+
   static async updateService(idService, serviceData) {
     const response = await apiClient.patch(
       `/api/v1/services/${encodeURIComponent(idService)}`,

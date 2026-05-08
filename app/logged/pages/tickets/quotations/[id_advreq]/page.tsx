@@ -10,6 +10,10 @@ import {
   AdvertisementState,
 } from "@/app/logged/pages/tickets/hooks/useAdvertisements";
 import { ServiceService } from "@/app/service/ServiceService";
+import { LookupService } from "@/app/service/LookupService";
+
+type EmailMatchEntity = { id: string; label: string };
+type EmailMatchUser = EmailMatchEntity & { email: string };
 
 type ServiceCatalogRow = {
   service_id?: string;
@@ -52,6 +56,13 @@ export default function AdvertisementDetailPage() {
   const [selectedState, setSelectedState] = useState<AdvertisementState>("pending");
   const [servicesById, setServicesById] = useState<Record<string, ServiceCatalogRow | null>>({});
   const [servicesLoading, setServicesLoading] = useState(false);
+  const [emailMatches, setEmailMatches] = useState<{
+    customers: EmailMatchEntity[];
+    contacts: EmailMatchEntity[];
+    companies: EmailMatchEntity[];
+    users: EmailMatchUser[];
+  } | null>(null);
+  const [emailMatchesLoading, setEmailMatchesLoading] = useState(false);
   const { setPageMeta } = usePageContent();
 
   const serviceIdsKey = useMemo(
@@ -118,6 +129,35 @@ export default function AdvertisementDetailPage() {
   }, [advReqId, advertisements, advertisementsLoading]);
 
   useEffect(() => {
+    const em = advertisement?.senderEmail?.trim() ?? "";
+    if (!em || !em.includes("@")) {
+      setEmailMatches(null);
+      return;
+    }
+    let cancelled = false;
+    setEmailMatchesLoading(true);
+    LookupService.getEmailMatches(em)
+      .then((data) => {
+        if (cancelled) return;
+        setEmailMatches({
+          customers: Array.isArray(data?.customers) ? data.customers : [],
+          contacts: Array.isArray(data?.contacts) ? data.contacts : [],
+          companies: Array.isArray(data?.companies) ? data.companies : [],
+          users: Array.isArray(data?.users) ? data.users : [],
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setEmailMatches(null);
+      })
+      .finally(() => {
+        if (!cancelled) setEmailMatchesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [advertisement?.senderEmail, advertisement?.idAdvReq]);
+
+  useEffect(() => {
     if (advertisement) {
       setPageMeta({
         pageTitle: "Advertisement Request Details",
@@ -126,7 +166,12 @@ export default function AdvertisementDetailPage() {
           { label: "Advertisement quotations", href: `${BASE}?tab=quotations` },
           { label: advertisement.idAdvReq },
         ],
-        buttons: [{ label: "Back to Advertisement Quotations", href: `${BASE}?tab=quotations` }],
+        buttons: [
+          { label: "Back to Advertisement Quotations", href: `${BASE}?tab=quotations` },
+          { label: "Create proposal", href: "/logged/pages/account-management/proposals/create" },
+          { label: "Create account", href: "/logged/pages/account-management/customers_db/create" },
+          { label: "Create contact", href: "/logged/pages/account-management/contacts_db/create" },
+        ],
       });
     } else {
       setPageMeta({
@@ -161,9 +206,6 @@ export default function AdvertisementDetailPage() {
       .replace(/^./, (str) => str.toUpperCase())
       .trim();
   };
-
-  const stateBadgeClass = (): string =>
-    "border-blue-500 bg-blue-950/40 font-medium text-blue-300";
 
   const handleStateChange = async (newState: AdvertisementState) => {
     if (!advertisement) return;
@@ -239,14 +281,6 @@ export default function AdvertisementDetailPage() {
       <PageContentSection>
         <div className="flex flex-col w-full">
           <div className="bg-white rounded-b-lg overflow-hidden p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <span className="text-sm text-gray-500">Current State:</span>
-          <span
-            className={`inline-flex rounded-r-md border-l-2 py-1.5 pl-2 pr-3 text-sm font-medium uppercase ${stateBadgeClass()}`}
-          >
-            {formatState(advertisement.advReqState)}
-          </span>
-        </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-6">Details</h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -272,6 +306,111 @@ export default function AdvertisementDetailPage() {
             <label className="text-sm font-medium text-gray-500">Contact email</label>
             <p className="text-lg text-gray-900 mt-1">{advertisement.senderEmail || "—"}</p>
           </div>
+          {(advertisement.senderEmail?.trim() && advertisement.senderEmail.includes("@")) || emailMatchesLoading ? (
+            <div className="md:col-span-2 mt-2 mb-2">
+              <label className="text-sm font-medium text-gray-500 block mb-2">
+                Coincidences found (same email in CRM / directory)
+              </label>
+              {emailMatchesLoading ? (
+                <p className="text-sm text-gray-500">Checking customers, companies, contacts, and users…</p>
+              ) : emailMatches ? (
+                <div className="overflow-x-auto border border-gray-200 rounded-lg !text-gray-900">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-3 py-2 text-left font-semibold !text-gray-700 w-1/4">Customers</th>
+                        <th className="px-3 py-2 text-left font-semibold !text-gray-700 w-1/4">Companies</th>
+                        <th className="px-3 py-2 text-left font-semibold !text-gray-700 w-1/4">Contacts</th>
+                        <th className="px-3 py-2 text-left font-semibold !text-gray-700 w-1/4">Users</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr className="align-top bg-white">
+                        <td className="px-3 py-3 border-r border-gray-100 !text-gray-900">
+                          {emailMatches.customers.length === 0 ? (
+                            <p className="text-gray-500 text-xs">No coincidences found for customers</p>
+                          ) : (
+                            <ul className="space-y-2">
+                              {emailMatches.customers.map((c) => (
+                                <li key={c.id}>
+                                  <Link
+                                    href={`/logged/pages/account-management/customers_db/${encodeURIComponent(c.id)}`}
+                                    className="block rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2 hover:border-blue-950 hover:bg-blue-50/50 transition-colors !text-gray-900"
+                                  >
+                                    <span className="font-medium block">{c.label}</span>
+                                    <span className="text-xs font-mono text-gray-500">{c.id}</span>
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 border-r border-gray-100 !text-gray-900">
+                          {emailMatches.companies.length === 0 ? (
+                            <p className="text-gray-500 text-xs">No coincidences found for companies</p>
+                          ) : (
+                            <ul className="space-y-2">
+                              {emailMatches.companies.map((c) => (
+                                <li key={c.id}>
+                                  <Link
+                                    href={`/logged/pages/network/directory/companies/${encodeURIComponent(c.id)}`}
+                                    className="block rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2 hover:border-blue-950 hover:bg-blue-50/50 transition-colors !text-gray-900"
+                                  >
+                                    <span className="font-medium block">{c.label}</span>
+                                    <span className="text-xs font-mono text-gray-500">{c.id}</span>
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 border-r border-gray-100 !text-gray-900">
+                          {emailMatches.contacts.length === 0 ? (
+                            <p className="text-gray-500 text-xs">No coincidences found for contacts</p>
+                          ) : (
+                            <ul className="space-y-2">
+                              {emailMatches.contacts.map((c) => (
+                                <li key={c.id}>
+                                  <Link
+                                    href={`/logged/pages/account-management/contacts_db/${encodeURIComponent(c.id)}`}
+                                    className="block rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2 hover:border-blue-950 hover:bg-blue-50/50 transition-colors !text-gray-900"
+                                  >
+                                    <span className="font-medium block">{c.label}</span>
+                                    <span className="text-xs font-mono text-gray-500">{c.id}</span>
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                        <td className="px-3 py-3 !text-gray-900">
+                          {emailMatches.users.length === 0 ? (
+                            <p className="text-gray-500 text-xs">No coincidences found for users</p>
+                          ) : (
+                            <ul className="space-y-2">
+                              {emailMatches.users.map((u) => (
+                                <li key={u.id}>
+                                  <Link
+                                    href={`/logged/pages/network/users/${encodeURIComponent(u.id)}`}
+                                    className="block rounded-lg border border-gray-200 bg-gray-50/80 px-3 py-2 hover:border-blue-950 hover:bg-blue-50/50 transition-colors !text-gray-900"
+                                  >
+                                    <span className="font-medium block">{u.label || u.email}</span>
+                                    <span className="text-xs font-mono text-gray-500">{u.email}</span>
+                                  </Link>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">Could not load matches.</p>
+              )}
+            </div>
+          ) : null}
           <div>
             <label className="text-sm font-medium text-gray-500">Contact name</label>
             <p className="text-lg text-gray-900 mt-1">{advertisement.senderCompany || "—"}</p>
@@ -309,7 +448,7 @@ export default function AdvertisementDetailPage() {
             {servicesLoading ? (
               <p className="mt-3 text-sm text-gray-500">Loading service catalog…</p>
             ) : (
-            <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-3 flex w-full max-w-2xl flex-col gap-4">
               {advertisement.serviceIds.map((rawId) => {
                 const id = String(rawId).trim();
                 const s = servicesById[id];
@@ -460,15 +599,6 @@ export default function AdvertisementDetailPage() {
               </div>
             ))
           )}
-        </div>
-
-        <div className="mt-8 pt-6 border-t">
-          <Link
-            href="/logged/pages/account-management/proposals/create"
-            className="inline-flex px-4 py-2 bg-blue-950 text-white font-medium rounded-lg hover:bg-blue-900 transition-colors"
-          >
-            Create proposal
-          </Link>
         </div>
           </div>
         </div>

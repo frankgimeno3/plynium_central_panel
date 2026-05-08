@@ -173,7 +173,7 @@ const AdministrationOrdersPage: FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-gray-500 text-sm">
+                  <td colSpan={8} className="px-4 py-5 text-center text-gray-500 text-sm">
                     Loading orders…
                   </td>
                 </tr>

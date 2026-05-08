@@ -1,16 +1,19 @@
 "use client";
 
-import React, { FC, use, useState, useEffect, useCallback } from "react";
+import React, { FC, use, useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import ga4Data from "@/app/contents/ga4.json";
 import { CustomerService } from "@/app/service/CustomerService";
+import { ProductService } from "@/app/service/ProductService";
 import { CompanyCategoryService } from "@/app/service/CompanyCategoryService";
+import CompanyPickerModal from "@/app/logged/logged_components/modals/CompanyPickerModal";
 import { ProposalService } from "@/app/service/ProposalService";
 import { ContractService } from "@/app/service/ContractService";
 import { ProjectService } from "@/app/service/ProjectService";
+import { hrefCreateCompanyFromCustomer } from "@/app/logged/pages/network/directory/companies/create/createCompanyPaths";
 
 type ContactItem = { name: string; role: string; email: string; phone: string };
 type CommentItem = { id?: string; text: string; date?: string; author?: string };
@@ -70,8 +73,30 @@ type Customer = {
 type Proposal = { id_proposal: string; title: string; status: string; amount_eur: number };
 type Contract = { id_contract: string; id_proposal?: string; title: string; process_state: string; payment_state: string };
 type Project = { id_project: string; id_contract: string; title: string; status: string; publication_date?: string };
+type DirectoryProductRow = {
+  productId: string;
+  productName: string;
+  price: number;
+  mainImageSrc?: string;
+  productCategoriesArray?: string[];
+  companyId: string;
+  companyName: string;
+};
 
 type Portal = { id: string; name: string };
+
+const CUSTOMER_STATUS_PRESETS = [
+  "active",
+  "inactive",
+  "activo",
+  "inactivo",
+  "lead",
+  "prospect",
+  "customer",
+  "churned",
+  "pending",
+  "pipeline",
+] as const;
 
 type TabKey = "principal" | "comentarios" | "contactos" | "contratos" | "propuestas" | "articulos";
 type ProposalStatusTab = "pending" | "accepted" | "rejected";
@@ -143,6 +168,56 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
   const [expandedContractId, setExpandedContractId] = useState<string | null>(null);
   const [companyCategoriesList, setCompanyCategoriesList] = useState<{ id_category: string; name: string }[]>([]);
   const [categoriesUpdating, setCategoriesUpdating] = useState(false);
+  const [categoryToAdd, setCategoryToAdd] = useState("");
+
+  const [directoryCompanyRels, setDirectoryCompanyRels] = useState<
+    { customer_company_relation_id: string; customer_id: string; company_id: string; company_name: string }[]
+  >([]);
+  const [directoryRelsLoading, setDirectoryRelsLoading] = useState(true);
+  const [companyPickerOpen, setCompanyPickerOpen] = useState(false);
+  const [directoryProducts, setDirectoryProducts] = useState<DirectoryProductRow[]>([]);
+  const [directoryProductsLoading, setDirectoryProductsLoading] = useState(false);
+  const [deleteCustomerModalOpen, setDeleteCustomerModalOpen] = useState(false);
+  const [deleteCustomerConfirmInput, setDeleteCustomerConfirmInput] = useState("");
+  const [deleteCustomerLoading, setDeleteCustomerLoading] = useState(false);
+
+  const [overviewDraft, setOverviewDraft] = useState({
+    name: "",
+    country: "",
+    cif: "",
+    address: "",
+    phone: "",
+    email: "",
+    website: "",
+    industry: "",
+    owner: "",
+    status: "active",
+  });
+  const [overviewSaving, setOverviewSaving] = useState(false);
+  const [overviewError, setOverviewError] = useState<string | null>(null);
+  const [overviewSavedAt, setOverviewSavedAt] = useState<string | null>(null);
+  const customerRef = useRef<Customer | undefined>(undefined);
+  customerRef.current = customer;
+
+  useLayoutEffect(() => {
+    if (customerLoading) return;
+    const c = customerRef.current;
+    if (!c || c.id_customer !== id_customer) return;
+    setOverviewDraft({
+      name: c.name ?? "",
+      country: c.country ?? "",
+      cif: c.cif ?? "",
+      address: c.address ?? "",
+      phone: c.phone ?? "",
+      email: c.email ?? "",
+      website: c.website ?? "",
+      industry: c.industry ?? "",
+      owner: c.owner ?? "",
+      status: (c.status && String(c.status).trim()) || "active",
+    });
+    setOverviewError(null);
+    setOverviewSavedAt(null);
+  }, [id_customer, customerLoading]);
 
   useEffect(() => {
     CompanyCategoryService.getAllCategories()
@@ -158,10 +233,83 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                 name: String(row.category_name ?? ""),
               };
             })
+            .filter((c) => c.id_category.trim().length > 0 && c.name.trim().length > 0)
+            .sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }))
         );
       })
       .catch(() => setCompanyCategoriesList([]));
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setDirectoryRelsLoading(true);
+      try {
+        const list = await CustomerService.getCustomerCompanyRelations({ customerId: id_customer });
+        if (!cancelled) setDirectoryCompanyRels(Array.isArray(list) ? list : []);
+      } catch {
+        if (!cancelled) setDirectoryCompanyRels([]);
+      } finally {
+        if (!cancelled) setDirectoryRelsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [id_customer]);
+
+  useEffect(() => {
+    if (directoryCompanyRels.length === 0) {
+      setDirectoryProducts([]);
+      setDirectoryProductsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      setDirectoryProductsLoading(true);
+      const rows: DirectoryProductRow[] = [];
+      try {
+        for (const rel of directoryCompanyRels) {
+          const prods = await ProductService.getProductsByCompany(rel.company_id);
+          const name = rel.company_name || rel.company_id;
+          for (const p of Array.isArray(prods) ? prods : []) {
+            const row = p as {
+              productId?: string;
+              productName?: string;
+              price?: number;
+              mainImageSrc?: string;
+              productCategoriesArray?: string[];
+            };
+            if (!row?.productId) continue;
+            rows.push({
+              productId: String(row.productId),
+              productName: String(row.productName ?? row.productId),
+              price: Number(row.price) || 0,
+              mainImageSrc: row.mainImageSrc,
+              productCategoriesArray: Array.isArray(row.productCategoriesArray) ? row.productCategoriesArray : [],
+              companyId: rel.company_id,
+              companyName: name,
+            });
+          }
+        }
+        if (!cancelled) setDirectoryProducts(rows);
+      } catch {
+        if (!cancelled) setDirectoryProducts([]);
+      } finally {
+        if (!cancelled) setDirectoryProductsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [directoryCompanyRels]);
+
+  const directoryProductsByCompany = useMemo(() => {
+    const m = new Map<string, { companyId: string; companyName: string; items: DirectoryProductRow[] }>();
+    for (const p of directoryProducts) {
+      if (!m.has(p.companyId)) {
+        m.set(p.companyId, { companyId: p.companyId, companyName: p.companyName, items: [] });
+      }
+      m.get(p.companyId)!.items.push(p);
+    }
+    return [...m.values()].sort((a, b) => a.companyName.localeCompare(b.companyName, undefined, { sensitivity: "base" }));
+  }, [directoryProducts]);
 
   useEffect(() => {
     if (customer?.comments) setComments([...customer.comments]);
@@ -213,7 +361,29 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
           { label: "Customers DB", href: "/logged/pages/account-management/customers_db" },
           { label: customer.name },
         ],
-        buttons: [{ label: "Back to Customers", href: "/logged/pages/account-management/customers_db" }],
+        buttons: [
+          { label: "Back to Customers", href: "/logged/pages/account-management/customers_db" },
+          {
+            label: "Create contact",
+            href: `/logged/pages/account-management/contacts_db/create?customer=${encodeURIComponent(id_customer)}`,
+          },
+          {
+            label: "Create proposal",
+            href: `/logged/pages/account-management/proposals/create?customer=${encodeURIComponent(id_customer)}`,
+          },
+          {
+            label: deleteCustomerLoading ? "Deleting…" : "Delete customer",
+            onClick: () => {
+              setDeleteCustomerConfirmInput("");
+              setDeleteCustomerModalOpen(true);
+            },
+            variant: "danger",
+          },
+          {
+            label: "Create company",
+            href: hrefCreateCompanyFromCustomer(customer?.id_customer ?? id_customer),
+          },
+        ],
       });
     } else {
       setPageMeta({
@@ -225,7 +395,55 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
         buttons: [{ label: "Back to Customers", href: "/logged/pages/account-management/customers_db" }],
       });
     }
-  }, [setPageMeta, customer]);
+  }, [setPageMeta, customer, id_customer, deleteCustomerLoading]);
+
+  const saveOverview = useCallback(async () => {
+    if (!customer) return;
+    if (!overviewDraft.name.trim()) {
+      setOverviewError("Account name is required.");
+      return;
+    }
+    setOverviewSaving(true);
+    setOverviewError(null);
+    try {
+      const updated = await CustomerService.updateCustomer(id_customer, {
+        name: overviewDraft.name.trim(),
+        country: overviewDraft.country.trim(),
+        cif: overviewDraft.cif.trim(),
+        address: overviewDraft.address.trim(),
+        phone: overviewDraft.phone.trim(),
+        email: overviewDraft.email.trim(),
+        website: overviewDraft.website.trim(),
+        industry: overviewDraft.industry.trim(),
+        owner: overviewDraft.owner.trim(),
+        status: overviewDraft.status.trim() || "active",
+      });
+      setCustomer({ ...customer, ...updated } as Customer);
+      setOverviewDraft({
+        name: updated.name ?? "",
+        country: updated.country ?? "",
+        cif: updated.cif ?? "",
+        address: updated.address ?? "",
+        phone: updated.phone ?? "",
+        email: updated.email ?? "",
+        website: updated.website ?? "",
+        industry: updated.industry ?? "",
+        owner: updated.owner ?? "",
+        status: (updated.status && String(updated.status).trim()) || "active",
+      });
+      setOverviewSavedAt(new Date().toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" }));
+    } catch (e: unknown) {
+      const msg =
+        e instanceof Error
+          ? e.message
+          : typeof e === "object" && e !== null && "message" in e
+            ? String((e as { message?: string }).message)
+            : "Could not save company details.";
+      setOverviewError(msg);
+    } finally {
+      setOverviewSaving(false);
+    }
+  }, [customer, id_customer, overviewDraft]);
 
   const handleAddComment = () => {
     const text = newComment.trim();
@@ -330,37 +548,160 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
               </section>
             )}
 
-            {/* Company details – all fields from create flow */}
+            {/* Company details – editable (persisted on customers_db) */}
             <section className="bg-gray-50 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Company details</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Field label="Client ID" value={customer.id_customer} />
-                <Field label="Account name" value={customer.name} />
-                <Field label="Country" value={customer.country} />
-                <Field label="CIF" value={customer.cif} />
-                <Field label="Fiscal address" value={customer.address} className="lg:col-span-2" />
-                <Field label="Postal code" value={customer.postal_code} />
-                <Field label="Agent" value={customer.owner} />
-                <Field label="Website" value={customer.website} link={customer.website} />
-                <Field label="Phone (generic)" value={customer.phone} link={customer.phone ? `tel:${customer.phone}` : undefined} />
-                <Field label="Email (generic)" value={customer.email} link={customer.email ? `mailto:${customer.email}` : undefined} className="lg:col-span-2" />
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Company details</h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  {overviewSavedAt && (
+                    <span className="text-xs text-green-700 font-medium">Saved {overviewSavedAt}</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => void saveOverview()}
+                    disabled={overviewSaving}
+                    className="px-4 py-2 bg-blue-950 text-white text-sm font-medium rounded-lg hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {overviewSaving ? "Saving…" : "Save changes"}
+                  </button>
+                </div>
               </div>
-            </section>
-
-            {/* Optional / classification */}
-            <section className="bg-gray-50 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Classification &amp; optional</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <Field label="Sector" value={customer.industry} />
-                <Field label="Segment" value={customer.segment} />
-                <Field label="Origin" value={customer.source} />
-                <Field label="Status" value={customer.status} />
-                {customer.next_activity && (
-                  <Field label="Next activity" value={customer.next_activity} className="lg:col-span-2" />
-                )}
-              </div>
+              {overviewError && (
+                <p className="mb-3 text-sm text-red-600" role="alert">
+                  {overviewError}
+                </p>
+              )}
+              <form
+                className="space-y-6"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void saveOverview();
+                }}
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Client ID</label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={customer.id_customer}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-100 text-gray-700 font-mono"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs text-gray-600 mb-1">
+                      Account name <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={overviewDraft.name}
+                      onChange={(e) => setOverviewDraft((d) => ({ ...d, name: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Country</label>
+                    <input
+                      type="text"
+                      value={overviewDraft.country}
+                      onChange={(e) => setOverviewDraft((d) => ({ ...d, country: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">CIF</label>
+                    <input
+                      type="text"
+                      value={overviewDraft.cif}
+                      onChange={(e) => setOverviewDraft((d) => ({ ...d, cif: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Status</label>
+                    <input
+                      type="text"
+                      list="customer-status-options"
+                      value={overviewDraft.status}
+                      onChange={(e) => setOverviewDraft((d) => ({ ...d, status: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="e.g. active"
+                    />
+                    <datalist id="customer-status-options">
+                      {CUSTOMER_STATUS_PRESETS.map((s) => (
+                        <option key={s} value={s} />
+                      ))}
+                    </datalist>
+                  </div>
+                  <div className="lg:col-span-3">
+                    <label className="block text-xs text-gray-600 mb-1">Fiscal address</label>
+                    <textarea
+                      value={overviewDraft.address}
+                      onChange={(e) => setOverviewDraft((d) => ({ ...d, address: e.target.value }))}
+                      rows={2}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Agent</label>
+                    <input
+                      type="text"
+                      value={overviewDraft.owner}
+                      onChange={(e) => setOverviewDraft((d) => ({ ...d, owner: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Website</label>
+                    <input
+                      type="url"
+                      value={overviewDraft.website}
+                      onChange={(e) => setOverviewDraft((d) => ({ ...d, website: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Phone (generic)</label>
+                    <input
+                      type="text"
+                      value={overviewDraft.phone}
+                      onChange={(e) => setOverviewDraft((d) => ({ ...d, phone: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs text-gray-600 mb-1">Email (generic)</label>
+                    <input
+                      type="email"
+                      value={overviewDraft.email}
+                      onChange={(e) => setOverviewDraft((d) => ({ ...d, email: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Sector</label>
+                    <input
+                      type="text"
+                      value={overviewDraft.industry}
+                      onChange={(e) => setOverviewDraft((d) => ({ ...d, industry: e.target.value }))}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                  </div>
+                </div>
+              </form>
+              {(customer.segment || customer.source || customer.postal_code || customer.next_activity) && (
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-3">Additional (read-only)</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <Field label="Segment" value={customer.segment} />
+                    <Field label="Origin" value={customer.source} />
+                    <Field label="Postal code" value={customer.postal_code} />
+                    <Field label="Next activity" value={customer.next_activity} className="lg:col-span-2" />
+                  </div>
+                </div>
+              )}
               {customer.tags && customer.tags.length > 0 && (
-                <div className="mt-4">
+                <div className="mt-6 pt-4 border-t border-gray-200">
                   <p className="text-xs text-gray-500 uppercase mb-2">Tags</p>
                   <div className="flex flex-wrap gap-2">
                     {customer.tags.map((tag) => (
@@ -381,13 +722,13 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Company categories</h2>
               <p className="text-sm text-gray-600 mb-3">Company categories linked to this customer. Add or remove with the controls below.</p>
               <select
-                value=""
+                value={categoryToAdd}
                 onChange={(e) => {
                   const id = e.target.value;
                   if (!id || !customer) return;
                   const current = customer.company_categories_array || [];
                   if (current.includes(id)) {
-                    e.target.value = "";
+                    setCategoryToAdd("");
                     return;
                   }
                   const next = [...current, id];
@@ -397,9 +738,9 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                       setCustomer({ ...customer, ...updated } as Customer);
                     })
                     .finally(() => setCategoriesUpdating(false));
-                  e.target.value = "";
+                  setCategoryToAdd("");
                 }}
-                disabled={categoriesUpdating}
+                disabled={categoriesUpdating || companyCategoriesList.length === 0}
                 className="max-w-xs px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:opacity-50"
               >
                 <option value="">Add a category...</option>
@@ -411,6 +752,9 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                     </option>
                   ))}
               </select>
+              {companyCategoriesList.length === 0 && (
+                <p className="text-gray-500 text-sm mt-2">No company categories available.</p>
+              )}
               {(customer.company_categories_array || []).length > 0 ? (
                 <div className="flex flex-wrap gap-2 mt-3">
                   {(customer.company_categories_array || []).map((id) => {
@@ -444,6 +788,179 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                 </div>
               ) : (
                 <p className="text-gray-500 text-sm mt-2">No company categories linked.</p>
+              )}
+            </section>
+
+            {/* Directory companies (CRM ↔ network directory) */}
+            <section className="bg-gray-50 rounded-xl p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Directory companies</h2>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCompanyPickerOpen(true)}
+                    className="px-4 py-2 bg-blue-950 text-white text-sm font-medium rounded-lg hover:bg-blue-900 transition-colors"
+                  >
+                    Link to a company
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push(hrefCreateCompanyFromCustomer(customer?.id_customer ?? id_customer))}
+                    className="px-4 py-2 border border-gray-300 bg-white text-gray-800 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    Create company
+                  </button>
+                </div>
+              </div>
+              <p className="text-sm text-gray-600 mb-3">
+                Link this customer account to one or more companies in the network directory. Product catalog is stored on
+                the company, not on the customer record.
+              </p>
+              {directoryRelsLoading ? (
+                <p className="text-sm text-gray-500">Loading…</p>
+              ) : directoryCompanyRels.length === 0 ? (
+                <p className="text-sm text-gray-500">No directory companies linked.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {directoryCompanyRels.map((rel) => (
+                    <li
+                      key={rel.customer_company_relation_id}
+                      className="flex flex-wrap items-center justify-between gap-2 p-3 bg-white border border-gray-200 rounded-lg"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          router.push(
+                            `/logged/pages/network/directory/companies/${encodeURIComponent(rel.company_id)}`
+                          )
+                        }
+                        className="text-left text-blue-700 hover:underline font-medium"
+                      >
+                        {rel.company_name}
+                      </button>
+                      <span className="text-gray-500 text-xs font-mono">{rel.company_id}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+
+            {/* Products from directory companies (via company_id) */}
+            <section className="bg-gray-50 rounded-xl p-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-2">Products (directory)</h2>
+              {directoryRelsLoading ? (
+                <p className="text-sm text-gray-500">Loading…</p>
+              ) : directoryCompanyRels.length === 0 ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-600">
+                    Only a company in the network directory can own products — not a customer account by itself. Link this
+                    account to a company to see the catalog stored under that company, or create a new company and link it.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setCompanyPickerOpen(true)}
+                      className="px-4 py-2 bg-blue-950 text-white text-sm font-medium rounded-lg hover:bg-blue-900 transition-colors"
+                    >
+                      Link to a company
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => router.push(hrefCreateCompanyFromCustomer(customer?.id_customer ?? id_customer))}
+                      className="px-4 py-2 border border-gray-300 bg-white text-gray-800 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
+                    >
+                      Create company
+                    </button>
+                  </div>
+                </div>
+              ) : directoryProductsLoading ? (
+                <p className="text-sm text-gray-500">Loading products…</p>
+              ) : directoryProducts.length === 0 ? (
+                <p className="text-sm text-gray-500">No products found for the linked company or companies yet.</p>
+              ) : (
+                <div className="space-y-3 text-gray-900">
+                  {directoryProductsByCompany.map((group) => (
+                    <details
+                      key={group.companyId}
+                      open
+                      className="group border border-gray-200 rounded-lg bg-white overflow-hidden text-gray-900"
+                    >
+                      <summary
+                        className="list-none flex flex-wrap items-center justify-between gap-2 px-4 py-3 bg-gray-100 cursor-pointer !text-gray-900 select-none [&::-webkit-details-marker]:hidden"
+                      >
+                        <div className="flex flex-wrap items-center gap-2 min-w-0">
+                          <span className="!text-gray-500 text-lg font-light group-open:rotate-90 transition-transform inline-block" aria-hidden>
+                            ›
+                          </span>
+                          <span className="font-semibold !text-gray-900">{group.companyName}</span>
+                          <span className="!text-gray-500 text-xs font-mono shrink-0">{group.companyId}</span>
+                          <span className="text-xs !text-gray-500">({group.items.length} product{group.items.length === 1 ? "" : "s"})</span>
+                        </div>
+                        <button
+                          type="button"
+                          className="text-xs text-blue-700 hover:underline font-medium shrink-0"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            router.push(
+                              `/logged/pages/network/directory/companies/${encodeURIComponent(group.companyId)}`
+                            );
+                          }}
+                        >
+                          Open company
+                        </button>
+                      </summary>
+                      <div className="overflow-x-auto border-t border-gray-200">
+                        <table className="min-w-full text-sm">
+                          <thead className="bg-gray-50 text-xs uppercase border-b border-gray-200">
+                            <tr>
+                              <th className="px-3 py-2 text-left w-20 !text-gray-600">Image</th>
+                              <th className="px-3 py-2 text-left !text-gray-600">Product</th>
+                              <th className="px-3 py-2 text-right !text-gray-600">Price</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-100 bg-white">
+                            {group.items.map((p) => (
+                              <tr
+                                key={p.productId}
+                                className="hover:bg-gray-50 cursor-pointer"
+                                onClick={() =>
+                                  router.push(
+                                    `/logged/pages/network/directory/products/${encodeURIComponent(p.productId)}`
+                                  )
+                                }
+                              >
+                                <td className="px-3 py-2 align-middle !text-gray-900">
+                                  <div className="w-10 h-10 rounded border border-gray-200 bg-gray-100 overflow-hidden flex items-center justify-center">
+                                    {p.mainImageSrc ? (
+                                      <img
+                                        src={p.mainImageSrc}
+                                        alt=""
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => {
+                                          (e.target as HTMLImageElement).style.display = "none";
+                                        }}
+                                      />
+                                    ) : (
+                                      <span className="text-gray-400 text-xs">—</span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td className="px-3 py-2 !text-gray-900">
+                                  <div className="font-medium !text-gray-900">{p.productName}</div>
+                                  <div className="text-xs !text-gray-600 font-mono">{p.productId}</div>
+                                </td>
+                                <td className="px-3 py-2 text-right tabular-nums !text-gray-900 font-medium">
+                                  {Number(p.price).toFixed(2)} €
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </details>
+                  ))}
+                </div>
               )}
             </section>
 
@@ -768,7 +1285,7 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
                           </div>
                           {isExpanded && contractProjects.length > 0 && (
                             <div className="border-t border-gray-200 bg-gray-50/70">
-                              <div className="p-3 pl-12 space-y-2">
+                              <div className="space-y-2 p-3 pl-8">
                                 {contractProjects.map((proj) => (
                                   <div
                                     key={proj.id_project}
@@ -956,6 +1473,112 @@ const CustomerDetailPage: FC<{ params: Promise<{ id_customer: string }> }> = ({ 
       </div>
         </div>
       </PageContentSection>
+
+      {deleteCustomerModalOpen && customer && (
+        <div
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-customer-title"
+          onClick={() => !deleteCustomerLoading && setDeleteCustomerModalOpen(false)}
+        >
+          <div
+            className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6 text-gray-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <h3 id="delete-customer-title" className="text-lg font-semibold text-gray-900">
+                Delete customer
+              </h3>
+              <button
+                type="button"
+                onClick={() => !deleteCustomerLoading && setDeleteCustomerModalOpen(false)}
+                disabled={deleteCustomerLoading}
+                className="text-gray-500 hover:text-gray-700 text-2xl leading-none disabled:opacity-50"
+                aria-label="Close"
+              >
+                ×
+              </button>
+            </div>
+            <p className="text-gray-700 text-sm mb-4">
+              This permanently deletes the customer account{" "}
+              <span className="font-semibold">{customer.name}</span> (<span className="font-mono text-xs">{id_customer}</span>)
+              from the database, including directory company links and customer comments.
+            </p>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Type <span className="font-mono">confirm</span> to enable delete
+            </label>
+            <input
+              type="text"
+              value={deleteCustomerConfirmInput}
+              onChange={(e) => setDeleteCustomerConfirmInput(e.target.value)}
+              disabled={deleteCustomerLoading}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-600 disabled:opacity-50 !text-gray-900"
+              placeholder="confirm"
+              autoFocus
+            />
+            <div className="flex justify-end gap-2 mt-5">
+              <button
+                type="button"
+                onClick={() => setDeleteCustomerModalOpen(false)}
+                disabled={deleteCustomerLoading}
+                className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 font-medium hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteCustomerLoading || deleteCustomerConfirmInput.trim() !== "confirm"}
+                onClick={async () => {
+                  if (deleteCustomerConfirmInput.trim() !== "confirm") return;
+                  setDeleteCustomerLoading(true);
+                  try {
+                    await CustomerService.deleteCustomer(id_customer);
+                    setDeleteCustomerModalOpen(false);
+                    router.push("/logged/pages/account-management/customers_db");
+                  } catch (e) {
+                    const msg =
+                      e instanceof Error
+                        ? e.message
+                        : String((e as { message?: string })?.message ?? "Failed to delete customer");
+                    alert(msg);
+                  } finally {
+                    setDeleteCustomerLoading(false);
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-red-600 text-white font-medium hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleteCustomerLoading ? "Deleting…" : "Delete customer"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <CompanyPickerModal
+        open={companyPickerOpen}
+        onClose={() => setCompanyPickerOpen(false)}
+        confirmLabel="Link company"
+        excludeCompanyIds={directoryCompanyRels.map((r) => r.company_id)}
+        onSelectCompany={({ companyId }) => {
+          void (async () => {
+            try {
+              await CustomerService.createCustomerCompanyRelation({
+                customer_id: id_customer,
+                company_id: companyId,
+              });
+              const list = await CustomerService.getCustomerCompanyRelations({ customerId: id_customer });
+              setDirectoryCompanyRels(Array.isArray(list) ? list : []);
+            } catch (e) {
+              const msg =
+                e instanceof Error
+                  ? e.message
+                  : String((e as { message?: string })?.message ?? "Could not link company");
+              alert(msg);
+            }
+          })();
+        }}
+      />
     </>
   );
 };

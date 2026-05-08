@@ -137,7 +137,7 @@ export default function GA4Page() {
           <PageContentSection>
         <div className="flex flex-col w-full">
           <div className="bg-white rounded-b-lg overflow-hidden p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
             <div>
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Traffic source</h2>
               <div className="space-y-3">

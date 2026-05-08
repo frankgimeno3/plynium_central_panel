@@ -1,16 +1,19 @@
 "use client";
 
-import React, { FC, useState, useMemo, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { FC, useState, useMemo, useEffect, useCallback, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import CustomerSelectModal from "@/app/logged/logged_components/modals/CustomerSelectModal";
 import ContactSelectModal from "@/app/logged/logged_components/modals/ContactSelectModal";
 import ServiceSelectModal from "@/app/logged/logged_components/modals/ServiceSelectModal";
 import type { ServiceRow, ServiceExtra } from "@/app/logged/logged_components/modals/ServiceSelectModal";
+import MagazinePreferentialAvailabilityModal from "./components/MagazinePreferentialAvailabilityModal";
+import { isMagazinePreferentialTariffGroup } from "./components/magazinePreferentialConstants";
 import { ServiceService } from "@/app/service/ServiceService";
 import { CustomerService } from "@/app/service/CustomerService";
 import { ContactService } from "@/app/service/ContactService";
+import { ProposalService } from "@/app/service/ProposalService";
 
 import Step1AccountContact from "./components/Step1AccountContact";
 import Step2Products from "./components/Step2Products";
@@ -18,23 +21,75 @@ import Step3Payment from "./components/Step3Payment";
 import Step4Review from "./components/Step4Review";
 import type { Contact, Customer, ProposalForm, Service, ServiceLine, Step } from "./components/types";
 
+function normalizeServiceForProposalUi(raw: unknown): Service | null {
+  if (!raw || typeof raw !== "object") return null;
+  const r = raw as Record<string, unknown>;
+  const id = String(r.id_service ?? r.service_id ?? "").trim();
+  if (!id) return null;
+
+  const name = String(r.name ?? r.service_full_name ?? "").trim() || id;
+  const display =
+    String(r.display_name ?? "").trim() ||
+    String(r.shown_name ?? "").trim() ||
+    name;
+
+  const desc =
+    String(r.description ?? r.service_description ?? "").trim();
+
+  const specs = String(r.service_unit_specifications ?? "").trim();
+
+  const tariff = Number(r.tariff_price_eur ?? r.service_unit_price ?? r.price ?? 0);
+  const tariff_price_eur = Number.isFinite(tariff) ? tariff : 0;
+
+  return {
+    id_service: id,
+    name,
+    display_name: display,
+    description: desc,
+    service_description: desc,
+    service_unit_specifications: specs,
+    tariff_price_eur,
+    unit: r.service_unit != null ? String(r.service_unit) : undefined,
+  };
+}
+
+function generateDraftProposalId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `prop-${crypto.randomUUID()}`;
+  }
+  return `prop_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function proposalTitleSegmentFromAccountName(name: string): string {
+  return name.trim().replace(/\s+/g, "_");
+}
+
 const CreateProposalPage: FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const customerFromUrl = searchParams.get("customer")?.trim() ?? "";
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   useEffect(() => {
-    ServiceService.getAllServices().then((list) => setServices(Array.isArray(list) ? list : [])).catch(() => setServices([]));
+    ServiceService.getAllServices()
+      .then((list) => {
+        const rows = Array.isArray(list) ? list : [];
+        setServices(rows.map((x) => normalizeServiceForProposalUi(x)).filter(Boolean) as Service[]);
+      })
+      .catch(() => setServices([]));
   }, []);
   useEffect(() => {
     CustomerService.getAllCustomers().then((l: Customer[]) => setCustomers(Array.isArray(l) ? l : [])).catch(() => setCustomers([]));
     ContactService.getAllContacts().then((l: Contact[]) => setContacts(Array.isArray(l) ? l : [])).catch(() => setContacts([]));
   }, []);
+
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<ProposalForm>({
     id_customer: "",
     id_contact: "",
     additionalContactIds: [],
+    draft_id_proposal: generateDraftProposalId(),
     title: "",
     proposal_date: new Date().toISOString().slice(0, 10),
     expiration_date: (() => {
@@ -56,12 +111,54 @@ const CreateProposalPage: FC = () => {
     exchangeTransferredAmount: 0,
     exchangeToBeReceivedHtml: "",
   });
+
+  useEffect(() => {
+    if (!customerFromUrl || customers.length === 0) return;
+    if (!customers.some((c) => c.id_customer === customerFromUrl)) return;
+    setForm((f) => {
+      if (f.id_customer === customerFromUrl) return f;
+      return { ...f, id_customer: customerFromUrl, id_contact: "" };
+    });
+  }, [customerFromUrl, customers]);
+
+  useEffect(() => {
+    if (!form.id_customer) return;
+    const forCust = contacts.filter((c) => c.id_customer === form.id_customer);
+    if (forCust.length !== 1 || form.id_contact) return;
+    setForm((f) => ({ ...f, id_contact: forCust[0].id_contact }));
+  }, [form.id_customer, form.id_contact, contacts]);
+
+  const proposalTitleUserEditedRef = useRef(false);
+  const prevIdCustomerForTitleRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    const prev = prevIdCustomerForTitleRef.current;
+    if (prev && form.id_customer && prev !== form.id_customer) {
+      proposalTitleUserEditedRef.current = false;
+    }
+    prevIdCustomerForTitleRef.current = form.id_customer;
+  }, [form.id_customer]);
+
+  useEffect(() => {
+    if (proposalTitleUserEditedRef.current) return;
+    if (!form.id_customer) return;
+    const cust = customers.find((c) => c.id_customer === form.id_customer);
+    if (!cust) return;
+    const nameSeg = proposalTitleSegmentFromAccountName(cust.name || "");
+    const parts = [nameSeg || undefined, form.proposal_date, form.draft_id_proposal].filter(Boolean) as string[];
+    const nextTitle = parts.join("_");
+    setForm((f) => (f.title === nextTitle ? f : { ...f, title: nextTitle }));
+  }, [form.id_customer, form.proposal_date, form.draft_id_proposal, customers]);
+
   const [customerModalOpen, setCustomerModalOpen] = useState(false);
   const [contactModalOpen, setContactModalOpen] = useState(false);
   const [additionalContactModalOpen, setAdditionalContactModalOpen] = useState(false);
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
   const [insertAtIndex, setInsertAtIndex] = useState<number>(0);
+  const [preferentialModal, setPreferentialModal] = useState<{ service: ServiceRow; extra: ServiceExtra } | null>(null);
   const [plyniumAgentName, setPlyniumAgentName] = useState<string>("");
+  const [createSaving, setCreateSaving] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -105,6 +202,143 @@ const CreateProposalPage: FC = () => {
   const paymentsSum = form.payments.reduce((s, p) => s + p.amount, 0);
   const paymentsMatchTotal = form.payments.length > 0 && Math.abs(paymentsSum - totalAfterTax) < 0.01;
   const canAdvanceStep3 = form.isExchange || paymentsMatchTotal;
+
+  useEffect(() => {
+    if (step === 4) setCreateError(null);
+  }, [step]);
+
+  const handleCreateProposal = useCallback(async () => {
+    setCreateError(null);
+    setCreateSaving(true);
+    try {
+      const created = await ProposalService.createProposal({
+        id_proposal: form.draft_id_proposal,
+        id_customer: form.id_customer,
+        id_contact: form.id_contact,
+        additionalContactIds: form.additionalContactIds,
+        agent: plyniumAgentName,
+        title: form.title.trim(),
+        proposal_date: form.proposal_date,
+        expiration_date: form.expiration_date,
+        amount_eur: totalAfterTax,
+        general_discount_mode: form.general_discount_mode,
+        general_discount_pct: form.general_discount_pct,
+        general_discount_abs_eur: form.general_discount_abs_eur,
+        serviceLines: form.serviceLines,
+        payments: form.payments,
+        isExchange: form.isExchange,
+        exchangeHasFinalPrice: form.exchangeHasFinalPrice,
+        exchangeFinalPrice: form.exchangeFinalPrice,
+        exchangeHasBankTransfers: form.exchangeHasBankTransfers,
+        exchangePlyniumTransferDate: form.exchangePlyniumTransferDate,
+        exchangeCounterpartDate: form.exchangeCounterpartDate,
+        exchangeTransferredAmount: form.exchangeTransferredAmount,
+        exchangeToBeReceivedHtml: form.exchangeToBeReceivedHtml,
+      });
+      router.push(`/logged/pages/account-management/proposals/${encodeURIComponent(created.id_proposal)}`);
+      router.refresh();
+    } catch (e: unknown) {
+      const ax = e as { response?: { data?: { message?: string } }; message?: string };
+      const msg =
+        ax?.response?.data?.message ||
+        (e instanceof Error ? e.message : null) ||
+        ax?.message ||
+        "Could not create proposal.";
+      setCreateError(String(msg));
+    } finally {
+      setCreateSaving(false);
+    }
+  }, [
+    form.draft_id_proposal,
+    form.id_customer,
+    form.id_contact,
+    form.additionalContactIds,
+    form.title,
+    form.proposal_date,
+    form.expiration_date,
+    form.general_discount_mode,
+    form.general_discount_pct,
+    form.general_discount_abs_eur,
+    form.serviceLines,
+    form.payments,
+    form.isExchange,
+    form.exchangeHasFinalPrice,
+    form.exchangeFinalPrice,
+    form.exchangeHasBankTransfers,
+    form.exchangePlyniumTransferDate,
+    form.exchangeCounterpartDate,
+    form.exchangeTransferredAmount,
+    form.exchangeToBeReceivedHtml,
+    plyniumAgentName,
+    totalAfterTax,
+    router,
+  ]);
+
+  const appendServiceLineFromPicker = useCallback(
+    (
+      service: ServiceRow,
+      extra?: ServiceExtra,
+      pref?: { preferential_slot_id: string; position_in_magazine: string }
+    ) => {
+      const normalized = normalizeServiceForProposalUi(service as unknown) ?? {
+        id_service: service.id_service,
+        name: service.name,
+        display_name: service.display_name,
+        description: String((service as unknown as Record<string, unknown>)?.description ?? ""),
+        service_unit_specifications: String(
+          (service as unknown as Record<string, unknown>)?.service_unit_specifications ?? ""
+        ),
+        tariff_price_eur: service.tariff_price_eur,
+      };
+
+      const baseDescription = String(normalized.service_description ?? normalized.description ?? "").trim();
+      const baseSpecifications = String(normalized.service_unit_specifications ?? "").trim();
+
+      let description = baseDescription;
+      if (extra && "publicationLabel" in extra) {
+        const label = String(extra.publicationLabel ?? "").trim();
+        if (label) {
+          description = baseDescription ? `${baseDescription}\n${label}` : label;
+        }
+      }
+      if (pref?.position_in_magazine) {
+        const pl = `Preferential placement: ${pref.position_in_magazine}`;
+        description = description ? `${description}\n${pl}` : pl;
+      }
+
+      const price = service.tariff_price_eur;
+      const newLine: ServiceLine = {
+        lineId: `line-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        id_service: service.id_service,
+        description,
+        specifications: baseSpecifications,
+        units: 1,
+        discount_pct: 0,
+        price,
+        ...(extra && "publicationMonth" in extra && { publicationMonth: extra.publicationMonth, publicationYear: extra.publicationYear }),
+        ...(extra && "startDate" in extra && { startDate: extra.startDate, endDate: extra.endDate }),
+        ...(extra &&
+          "publicationDateIso" in extra &&
+          typeof (extra as { publicationDateIso?: string }).publicationDateIso === "string" &&
+          String((extra as { publicationDateIso?: string }).publicationDateIso).trim() && {
+            startDate: String((extra as { publicationDateIso?: string }).publicationDateIso).trim().slice(0, 10),
+          }),
+        ...(extra && "id_planned_publication" in extra && {
+          id_planned_publication: extra.id_planned_publication,
+          ...("pageType" in extra && { magazinePageType: extra.pageType, magazineSlotKey: extra.slotKey }),
+        }),
+        ...(pref
+          ? { preferential_slot_id: pref.preferential_slot_id, position_in_magazine: pref.position_in_magazine }
+          : {}),
+      };
+      if (extra && "calculatedPrice" in extra) newLine.price = extra.calculatedPrice;
+      setForm((f) => ({
+        ...f,
+        serviceLines: [...f.serviceLines.slice(0, insertAtIndex), newLine, ...f.serviceLines.slice(insertAtIndex)],
+      }));
+    },
+    [insertAtIndex]
+  );
 
   const backUrl = "/logged/pages/account-management/proposals";
 
@@ -152,7 +386,7 @@ const CreateProposalPage: FC = () => {
         </div>
       </div>
 
-      <div className="bg-white rounded-b-lg overflow-hidden p-12 w-full">
+      <div className="bg-white rounded-b-lg overflow-hidden p-6 md:p-8 w-full">
         {step === 1 && (
           <Step1AccountContact
             form={form}
@@ -162,6 +396,9 @@ const CreateProposalPage: FC = () => {
             onOpenCustomerModal={() => setCustomerModalOpen(true)}
             onOpenMainContactModal={() => form.id_customer && setContactModalOpen(true)}
             onOpenAdditionalContactModal={() => form.id_customer && setAdditionalContactModalOpen(true)}
+            onProposalTitleUserEdit={() => {
+              proposalTitleUserEditedRef.current = true;
+            }}
             canAdvance={!!canAdvanceStep1}
             onNext={goNext}
           />
@@ -215,7 +452,9 @@ const CreateProposalPage: FC = () => {
             paymentsSum={paymentsSum}
             paymentsMatchTotal={paymentsMatchTotal}
             onBack={goBack}
-            onCreate={() => router.push(backUrl)}
+            onCreate={handleCreateProposal}
+            createSaving={createSaving}
+            createError={createError}
           />
         )}
       </div>
@@ -262,34 +501,34 @@ const CreateProposalPage: FC = () => {
         open={serviceModalOpen}
         onClose={() => setServiceModalOpen(false)}
         onConfirm={(service: ServiceRow, extra?: ServiceExtra) => {
-          const price = service.tariff_price_eur;
-          const newLine: ServiceLine = {
-            lineId: `line-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-            id_service: service.id_service,
-            description: service.description ?? "",
-            specifications: "",
-            units: 1,
-            discount_pct: 0,
-            price,
-            ...(extra && "publicationMonth" in extra && { publicationMonth: extra.publicationMonth, publicationYear: extra.publicationYear }),
-            ...(extra && "startDate" in extra && { startDate: extra.startDate, endDate: extra.endDate }),
-            ...(extra && "id_planned_publication" in extra && {
-              id_planned_publication: extra.id_planned_publication,
-              ...("pageType" in extra && { magazinePageType: extra.pageType, magazineSlotKey: extra.slotKey }),
-            }),
-          };
-          if (extra && "calculatedPrice" in extra) (newLine as ServiceLine).price = extra.calculatedPrice;
-          setForm((f) => ({
-            ...f,
-            serviceLines: [
-              ...f.serviceLines.slice(0, insertAtIndex),
-              newLine,
-              ...f.serviceLines.slice(insertAtIndex),
-            ],
-          }));
-          setServiceModalOpen(false);
+          const gid = String(service.service_group_id ?? "").trim();
+          const pubId =
+            extra && typeof extra === "object" && "id_planned_publication" in extra
+              ? String((extra as { id_planned_publication?: string }).id_planned_publication ?? "").trim()
+              : "";
+          if (isMagazinePreferentialTariffGroup(gid) && pubId && extra) {
+            setPreferentialModal({ service, extra });
+            return;
+          }
+          appendServiceLineFromPicker(service, extra);
         }}
       />
+      {preferentialModal && (
+        <MagazinePreferentialAvailabilityModal
+          open
+          service={preferentialModal.service}
+          publicationId={
+            preferentialModal.extra && "id_planned_publication" in preferentialModal.extra
+              ? String(preferentialModal.extra.id_planned_publication ?? "").trim()
+              : ""
+          }
+          onClose={() => setPreferentialModal(null)}
+          onConfirmPlacement={(patch) => {
+            appendServiceLineFromPicker(preferentialModal.service, preferentialModal.extra, patch);
+            setPreferentialModal(null);
+          }}
+        />
+      )}
     </>
   );
 };

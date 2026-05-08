@@ -30,9 +30,9 @@ export default function PageContentLayout({ children }: PageContentLayoutProps) 
     <div className="flex flex-col w-full min-h-full ">
       <MiddleNav pageTitle={pageTitle} breadcrumbs={filteredBreadcrumbs} />
 
-      <div className="flex-1 bg-white text-black content-main ">
+      <div className="content-main flex-1 bg-white text-sm leading-normal text-black antialiased">
         {buttons && buttons.length > 0 && (
-          <div className="flex flex-wrap gap-2 justify-end pr-12 pt-12">
+          <div className="flex flex-wrap justify-end gap-2 pr-4 pt-4 md:pr-6 md:pt-5">
             {buttons.map((btn, index) => {
               const baseStyles =
                 "flex min-h-[36px] items-center rounded-md py-2 px-3 text-sm font-medium uppercase transition-colors cursor-pointer text-white";

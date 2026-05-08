@@ -108,7 +108,7 @@ export default function IdArticlePage() {
 
   if (loading) {
     return (
-      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600 w-full">
+      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-6 py-6 md:px-10 md:py-8 text-gray-600 w-full">
         <p className="text-lg">Loading article...</p>
       </main>
     );
@@ -116,7 +116,7 @@ export default function IdArticlePage() {
 
   if (error) {
     return (
-      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600 w-full">
+      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-6 py-6 md:px-10 md:py-8 text-gray-600 w-full">
         <p className="text-red-500 text-lg">{error}</p>
         <button
           onClick={() => router.push("/logged/pages/network/contents/articles")}
@@ -130,7 +130,7 @@ export default function IdArticlePage() {
 
   if (!articleData) {
     return (
-      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-24 py-10 text-gray-600 w-full">
+      <main className="flex h-full min-h-screen flex-col items-center justify-center bg-white px-6 py-6 md:px-10 md:py-8 text-gray-600 w-full">
         <p className="text-red-500 text-lg">The article you are looking for does not exist.</p>
         <button
           onClick={() => router.push("/logged/pages/network/contents/articles")}

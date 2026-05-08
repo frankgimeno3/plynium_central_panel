@@ -197,13 +197,13 @@ const CustomerSelectModal: FC<CustomerSelectModalProps> = ({
               <tbody className="bg-white divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={8} className="px-4 py-5 text-center text-gray-500">
                       Loading customers…
                     </td>
                   </tr>
                 ) : loadError ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center">
+                    <td colSpan={8} className="px-4 py-5 text-center">
                       <p className="text-amber-700 font-medium">Could not load customers</p>
                       <p className="text-sm text-gray-600 mt-1">{loadError}</p>
                       <p className="text-xs text-gray-500 mt-2">Check .env (DATABASE_*) and that the customers_db table exists in your RDS.</p>
@@ -211,7 +211,7 @@ const CustomerSelectModal: FC<CustomerSelectModalProps> = ({
                   </tr>
                 ) : paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={8} className="px-4 py-5 text-center text-gray-500">
                       No customers found.
                     </td>
                   </tr>

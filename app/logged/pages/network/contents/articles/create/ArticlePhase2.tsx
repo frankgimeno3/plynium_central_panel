@@ -113,7 +113,7 @@ const ArticlePhase2: React.FC<ArticlePhase2Props> = ({
             renderInlineEditorSlot()
           ) : (
             <div
-              className="border-2 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer hover:border-blue-950 hover:bg-blue-50"
+              className="border-2 border-dashed border-gray-300 rounded-xl p-5 text-center md:p-6 cursor-pointer hover:border-blue-950 hover:bg-blue-50"
               onClick={() => onOpenModal(null)}
             >
               <p className="text-gray-500">Click to add the first content</p>

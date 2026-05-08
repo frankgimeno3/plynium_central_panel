@@ -20,7 +20,13 @@ const putOrderSchema = Joi.object({
   collection_date: Joi.string().pattern(/^\d{4}-\d{2}-\d{2}$/).optional(),
   amount_eur: Joi.number().min(0).optional(),
   payment_status: Joi.string().valid("paid", "pending").optional(),
-}).or("collection_date", "amount_eur", "payment_status");
+  sync_revenue: Joi.boolean().optional(),
+}).or(
+  "collection_date",
+  "amount_eur",
+  "payment_status",
+  "sync_revenue"
+);
 
 export const GET = createEndpoint(
   async (request) => {

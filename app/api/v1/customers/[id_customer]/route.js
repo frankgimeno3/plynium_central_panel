@@ -1,7 +1,7 @@
 import { createEndpoint } from "../../../../../server/createEndpoint.js";
 import { NextResponse } from "next/server";
 import Joi from "joi";
-import { getCustomerById, updateCustomer } from "../../../../../server/features/customer_db/CustomerDbService.js";
+import { getCustomerById, updateCustomer, deleteCustomer } from "../../../../../server/features/customer_db/CustomerDbService.js";
 
 export const runtime = "nodejs";
 
@@ -70,5 +70,22 @@ export const PATCH = createEndpoint(
     }
   },
   patchSchema,
+  true
+);
+
+export const DELETE = createEndpoint(
+  async (request) => {
+    const id_customer = getIdFromRequest(request);
+    try {
+      const removed = await deleteCustomer(id_customer);
+      return NextResponse.json(removed);
+    } catch (err) {
+      if (err.message && err.message.includes("not found")) {
+        return NextResponse.json({ message: "Customer not found" }, { status: 404 });
+      }
+      throw err;
+    }
+  },
+  null,
   true
 );

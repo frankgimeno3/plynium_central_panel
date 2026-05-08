@@ -13,7 +13,8 @@ import {
 import type { NotificationComment as PanelTicketComment } from "@/app/contents/notifications.types";
 import {
   fulfilledCompanyIdFromPanelTicketUpdates,
-  updateNotificationApi,
+  fetchNotificationById,
+    updateNotificationApi,
 } from "@/app/contents/notifications.types";
 import UserSerivce from "@/app/service/UserSerivce.js";
 import { PortalService } from "@/app/service/PortalService";
@@ -232,12 +233,27 @@ const CompanyRequestDetailPage: FC = () => {
         company_content: draftContent,
         fulfill_portal_ids: [...selectedPortalIds].sort((a, b) => a - b),
       });
-      const newCompanyId = fulfilledCompanyIdFromPanelTicketUpdates(updated.panel_ticket_updates_array);
-      await refetch();
+      let newCompanyId =
+        (typeof updated.fulfilled_company_id === "string" && updated.fulfilled_company_id.trim()
+          ? updated.fulfilled_company_id.trim()
+          : null) ?? fulfilledCompanyIdFromPanelTicketUpdates(updated.panel_ticket_updates_array);
+      if (!newCompanyId) {
+        try {
+          const again = await fetchNotificationById(request.companyRequestId);
+          newCompanyId =
+            (typeof again.fulfilled_company_id === "string" && again.fulfilled_company_id.trim()
+              ? again.fulfilled_company_id.trim()
+              : null) ?? fulfilledCompanyIdFromPanelTicketUpdates(again.panel_ticket_updates_array);
+        } catch {
+          /* keep null */
+        }
+      }
       if (newCompanyId) {
-        router.push(`/logged/pages/network/directory/companies/${encodeURIComponent(newCompanyId)}`);
+        const path = `/logged/pages/network/directory/companies/${encodeURIComponent(newCompanyId)}`;
+        window.location.assign(path);
         return;
       }
+      await refetch();
       const refreshed = getById(request.companyRequestId);
       if (refreshed) {
         setRequest(refreshed);
@@ -252,6 +268,9 @@ const CompanyRequestDetailPage: FC = () => {
           list_as_employee: Boolean(refreshed.content.list_as_employee),
         });
       }
+      setCreateError(
+        "The ticket was closed but no new company ID was returned. Open Directory → Companies to find the company, or check server logs for this ticket."
+      );
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to create company.";
       setCreateError(msg);
@@ -499,11 +518,6 @@ const CompanyRequestDetailPage: FC = () => {
               >
                 {createLoading ? "Creating…" : isDone ? "Company created" : "Create company"}
               </button>
-              {isDone && (
-                <p className="mt-2 text-sm text-gray-600 normal-case">
-                  This request is marked done. If fulfillment already ran, use the directory to manage the company.
-                </p>
-              )}
             </div>
           </div>
         </div>

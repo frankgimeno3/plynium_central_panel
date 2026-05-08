@@ -4,6 +4,7 @@ import Joi from "joi";
 import {
   getMagazineById,
   updateMagazine,
+  deleteMagazineWithCascade,
 } from "../../../../../server/features/magazine_db/MagazineDbService.js";
 
 export const runtime = "nodejs";
@@ -62,5 +63,22 @@ export const PATCH = createEndpoint(
     }
   },
   patchSchema,
+  true
+);
+
+export const DELETE = createEndpoint(
+  async (request) => {
+    const id_magazine = getIdFromRequest(request);
+    try {
+      await deleteMagazineWithCascade(id_magazine);
+      return NextResponse.json({ ok: true });
+    } catch (err) {
+      if (err.message && err.message.includes("not found")) {
+        return NextResponse.json({ message: "Magazine not found" }, { status: 404 });
+      }
+      throw err;
+    }
+  },
+  null,
   true
 );

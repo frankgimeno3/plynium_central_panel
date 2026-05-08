@@ -106,22 +106,22 @@ const Logged: FC<LoggedProps> = ({ }) => {
     : [];
 
   return (
-    <div className='flex flex-col w-full bg-gradient-to-r from-gray-950 to-zinc-900 text-slate-200 px-24  pb-24 '>
-      <p className='font-bold text-5xl min-h-[2.5rem] text-center text-slate-100 py-24'>
+    <div className='flex flex-col w-full bg-gradient-to-r from-gray-950 to-zinc-900 text-slate-200 px-6 pb-8 md:px-10 md:pb-10'>
+      <p className='font-bold text-2xl md:text-3xl min-h-[1.75rem] text-center text-slate-100 py-6 md:py-8'>
         {welcomeDisplay}
         {!welcomeComplete && <span className='animate-pulse'>|</span>}
       </p>
 
       <ManagementDashboard />
 
-      <p className='my-12 text-3xl font-semibold text-slate-100'>Main tickets</p>
+      <p className='my-6 text-xl font-semibold text-slate-100 md:text-2xl'>Main tickets</p>
 
       {/* Tabs */}
-      <div className='flex border-b border-slate-600 bg-slate-800/50 rounded-t-lg overflow-hidden'>
+      <div className='flex overflow-hidden rounded-t-lg border-b border-slate-600 bg-slate-800/50'>
         <button
           onClick={() => setActiveTab('tickets')}
           className={`
-            px-6 py-3 text-sm font-medium transition-colors
+            px-4 py-2 text-xs font-medium transition-colors md:px-5 md:py-2.5 md:text-sm
             ${activeTab === 'tickets'
               ? 'text-blue-200 border-b-2 border-blue-400 bg-slate-700 text-white'
               : 'text-slate-400 hover:text-slate-100 hover:bg-slate-700/70'
@@ -133,7 +133,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
         <button
           onClick={() => setActiveTab('other')}
           className={`
-            px-6 py-3 text-sm font-medium transition-colors
+            px-4 py-2 text-xs font-medium transition-colors md:px-5 md:py-2.5 md:text-sm
             ${activeTab === 'other'
               ? 'text-blue-200 border-b-2 border-blue-400 bg-slate-700 text-white'
               : 'text-slate-400 hover:text-slate-100 hover:bg-slate-700/70'
@@ -152,7 +152,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
               <Link
                 key={n.notification_id}
                 href={`/logged/pages/tickets/${n.notification_id}`}
-                className='flex flex-row justify-between bg-slate-800 p-4 border-b border-slate-600 cursor-pointer hover:bg-slate-700 text-slate-200'
+                className='flex cursor-pointer flex-row justify-between border-b border-slate-600 bg-slate-800 p-3 text-slate-200 hover:bg-slate-700'
               >
                 <p>{n.notification_brief_description}</p>
                 <p className='text-slate-400 text-sm'>{formatNotificationTime(n.notification_time)}</p>
@@ -174,7 +174,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
                 <Link
                   key={item.id}
                   href={`/logged/pages/tickets/other/${encodeURIComponent(item.id)}`}
-                  className='flex flex-row justify-between bg-slate-800 p-4 border-b border-slate-600 cursor-pointer hover:bg-slate-700'
+                  className='flex cursor-pointer flex-row justify-between border-b border-slate-600 bg-slate-800 p-3 hover:bg-slate-700'
                 >
                   <div>
                     <p className='font-medium text-slate-100'>{item.author}</p>
@@ -186,7 +186,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
                 <Link
                   key={item.companyRequestId}
                   href={`/logged/pages/tickets/company/${encodeURIComponent(item.companyRequestId)}`}
-                  className='flex flex-row justify-between bg-slate-800 p-4 border-b border-slate-600 cursor-pointer hover:bg-slate-700'
+                  className='flex cursor-pointer flex-row justify-between border-b border-slate-600 bg-slate-800 p-3 hover:bg-slate-700'
                 >
                   <div>
                     <p className='font-medium text-slate-100'>{item.content.nombre_comercial}</p>
@@ -198,7 +198,7 @@ const Logged: FC<LoggedProps> = ({ }) => {
                 <Link
                   key={item.idAdvReq}
                   href={`/logged/pages/tickets/quotations/${encodeURIComponent(item.idAdvReq)}`}
-                  className='flex flex-row justify-between bg-slate-800 p-4 border-b border-slate-600 cursor-pointer hover:bg-slate-700'
+                  className='flex cursor-pointer flex-row justify-between border-b border-slate-600 bg-slate-800 p-3 hover:bg-slate-700'
                 >
                   <div>
                     <p className='font-medium text-slate-100'>{item.senderCompany}</p>
@@ -223,13 +223,13 @@ const Logged: FC<LoggedProps> = ({ }) => {
         )}
       </div>
 
-      <p className='mt-12 mb-4 text-3xl font-semibold text-slate-100'>Google Analytics</p>
+      <p className='mt-8 mb-3 text-xl font-semibold text-slate-100 md:text-2xl'>Google Analytics</p>
       <div className='flex border-b border-slate-600 bg-slate-800/50 rounded-t-lg overflow-hidden'>
         {portals.map((p, i) => (
           <button
             key={p.id}
             onClick={() => setGa4PortalTab(i)}
-            className={`px-6 py-3 text-sm font-medium transition-colors ${
+            className={`px-4 py-2 text-xs font-medium transition-colors md:px-5 md:py-2.5 md:text-sm ${
               ga4PortalTab === i
                 ? 'text-blue-200 border-b-2 border-blue-400 bg-slate-700 text-white'
                 : 'text-slate-400 hover:text-slate-100 hover:bg-slate-700/70'

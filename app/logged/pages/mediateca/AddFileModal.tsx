@@ -26,6 +26,7 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
   const [step, setStep] = useState<"type" | "attach" | "success">("type");
   const [fileType, setFileType] = useState<FileType | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [contentName, setContentName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -34,6 +35,7 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
     setStep("type");
     setFileType(null);
     setFile(null);
+    setContentName("");
     setError(null);
     setLoading(false);
   };
@@ -46,6 +48,7 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
   const handleChooseType = (type: FileType) => {
     setFileType(type);
     setFile(null);
+    setContentName("");
     setError(null);
     setStep("attach");
   };
@@ -53,6 +56,7 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     setFile(f ?? null);
+    if (f?.name) setContentName(f.name);
     setError(null);
   };
 
@@ -60,6 +64,10 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
     setError(null);
     if (!file) {
       setError("Please select a file.");
+      return;
+    }
+    if (!contentName.trim()) {
+      setError("Please provide a name.");
       return;
     }
     if (fileType === "pdf") {
@@ -89,7 +97,7 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
       }
       await createMedia({
         mediaId,
-        contentName: file.name,
+        contentName: contentName.trim(),
         s3Key,
         folderPath,
         cdnUrl: cdnUrl ?? undefined,
@@ -112,7 +120,7 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/50" onClick={handleClose} aria-hidden />
       <div className="relative bg-white rounded-xl shadow-xl border border-gray-200 p-6 w-full max-w-md mx-4">
         {step === "type" && (
@@ -172,12 +180,24 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
                   Selected: {file.name}
                 </p>
               )}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Name
+                </label>
+                <input
+                  type="text"
+                  value={contentName}
+                  onChange={(e) => setContentName(e.target.value)}
+                  placeholder="File name in Media Library"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-950 focus:border-blue-950 text-sm"
+                />
+              </div>
               {error && <p className="text-sm text-red-600">{error}</p>}
             </div>
             <div className="flex gap-2 justify-end pt-4">
               <button
                 type="button"
-                onClick={() => { setStep("type"); setFileType(null); setFile(null); setError(null); }}
+                onClick={() => { setStep("type"); setFileType(null); setFile(null); setContentName(""); setError(null); }}
                 disabled={loading}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
               >
@@ -186,7 +206,7 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
               <button
                 type="button"
                 onClick={validateAndSubmit}
-                disabled={loading}
+                disabled={loading || !file || !contentName.trim()}
                 className="px-4 py-2 text-sm font-medium text-white bg-blue-950 rounded-lg hover:bg-blue-900 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? "Uploading…" : "Upload"}

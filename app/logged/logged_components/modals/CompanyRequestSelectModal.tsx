@@ -121,7 +121,7 @@ const CompanyRequestSelectModal: FC<CompanyRequestSelectModalProps> = ({
                   <tr>
                     <td
                       colSpan={5}
-                      className="px-6 py-8 text-center text-gray-500"
+                      className="px-4 py-5 text-center text-gray-500"
                     >
                       No pending company requests found.
                     </td>

@@ -5,4 +5,11 @@ export class PortalService {
         const response = await apiClient.get("/api/v1/portals");
         return response.data;
     }
+
+    static async getNewsletterCampaignsForPortal(portalId) {
+        const response = await apiClient.get(
+            `/api/v1/portals/${encodeURIComponent(String(portalId))}/newsletter-campaigns`
+        );
+        return response.data;
+    }
 }

@@ -365,7 +365,7 @@ const IndustryEvents: FC = () => {
           <div className="bg-white rounded-b-lg overflow-hidden mt-4">
             <div className="p-6">
       {viewMode === 'months' ? (
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-4 md:gap-6">
           <div className="lg:w-2/3">
             <div className="border border-gray-200 rounded-lg p-6 bg-gray-50">
               {renderCalendar()}
@@ -481,7 +481,7 @@ const IndustryEvents: FC = () => {
           </button>
 
           {selectedDay && (
-            <div className="border border-gray-200 rounded-lg p-8 bg-gray-50">
+            <div className="border border-gray-200 rounded-lg p-5 bg-gray-50 md:p-6">
               <div className="flex items-center justify-between mb-6">
                 <button
                   onClick={() => navigateDay('prev')}
@@ -490,7 +490,7 @@ const IndustryEvents: FC = () => {
                   ← Previous Day
                 </button>
                 <div className="text-center">
-                  <div className="text-4xl font-bold text-gray-900">{selectedDay.getDate()}</div>
+                  <div className="text-2xl font-bold text-gray-900 md:text-3xl">{selectedDay.getDate()}</div>
                   <div className="text-xl text-gray-600 capitalize">
                     {selectedDay.toLocaleDateString('en-US', { weekday: 'long' })}
                   </div>

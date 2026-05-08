@@ -1,7 +1,7 @@
 "use client";
 
 import React, { FC, useState, useMemo, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import CustomerSelectModal, { type CustomerRow } from "@/app/logged/logged_components/modals/CustomerSelectModal";
@@ -112,6 +112,8 @@ const initialForm: FormState = {
 
 const CreateContactPage: FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const customerFromUrl = searchParams.get("customer")?.trim() ?? "";
   const [step, setStep] = useState<Step>(1);
   const [form, setForm] = useState<FormState>(initialForm);
   const [allContacts, setAllContacts] = useState<ContactRow[]>([]);
@@ -126,6 +128,38 @@ const CreateContactPage: FC = () => {
       .then((list: ContactRow[]) => setAllContacts(Array.isArray(list) ? list.filter((c) => c && typeof c.id_contact === "string") : []))
       .catch(() => setAllContacts([]));
   }, []);
+
+  useEffect(() => {
+    if (!customerFromUrl) return;
+    let cancelled = false;
+    CustomerService.getCustomerById(customerFromUrl)
+      .then((cust) => {
+        if (cancelled || !cust) return;
+        const c = cust as {
+          id_customer?: string;
+          name?: string;
+          cif?: string;
+          country?: string;
+        };
+        const linked: CustomerRow = {
+          id_customer: String(c.id_customer ?? customerFromUrl),
+          name: String(c.name ?? ""),
+          cif: String(c.cif ?? ""),
+          country: String(c.country ?? ""),
+        };
+        setForm((f) => ({
+          ...f,
+          linkedToCustomer: true,
+          linkedCustomer: linked,
+          id_customer: linked.id_customer,
+          company_name: linked.name,
+        }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [customerFromUrl]);
 
   const countryOptionsFiltered = useMemo(() => {
     const q = countryFilter.trim().toLowerCase();
@@ -218,7 +252,7 @@ const CreateContactPage: FC = () => {
   return (
     <>
       <PageContentSection className="p-0">
-        <div className="flex flex-col w-full mt-12">
+        <div className="flex flex-col w-full mt-6 md:mt-8">
           <div className="flex border-b border-gray-200 bg-gray-50 px-6 py-4">
             <div className="flex items-center gap-4">
               {([1, 2, 3, 4] as Step[]).map((s) => (
@@ -243,7 +277,7 @@ const CreateContactPage: FC = () => {
             </div>
           </div>
 
-          <div className="bg-white rounded-b-lg overflow-hidden p-8 md:p-12 w-full max-w-full">
+          <div className="bg-white rounded-b-lg overflow-hidden p-5 md:p-8 w-full max-w-full">
             {/* Step 1: Link to customer (optional) */}
             {step === 1 && (
               <div className="space-y-6">

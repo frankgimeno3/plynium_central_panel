@@ -6,10 +6,12 @@ import { usePageContent } from '@/app/logged/logged_components/context_content/P
 import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { ProductService } from '@/app/service/ProductService';
 import { CompanyService } from '@/app/service/CompanyService';
+import { PRODUCTS_MEDIA_LIBRARY_PATH } from '@/app/contents/mediatecaPaths';
 import CompanyDirectorySelectModal from '@/app/logged/logged_components/modals/CompanyDirectorySelectModal';
 import MediatecaModal from '@/app/logged/logged_components/modals/MediatecaModal';
 import CategoriesModal from '@/app/logged/logged_components/modals/CategoriesModal';
 import type { CategoryItem } from '@/app/logged/logged_components/modals/CategoriesModal';
+import { RichTextEditor } from '@/app/logged/logged_components/RichTextEditor';
 
 interface ProductForm {
   productName: string;
@@ -41,10 +43,11 @@ const CreateProductInner: FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [form, setForm] = useState<ProductForm>(initialForm);
-  const [errors, setErrors] = useState<Partial<Record<keyof ProductForm, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof ProductForm | 'portals', string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [companyPortals, setCompanyPortals] = useState<{ portalId: number; portalName: string }[]>([]);
   const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
+  const [companyInfo, setCompanyInfo] = useState<any | null>(null);
   const [companySelectOpen, setCompanySelectOpen] = useState(false);
   const [mediatecaOpen, setMediatecaOpen] = useState(false);
   const [categoriesModalOpen, setCategoriesModalOpen] = useState(false);
@@ -63,12 +66,22 @@ const CreateProductInner: FC = () => {
     if (!form.company.trim()) {
       setCompanyPortals([]);
       setSelectedPortalIds([]);
+      setCompanyInfo(null);
       return;
     }
+    CompanyService.getCompanyById(form.company.trim())
+      .then((data: any) => setCompanyInfo(data ?? null))
+      .catch(() => setCompanyInfo(null));
     CompanyService.getCompanyPortals(form.company.trim())
       .then((list: any[]) => {
-        setCompanyPortals(Array.isArray(list) ? list : []);
-        setSelectedPortalIds([]);
+        const normalized = Array.isArray(list) ? list : [];
+        setCompanyPortals(normalized);
+        // Default: select all portals; user can uncheck, but we require at least one.
+        setSelectedPortalIds(
+          normalized
+            .map((p) => Number(p.portalId))
+            .filter((n) => Number.isFinite(n))
+        );
       })
       .catch(() => {
         setCompanyPortals([]);
@@ -82,6 +95,7 @@ const CreateProductInner: FC = () => {
         ? prev.filter((id) => id !== portalId)
         : [...prev, portalId]
     );
+    if (errors.portals) setErrors((prev) => ({ ...prev, portals: undefined }));
   };
 
   const update = (field: keyof ProductForm, value: string | string[]) => {
@@ -90,12 +104,15 @@ const CreateProductInner: FC = () => {
   };
 
   const validate = (): boolean => {
-    const next: Partial<Record<keyof ProductForm, string>> = {};
+    const next: Partial<Record<keyof ProductForm | 'portals', string>> = {};
     if (!form.productName.trim()) next.productName = 'Product name is required';
     if (!form.company.trim()) next.company = 'Company is required';
     if (form.price !== '') {
       const num = parseFloat(form.price);
       if (isNaN(num) || num < 0) next.price = 'Price must be a valid non-negative number';
+    }
+    if (form.company.trim() && companyPortals.length > 0 && selectedPortalIds.length === 0) {
+      next.portals = 'Select at least one portal.';
     }
     setErrors(next);
     return Object.keys(next).length === 0;
@@ -199,32 +216,74 @@ const CreateProductInner: FC = () => {
                   Belongs to company
                 </label>
                 <div className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setCompanySelectOpen(true)}
-                    className={`w-full max-w-md px-4 py-2 border-2 border-dashed rounded-lg text-gray-700 hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium text-left ${
-                      errors.company ? 'border-red-500' : 'border-gray-300'
-                    }`}
-                  >
-                    Select company from directory
-                  </button>
                   {errors.company && (
                     <p className="text-sm text-red-500">{errors.company}</p>
                   )}
-                  {form.company && (
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg border border-gray-200 max-w-2xl">
-                      <span className="text-sm font-mono text-gray-800">{form.company}</span>
-                      {form.companyDisplayName && form.companyDisplayName !== form.company && (
-                        <span className="text-sm text-gray-600">— {form.companyDisplayName}</span>
-                      )}
+                  {!form.company ? (
+                    <button
+                      type="button"
+                      onClick={() => setCompanySelectOpen(true)}
+                      className={`w-full max-w-md px-4 py-2 border-2 border-dashed rounded-lg text-gray-700 hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium text-left ${
+                        errors.company ? 'border-red-500' : 'border-gray-300'
+                      }`}
+                    >
+                      Select company from directory
+                    </button>
+                  ) : (
+                    <>
+                      <div className="w-full max-w-3xl rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                        <div className="flex flex-wrap items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Company</p>
+                            <p className="mt-1 truncate text-lg font-semibold text-gray-900" title={form.companyDisplayName || form.company}>
+                              {form.companyDisplayName || form.company}
+                            </p>
+                            <p className="mt-1 font-mono text-xs text-gray-500">{form.company}</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setForm((p) => ({ ...p, company: '', companyDisplayName: '' }))}
+                            className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-medium text-red-700 hover:bg-red-50"
+                          >
+                            Clear
+                          </button>
+                        </div>
+
+                        {companyInfo && (
+                          <dl className="mt-4 grid grid-cols-1 gap-3 text-sm sm:grid-cols-3">
+                            <div>
+                              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Country</dt>
+                              <dd className="mt-1 font-medium text-gray-900">{companyInfo.country || '—'}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Region</dt>
+                              <dd className="mt-1 font-medium text-gray-900">{companyInfo.region || '—'}</dd>
+                            </div>
+                            <div>
+                              <dt className="text-xs font-semibold uppercase tracking-wide text-gray-500">Email</dt>
+                              <dd className="mt-1 font-medium text-gray-900 break-all">{companyInfo.mainEmail || '—'}</dd>
+                            </div>
+                          </dl>
+                        )}
+
+                        <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-gray-600">
+                          <span className="rounded-full bg-gray-100 px-2 py-1">
+                            Portals available: <span className="font-semibold text-gray-900">{companyPortals.length}</span>
+                          </span>
+                          <span className="rounded-full bg-gray-100 px-2 py-1">
+                            Selected: <span className="font-semibold text-gray-900">{selectedPortalIds.length}</span>
+                          </span>
+                        </div>
+                      </div>
+
                       <button
                         type="button"
-                        onClick={() => setForm((p) => ({ ...p, company: '', companyDisplayName: '' }))}
-                        className="text-sm text-red-600 hover:text-red-800 font-medium"
+                        onClick={() => setCompanySelectOpen(true)}
+                        className="w-full max-w-md px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-700 hover:border-blue-950 hover:bg-blue-50/30 transition-colors font-medium text-left"
                       >
-                        Clear
+                        Choose another company
                       </button>
-                    </div>
+                    </>
                   )}
                 </div>
               </div>
@@ -255,6 +314,9 @@ const CreateProductInner: FC = () => {
                         </label>
                       ))}
                     </div>
+                  )}
+                  {errors.portals && (
+                    <p className="mt-2 text-sm text-red-500">{errors.portals}</p>
                   )}
                 </div>
               )}
@@ -332,12 +394,11 @@ const CreateProductInner: FC = () => {
                 <label className="block text-sm font-semibold text-gray-500 uppercase mb-1">
                   Product Description
                 </label>
-                <textarea
+                <RichTextEditor
                   value={form.productDescription}
-                  onChange={(e) => update('productDescription', e.target.value)}
-                  placeholder="Product description..."
-                  rows={4}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-950 focus:border-blue-950"
+                  onChange={(html) => update('productDescription', html)}
+                  placeholder="Write product description..."
+                  minHeight="160px"
                 />
               </div>
             </div>
@@ -382,6 +443,7 @@ const CreateProductInner: FC = () => {
           update('mainImageSrc', src);
           setMediatecaOpen(false);
         }}
+        initialPath={PRODUCTS_MEDIA_LIBRARY_PATH}
       />
 
       <CategoriesModal
@@ -443,7 +505,7 @@ const CreateProductInner: FC = () => {
 const CreateProductPage: FC = () => (
   <Suspense
     fallback={
-      <div className="flex flex-col w-full bg-white p-8">
+      <div className="flex flex-col w-full bg-white p-5 md:p-6">
         <p className="text-center text-gray-500">Loading…</p>
       </div>
     }

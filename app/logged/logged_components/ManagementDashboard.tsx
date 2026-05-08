@@ -208,24 +208,24 @@ const ManagementDashboard: FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-8 ">
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-5 lg:gap-5">
         {/* Left column: Tasks in agenda */}
         <div className="lg:col-span-2">
-          <div className="flex items-center justify-between mb-4 pt-2">
-            <h2 className="text-3xl font-semibold text-slate-100">Tasks in agenda</h2>
+          <div className="mb-2 flex items-center justify-between pt-0">
+            <h2 className="text-xl font-semibold text-slate-100 md:text-2xl">Tasks in agenda</h2>
             <button
               type="button"
               onClick={() => setAddAgendaModalOpen(true)}
-              className="flex min-h-[36px] items-center rounded-md  py-2 px-3 text-sm font-medium uppercase  transition-colors cursor-pointer text-white bg-gray-600/70  hover:bg-gray-600"
+              className="flex min-h-[32px] cursor-pointer items-center rounded-md bg-gray-600/70 px-2.5 py-1.5 text-xs font-medium uppercase text-white transition-colors hover:bg-gray-600 md:min-h-[36px] md:px-3 md:py-2 md:text-sm"
             >
               Add agenda event
             </button>
           </div>
-          <div className="my-8 flex flex-wrap gap-6 items-end">
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-type" className="text-sm font-medium text-slate-300">Type</label>
-              <select id="filter-type" value={filterType} onChange={(e) => setFilterType(e.target.value)} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[140px]">
+          <div className="my-3 flex flex-wrap items-end gap-3">
+            <div className="flex flex-col gap-0.5">
+              <label htmlFor="filter-type" className="text-xs font-medium text-slate-300">Type</label>
+              <select id="filter-type" value={filterType} onChange={(e) => setFilterType(e.target.value)} className="min-w-[120px] rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 md:min-w-[140px] md:px-3 md:py-2 md:text-sm">
                 <option value="">All</option>
                 <option value="task">{eventTypeLabel.task}</option>
                 <option value="ask_materials">{eventTypeLabel.ask_materials}</option>
@@ -233,62 +233,62 @@ const ManagementDashboard: FC = () => {
                 <option value="publication_date">{eventTypeLabel.publication_date}</option>
               </select>
             </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-month" className="text-sm font-medium text-slate-300">Month</label>
-              <select id="filter-month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[120px]">
+            <div className="flex flex-col gap-0.5">
+              <label htmlFor="filter-month" className="text-xs font-medium text-slate-300">Month</label>
+              <select id="filter-month" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} className="min-w-[100px] rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs text-slate-100 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 md:min-w-[120px] md:px-3 md:py-2 md:text-sm">
                 <option value="">All</option>
                 {MONTH_NAMES.map((name, i) => <option key={name} value={String(i + 1)}>{name}</option>)}
               </select>
             </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-year" className="text-sm font-medium text-slate-300">Year</label>
-              <input id="filter-year" type="text" placeholder="e.g. 2026" value={filterYear} onChange={(e) => setFilterYear(e.target.value.replace(/\D/g, "").slice(0, 4))} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-24 placeholder-slate-500" />
+            <div className="flex flex-col gap-0.5">
+              <label htmlFor="filter-year" className="text-xs font-medium text-slate-300">Year</label>
+              <input id="filter-year" type="text" placeholder="e.g. 2026" value={filterYear} onChange={(e) => setFilterYear(e.target.value.replace(/\D/g, "").slice(0, 4))} className="w-20 rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 md:w-24 md:px-3 md:py-2 md:text-sm" />
             </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-project" className="text-sm font-medium text-slate-300">Project</label>
-              <input id="filter-project" type="text" placeholder="Project name" value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[180px] placeholder-slate-500" />
+            <div className="flex flex-col gap-0.5">
+              <label htmlFor="filter-project" className="text-xs font-medium text-slate-300">Project</label>
+              <input id="filter-project" type="text" placeholder="Project name" value={filterProject} onChange={(e) => setFilterProject(e.target.value)} className="min-w-[140px] rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 md:min-w-[180px] md:px-3 md:py-2 md:text-sm" />
             </div>
-            <div className="flex flex-col gap-1">
-              <label htmlFor="filter-customer" className="text-sm font-medium text-slate-300">Customer</label>
-              <input id="filter-customer" type="text" placeholder="Customer name" value={filterCustomer} onChange={(e) => setFilterCustomer(e.target.value)} className="px-3 py-2 text-sm border border-slate-600 rounded-lg bg-slate-800 text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-w-[180px] placeholder-slate-500" />
+            <div className="flex flex-col gap-0.5">
+              <label htmlFor="filter-customer" className="text-xs font-medium text-slate-300">Customer</label>
+              <input id="filter-customer" type="text" placeholder="Customer name" value={filterCustomer} onChange={(e) => setFilterCustomer(e.target.value)} className="min-w-[140px] rounded-md border border-slate-600 bg-slate-800 px-2 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:border-blue-500 focus:ring-2 focus:ring-blue-500 md:min-w-[180px] md:px-3 md:py-2 md:text-sm" />
             </div>
           </div>
-          <div className="flex flex-row border-b border-slate-600 gap-1 mb-4 ">
+          <div className="mb-2 flex flex-row gap-1 border-b border-slate-600">
             {(["pending", "done"] as EventStateTab[]).map((tab) => (
-              <button key={tab} type="button" onClick={() => setEventStateTab(tab)} className={`px-6 py-3 font-medium rounded-t-lg transition-colors capitalize ${eventStateTab === tab ? "bg-blue-600 text-white border-b-2 border-blue-500" : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-slate-100"}`}>{tab}</button>
+              <button key={tab} type="button" onClick={() => setEventStateTab(tab)} className={`rounded-t-md px-3 py-1.5 text-sm font-medium capitalize transition-colors md:px-4 md:py-2 ${eventStateTab === tab ? "border-b-2 border-blue-500 bg-blue-600 text-white" : "bg-slate-700 text-slate-300 hover:bg-slate-600 hover:text-slate-100"}`}>{tab}</button>
             ))}
           </div>
           {filteredEventsByTab.length === 0 ? (
-            <p className="py-6 text-center text-slate-400 text-sm border border-slate-600 rounded-lg bg-slate-800/50">No events for this state.</p>
+            <p className="rounded-md border border-slate-600 bg-slate-800/50 py-4 text-center text-xs text-slate-400 md:text-sm">No events for this state.</p>
           ) : (
             <>
               <div className="overflow-x-auto uppercase">
-                <table className="min-w-full divide-y divide-slate-600 border border-slate-600 rounded-lg overflow-hidden">
+                <table className="min-w-full divide-y divide-slate-600 overflow-hidden rounded-md border border-slate-600">
                   <thead className="bg-slate-700">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Date (dd mm yyyy)</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Project</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Type</th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-slate-300 uppercase tracking-wider">Customer</th>
+                      <th className="px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wider text-slate-300 md:px-3 md:py-2 md:text-xs">Date (dd mm yyyy)</th>
+                      <th className="px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wider text-slate-300 md:px-3 md:py-2 md:text-xs">Project</th>
+                      <th className="px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wider text-slate-300 md:px-3 md:py-2 md:text-xs">Type</th>
+                      <th className="px-2 py-2 text-left text-[10px] font-medium uppercase tracking-wider text-slate-300 md:px-3 md:py-2 md:text-xs">Customer</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-slate-800 divide-y divide-slate-600">
+                  <tbody className="divide-y divide-slate-600 bg-slate-800">
                     {paginatedEvents.map((ev) => (
                       <tr
                         key={ev.id_event}
                         onClick={() => { if (ev.id_project !== "agenda") router.push(`${PROJECTS_PATH}/${ev.id_project}`); }}
-                        className="hover:bg-slate-700/80 cursor-pointer"
+                        className="cursor-pointer hover:bg-slate-700/80"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-100" title="dd mm yyyy">{formatDateDdMmYyyy(ev.date)}</td>
-                        <td className="px-6 py-4 text-sm text-slate-100">{getProjectTitle(ev.id_project)}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-300">{eventTypeLabel[ev.event_type] ?? ev.event_type}</td>
-                        <td className="px-6 py-4 text-sm text-slate-100">{getCustomerName(ev.id_customer)}</td>
+                        <td className="whitespace-nowrap px-2 py-2 text-xs text-slate-100 md:px-3 md:text-sm" title="dd mm yyyy">{formatDateDdMmYyyy(ev.date)}</td>
+                        <td className="px-2 py-2 text-xs text-slate-100 md:px-3 md:text-sm">{getProjectTitle(ev.id_project)}</td>
+                        <td className="whitespace-nowrap px-2 py-2 text-xs text-slate-300 md:px-3 md:text-sm">{eventTypeLabel[ev.event_type] ?? ev.event_type}</td>
+                        <td className="px-2 py-2 text-xs text-slate-100 md:px-3 md:text-sm">{getCustomerName(ev.id_customer)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center justify-between mt-4 px-2">
+              <div className="mt-2 flex items-center justify-between px-1 md:mt-3">
                 <p className="text-sm text-slate-300">Viewing {paginatedEvents.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1}–{Math.min(currentPage * PAGE_SIZE, filteredEventsByTab.length)} of {filteredEventsByTab.length}</p>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1} className="px-3 py-1 text-sm font-medium text-slate-200 bg-slate-700 rounded hover:bg-slate-600 disabled:opacity-50 disabled:cursor-not-allowed">← Prev</button>
@@ -300,16 +300,16 @@ const ManagementDashboard: FC = () => {
         </div>
 
         {/* Right column: Agenda calendar */}
-        <div className="pl-6 lg:col-span-3">
+        <div className="pl-0 lg:col-span-3 lg:pl-4">
           {viewMode === "months" ? (
-            <div className="flex flex-col w-full">
-              <div className="flex items-center justify-center gap-4 mb-4 w-full max-w-7xl mx-auto">
-                <button type="button" onClick={() => navigateMonth("prev")} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-full text-2xl text-slate-200" aria-label="Previous month">{'<'}</button>
-                <span className="text-2xl font-semibold text-slate-100">{agendaTitle}</span>
-                <button type="button" onClick={() => navigateMonth("next")} className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded-full text-2xl text-slate-200" aria-label="Next month">{'>'}</button>
+            <div className="flex w-full flex-col">
+              <div className="mx-auto mb-2 flex w-full max-w-7xl items-center justify-center gap-2 md:mb-3 md:gap-3">
+                <button type="button" onClick={() => navigateMonth("prev")} className="rounded-full bg-slate-700 px-2 py-0.5 text-base text-slate-200 hover:bg-slate-600 md:px-3 md:py-1 md:text-lg" aria-label="Previous month">{'<'}</button>
+                <span className="text-base font-semibold text-slate-100 md:text-lg">{agendaTitle}</span>
+                <button type="button" onClick={() => navigateMonth("next")} className="rounded-full bg-slate-700 px-2 py-0.5 text-base text-slate-200 hover:bg-slate-600 md:px-3 md:py-1 md:text-lg" aria-label="Next month">{'>'}</button>
               </div>
               <div className="w-full">
-                <div className="w-full max-w-7xl mx-auto">
+                <div className="mx-auto w-full max-w-7xl">
                   {renderMonth({
                     month: displayMonth,
                     today,
@@ -327,11 +327,11 @@ const ManagementDashboard: FC = () => {
             <div className="flex flex-col">
               <button type="button" onClick={() => { setViewMode("months"); setSelectedDay(null); }} className="mb-4 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm self-start text-slate-200">← Back to Calendar</button>
               {selectedDay && (
-                <div className="border border-slate-600 rounded-lg p-8 bg-slate-800/50">
+                <div className="border border-slate-600 rounded-lg p-4 bg-slate-800/50 md:p-5">
                   <div className="flex items-center justify-between mb-6">
                     <button type="button" onClick={() => setSelectedDay(new Date(selectedDay.getTime() - 86400000))} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm text-slate-200">← Previous Day</button>
                     <div className="text-center">
-                      <div className="text-4xl font-bold text-slate-100" title="dd mm yyyy">{formatDateDdMmYyyyFromDate(selectedDay)}</div>
+                      <div className="text-2xl font-bold text-slate-100 md:text-3xl" title="dd mm yyyy">{formatDateDdMmYyyyFromDate(selectedDay)}</div>
                       <div className="text-xl text-slate-300 capitalize mt-1">{selectedDay.toLocaleDateString("en-US", { weekday: "long" })}</div>
                     </div>
                     <button type="button" onClick={() => setSelectedDay(new Date(selectedDay.getTime() + 86400000))} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-sm text-slate-200">Next Day →</button>

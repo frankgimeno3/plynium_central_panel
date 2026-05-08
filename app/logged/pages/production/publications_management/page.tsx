@@ -4,27 +4,44 @@ import React, { FC, useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
-import publicationsData from "@/app/contents/publications.json";
-import { getPlanned } from "@/app/contents/publicationsHelpers";
-import type { PublicationUnified } from "@/app/contents/interfaces";
+import { PublicationService } from "@/app/service/PublicationService";
 
 type PlannedPublication = {
-  id_planned_publication: string;
-  edition_name: string;
-  theme: string;
-  publication_date: string;
+  id_publication: string;
+  edition_name?: string;
+  theme?: string;
+  publication_date?: string;
 };
 
 const ITEMS_PER_PAGE = 12;
 
 const PublicationsManagementPage: FC = () => {
   const router = useRouter();
-  const all = getPlanned(publicationsData as unknown as PublicationUnified[]) as PlannedPublication[];
+  const [all, setAll] = useState<PlannedPublication[]>([]);
   const [filter, setFilter] = useState({ id: "", edition: "", theme: "" });
+
+  useEffect(() => {
+    PublicationService.getAllPublications()
+      .then((list: any[]) => {
+        const rows = Array.isArray(list) ? list : [];
+        setAll(
+          rows
+            .filter((x) => x && typeof x === "object")
+            .map((x: any) => ({
+              id_publication: String(x.id_publication ?? x.publication_id ?? x.id ?? "").trim(),
+              edition_name: x.edition_name != null ? String(x.edition_name) : undefined,
+              theme: x.theme != null ? String(x.theme) : undefined,
+              publication_date: x.publication_date != null ? String(x.publication_date) : undefined,
+            }))
+            .filter((p) => p.id_publication.length > 0)
+        );
+      })
+      .catch(() => setAll([]));
+  }, []);
 
   const filtered = useMemo(() => {
     let list = [...all];
-    if (filter.id) list = list.filter((p) => p.id_planned_publication.toLowerCase().includes(filter.id.toLowerCase()));
+    if (filter.id) list = list.filter((p) => p.id_publication.toLowerCase().includes(filter.id.toLowerCase()));
     if (filter.edition) list = list.filter((p) => p.edition_name?.toLowerCase().includes(filter.edition.toLowerCase()));
     if (filter.theme) list = list.filter((p) => p.theme?.toLowerCase().includes(filter.theme.toLowerCase()));
     return list;
@@ -95,21 +112,19 @@ const PublicationsManagementPage: FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Edition</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Theme</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Publication date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contents</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {paginated.map((p) => (
                 <tr
-                  key={p.id_planned_publication}
-                  onClick={() => router.push(`/logged/pages/production/publications_management/${p.id_planned_publication}`)}
+                  key={p.id_publication}
+                  onClick={() => router.push(`/logged/pages/production/publications_management/${encodeURIComponent(p.id_publication)}`)}
                   className={rowClass}
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.id_planned_publication}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{p.edition_name}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{p.theme}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.publication_date}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">13 slots</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.id_publication}</td>
+                  <td className="px-6 py-4 text-sm text-gray-900">{p.edition_name ?? "—"}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{p.theme ?? "—"}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{p.publication_date ?? "—"}</td>
                 </tr>
               ))}
             </tbody>

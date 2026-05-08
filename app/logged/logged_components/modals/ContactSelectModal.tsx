@@ -192,13 +192,13 @@ const ContactSelectModal: FC<ContactSelectModalProps> = ({
               <tbody className="bg-white divide-y divide-gray-200">
                 {loading ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={6} className="px-4 py-5 text-center text-gray-500">
                       Loading contacts…
                     </td>
                   </tr>
                 ) : paginated.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={6} className="px-4 py-5 text-center text-gray-500">
                       No contacts found.
                     </td>
                   </tr>

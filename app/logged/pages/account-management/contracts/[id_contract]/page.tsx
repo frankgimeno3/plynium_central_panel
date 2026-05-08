@@ -8,9 +8,7 @@ import PageContentSection from "@/app/logged/logged_components/context_content/P
 import { ServiceService } from "@/app/service/ServiceService";
 import { CustomerService } from "@/app/service/CustomerService";
 import { ContactService } from "@/app/service/ContactService";
-import publicationsData from "@/app/contents/publications.json";
-import { getPlanned } from "@/app/contents/publicationsHelpers";
-import type { PublicationUnified } from "@/app/contents/interfaces";
+import { PublicationService } from "@/app/service/PublicationService";
 import { ContractService } from "@/app/service/ContractService";
 
 type ServiceLine = {
@@ -87,11 +85,7 @@ type Project = {
 type Service = { id_service: string; name: string; display_name?: string };
 type Customer = { id_customer: string; name: string; country?: string };
 type Contact = { id_contact: string; name: string; email?: string; id_customer?: string };
-type PlannedPublication = { id_planned_publication: string; edition_name: string };
-
-const plannedPublications = getPlanned(
-  publicationsData as unknown as PublicationUnified[]
-) as PlannedPublication[];
+type PublicationRow = { id_publication: string; edition_name?: string };
 
 const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ params }) => {
   const router = useRouter();
@@ -99,12 +93,29 @@ const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [publications, setPublications] = useState<PublicationRow[]>([]);
   const [contract, setContract] = useState<Contract | null>(null);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     ServiceService.getAllServices().then((list) => setServices(Array.isArray(list) ? list : [])).catch(() => setServices([]));
+  }, []);
+  useEffect(() => {
+    PublicationService.getAllPublications()
+      .then((list: any[]) => {
+        const rows = Array.isArray(list) ? list : [];
+        setPublications(
+          rows
+            .filter((x) => x && typeof x === "object")
+            .map((x: any) => ({
+              id_publication: String(x.id_publication ?? x.publication_id ?? x.id ?? "").trim(),
+              edition_name: x.edition_name != null ? String(x.edition_name) : undefined,
+            }))
+            .filter((p) => p.id_publication.length > 0)
+        );
+      })
+      .catch(() => setPublications([]));
   }, []);
   useEffect(() => {
     CustomerService.getAllCustomers().then((l: Customer[]) => setCustomers(Array.isArray(l) ? l : [])).catch(() => setCustomers([]));
@@ -137,7 +148,7 @@ const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ 
   );
 
   const getServiceName = (id: string) => services.find((s) => s.id_service === id)?.display_name ?? services.find((s) => s.id_service === id)?.name?.replace(/_/g, " ") ?? id;
-  const getPublicationName = (id: string) => plannedPublications.find((p) => p.id_planned_publication === id)?.edition_name ?? id;
+  const getPublicationName = (id: string) => publications.find((p) => p.id_publication === id)?.edition_name ?? id;
 
   const lines = proposal?.serviceLines ?? [];
   const totalBeforeDiscount = useMemo(
@@ -350,7 +361,11 @@ const ContractDetailPage: FC<{ params: Promise<{ id_contract: string }> }> = ({ 
               projects.map((p) => (
                 <div
                   key={p.id_project}
-                  onClick={() => router.push(`/logged/pages/account-management/projects/${contract.id_contract}`)}
+                  onClick={() =>
+                    router.push(
+                      `/logged/pages/account-management/projects/${encodeURIComponent(p.id_project)}`
+                    )
+                  }
                   className="flex items-center justify-between p-4 border border-gray-200 rounded-lg cursor-pointer hover:bg-blue-50/80 transition-colors"
                 >
                   <div>

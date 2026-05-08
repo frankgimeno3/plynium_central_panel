@@ -25,4 +25,28 @@ export class CustomerService {
     );
     return response.data;
   }
+
+  /** @param {{ companyId?: string, customerId?: string }} params — exactly one required */
+  static async getCustomerCompanyRelations(params) {
+    const response = await apiClient.get("/api/v1/customer-company-relations", { params });
+    return response.data;
+  }
+
+  static async createCustomerCompanyRelation(body) {
+    const response = await apiClient.post("/api/v1/customer-company-relations", body);
+    return response.data;
+  }
+
+  static async deleteCustomerCompanyRelation(relationId) {
+    await apiClient.delete(
+      `/api/v1/customer-company-relations/${encodeURIComponent(relationId)}`
+    );
+  }
+
+  static async deleteCustomer(idCustomer) {
+    const response = await apiClient.delete(
+      `/api/v1/customers/${encodeURIComponent(idCustomer)}`
+    );
+    return response.data;
+  }
 }

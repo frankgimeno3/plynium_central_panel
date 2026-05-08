@@ -2,6 +2,7 @@ import PublicationModel from "./PublicationModel.js";
 // Ensure models are initialized by importing models.js
 import "../../database/models.js";
 import { QueryTypes } from "sequelize";
+import { createPreferentialSlotsForMagazinePublication } from "./publicationPreferentialSlots.js";
 
 function toApiShape(p) {
     const row = p && typeof p.get === "function" ? p.get({ plain: true }) : p;
@@ -174,21 +175,32 @@ export async function createMagazineIssuePublication({
     const realDate = month != null ? lastDayOfMonthIso(y, month) : null;
     const format = normalizePublicationFormat(publication_format);
 
-    const row = await PublicationModel.create({
-        publication_id: id,
-        magazine_id: mid,
-        magazine_general_issue_number: gen,
-        publication_year: y,
-        magazine_this_year_issue: issueInYear,
-        publication_expected_publication_month: month,
-        real_publication_month_date: realDate,
-        publication_materials_deadline: null,
-        publication_main_image_url: "",
-        publication_edition_name: edition,
-        is_special_edition: Boolean(is_special_edition),
-        publication_theme: String(publication_theme ?? "").trim(),
-        publication_status: "draft",
-        publication_format: format,
+    const sequelize = PublicationModel.sequelize;
+    const row = await sequelize.transaction(async (transaction) => {
+        const created = await PublicationModel.create(
+            {
+                publication_id: id,
+                magazine_id: mid,
+                magazine_general_issue_number: gen,
+                publication_year: y,
+                magazine_this_year_issue: issueInYear,
+                publication_expected_publication_month: month,
+                real_publication_month_date: realDate,
+                publication_materials_deadline: null,
+                publication_main_image_url: "",
+                publication_edition_name: edition,
+                is_special_edition: Boolean(is_special_edition),
+                publication_theme: String(publication_theme ?? "").trim(),
+                publication_status: "draft",
+                publication_format: format,
+            },
+            { transaction }
+        );
+        await createPreferentialSlotsForMagazinePublication(
+            { publicationId: id, magazineId: mid },
+            { transaction }
+        );
+        return created;
     });
 
     return toPublicationMagazineAdminApi(row);
@@ -210,7 +222,10 @@ export async function createPublication(publicationData) {
 
         const format = normalizePublicationFormat(publicationData.publication_format);
 
-        const publication = await PublicationModel.create({
+        const magazineIdRaw = publicationData.magazine_id ?? publicationData.id_magazine ?? null;
+        const magazineId = magazineIdRaw != null ? String(magazineIdRaw).trim() : "";
+
+        const createPayload = {
             publication_id: publicationData.id_publication,
             magazine_id: publicationData.magazine_id ?? publicationData.id_magazine ?? null,
             magazine_general_issue_number:
@@ -240,8 +255,23 @@ export async function createPublication(publicationData) {
                 publicationData.magazine ??
                 "",
             publication_status: publicationData.publication_status != null ? String(publicationData.publication_status) : "draft",
-            publication_format: format
-        });
+            publication_format: format,
+        };
+
+        const publication =
+            magazineId !== ""
+                ? await PublicationModel.sequelize.transaction(async (transaction) => {
+                      const created = await PublicationModel.create(createPayload, { transaction });
+                      await createPreferentialSlotsForMagazinePublication(
+                          {
+                              publicationId: created.get("publication_id"),
+                              magazineId,
+                          },
+                          { transaction }
+                      );
+                      return created;
+                  })
+                : await PublicationModel.create(createPayload);
 
         console.log(`[PublicationService] [${requestId}] Publication created successfully:`, publication.toJSON());
 

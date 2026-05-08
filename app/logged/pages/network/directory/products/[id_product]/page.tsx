@@ -8,9 +8,11 @@ import PageContentSection from "@/app/logged/logged_components/context_content/P
 import { ProductService } from "@/app/service/ProductService";
 import { CompanyService } from "@/app/service/CompanyService";
 import { Product } from "@/app/contents/interfaces";
+import { PRODUCTS_MEDIA_LIBRARY_PATH } from "@/app/contents/mediatecaPaths";
 import MediatecaModal from "@/app/logged/logged_components/modals/MediatecaModal";
 import CategoriesModal from "@/app/logged/logged_components/modals/CategoriesModal";
 import type { CategoryItem } from "@/app/logged/logged_components/modals/CategoriesModal";
+import { RichTextEditor } from "@/app/logged/logged_components/RichTextEditor";
 
 const MAX_EXTRA_IMAGES = 3;
 
@@ -307,7 +309,7 @@ const IdProduct: FC<IdProductProps> = ({}) => {
 
   if (loading) {
     return (
-      <div className="flex flex-col w-full bg-white p-8">
+      <div className="flex flex-col w-full bg-white p-5 md:p-6">
         <p className="text-center text-gray-500">Loading product...</p>
       </div>
     );
@@ -315,7 +317,7 @@ const IdProduct: FC<IdProductProps> = ({}) => {
 
   if (!product || !formData) {
     return (
-      <div className="flex flex-col w-full bg-white p-8">
+      <div className="flex flex-col w-full bg-white p-5 md:p-6">
         <p className="text-center text-gray-500">Product not found</p>
       </div>
     );
@@ -454,13 +456,11 @@ const IdProduct: FC<IdProductProps> = ({}) => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Product Description
               </label>
-              <textarea
+              <RichTextEditor
                 value={formData.productDescription}
-                onChange={(e) =>
-                  handleInputChange("productDescription", e.target.value)
-                }
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                rows={4}
+                onChange={(html) => handleInputChange("productDescription", html)}
+                placeholder="Write product description..."
+                minHeight="180px"
               />
             </div>
 
@@ -794,6 +794,7 @@ const IdProduct: FC<IdProductProps> = ({}) => {
         open={mediatecaOpen}
         onClose={() => setMediatecaOpen(false)}
         onSelectImage={handleMediatecaSelect}
+        initialPath={PRODUCTS_MEDIA_LIBRARY_PATH}
       />
 
       <CategoriesModal

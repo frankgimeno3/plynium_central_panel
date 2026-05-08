@@ -20,4 +20,9 @@ export class MagazineService {
     const response = await apiClient.patch(`/api/v1/magazines/${encodeURIComponent(idMagazine)}`, data);
     return response.data;
   }
+
+  static async deleteMagazine(idMagazine) {
+    const response = await apiClient.delete(`/api/v1/magazines/${encodeURIComponent(idMagazine)}`);
+    return response.data;
+  }
 }

@@ -39,6 +39,21 @@ export class PublicationService{
         return response.data;
     }
 
+    /**
+     * @param {string} publicationId
+     * @param {{ service_group_id: string, position_in_magazine: string }} params
+     */
+    static async getPreferentialSlotAvailability(publicationId, params) {
+        const q = new URLSearchParams({
+            service_group_id: String(params.service_group_id ?? ""),
+            position_in_magazine: String(params.position_in_magazine ?? ""),
+        }).toString();
+        const response = await apiClient.get(
+            `/api/v1/publications/${encodeURIComponent(publicationId)}/preferential-slots/availability?${q}`
+        );
+        return response.data;
+    }
+
     /** Creates a draft row in publications_db for a planned issue. */
     static async createMagazinePublication(magazineId, body) {
         const response = await apiClient.post(

@@ -17,16 +17,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <div className="flex flex-col min-h-screen">
-      <TopnavProviders>
+    <TopnavProviders>
+      <div className="flex flex-col min-h-screen">
         <Topnav />
-      </TopnavProviders>
-      <div className="flex flex-row flex-1 min-h-screen text-slate-200 w-full">
-        <Leftnav />
-        <PageContentProvider>
-          <PageContentLayout>{children}</PageContentLayout>
-        </PageContentProvider>
+        <div className="flex flex-row flex-1 min-h-screen text-slate-200 w-full">
+          <Leftnav />
+          <PageContentProvider>
+            <PageContentLayout>{children}</PageContentLayout>
+          </PageContentProvider>
+        </div>
       </div>
-    </div>
+    </TopnavProviders>
   );
 }

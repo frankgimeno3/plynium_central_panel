@@ -4,7 +4,10 @@ import NotificationCompanyContentDbModel from "./NotificationCompanyContentDbMod
 import NotificationAdvertisementDbModel from "./NotificationAdvertisementDbModel.js";
 import AgentDbModel from "../agent_db/AgentDbModel.js";
 import "../../database/models.js";
-import { maybeFulfillCompanyDirectoryRequest } from "../company_directory_request/approveCompanyDirectoryRequest.js";
+import {
+    maybeFulfillCompanyDirectoryRequest,
+    readFulfilledCompanyIdFromPanelTicketUpdates,
+} from "../company_directory_request/approveCompanyDirectoryRequest.js";
 import { maybeFulfillProductDirectoryRequest } from "../product_directory_request/approveProductDirectoryRequest.js";
 import {
     notificationCompanyContentInclude,
@@ -67,6 +70,20 @@ function mapAdvertisementToApi(adv) {
 }
 
 /** Legacy mediakit body: FROM / Interest / Phone blocks + message. */
+function panelTicketUpdatesArrayForApi(raw) {
+    if (raw == null) return [];
+    if (Array.isArray(raw)) return raw;
+    if (typeof raw === "string") {
+        try {
+            const parsed = JSON.parse(raw);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+    return [];
+}
+
 function parseLegacyAdvertisementDescription(full) {
     const raw = String(full ?? "");
     const out = {
@@ -121,6 +138,9 @@ function toApiNotification(row) {
         if (parsed.message) description = parsed.message;
     }
 
+    const updatesForApi = panelTicketUpdatesArrayForApi(plain.panel_ticket_updates_array);
+    const fulfilledCompanyIdFromUpdates = readFulfilledCompanyIdFromPanelTicketUpdates(updatesForApi);
+
     return {
         id: plain.panel_ticket_id,
         notification_type: plain.panel_ticket_type,
@@ -135,7 +155,8 @@ function toApiNotification(row) {
         sender_contact_phone,
         country: "",
         user_id: userIdFirst,
-        panel_ticket_updates_array: plain.panel_ticket_updates_array ?? [],
+        ...(fulfilledCompanyIdFromUpdates ? { fulfilled_company_id: fulfilledCompanyIdFromUpdates } : {}),
+        panel_ticket_updates_array: updatesForApi,
         comments: Array.isArray(plain.comments) ? plain.comments.map(c => ({
             date: c.panel_ticket_comment_date
                 ? (typeof c.panel_ticket_comment_date === "string" ? c.panel_ticket_comment_date : c.panel_ticket_comment_date.toISOString())
@@ -461,8 +482,9 @@ export async function updateNotification(id, data) {
 
     const newState =
         updates.panel_ticket_state !== undefined ? updates.panel_ticket_state : previousState;
+    let directoryFulfilledCompanyId = null;
     try {
-        await maybeFulfillCompanyDirectoryRequest(id, previousState, newState, {
+        directoryFulfilledCompanyId = await maybeFulfillCompanyDirectoryRequest(id, previousState, newState, {
             portalId: data.fulfill_portal_id,
             portalIds: data.fulfill_portal_ids,
         });
@@ -477,7 +499,15 @@ export async function updateNotification(id, data) {
         console.error("[updateNotification] product directory fulfillment failed:", e?.message || e);
     }
 
-    return getNotificationById(id);
+    const api = await getNotificationById(id);
+    const resolvedFulfilled =
+        (typeof directoryFulfilledCompanyId === "string" && directoryFulfilledCompanyId.trim()
+            ? directoryFulfilledCompanyId.trim()
+            : null) || readFulfilledCompanyIdFromPanelTicketUpdates(api.panel_ticket_updates_array);
+    if (resolvedFulfilled) {
+        api.fulfilled_company_id = resolvedFulfilled;
+    }
+    return api;
 }
 
 export async function addComment(notificationId, content, agentId = null) {

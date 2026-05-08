@@ -24,7 +24,7 @@ const ArticleHeader: FC<ArticleHeaderProps> = ({
     <div className="flex flex-col gap-3">
     {/* Title with Pencil */}
     <div className="relative flex flex-row">
-      <h1 className="text-4xl font-bold">{safeTitle}</h1>
+      <h1 className="text-2xl font-bold md:text-3xl">{safeTitle}</h1>
       <div className="absolute bottom-0 right-[-35px]">
         <PencilSvg size="10" onClick={onEditTitle} />
       </div>

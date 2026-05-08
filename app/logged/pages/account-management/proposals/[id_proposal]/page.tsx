@@ -2,18 +2,17 @@
 
 import React, { FC, use, useEffect, useMemo, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { ServiceService } from "@/app/service/ServiceService";
 import { CustomerService } from "@/app/service/CustomerService";
 import { ContactService } from "@/app/service/ContactService";
-import publicationsData from "@/app/contents/publications.json";
-import { getPlanned } from "@/app/contents/publicationsHelpers";
-import type { PublicationUnified } from "@/app/contents/interfaces";
+import { PublicationService } from "@/app/service/PublicationService";
 import { ProposalService } from "@/app/service/ProposalService";
 
 type ServiceLine = {
-  lineId: string;
+  lineId?: string;
   id_service: string;
   description: string;
   specifications: string;
@@ -30,7 +29,7 @@ type ServiceLine = {
 };
 
 type PaymentLine = {
-  paymentId: string;
+  paymentId?: string;
   date: string;
   paymentMethod: "recibo" | "transferencia_bancaria";
   bank: "Sabadell" | "Santander";
@@ -66,21 +65,44 @@ type Proposal = {
 type Service = { id_service: string; name: string; display_name?: string };
 type Customer = { id_customer: string; name: string; country?: string };
 type Contact = { id_contact: string; name: string; email?: string; id_customer?: string };
-type PlannedPublication = { id_planned_publication: string; edition_name: string };
-
-const plannedPublications = getPlanned(
-  publicationsData as unknown as PublicationUnified[]
-) as PlannedPublication[];
+type PublicationRow = { id_publication: string; edition_name?: string };
 
 const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ params }) => {
+  const router = useRouter();
   const { id_proposal } = use(params);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [publications, setPublications] = useState<PublicationRow[]>([]);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editableLines, setEditableLines] = useState<ServiceLine[]>([]);
+  const [editablePayments, setEditablePayments] = useState<PaymentLine[]>([]);
+  const [editableGeneralDiscount, setEditableGeneralDiscount] = useState(0);
+  const [saveSaving, setSaveSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [acceptModalOpen, setAcceptModalOpen] = useState(false);
+  const [acceptContractTitle, setAcceptContractTitle] = useState("");
+  const [acceptSaving, setAcceptSaving] = useState(false);
+  const [acceptError, setAcceptError] = useState<string | null>(null);
   useEffect(() => {
     ServiceService.getAllServices().then((list) => setServices(Array.isArray(list) ? list : [])).catch(() => setServices([]));
+  }, []);
+  useEffect(() => {
+    PublicationService.getAllPublications()
+      .then((list: any[]) => {
+        const rows = Array.isArray(list) ? list : [];
+        setPublications(
+          rows
+            .filter((x) => x && typeof x === "object")
+            .map((x: any) => ({
+              id_publication: String(x.id_publication ?? x.publication_id ?? x.id ?? "").trim(),
+              edition_name: x.edition_name != null ? String(x.edition_name) : undefined,
+            }))
+            .filter((p) => p.id_publication.length > 0)
+        );
+      })
+      .catch(() => setPublications([]));
   }, []);
   useEffect(() => {
     CustomerService.getAllCustomers().then((l: Customer[]) => setCustomers(Array.isArray(l) ? l : [])).catch(() => setCustomers([]));
@@ -91,8 +113,20 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
     try {
       const p = await ProposalService.getProposalById(id_proposal);
       setProposal(p ?? null);
+      if (p) {
+        setEditableLines((p.serviceLines ?? []).map((l: ServiceLine) => ({ ...l })));
+        setEditablePayments((p.payments ?? []).map((x: PaymentLine) => ({ ...x })));
+        setEditableGeneralDiscount(p.general_discount_pct ?? 0);
+      } else {
+        setEditableLines([]);
+        setEditablePayments([]);
+        setEditableGeneralDiscount(0);
+      }
     } catch {
       setProposal(null);
+      setEditableLines([]);
+      setEditablePayments([]);
+      setEditableGeneralDiscount(0);
     } finally {
       setLoading(false);
     }
@@ -135,19 +169,99 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
   );
 
   const getServiceName = (id: string) => services.find((s) => s.id_service === id)?.display_name ?? services.find((s) => s.id_service === id)?.name?.replace(/_/g, " ") ?? id;
-  const getPublicationName = (id: string) => plannedPublications.find((p) => p.id_planned_publication === id)?.edition_name ?? id;
+  const getPublicationName = (id: string) => publications.find((p) => p.id_publication === id)?.edition_name ?? id;
 
-  const lines = proposal?.serviceLines ?? [];
+  const lines = editableLines;
   const totalBeforeDiscount = useMemo(
     () => lines.reduce((sum, l) => sum + l.units * l.price * (1 - (l.discount_pct ?? 0) / 100), 0),
     [lines]
   );
-  const generalDiscountPct = proposal?.general_discount_pct ?? 0;
+  const generalDiscountPct = editableGeneralDiscount;
   const totalPreTax = totalBeforeDiscount * (1 - generalDiscountPct / 100);
   const isSpain = (customer?.country ?? "").toLowerCase() === "spain";
   const vatPct = isSpain ? 21 : 0;
   const totalAfterTax = totalPreTax * (1 + vatPct / 100);
-  const paymentsSum = (proposal?.payments ?? []).reduce((s, p) => s + p.amount, 0);
+  const paymentsSum = (!proposal?.isExchange ? editablePayments : (proposal?.payments ?? [])).reduce((s, p) => s + p.amount, 0);
+
+  const buildProposalPatch = useCallback((): Record<string, unknown> => {
+    if (!proposal) return {};
+    const body: Record<string, unknown> = {
+      title: editableTitle,
+      date_created: editableCreationDate,
+      proposal_date: editableCreationDate,
+      expiration_date: editableExpirationDate || null,
+      general_discount_pct: editableGeneralDiscount,
+      serviceLines: editableLines,
+    };
+    if (!proposal.isExchange) {
+      body.payments = editablePayments;
+    }
+    return body;
+  }, [
+    proposal,
+    editableTitle,
+    editableCreationDate,
+    editableExpirationDate,
+    editableGeneralDiscount,
+    editableLines,
+    editablePayments,
+  ]);
+
+  const updateLine = useCallback((idx: number, patch: Partial<ServiceLine>) => {
+    setEditableLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
+  }, []);
+
+  const updatePayment = useCallback((idx: number, patch: Partial<PaymentLine>) => {
+    setEditablePayments((prev) => prev.map((p, i) => (i === idx ? { ...p, ...patch } : p)));
+  }, []);
+
+  const handleSave = useCallback(async () => {
+    if (!proposal) return;
+    setSaveSaving(true);
+    setSaveError(null);
+    try {
+      await ProposalService.updateProposal(id_proposal, buildProposalPatch());
+      await loadProposal();
+    } catch (e: unknown) {
+      const msg =
+        typeof e === "object" && e !== null && "message" in e && typeof (e as { message: unknown }).message === "string"
+          ? (e as { message: string }).message
+          : null;
+      setSaveError(msg || "No se pudo guardar.");
+    } finally {
+      setSaveSaving(false);
+    }
+  }, [proposal, id_proposal, buildProposalPatch, loadProposal]);
+
+  const handleConfirmAccept = useCallback(async () => {
+    if (!proposal) return;
+    const contractTitle = acceptContractTitle.trim();
+    if (!contractTitle) {
+      setAcceptError("Indica un nombre para el contrato.");
+      return;
+    }
+    setAcceptSaving(true);
+    setAcceptError(null);
+    try {
+      await ProposalService.updateProposal(id_proposal, buildProposalPatch());
+      const result = await ProposalService.acceptProposal(id_proposal, { contract_title: contractTitle });
+      setAcceptModalOpen(false);
+      setProposal(result.proposal);
+      if (result?.contract?.id_contract) {
+        router.push(`/logged/pages/account-management/contracts/${encodeURIComponent(result.contract.id_contract)}`);
+      } else {
+        await loadProposal();
+      }
+    } catch (e: unknown) {
+      const msg =
+        typeof e === "object" && e !== null && "message" in e && typeof (e as { message: unknown }).message === "string"
+          ? (e as { message: string }).message
+          : null;
+      setAcceptError(msg || "No se pudo aceptar la propuesta.");
+    } finally {
+      setAcceptSaving(false);
+    }
+  }, [proposal, id_proposal, router, loadProposal, buildProposalPatch, acceptContractTitle]);
 
   const { setPageMeta } = usePageContent();
 
@@ -186,7 +300,8 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
     );
   }
 
-  const displayAmount = proposal.serviceLines?.length ? totalAfterTax : proposal.amount_eur;
+  const locked = proposal.status === "accepted";
+  const displayAmount = lines.length ? totalAfterTax : proposal.amount_eur;
   const displayDate = proposal.proposal_date ?? proposal.date_created;
 
   return (
@@ -198,7 +313,8 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
           type="text"
           value={editableTitle}
           onChange={(e) => setEditableTitle(e.target.value)}
-          className="w-full px-4 py-3 text-xl font-semibold text-gray-900 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          disabled={locked}
+          className="w-full px-4 py-3 text-xl font-semibold text-gray-900 border-2 border-gray-300 rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           placeholder="Proposal title"
         />
 
@@ -263,7 +379,8 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
               type="date"
               value={editableCreationDate}
               onChange={(e) => setEditableCreationDate(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={locked}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
           </div>
           <div>
@@ -272,12 +389,39 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
               type="date"
               value={editableExpirationDate}
               onChange={(e) => setEditableExpirationDate(e.target.value)}
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              disabled={locked}
+              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
             />
             {isExpired && (
               <p className="text-xs text-red-600 mt-1">This proposal is considered expired (expiration date has passed).</p>
             )}
           </div>
+        </div>
+
+        <div className="flex flex-wrap gap-3 items-center pt-2 border-t border-gray-100">
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={locked || saveSaving}
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {saveSaving ? "Guardando…" : "Guardar cambios"}
+          </button>
+          {lines.length > 0 && !locked && (
+            <button
+              type="button"
+              onClick={() => {
+                setAcceptError(null);
+                setAcceptContractTitle(editableTitle.trim() || proposal.title || "");
+                setAcceptModalOpen(true);
+              }}
+              disabled={acceptSaving || saveSaving}
+              className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Marcar como aceptada
+            </button>
+          )}
+          {saveError && <p className="text-sm text-red-600 w-full">{saveError}</p>}
         </div>
 
         {additionalContacts.length > 0 && (
@@ -308,31 +452,94 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {lines.map((line) => {
+                  {lines.map((line, idx) => {
                     const lineTotal = line.units * line.price * (1 - (line.discount_pct ?? 0) / 100);
                     const extra: string[] = [];
                     if (line.publicationMonth != null && line.publicationYear != null) extra.push(`${line.publicationMonth}/${line.publicationYear}`);
                     if (line.startDate && line.endDate) extra.push(`${line.startDate} – ${line.endDate}`);
                     if (line.id_planned_publication) extra.push(getPublicationName(line.id_planned_publication) + (line.magazinePageType ? ` · ${line.magazinePageType}` : ""));
+                    const rowKey = line.lineId || `${line.id_service ?? "svc"}-${idx}`;
+                    const cellInput =
+                      "w-full min-w-[5rem] px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed";
                     return (
-                      <tr key={line.lineId}>
-                        <td className="px-4 py-2">{getServiceName(line.id_service)}</td>
-                        <td className="px-4 py-2">{line.description || "—"}</td>
-                        <td className="px-4 py-2">{line.specifications || "—"}</td>
-                        <td className="px-4 py-2 text-right">{line.units}</td>
-                        <td className="px-4 py-2 text-right">{line.discount_pct ?? 0}%</td>
-                        <td className="px-4 py-2 text-right">{line.price} €</td>
-                        <td className="px-4 py-2 text-right">{lineTotal.toFixed(2)} €</td>
-                        <td className="px-4 py-2 text-gray-600">{extra.join(" · ") || "—"}</td>
+                      <tr key={rowKey}>
+                        <td className="px-4 py-2 whitespace-nowrap">{getServiceName(line.id_service)}</td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="text"
+                            value={line.description ?? ""}
+                            onChange={(e) => updateLine(idx, { description: e.target.value })}
+                            disabled={locked}
+                            className={cellInput}
+                          />
+                        </td>
+                        <td className="px-4 py-2">
+                          <input
+                            type="text"
+                            value={line.specifications ?? ""}
+                            onChange={(e) => updateLine(idx, { specifications: e.target.value })}
+                            disabled={locked}
+                            className={cellInput}
+                          />
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          <input
+                            type="number"
+                            min={0}
+                            step={1}
+                            value={Number.isFinite(line.units) ? line.units : 0}
+                            onChange={(e) => updateLine(idx, { units: Math.max(0, parseInt(e.target.value, 10) || 0) })}
+                            disabled={locked}
+                            className={`${cellInput} text-right`}
+                          />
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={0.5}
+                            value={line.discount_pct ?? 0}
+                            onChange={(e) => updateLine(idx, { discount_pct: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) })}
+                            disabled={locked}
+                            className={`${cellInput} text-right`}
+                          />
+                        </td>
+                        <td className="px-4 py-2 text-right">
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={line.price}
+                            onChange={(e) => updateLine(idx, { price: Math.max(0, parseFloat(e.target.value) || 0) })}
+                            disabled={locked}
+                            className={`${cellInput} text-right`}
+                          />
+                        </td>
+                        <td className="px-4 py-2 text-right font-medium">{lineTotal.toFixed(2)} €</td>
+                        <td className="px-4 py-2 text-gray-600 text-xs">{extra.join(" · ") || "—"}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <div className="mt-4 pt-4 border-t border-gray-200 space-y-1 text-sm text-right">
+            <div className="mt-4 pt-4 border-t border-gray-200 space-y-2 text-sm text-right">
               <div>Total before discount: <strong>{totalBeforeDiscount.toFixed(2)} €</strong></div>
-              <div>General discount {generalDiscountPct}%: <strong>{totalPreTax.toFixed(2)} €</strong> (pre-tax)</div>
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <span>General discount (%)</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={0.5}
+                  value={editableGeneralDiscount}
+                  onChange={(e) => setEditableGeneralDiscount(Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)))}
+                  disabled={locked}
+                  className="w-24 px-2 py-1 border border-gray-300 rounded text-right disabled:bg-gray-100"
+                />
+              </div>
+              <div>After general discount (pre-tax): <strong>{totalPreTax.toFixed(2)} €</strong></div>
               {vatPct > 0 && <div>VAT {vatPct}%: <strong>{(totalAfterTax - totalPreTax).toFixed(2)} €</strong></div>}
               <p className="mt-2 text-lg font-semibold">Total after tax: {totalAfterTax.toFixed(2)} €</p>
             </div>
@@ -359,16 +566,63 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
         )}
 
         {/* Payments */}
-        {!proposal.isExchange && proposal.payments && proposal.payments.length > 0 && (
+        {!proposal.isExchange && editablePayments.length > 0 && (
           <div className="border-t pt-6">
             <p className="text-sm font-semibold text-gray-700 mb-3">Payment method</p>
-            <ul className="space-y-2 text-sm">
-              {proposal.payments.map((p) => (
-                <li key={p.paymentId} className="flex justify-between items-center py-1">
-                  <span>
-                    {p.date} — {p.paymentMethod === "recibo" ? "Direct debit" : "Bank transfer"} — {p.bank}
-                  </span>
-                  <span className="font-medium">{p.amount.toFixed(2)} €</span>
+            <ul className="space-y-3 text-sm">
+              {editablePayments.map((p, idx) => (
+                <li
+                  key={p.paymentId || `payment-${idx}`}
+                  className="flex flex-wrap gap-3 items-end py-2 border-b border-gray-100 last:border-0"
+                >
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Date</label>
+                    <input
+                      type="date"
+                      value={p.date ? p.date.slice(0, 10) : ""}
+                      onChange={(e) => updatePayment(idx, { date: e.target.value })}
+                      disabled={locked}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Method</label>
+                    <select
+                      value={p.paymentMethod}
+                      onChange={(e) =>
+                        updatePayment(idx, { paymentMethod: e.target.value as PaymentLine["paymentMethod"] })
+                      }
+                      disabled={locked}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                    >
+                      <option value="recibo">Direct debit</option>
+                      <option value="transferencia_bancaria">Bank transfer</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Bank</label>
+                    <select
+                      value={p.bank}
+                      onChange={(e) => updatePayment(idx, { bank: e.target.value as PaymentLine["bank"] })}
+                      disabled={locked}
+                      className="px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
+                    >
+                      <option value="Sabadell">Sabadell</option>
+                      <option value="Santander">Santander</option>
+                    </select>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <label className="text-xs text-gray-500">Amount (€)</label>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={p.amount}
+                      onChange={(e) => updatePayment(idx, { amount: Math.max(0, parseFloat(e.target.value) || 0) })}
+                      disabled={locked}
+                      className="w-28 px-2 py-1 border border-gray-300 rounded text-sm text-right disabled:bg-gray-100"
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
@@ -406,6 +660,69 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
           </div>
         )}
         </div>
+
+        {acceptModalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+            role="presentation"
+            onClick={() => !acceptSaving && setAcceptModalOpen(false)}
+            onKeyDown={(e) => e.key === "Escape" && !acceptSaving && setAcceptModalOpen(false)}
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="accept-proposal-title"
+              className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <h2 id="accept-proposal-title" className="text-lg font-semibold text-gray-900">
+                ¿Confirmar aceptación?
+              </h2>
+              <p className="text-sm text-gray-600">
+                Se guardarán los cambios pendientes, la propuesta pasará a estado <strong>accepted</strong> y se creará{" "}
+                <strong>un contrato</strong> con el nombre indicado abajo, con <strong>un proyecto por cada línea de servicio</strong>{" "}
+                en <code className="text-xs bg-gray-100 px-1 rounded">contracts_db</code> y{" "}
+                <code className="text-xs bg-gray-100 px-1 rounded">projects_db</code>.
+              </p>
+              <div className="space-y-1">
+                <label htmlFor="accept-contract-title" className="block text-sm font-medium text-gray-700">
+                  Nombre del contrato
+                </label>
+                <input
+                  id="accept-contract-title"
+                  type="text"
+                  value={acceptContractTitle}
+                  onChange={(e) => setAcceptContractTitle(e.target.value)}
+                  maxLength={255}
+                  disabled={acceptSaving}
+                  placeholder="Ej. Contrato publicidad Q2 2026"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
+                />
+                <p className="text-xs text-gray-500">Máx. 255 caracteres. Los títulos de proyecto se generan a partir de este nombre.</p>
+              </div>
+              {acceptError && <p className="text-sm text-red-600">{acceptError}</p>}
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
+                  disabled={acceptSaving}
+                  onClick={() => setAcceptModalOpen(false)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50"
+                  disabled={acceptSaving || !acceptContractTitle.trim()}
+                  onClick={() => void handleConfirmAccept()}
+                >
+                  {acceptSaving ? "Procesando…" : "Confirmar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </PageContentSection>
   );

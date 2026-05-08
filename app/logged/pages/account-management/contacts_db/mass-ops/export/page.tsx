@@ -19,11 +19,11 @@ type Contact = {
 const EXPORT_FIELD_OPTIONS: { key: keyof Contact; label: string }[] = [
   { key: "id_contact", label: "Contact ID" },
   { key: "name", label: "Name" },
-  { key: "role", label: "Rol" },
+  { key: "role", label: "Role" },
   { key: "email", label: "Email" },
   { key: "phone", label: "Phone" },
-  { key: "id_customer", label: "ID cliente" },
-  { key: "company_name", label: "Empresa" },
+  { key: "id_customer", label: "Customer ID" },
+  { key: "company_name", label: "Company" },
 ];
 
 type ExportPhase = "config" | "loading" | "ready";
@@ -129,7 +129,7 @@ const ExportContactsPage: FC = () => {
         {phase === "config" && (
           <div className="space-y-6">
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-6">
-              <p className="text-sm font-semibold text-gray-700 mb-3">Campos a incluir en el listado</p>
+              <p className="text-sm font-semibold text-gray-700 mb-3">Fields to include in the export</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {EXPORT_FIELD_OPTIONS.map(({ key, label }) => (
                   <label key={key} className="flex items-center gap-2 cursor-pointer">
@@ -146,7 +146,7 @@ const ExportContactsPage: FC = () => {
             </div>
 
             <div className="bg-white border border-gray-200 rounded-xl shadow-sm overflow-hidden p-6">
-              <p className="text-sm font-semibold text-gray-700 mb-3">Restricciones (filtrar antes de exportar)</p>
+              <p className="text-sm font-semibold text-gray-700 mb-3">Filters (apply before export)</p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">ID</label>
@@ -155,7 +155,7 @@ const ExportContactsPage: FC = () => {
                     value={restrictions.id}
                     onChange={(e) => setRestrictions((r) => ({ ...r, id: e.target.value }))}
                     className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Filtrar por ID"
+                    placeholder="Filter by ID"
                   />
                 </div>
                 <div>
@@ -165,33 +165,33 @@ const ExportContactsPage: FC = () => {
                     value={restrictions.name}
                     onChange={(e) => setRestrictions((r) => ({ ...r, name: e.target.value }))}
                     className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Filtrar por nombre"
+                    placeholder="Filter by name"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Rol</label>
+                  <label className="block text-xs text-gray-600 mb-1">Role</label>
                   <input
                     type="text"
                     value={restrictions.role}
                     onChange={(e) => setRestrictions((r) => ({ ...r, role: e.target.value }))}
                     className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Filtrar por rol"
+                    placeholder="Filter by role"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Empresa</label>
+                  <label className="block text-xs text-gray-600 mb-1">Company</label>
                   <input
                     type="text"
                     value={restrictions.company}
                     onChange={(e) => setRestrictions((r) => ({ ...r, company: e.target.value }))}
                     className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Filtrar por empresa"
+                    placeholder="Filter by company"
                   />
                 </div>
               </div>
               <p className="text-xs text-gray-500 mt-2">
-                Will export <span className="font-medium">{filteredContacts.length}</span> contact(s) with the
-                filtros actuales.
+                Will export <span className="font-medium">{filteredContacts.length}</span> contact(s) using the
+                current filters.
               </p>
             </div>
 
@@ -207,10 +207,10 @@ const ExportContactsPage: FC = () => {
         )}
 
         {phase === "loading" && (
-          <div className="bg-white border border-gray-200 rounded-lg p-8 text-center">
+          <div className="bg-white border border-gray-200 rounded-lg p-5 text-center md:p-6">
             <div className="inline-block w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mb-4" />
-            <p className="text-gray-700">Generando archivo...</p>
-            <p className="text-sm text-gray-500 mt-1">Espere un momento.</p>
+            <p className="text-gray-700">Generating file…</p>
+            <p className="text-sm text-gray-500 mt-1">Please wait.</p>
           </div>
         )}
 
@@ -219,7 +219,7 @@ const ExportContactsPage: FC = () => {
             <p className="text-sm font-semibold text-gray-700">Export ready</p>
             <p className="text-sm text-gray-600">
               Exported <span className="font-medium">{filteredContacts.length}</span> contact(s) with the
-              campos seleccionados.
+              selected fields.
             </p>
             <div className="flex gap-3 pt-2">
               <button
@@ -227,7 +227,7 @@ const ExportContactsPage: FC = () => {
                 onClick={handleDownload}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
               >
-                Descargar
+                Download
               </button>
               <Link
                 href={backUrl}

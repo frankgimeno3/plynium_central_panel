@@ -9,6 +9,7 @@ import { ContentService } from "@/app/service/ContentService";
 import { EventsService } from "@/app/service/EventsService";
 import { PortalService } from "@/app/service/PortalService";
 import { ContentTopicService } from "@/app/service/ContentTopicService";
+import { CompanyService } from "@/app/service/CompanyService";
 import type { Content, ArticleData } from "./types";
 import ArticlePhase1 from "./ArticlePhase1";
 import ArticlePhase2 from "./ArticlePhase2";
@@ -17,6 +18,7 @@ import ContentModal from "./ContentModal";
 import MediatecaModal from "@/app/logged/logged_components/modals/MediatecaModal";
 import EventSelectModal from "@/app/logged/logged_components/modals/EventSelectModal";
 import { isRichTextEmpty } from "@/app/logged/logged_components/RichTextEditor";
+import { useSearchParams } from "next/navigation";
 
 const getTodayDate = () => {
   const today = new Date();
@@ -28,6 +30,7 @@ const getTodayDate = () => {
 
 export default function CreateArticlePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [currentPhase, setCurrentPhase] = useState<1 | 2 | 3>(1);
 
   const [idArticle, setIdArticle] = useState("");
@@ -36,6 +39,8 @@ export default function CreateArticlePage() {
   const [articleMainImageUrl, setArticleMainImageUrl] = useState("");
   const [companyPairs, setCompanyPairs] = useState<{ name: string; id: string }[]>([]);
   const [isArticleRelatedToCompany, setIsArticleRelatedToCompany] = useState(false);
+  const [lockedCompanyId, setLockedCompanyId] = useState<string>("");
+  const [lockedCompanyName, setLockedCompanyName] = useState<string>("");
     const [date, setDate] = useState(getTodayDate());
   const [highlitedPosition, setHighlitedPosition] = useState("");
   const [isArticleEvent, setIsArticleEvent] = useState(false);
@@ -87,6 +92,32 @@ export default function CreateArticlePage() {
       setPortals(normalized);
     }).catch(() => setPortals([]));
   }, []);
+
+  // Prefill when article is created from a company page.
+  useEffect(() => {
+    const cid = String(searchParams.get("companyId") ?? "").trim();
+    if (!cid) return;
+    setIsArticleRelatedToCompany(true);
+    setLockedCompanyId(cid);
+    CompanyService.getCompanyById(cid)
+      .then((c: any) => {
+        const name = (c?.commercialName ?? c?.commercial_name ?? cid) ? String(c?.commercialName ?? c?.commercial_name ?? cid) : cid;
+        setLockedCompanyName(name);
+        setCompanyPairs([{ name, id: cid }]);
+      })
+      .catch(() => {
+        setLockedCompanyName(cid);
+        setCompanyPairs([{ name: cid, id: cid }]);
+      });
+    CompanyService.getCompanyPortals(cid)
+      .then((list: any[]) => {
+        const ids = (Array.isArray(list) ? list : [])
+          .map((p) => Number(p?.portalId ?? p?.portal_id ?? p?.id))
+          .filter((n) => Number.isFinite(n));
+        if (ids.length > 0) setSelectedPortalIds(ids);
+      })
+      .catch(() => {});
+  }, [searchParams]);
 
   const handleTogglePortal = (portalId: number) => {
     const id = Number(portalId);
@@ -349,6 +380,28 @@ export default function CreateArticlePage() {
     }
     setIsSubmitting(true);
     try {
+      if (!articleMainImageUrl.trim()) {
+        alert("Please select a main image (Phase 1).");
+        setCurrentPhase(1);
+        return;
+      }
+      if (!articleSubtitle.trim()) {
+        alert("Please provide an article subtitle (Phase 1).");
+        setCurrentPhase(1);
+        return;
+      }
+      const hasAtLeastOneParagraph = contents.some((c) => {
+        if (!c) return false;
+        if (c.content_type === "text_image") return !isRichTextEmpty(c.content_content?.left);
+        if (c.content_type === "image_text") return !isRichTextEmpty(c.content_content?.right);
+        if (c.content_type === "just_text") return !isRichTextEmpty(c.content_content?.center);
+        return false;
+      });
+      if (contents.length === 0 || !hasAtLeastOneParagraph) {
+        alert("Please add contents with at least one text paragraph (Phase 2).");
+        setCurrentPhase(2);
+        return;
+      }
       if (selectedPortalIds.length === 0) {
         alert("Please select at least one portal (Phase 1).");
         setIsSubmitting(false);
@@ -449,7 +502,7 @@ export default function CreateArticlePage() {
   return (
     <>
       <PageContentSection>
-      <div className="flex flex-col max-w-4xl mx-auto w-full py-12">
+      <div className="flex flex-col max-w-4xl mx-auto w-full py-6 md:py-8">
         {currentPhase === 1 && (
           <ArticlePhase1
             idArticle={idArticle}
@@ -491,6 +544,11 @@ export default function CreateArticlePage() {
             onAddTag={handleAddTag}
             onRemoveTag={handleRemoveTag}
             onNext={handlePhase1Next}
+            lockedCompany={
+              lockedCompanyId
+                ? { id: lockedCompanyId, name: lockedCompanyName || lockedCompanyId }
+                : null
+            }
           />
         )}
 

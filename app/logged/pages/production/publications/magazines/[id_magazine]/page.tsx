@@ -10,6 +10,7 @@ import type { Magazine, MagazineIssue } from "@/app/contents/interfaces";
 
 const BASE = "/logged/pages/production/publications/magazines";
 const MAX_ISSUES_PER_YEAR = 12;
+const DELETE_CONFIRM_WORD = "confirm";
 
 const PERIODICITY_OPTIONS = [
   { value: "Annually", label: "Annually" },
@@ -93,6 +94,46 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
   const [editableSubscriberNumber, setEditableSubscriberNumber] = useState("");
   const [saving, setSaving] = useState(false);
   const [issuesDirty, setIssuesDirty] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+  const [deleteSubmitting, setDeleteSubmitting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const canSubmitDelete =
+    deleteConfirmInput === DELETE_CONFIRM_WORD && !deleteSubmitting && Boolean(magazine);
+
+  const openDeleteModal = () => {
+    setDeleteConfirmInput("");
+    setDeleteError(null);
+    setDeleteModalOpen(true);
+  };
+
+  const closeDeleteModal = () => {
+    if (deleteSubmitting) return;
+    setDeleteModalOpen(false);
+  };
+
+  const confirmDeleteMagazine = async () => {
+    if (!magazine || !canSubmitDelete) return;
+    setDeleteSubmitting(true);
+    setDeleteError(null);
+    try {
+      await MagazineService.deleteMagazine(magazine.id_magazine);
+      setDeleteModalOpen(false);
+      router.push(BASE);
+    } catch (e: unknown) {
+      const msg =
+        e != null &&
+        typeof e === "object" &&
+        "message" in e &&
+        typeof (e as { message: unknown }).message === "string"
+          ? (e as { message: string }).message
+          : "Could not delete magazine.";
+      setDeleteError(msg);
+    } finally {
+      setDeleteSubmitting(false);
+    }
+  };
 
   const loadPublications = useCallback(async () => {
     setPubsLoading(true);
@@ -453,6 +494,19 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
                 </button>
               </div>
             )}
+            <div className="mt-8 pt-6 border-t border-gray-200">
+              <h3 className="text-sm font-semibold text-gray-900">Danger zone</h3>
+              <p className="mt-1 text-sm text-gray-600">
+                Permanently remove this magazine. This cannot be undone.
+              </p>
+              <button
+                type="button"
+                onClick={openDeleteModal}
+                className="mt-3 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+              >
+                Delete magazine
+              </button>
+            </div>
           </div>
         </div>
 
@@ -708,6 +762,65 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
           </div>
         </div>
       </div>
+
+      {deleteModalOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-magazine-title"
+        >
+          <div className="max-w-lg w-full rounded-xl bg-white p-6 shadow-xl">
+            <h3 id="delete-magazine-title" className="text-base font-semibold text-gray-900">
+              Delete this magazine?
+            </h3>
+            <p className="mt-3 text-sm text-gray-600">
+              This will permanently delete <span className="font-medium text-gray-800">{magazine.name}</span> and all
+              related data, including:
+            </p>
+            <ul className="mt-2 list-disc list-inside text-sm text-gray-600 space-y-1">
+              <li>All publications for this magazine</li>
+              <li>Publication slots and slot content (<code className="text-xs">publication_slot_content</code>)</li>
+              <li>Portal links in <code className="text-xs">magazine_portals</code></li>
+            </ul>
+            <p className="mt-3 text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+              Related sales offers on preferential pages may also be removed if they point at these publications or
+              slots.
+            </p>
+            <label className="mt-4 block text-sm font-medium text-gray-700">
+              Type <span className="font-mono text-gray-900">{DELETE_CONFIRM_WORD}</span> to enable deletion
+              <input
+                type="text"
+                autoComplete="off"
+                value={deleteConfirmInput}
+                onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                disabled={deleteSubmitting}
+                className="mt-1 w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                placeholder={DELETE_CONFIRM_WORD}
+              />
+            </label>
+            {deleteError && <p className="mt-2 text-sm text-red-600">{deleteError}</p>}
+            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
+              <button
+                type="button"
+                onClick={closeDeleteModal}
+                disabled={deleteSubmitting}
+                className="rounded-md px-4 py-2 text-sm border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => void confirmDeleteMagazine()}
+                disabled={!canSubmitDelete}
+                className="rounded-md px-4 py-2 text-sm font-medium bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleteSubmitting ? "Deleting…" : "Delete magazine permanently"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageContentSection>
   );
 };

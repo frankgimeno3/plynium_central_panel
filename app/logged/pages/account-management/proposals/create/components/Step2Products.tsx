@@ -62,25 +62,26 @@ const Step2Products: FC<Props> = ({
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-        <table className="w-full text-sm text-gray-200">
+        <table className="w-full text-sm text-gray-600">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              <th className="px-3 py-2 text-left font-medium text-gray-200">Service</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-200">Description</th>
-              <th className="px-3 py-2 text-left font-medium text-gray-200">Specifications</th>
-              <th className="px-3 py-2 text-right font-medium text-gray-200">units</th>
-              <th className="px-3 py-2 text-right font-medium text-gray-200">discount</th>
-              <th className="px-3 py-2 text-right font-medium text-gray-200">Price</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600 w-10" aria-label="Remove" />
+              <th className="px-3 py-2 text-left font-medium text-gray-600">Service</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">Description</th>
+              <th className="px-3 py-2 text-left font-medium text-gray-600">Specifications</th>
+              <th className="px-3 py-2 text-right font-medium text-gray-600">Units</th>
+              <th className="px-3 py-2 text-right font-medium text-gray-600">Discount</th>
+              <th className="px-3 py-2 text-right font-medium text-gray-600">Price</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {form.serviceLines.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-4 text-center">
+                <td colSpan={7} className="px-3 py-6 text-center">
                   <button
                     type="button"
                     onClick={() => onOpenServiceModalAt(0)}
-                    className="inline-flex items-center justify-center w-full max-w-sm px-4 py-3 rounded-lg bg-blue-50 text-gray-200 border border-blue-100 hover:bg-blue-100 font-semibold"
+                    className="inline-flex items-center justify-center px-3 py-2 rounded-md bg-blue-50 text-blue-950 border border-blue-200 hover:bg-blue-100 font-semibold"
                   >
                     Add service here
                   </button>
@@ -91,123 +92,161 @@ const Step2Products: FC<Props> = ({
                 <React.Fragment key={line.lineId}>
                   <tr className="insert-zone group" role="presentation">
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="px-3 py-2 align-middle cursor-pointer border-none bg-blue-50/70 hover:bg-blue-100/80"
                       onClick={() => onOpenServiceModalAt(index)}
                     >
                       <div className="flex items-center justify-center">
-                        <span className="inline-flex items-center justify-center w-full max-w-sm text-sm font-semibold text-gray-200">
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center px-3 py-1.5 rounded-md border border-blue-200 bg-blue-50 text-blue-950 text-sm font-semibold hover:bg-blue-100"
+                        >
                           + Add service here
-                        </span>
+                        </button>
                       </div>
                     </td>
                   </tr>
 
                   <tr className="border-b border-gray-100 hover:border-gray-200">
-                    <td className="px-3 py-2 align-top">
-                      <span className="font-medium text-gray-200">{getServiceName(line.id_service)}</span>
-                    </td>
-                    <td className="px-3 py-2 align-top">
-                      <input
-                        type="text"
-                        value={line.description}
-                        onChange={(e) =>
+                    <td className="px-3 py-3 align-top">
+                      <button
+                        type="button"
+                        onClick={() =>
                           setForm((f) => ({
                             ...f,
-                            serviceLines: f.serviceLines.map((l) =>
-                              l.lineId === line.lineId ? { ...l, description: e.target.value } : l
-                            ),
+                            serviceLines: f.serviceLines.filter((l) => l.lineId !== line.lineId),
                           }))
                         }
-                        className="w-full min-w-[120px] px-2 py-1 text-sm text-gray-200 placeholder:text-gray-300 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        placeholder="Description"
-                      />
+                        className="inline-flex items-center justify-center w-7 h-7 rounded-md border border-gray-600 text-gray-600 hover:bg-gray-100"
+                        aria-label={`Remove ${getServiceName(line.id_service)}`}
+                        title="Remove"
+                      >
+                        ×
+                      </button>
                     </td>
-                    <td className="px-3 py-2 align-top text-gray-200">
-                      <input
-                        type="text"
-                        value={line.specifications}
-                        onChange={(e) =>
-                          setForm((f) => ({
-                            ...f,
-                            serviceLines: f.serviceLines.map((l) =>
-                              l.lineId === line.lineId ? { ...l, specifications: e.target.value } : l
-                            ),
-                          }))
-                        }
-                        className="w-full min-w-[120px] px-2 py-1 text-sm text-gray-200 placeholder:text-gray-300 border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        placeholder="Specifications"
-                      />
+                    <td className="px-3 py-3 align-top">
+                      <div className="bg-gray-100 rounded-lg p-3">
+                        <span className="font-semibold text-gray-600">{getServiceName(line.id_service)}</span>
+                      </div>
                     </td>
-                    <td className="px-3 py-2 align-top text-right text-gray-200">
-                      <input
-                        type="number"
-                        min={0}
-                        step={1}
-                        value={line.units}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          setForm((f) => ({
-                            ...f,
-                            serviceLines: f.serviceLines.map((l) =>
-                              l.lineId === line.lineId ? { ...l, units: Number.isNaN(v) ? 0 : Math.max(0, v) } : l
-                            ),
-                          }));
-                        }}
-                        className="w-16 px-2 py-1 text-sm text-gray-200 border border-gray-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
+                    <td className="px-3 py-3 align-top">
+                      <div className="bg-gray-100 rounded-lg p-3">
+                        <input
+                          type="text"
+                          value={line.description}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              serviceLines: f.serviceLines.map((l) =>
+                                l.lineId === line.lineId ? { ...l, description: e.target.value } : l
+                              ),
+                            }))
+                          }
+                          className="w-full min-w-[120px] px-2 py-1 text-sm text-gray-600 placeholder:text-gray-500 bg-white border border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder="Description"
+                        />
+                      </div>
                     </td>
-                    <td className="px-3 py-2 align-top text-right">
-                      <input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step={0.5}
-                        value={line.discount_pct}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          setForm((f) => ({
-                            ...f,
-                            serviceLines: f.serviceLines.map((l) =>
-                              l.lineId === line.lineId ? { ...l, discount_pct: Number.isNaN(v) ? 0 : v } : l
-                            ),
-                          }));
-                        }}
-                        className="w-14 px-2 py-1 text-sm text-gray-200 border border-gray-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                      %
+                    <td className="px-3 py-3 align-top">
+                      <div className="bg-gray-100 rounded-lg p-3">
+                        <input
+                          type="text"
+                          value={line.specifications}
+                          onChange={(e) =>
+                            setForm((f) => ({
+                              ...f,
+                              serviceLines: f.serviceLines.map((l) =>
+                                l.lineId === line.lineId ? { ...l, specifications: e.target.value } : l
+                              ),
+                            }))
+                          }
+                          className="w-full min-w-[120px] px-2 py-1 text-sm text-gray-600 placeholder:text-gray-500 bg-white border border-gray-600 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder="Specifications"
+                        />
+                      </div>
                     </td>
-                    <td className="px-3 py-2 align-top text-right">
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={line.price}
-                        onChange={(e) => {
-                          const v = Number(e.target.value);
-                          setForm((f) => ({
-                            ...f,
-                            serviceLines: f.serviceLines.map((l) =>
-                              l.lineId === line.lineId ? { ...l, price: Number.isNaN(v) ? 0 : v } : l
-                            ),
-                          }));
-                        }}
-                        className="w-20 px-2 py-1 text-sm text-gray-200 border border-gray-200 rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
-                      €
+                    <td className="px-3 py-3 align-top text-right">
+                      <div className="bg-gray-100 rounded-lg p-3 inline-block">
+                        <input
+                          type="number"
+                          min={0}
+                          step={1}
+                          value={line.units}
+                          onChange={(e) => {
+                            const v = Number(e.target.value);
+                            setForm((f) => ({
+                              ...f,
+                              serviceLines: f.serviceLines.map((l) =>
+                                l.lineId === line.lineId ? { ...l, units: Number.isNaN(v) ? 0 : Math.max(0, v) } : l
+                              ),
+                            }));
+                          }}
+                          className="w-16 px-2 py-1 text-sm text-gray-600 bg-white border border-gray-600 rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 align-top text-right">
+                      <div className="bg-gray-100 rounded-lg p-3 inline-block">
+                        <div className="flex items-center justify-end gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            max={100}
+                            step={0.5}
+                            value={line.discount_pct}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              setForm((f) => ({
+                                ...f,
+                                serviceLines: f.serviceLines.map((l) =>
+                                  l.lineId === line.lineId ? { ...l, discount_pct: Number.isNaN(v) ? 0 : v } : l
+                                ),
+                              }));
+                            }}
+                            className="w-14 px-2 py-1 text-sm text-gray-600 bg-white border border-gray-600 rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                          <span className="text-gray-600">%</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 align-top text-right">
+                      <div className="bg-gray-100 rounded-lg p-3 inline-block">
+                        <div className="flex items-center justify-end gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            step={0.01}
+                            value={line.price}
+                            onChange={(e) => {
+                              const v = Number(e.target.value);
+                              setForm((f) => ({
+                                ...f,
+                                serviceLines: f.serviceLines.map((l) =>
+                                  l.lineId === line.lineId ? { ...l, price: Number.isNaN(v) ? 0 : v } : l
+                                ),
+                              }));
+                            }}
+                            className="w-20 px-2 py-1 text-sm text-gray-600 bg-white border border-gray-600 rounded text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                          <span className="text-gray-600">€</span>
+                        </div>
+                      </div>
                     </td>
                   </tr>
 
                   <tr className="insert-zone group" role="presentation">
                     <td
-                      colSpan={6}
+                      colSpan={7}
                       className="px-3 py-2 align-middle cursor-pointer border-none bg-blue-50/70 hover:bg-blue-100/80"
                       onClick={() => onOpenServiceModalAt(index + 1)}
                     >
                       <div className="flex items-center justify-center">
-                        <span className="inline-flex items-center justify-center w-full max-w-sm text-sm font-semibold text-gray-200">
+                        <button
+                          type="button"
+                          className="inline-flex items-center justify-center px-3 py-1.5 rounded-md border border-blue-200 bg-blue-50 text-blue-950 text-sm font-semibold hover:bg-blue-100"
+                        >
                           + Add service here
-                        </span>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -216,18 +255,6 @@ const Step2Products: FC<Props> = ({
             )}
           </tbody>
         </table>
-
-        {form.serviceLines.length > 0 && (
-          <div className="border-t border-gray-200 bg-gray-50 px-3 py-2 flex justify-end">
-            <button
-              type="button"
-              onClick={() => onOpenServiceModalAt(form.serviceLines.length)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-gray-200 font-semibold hover:bg-blue-700"
-            >
-              + Add service here
-            </button>
-          </div>
-        )}
       </div>
 
       <div className="bg-white border border-gray-200 rounded-lg p-6 max-w-sm ml-auto">

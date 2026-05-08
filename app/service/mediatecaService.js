@@ -61,6 +61,17 @@ export function deleteMedia(mediaId) {
 }
 
 /**
+ * @param {string} mediaId
+ * @param {{ contentName?: string, name?: string, folderPath?: string }} data
+ * @returns {Promise<{ id: string, name: string, s3Key: string, url?: string, folderPath: string }>}
+ */
+export function updateMedia(mediaId, data) {
+    return apiClient
+        .patch(`/api/v1/media/${encodeURIComponent(mediaId)}`, data)
+        .then((r) => r.data);
+}
+
+/**
  * @param {string} path - Folder path (e.g. "a" or "a/b").
  * @returns {Promise<{ id: string, name: string, path: string } | null>}
  */

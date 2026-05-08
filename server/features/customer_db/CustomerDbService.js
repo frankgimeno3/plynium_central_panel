@@ -17,8 +17,6 @@ function toApiCustomer(row) {
         status: row.status ?? "active",
         tags: Array.isArray(row.tags) ? row.tags : [],
         related_accounts: Array.isArray(row.related_accounts) ? row.related_accounts : [],
-        customer_company_id_array: Array.isArray(row.customer_company_id_array) ? row.customer_company_id_array : [],
-        customer_product_id_array: Array.isArray(row.customer_product_id_array) ? row.customer_product_id_array : [],
     };
 }
 
@@ -81,8 +79,6 @@ export async function createCustomer(data) {
         status: data.status ?? "active",
         tags: Array.isArray(data.tags) ? data.tags : [],
         related_accounts: Array.isArray(data.related_accounts) ? data.related_accounts : [],
-        customer_company_id_array: Array.isArray(data.customer_company_id_array) ? data.customer_company_id_array : [],
-        customer_product_id_array: Array.isArray(data.customer_product_id_array) ? data.customer_product_id_array : [],
     };
     const row = await CustomerDbModel.create(payload);
     return toApiCustomer(row.get({ plain: true }));
@@ -106,12 +102,6 @@ export async function updateCustomer(idCustomer, data) {
     if (data.status !== undefined) updates.status = data.status;
     if (data.tags !== undefined) updates.tags = Array.isArray(data.tags) ? data.tags : [];
     if (data.related_accounts !== undefined) updates.related_accounts = Array.isArray(data.related_accounts) ? data.related_accounts : [];
-    if (data.customer_company_id_array !== undefined) {
-        updates.customer_company_id_array = Array.isArray(data.customer_company_id_array) ? data.customer_company_id_array : [];
-    }
-    if (data.customer_product_id_array !== undefined) {
-        updates.customer_product_id_array = Array.isArray(data.customer_product_id_array) ? data.customer_product_id_array : [];
-    }
     if (Object.keys(updates).length === 0) {
         return toApiCustomer(row.get({ plain: true }));
     }
@@ -121,10 +111,39 @@ export async function updateCustomer(idCustomer, data) {
 }
 
 export async function deleteCustomer(idCustomer) {
-    const row = await CustomerDbModel.findByPk(idCustomer);
-    if (!row) {
-        throw new Error(`Customer with id ${idCustomer} not found`);
+    const sequelize = CustomerDbModel.sequelize;
+    if (!sequelize) {
+        throw new Error("CustomerDbModel not initialized");
     }
-    await row.destroy();
-    return toApiCustomer(row.get({ plain: true }));
+    const id = String(idCustomer ?? "").trim();
+    if (!id) {
+        throw new Error("Customer id is required");
+    }
+    const row = await CustomerDbModel.findByPk(id);
+    if (!row) {
+        throw new Error(`Customer with id ${id} not found`);
+    }
+    const plain = row.get({ plain: true });
+    await sequelize.transaction(async (transaction) => {
+        try {
+            await sequelize.query(
+                `DELETE FROM public.customer_company_relations WHERE customer_id = :id`,
+                { replacements: { id }, transaction }
+            );
+        } catch (e) {
+            const msg = String(e?.message || e?.original?.message || "");
+            if (!msg.includes("customer_company_relations") || !msg.includes("does not exist")) throw e;
+        }
+        try {
+            await sequelize.query(
+                `DELETE FROM public.customer_comments WHERE customer_id = :id`,
+                { replacements: { id }, transaction }
+            );
+        } catch (e) {
+            const msg = String(e?.message || e?.original?.message || "");
+            if (!msg.includes("customer_comments") || !msg.includes("does not exist")) throw e;
+        }
+        await row.destroy({ transaction });
+    });
+    return toApiCustomer(plain);
 }

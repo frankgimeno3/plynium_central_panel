@@ -162,7 +162,7 @@ const CreateFlatplanFromForecastedInner: FC = () => {
   if (loading) {
     return (
       <PageContentSection>
-        <div className="p-8 text-center text-gray-500 text-sm">Loading…</div>
+        <div className="p-5 text-center text-gray-500 text-sm md:p-6">Loading…</div>
       </PageContentSection>
     );
   }
@@ -365,7 +365,7 @@ const CreateFlatplanFromForecastedPage: FC = () => (
   <Suspense
     fallback={
       <PageContentSection>
-        <div className="p-8 text-center text-gray-500 text-sm">Loading…</div>
+        <div className="p-5 text-center text-gray-500 text-sm md:p-6">Loading…</div>
       </PageContentSection>
     }
   >

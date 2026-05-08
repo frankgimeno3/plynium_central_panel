@@ -20,10 +20,11 @@ const MiddleNav: FC<MiddleNavProps> = ({ pageTitle, breadcrumbs }) => {
   ];
 
   return (
-    <div className="flex flex-row items-center justify-between bg-gradient-to-r from-zinc-700  to-gray-800 px-8 py-5 text-white  ">
-      <p className="text-xl text-zinc-100 uppercase"       aria-label="Main navigation"
-      >{pageTitle}</p>
-      <nav className="flex items-center gap-0 text-md pr-4" aria-label="Breadcrumb">
+    <div className="flex flex-row items-center justify-between bg-gradient-to-r from-zinc-700 to-gray-800 px-4 py-2.5 text-white md:px-6">
+      <p className="text-sm font-semibold uppercase text-zinc-100 md:text-base" aria-label="Main navigation">
+        {pageTitle}
+      </p>
+      <nav className="flex items-center gap-0 pr-2 text-sm md:pr-4" aria-label="Breadcrumb">
         {withHome.map((item, index) => (
           <span key={index} className="flex items-center gap-0">
             {index > 0 && <span className="text-blue-200/80 px-1">&gt;</span>}

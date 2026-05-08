@@ -388,7 +388,7 @@ const IdEvent: FC = () => {
 
   if (!eventId) {
     return (
-      <div className="flex flex-col w-full h-full min-h-screen text-gray-600 px-6 py-10 gap-6 items-center justify-center">
+      <div className="flex flex-col w-full h-full min-h-screen text-gray-600 px-4 py-6 gap-6 items-center justify-center">
         <p className="text-red-500 text-lg">Invalid event</p>
         <button
           onClick={() => router.push('/logged/pages/network/contents/events')}
@@ -402,7 +402,7 @@ const IdEvent: FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col w-full min-h-screen bg-white px-6 py-10">
+      <div className="flex flex-col w-full min-h-screen bg-white px-4 py-6">
         <button
           onClick={() => router.push('/logged/pages/network/contents/events')}
           className="mb-6 px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded text-sm self-start"
@@ -416,7 +416,7 @@ const IdEvent: FC = () => {
 
   if (!event) {
     return (
-      <div className="flex flex-col w-full h-full min-h-screen text-gray-600 px-6 py-10 gap-6 items-center justify-center">
+      <div className="flex flex-col w-full h-full min-h-screen text-gray-600 px-4 py-6 gap-6 items-center justify-center">
         <p className="text-red-500 text-lg">The event you are looking for doesn&apos;t exist.</p>
         <button
           onClick={() => router.push('/logged/pages/network/contents/events')}

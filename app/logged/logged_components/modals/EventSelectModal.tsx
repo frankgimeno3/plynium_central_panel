@@ -307,11 +307,11 @@ const EventSelectModal: FC<EventSelectModalProps> = ({
           {/* Table */}
           <div className="border border-gray-300 rounded-lg overflow-hidden">
             {loading ? (
-              <div className="py-12 text-center text-gray-500">
+              <div className="py-6 md:py-8 text-center text-gray-500">
                 Loading events...
               </div>
             ) : events.length === 0 ? (
-              <div className="py-12 text-center text-gray-500">
+              <div className="py-6 md:py-8 text-center text-gray-500">
                 No events match the filter.
               </div>
             ) : (

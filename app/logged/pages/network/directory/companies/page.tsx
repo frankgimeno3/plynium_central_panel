@@ -189,7 +189,7 @@ const Companies: FC<CompaniesProps> = ({ }) => {
               </div>
 
               {loading ? (
-                <div className="text-center py-10 mt-6">
+                <div className="text-center py-6 mt-6">
                   <p className="text-gray-500">Loading companies...</p>
                 </div>
               ) : (
@@ -197,7 +197,7 @@ const Companies: FC<CompaniesProps> = ({ }) => {
             <table className="min-w-full divide-y divide-gray-200 border border-gray-300" style={{ tableLayout: 'fixed' }}>
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300" style={{ width: 84, minWidth: 84 }}>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300" style={{ width: 148, minWidth: 148 }}>
                     Image
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
@@ -237,16 +237,16 @@ const Companies: FC<CompaniesProps> = ({ }) => {
                       onClick={() => router.push(`/logged/pages/network/directory/companies/${company.companyId}`)}
                       className="hover:bg-gray-50 cursor-pointer"
                     >
-                      <td className="px-3 py-2 border-b border-gray-200 align-middle" style={{ width: 84, minWidth: 84, verticalAlign: 'middle' }}>
+                      <td className="px-3 py-2 border-b border-gray-200 align-middle" style={{ width: 148, minWidth: 148, verticalAlign: 'middle' }}>
                         <div
-                          className="relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shadow flex items-center justify-center"
-                          style={{ width: 60, height: 60, minWidth: 60, minHeight: 60, boxSizing: 'border-box' }}
+                          className="relative flex aspect-[5/2] w-[132px] max-w-full items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow"
+                          style={{ boxSizing: 'border-box' }}
                         >
                           {company.mainImage ? (
                             <img
                               src={company.mainImage}
                               alt=""
-                              className="absolute inset-0 w-full h-full object-cover"
+                              className="absolute inset-0 h-full w-full object-cover object-center"
                               style={{ display: 'block' }}
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display = 'none';

@@ -38,7 +38,7 @@ const Home: FC<LoginProps> = ({ }) => {
         <div className='flex flex-col bg-white items-center justify-center min-h-screen'>
             <form 
                 onSubmit={handleLogin}
-                className="flex flex-col gap-4 bg-gray-900 p-8 rounded shadow-md w-full max-w-md" 
+                className="flex w-full max-w-md flex-col gap-3 rounded bg-gray-900 p-6 shadow-md" 
             >
                 <h2 className="text-2xl text-white font-semibold mb-4 text-center">
                     Ingrese email y contraseña

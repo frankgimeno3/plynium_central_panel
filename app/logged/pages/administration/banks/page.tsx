@@ -631,13 +631,13 @@ const BanksPage: FC = () => {
                           <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
                               <tr>
-                                <td colSpan={4} className="px-6 py-8 text-center text-gray-500 text-sm">
+                                <td colSpan={4} className="px-4 py-5 text-center text-gray-500 text-sm">
                                   Loading bank movements…
                                 </td>
                               </tr>
                             ) : currentHistoryPageItems.length === 0 ? (
                               <tr>
-                                <td colSpan={4} className="px-6 py-8 text-center text-gray-500 text-sm">
+                                <td colSpan={4} className="px-4 py-5 text-center text-gray-500 text-sm">
                                   No movements found for the selected range.
                                 </td>
                               </tr>
@@ -790,13 +790,13 @@ const BanksPage: FC = () => {
                           <tbody className="bg-white divide-y divide-gray-200">
                             {loading ? (
                               <tr>
-                                <td colSpan={6} className="px-6 py-8 text-center text-gray-500 text-sm">
+                                <td colSpan={6} className="px-4 py-5 text-center text-gray-500 text-sm">
                                   Loading custom movements…
                                 </td>
                               </tr>
                             ) : customRowsWithBalance.length === 0 ? (
                               <tr>
-                                <td colSpan={6} className="px-6 py-8 text-center text-gray-500 text-sm">
+                                <td colSpan={6} className="px-4 py-5 text-center text-gray-500 text-sm">
                                   No movements on or before{" "}
                                   {formatAdminDate(customDateAppliedYMD)}.
                                 </td>
@@ -876,7 +876,7 @@ const BanksPage: FC = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {loading ? (
                       <tr>
-                        <td colSpan={4} className="px-6 py-8 text-center text-gray-500 text-sm">
+                        <td colSpan={4} className="px-4 py-5 text-center text-gray-500 text-sm">
                           Loading forecast…
                         </td>
                       </tr>

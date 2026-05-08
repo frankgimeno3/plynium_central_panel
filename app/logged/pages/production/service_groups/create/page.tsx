@@ -20,6 +20,9 @@ const CreateServiceGroupPage: FC = () => {
     const router = useRouter();
     const [service_group_name, setServiceGroupName] = useState("");
     const [service_group_channel, setServiceGroupChannel] = useState<Channel>("");
+    const [tariff_price_eur, setTariffPriceEur] = useState("0");
+    const [service_base_description, setServiceBaseDescription] = useState("");
+    const [service_specifications, setServiceSpecifications] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -49,9 +52,13 @@ const CreateServiceGroupPage: FC = () => {
         setSubmitting(true);
         setError(null);
         try {
+            const t = Number(String(tariff_price_eur).replace(",", "."));
             const created = await ServiceGroupService.createServiceGroup({
                 service_group_name: service_group_name.trim(),
                 service_group_channel,
+                tariff_price_eur: Number.isFinite(t) && t >= 0 ? t : 0,
+                service_base_description,
+                service_specifications,
             });
             const id = created?.service_group_id;
             if (id) {
@@ -93,7 +100,7 @@ const CreateServiceGroupPage: FC = () => {
                                     value={service_group_name}
                                     onChange={(e) => setServiceGroupName(e.target.value)}
                                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                    placeholder="e.g. my_custom_placement"
+                                    placeholder="e.g. Newsletter Banner"
                                     autoComplete="off"
                                 />
                             </div>
@@ -114,6 +121,52 @@ const CreateServiceGroupPage: FC = () => {
                                         </option>
                                     ))}
                                 </select>
+                            </div>
+                            <div>
+                                <label htmlFor="sg-tariff" className="block text-xs text-gray-600 mb-1">
+                                    Standard tariff price (€)
+                                </label>
+                                <input
+                                    id="sg-tariff"
+                                    type="number"
+                                    min={0}
+                                    step={0.01}
+                                    value={tariff_price_eur}
+                                    onChange={(e) => setTariffPriceEur(e.target.value)}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                            </div>
+                            <div>
+                                <label htmlFor="sg-description" className="block text-xs text-gray-600 mb-1">
+                                    Description
+                                </label>
+                                <textarea
+                                    id="sg-description"
+                                    value={service_base_description}
+                                    onChange={(e) => setServiceBaseDescription(e.target.value)}
+                                    rows={8}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Base description inherited by services in this group."
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    This description is inherited by services in this group.
+                                </p>
+                            </div>
+                            <div>
+                                <label htmlFor="sg-specs" className="block text-xs text-gray-600 mb-1">
+                                    Service specifications
+                                </label>
+                                <textarea
+                                    id="sg-specs"
+                                    value={service_specifications}
+                                    onChange={(e) => setServiceSpecifications(e.target.value)}
+                                    rows={6}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Shared specifications for all services in this group."
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    These specifications are inherited by services in this group.
+                                </p>
                             </div>
                             {error && (
                                 <p className="text-sm text-red-600" role="alert">

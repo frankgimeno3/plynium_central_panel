@@ -23,7 +23,7 @@ const SectionTrigger: FC<{
   <button
     type="button"
     onClick={onClick}
-    className={`flex w-full items-center gap-2 rounded-r-lg border-l-2 py-3 pl-3 pr-4 text-left transition-colors ${
+    className={`flex w-full items-center gap-2 rounded-r-lg border-l-2 py-2 pl-2.5 pr-3 text-left transition-colors ${
       isActive
         ? "border-blue-500 bg-blue-950/40 font-semibold text-gray-100"
         : "border-transparent text-gray-300 hover:bg-gray-800 hover:text-gray-100"
@@ -33,7 +33,7 @@ const SectionTrigger: FC<{
     <span className="flex shrink-0 text-gray-500 group-hover:text-gray-400" aria-hidden>
       {isOpen ? <ChevronDownSvg size={18} /> : <ChevronRightSvg size={18} />}
     </span>
-    <span className="text-[15px] uppercase">{label}</span>
+    <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
   </button>
 );
 
@@ -105,10 +105,10 @@ const Leftnav: FC<LeftnavProps> = () => {
 
   return (
     <nav
-      className="flex h-full min-h-screen w-[280px] min-w-[280px] shrink-0 flex-col bg-gray-900"
+      className="flex h-full min-h-screen w-[220px] min-w-[220px] shrink-0 flex-col bg-gray-900 md:w-[240px] md:min-w-[240px]"
       aria-label="Main navigation"
     >
-      <div className="flex flex-col gap-0.5 py-4">
+      <div className="flex flex-col gap-0.5 py-2 md:py-3">
         {/* ——— Plynium Network ——— */}
         <div className="group px-3">
           <SectionTrigger

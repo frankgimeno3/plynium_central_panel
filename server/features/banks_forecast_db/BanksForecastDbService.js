@@ -1,4 +1,5 @@
 import Database from "../../database/database.js";
+import { syncLinkedOrderFromRevenueExpected } from "../billing_db/BillingDbService.js";
 
 function toYMD(value) {
   if (!value) return "";
@@ -14,14 +15,22 @@ function toAmount(value) {
   return Number.isNaN(n) ? 0 : n;
 }
 
+function normalizePayStatus(value) {
+  const v = String(value ?? "").trim().toLowerCase();
+  return v === "paid" ? "paid" : "pending";
+}
+
+function panelRevenueReturning() {
+  return `RETURNING id, label, order_id, amount_eur, revenue_real_amount_eur,
+          revenue_date, revenue_real_payment_date, revenue_payment_status, customer_name`;
+}
+
 function toApiRevenue(row) {
-  const expected =
-    row.revenue_expected_payment_date ?? row.revenue_date ?? row.date;
+  const expected = row.revenue_expected_payment_date ?? row.revenue_date ?? row.date;
   const expectedAmount = toAmount(
-    row.revenue_expected_amount_eur ??
-      row.revenue_amount_eur ??
-      row.amount_eur
+    row.revenue_expected_amount_eur ?? row.revenue_amount_eur ?? row.amount_eur
   );
+  const orderIdCol = row.order_id ?? row.revenue_reference ?? row.reference ?? "";
   return {
     id: row.revenue_id ?? row.id,
     type: "revenue",
@@ -33,11 +42,11 @@ function toApiRevenue(row) {
       row.revenue_real_amount_eur != null && row.revenue_real_amount_eur !== ""
         ? toAmount(row.revenue_real_amount_eur)
         : null,
-    reference: row.revenue_reference ?? row.reference ?? "",
+    reference: orderIdCol,
+    order_id: orderIdCol,
     customer_name: row.customer_name ?? "",
-    revenue_real_payment_date: toYMD(
-      row.revenue_real_payment_date ?? row.real_payment_date
-    ),
+    revenue_payment_status: normalizePayStatus(row.revenue_payment_status),
+    revenue_real_payment_date: toYMD(row.revenue_real_payment_date ?? row.real_payment_date),
   };
 }
 
@@ -87,16 +96,17 @@ export async function getAllForecastedItems() {
     sequelize.query(
       `
         SELECT
-          revenue_id AS id,
-          revenue_label AS label,
-          revenue_reference AS reference,
-          revenue_expected_amount_eur AS amount_eur,
+          id,
+          label,
+          order_id,
+          amount_eur,
           revenue_real_amount_eur,
-          revenue_expected_payment_date AS revenue_date,
+          revenue_date,
           revenue_real_payment_date,
+          revenue_payment_status,
           customer_name
-        FROM revenues_db
-        ORDER BY revenue_expected_payment_date ASC, revenue_created_at DESC
+        FROM public.revenues_db
+        ORDER BY revenue_date ASC NULLS LAST, updated_at DESC NULLS LAST
       `
     ),
     sequelize.query(
@@ -147,8 +157,8 @@ export async function createForecastedItem({
   const cleanedLabel =
     label != null && String(label).trim().length > 0 ? String(label).trim() : "";
 
-  const cleanedReference =
-    reference != null && String(reference).trim().length > 0 ? String(reference).trim() : "";
+  const cleanedOrderId =
+    reference != null && String(reference).trim().length > 0 ? String(reference).trim().slice(0, 255) : "";
 
   const idPrefix = type === "payment" ? "pay" : "rev";
   const id = `${idPrefix}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -173,17 +183,24 @@ export async function createForecastedItem({
     const fallbackLabel = id_customer ? `Revenue — ${customer_name || id_customer}` : "Forecasted revenue";
     const finalLabel = cleanedLabel || fallbackLabel;
 
-    const finalReference = cleanedReference || (id_customer ?? "");
+    const finalOrderId = cleanedOrderId || (id_customer ?? "");
 
     const sql = `
-      INSERT INTO revenues_db
-        (revenue_id, customer_id, customer_name, revenue_label, revenue_reference, revenue_expected_amount_eur,
-         revenue_real_amount_eur, revenue_expected_payment_date, revenue_real_payment_date, revenue_created_at, revenue_updated_at)
-      VALUES
-        (:id, :customer_id, :customer_name, :label, :reference, :amount_eur, NULL, :revenue_expected_date, NULL, NOW(), NOW())
-      RETURNING revenue_id AS id, revenue_label AS label, revenue_reference AS reference,
-                revenue_expected_amount_eur AS amount_eur, revenue_real_amount_eur, revenue_expected_payment_date AS revenue_date,
-                revenue_real_payment_date, customer_name
+      INSERT INTO public.revenues_db (
+        id, id_customer, customer_name, label, order_id,
+        amount_eur, revenue_real_amount_eur,
+        revenue_date, revenue_real_payment_date,
+        revenue_payment_status,
+        created_at, updated_at
+      )
+      VALUES (
+        :id, :customer_id, :customer_name, :label, :order_id,
+        :amount_eur, NULL,
+        CAST(:revenue_expected_date AS DATE), NULL,
+        'pending',
+        NOW(), NOW()
+      )
+      ${panelRevenueReturning()}
     `;
 
     const [rows] = await sequelize.query(sql, {
@@ -192,7 +209,7 @@ export async function createForecastedItem({
         customer_id: id_customer,
         customer_name: customer_name || "",
         label: finalLabel,
-        reference: finalReference,
+        order_id: finalOrderId,
         amount_eur,
         revenue_expected_date: forecast_date,
       },
@@ -221,7 +238,7 @@ export async function createForecastedItem({
 
     const fallbackLabel = id_provider ? `Payment — ${provider_name || id_provider}` : "Forecasted payment";
     const finalLabel = cleanedLabel || fallbackLabel;
-    const finalReference = cleanedReference || (id_provider ?? "");
+    const finalReference = cleanedOrderId || (id_provider ?? "");
 
     const sql = `
       INSERT INTO payments_db
@@ -267,16 +284,17 @@ export async function getForecastedItemById(id) {
     const [rows] = await sequelize.query(
       `
         SELECT
-          revenue_id AS id,
-          revenue_label AS label,
-          revenue_reference AS reference,
-          revenue_expected_amount_eur AS amount_eur,
+          id,
+          label,
+          order_id,
+          amount_eur,
           revenue_real_amount_eur,
-          revenue_expected_payment_date AS revenue_date,
+          revenue_date,
           revenue_real_payment_date,
+          revenue_payment_status,
           customer_name
-        FROM revenues_db
-        WHERE revenue_id = :id
+        FROM public.revenues_db
+        WHERE id = :id
         LIMIT 1
       `,
       { replacements: { id } }
@@ -317,6 +335,7 @@ export async function updateForecastedItem(id, patch) {
 
   const sequelize = db.getSequelize();
   const itemType = inferTypeFromId(id);
+  const sync_order = patch?.sync_order === true;
 
   if (itemType === "revenue") {
     const sets = [];
@@ -327,8 +346,8 @@ export async function updateForecastedItem(id, patch) {
         ? patch.revenue_expected_amount_eur
         : patch.amount_eur;
     if (expectedAmt !== undefined && expectedAmt !== null) {
-      sets.push("revenue_expected_amount_eur = :expected_amount_eur");
-      repl.expected_amount_eur = expectedAmt;
+      sets.push("amount_eur = :expected_amt");
+      repl.expected_amt = expectedAmt;
     }
     if (patch.revenue_real_amount_eur !== undefined) {
       if (patch.revenue_real_amount_eur === null || patch.revenue_real_amount_eur === "") {
@@ -339,7 +358,7 @@ export async function updateForecastedItem(id, patch) {
       }
     }
     if (patch.label !== undefined) {
-      sets.push("revenue_label = :label");
+      sets.push("label = :label");
       repl.label = String(patch.label ?? "").slice(0, 512);
     }
     if (patch.customer_name !== undefined) {
@@ -349,24 +368,30 @@ export async function updateForecastedItem(id, patch) {
     if (patch.revenue_real_payment_date !== undefined && patch.revenue_real_payment_date !== null) {
       const ymd = String(patch.revenue_real_payment_date).trim().slice(0, 10);
       if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
-        sets.push("revenue_real_payment_date = :revenue_real_payment_date");
+        sets.push("revenue_real_payment_date = CAST(:revenue_real_payment_date AS DATE)");
         repl.revenue_real_payment_date = ymd;
       }
     }
     if (patch.date !== undefined && patch.date !== null) {
       const ymd = String(patch.date).trim().slice(0, 10);
       if (/^\d{4}-\d{2}-\d{2}$/.test(ymd)) {
-        sets.push("revenue_expected_payment_date = :revenue_expected_payment_date");
-        repl.revenue_expected_payment_date = ymd;
+        sets.push("revenue_date = CAST(:revenue_date AS DATE)");
+        repl.revenue_date = ymd;
       }
     }
-    if (sets.length === 0) {
+    if (patch.revenue_payment_status !== undefined && patch.revenue_payment_status !== null) {
+      sets.push("revenue_payment_status = :revenue_payment_status");
+      repl.revenue_payment_status = normalizePayStatus(patch.revenue_payment_status);
+    }
+    if (sets.length === 0 && !sync_order) {
       const err = new Error("No updatable fields provided");
       err.statusCode = 400;
       throw err;
     }
+    sets.push("updated_at = NOW()");
+
     const [rows] = await sequelize.query(
-      `UPDATE revenues_db SET ${sets.join(", ")} WHERE revenue_id = :id RETURNING revenue_id AS id, revenue_label AS label, revenue_reference AS reference, revenue_expected_amount_eur AS amount_eur, revenue_real_amount_eur, revenue_expected_payment_date AS revenue_date, revenue_real_payment_date, customer_name`,
+      `UPDATE public.revenues_db SET ${sets.join(", ")} WHERE id = :id ${panelRevenueReturning()}`,
       { replacements: repl }
     );
 
@@ -374,6 +399,14 @@ export async function updateForecastedItem(id, patch) {
       const err = new Error("Forecasted revenue not found");
       err.statusCode = 404;
       throw err;
+    }
+
+    if (sync_order && rows[0].order_id) {
+      await syncLinkedOrderFromRevenueExpected(String(rows[0].order_id), {
+        amount_eur: toAmount(rows[0].amount_eur),
+        revenue_date: toYMD(rows[0].revenue_date),
+        revenue_payment_status: normalizePayStatus(rows[0].revenue_payment_status),
+      });
     }
 
     return toApiRevenue(rows[0]);
@@ -461,4 +494,3 @@ export async function updateForecastedItem(id, patch) {
   err.statusCode = 400;
   throw err;
 }
-

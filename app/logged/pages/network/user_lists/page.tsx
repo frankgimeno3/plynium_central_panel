@@ -166,7 +166,7 @@ const UserListsPage: FC = () => {
 
   return (
     <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
-      <div className="mt-12 flex flex-col w-full">
+      <div className="mt-6 md:mt-8 flex flex-col w-full">
         <div className="bg-white rounded-lg overflow-hidden flex-1 min-h-0 flex flex-col border border-gray-200">
           <div className="flex border-b border-gray-200 bg-gray-50 flex-wrap shrink-0">
             {portalTabs.map((p) => (
@@ -268,7 +268,7 @@ const UserListsPage: FC = () => {
                 </div>
 
                 {listsLoading ? (
-                  <div className="py-10 text-center text-sm text-gray-500">Loading lists…</div>
+                  <div className="py-6 text-center text-sm text-gray-500">Loading lists…</div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200 border border-gray-300">

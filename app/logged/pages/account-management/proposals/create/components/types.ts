@@ -19,7 +19,12 @@ export type Service = {
   id_service: string;
   name: string;
   display_name?: string;
+  /** Preferred: comes from services_db.service_description */
   description: string;
+  /** Alias for services_db.service_description (API often uses this key) */
+  service_description?: string;
+  /** services_db.service_unit_specifications */
+  service_unit_specifications?: string;
   tariff_price_eur: number;
   unit?: string;
 };
@@ -42,6 +47,10 @@ export type ServiceLine = {
   id_planned_publication?: string;
   magazinePageType?: string;
   magazineSlotKey?: string;
+  /** publication_preferential_slots.preferential_slot_id after availability modal */
+  preferential_slot_id?: string;
+  /** publication_preferential_slots.position_in_magazine */
+  position_in_magazine?: string;
 };
 
 export type Step = 1 | 2 | 3 | 4;
@@ -58,6 +67,8 @@ export type ProposalForm = {
   id_customer: string;
   id_contact: string;
   additionalContactIds: string[];
+  /** Pre-generated id sent on create so the title can include the final proposal id. */
+  draft_id_proposal: string;
   title: string;
   proposal_date: string;
   expiration_date: string;

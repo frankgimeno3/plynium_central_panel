@@ -8,6 +8,8 @@ import { CustomerService } from "@/app/service/CustomerService";
 import { ServiceService } from "@/app/service/ServiceService";
 import { ProjectService } from "@/app/service/ProjectService";
 import { ContractService } from "@/app/service/ContractService";
+import { AgentService } from "@/app/service/AgentService";
+import { buildAgentIdToNameMap, resolveAgentDisplayName } from "@/app/logged/pages/account-management/resolveAgentDisplayName";
 
 type Project = {
   id_project: string;
@@ -21,8 +23,9 @@ type Project = {
 };
 
 type Service = { id_service: string; name: string };
-type Contract = { id_contract: string; id_customer: string };
+type Contract = { id_contract: string; id_customer: string; agent?: string };
 type Customer = { id_customer: string; name: string };
+type AgentRow = { id_agent: string; name: string };
 
 const ITEMS_PER_PAGE = 12;
 
@@ -43,6 +46,7 @@ const ProjectsPage: FC = () => {
   const [loading, setLoading] = useState(true);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [agents, setAgents] = useState<AgentRow[]>([]);
   useEffect(() => {
     ServiceService.getAllServices().then((list) => setServices(Array.isArray(list) ? list : [])).catch(() => setServices([]));
   }, []);
@@ -50,6 +54,12 @@ const ProjectsPage: FC = () => {
     CustomerService.getAllCustomers()
       .then((list: Customer[]) => setCustomers(Array.isArray(list) ? list : []))
       .catch(() => setCustomers([]));
+  }, []);
+
+  useEffect(() => {
+    AgentService.getAllAgents()
+      .then((list: AgentRow[]) => setAgents(Array.isArray(list) ? list : []))
+      .catch(() => setAgents([]));
   }, []);
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -75,20 +85,28 @@ const ProjectsPage: FC = () => {
     const c = contracts.find((x) => x.id_contract === idContract);
     return c ? (customers.find((cust) => cust.id_customer === c.id_customer)?.name ?? c.id_customer) : idContract;
   };
+  const getContractAgentId = (idContract: string) => contracts.find((x) => x.id_contract === idContract)?.agent;
+  const agentIdToName = useMemo(() => buildAgentIdToNameMap(agents), [agents]);
   const getServiceName = (idService: string) =>
     services.find((s) => s.id_service === idService)?.name?.replace(/_/g, " ") ?? idService;
 
   const [activeTab, setActiveTab] = useState<typeof TAB_CALENDARIZED | typeof TAB_PENDING | typeof TAB_FINISHED>(TAB_PENDING);
-  const [filter, setFilter] = useState({ id: "", company: "", service: "" });
+  const [filter, setFilter] = useState({ id: "", company: "", service: "", agent_id: "" });
 
   const filtered = useMemo(() => {
     const allowedStatuses = STATUS_BY_TAB[activeTab] ?? [];
     let list = all.filter((p) => allowedStatuses.includes(p.status));
     if (filter.id) list = list.filter((p) => p.id_project.toLowerCase().includes(filter.id.toLowerCase()));
     if (filter.company) list = list.filter((p) => getCompanyName(p.id_contract).toLowerCase().includes(filter.company.toLowerCase()));
+    if (filter.agent_id) {
+      list = list.filter((p) => {
+        const rowAgent = contracts.find((x) => x.id_contract === p.id_contract)?.agent;
+        return String(rowAgent ?? "").trim() === filter.agent_id;
+      });
+    }
     if (filter.service) list = list.filter((p) => p.service === filter.service);
     return list;
-  }, [all, activeTab, filter]);
+  }, [all, activeTab, filter, contracts, customers]);
 
   const [page, setPage] = useState(1);
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE);
@@ -110,9 +128,9 @@ const ProjectsPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <div className="flex flex-col w-full mt-12">
+        <div className="flex flex-col w-full mt-6 md:mt-8">
             <p className="text-sm font-semibold text-gray-700 mb-3">Filter</p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label className="block text-xs text-gray-600 mb-1">ID</label>
                 <input
@@ -132,6 +150,26 @@ const ProjectsPage: FC = () => {
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   placeholder="Search by company"
                 />
+              </div>
+              <div>
+                <label className="block text-xs text-gray-600 mb-1">Agent</label>
+                <select
+                  value={filter.agent_id}
+                  onChange={(e) => {
+                    setFilter((f) => ({ ...f, agent_id: e.target.value }));
+                    setPage(1);
+                  }}
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">All agents</option>
+                  {[...agents]
+                    .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base" }))
+                    .map((a) => (
+                      <option key={a.id_agent} value={a.id_agent}>
+                        {a.name || a.id_agent}
+                      </option>
+                    ))}
+                </select>
               </div>
               <div>
                 <label className="block text-xs text-gray-600 mb-1">Service</label>
@@ -181,6 +219,7 @@ const ProjectsPage: FC = () => {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Company</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Agent</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Publication date</th>
@@ -189,13 +228,13 @@ const ProjectsPage: FC = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {loading ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 text-sm">
+                      <td colSpan={6} className="px-4 py-5 text-center text-gray-500 text-sm">
                         Loading projects…
                       </td>
                     </tr>
                   ) : paginated.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="px-6 py-8 text-center text-gray-500 text-sm">
+                      <td colSpan={6} className="px-4 py-5 text-center text-gray-500 text-sm">
                         No projects yet.
                       </td>
                     </tr>
@@ -204,6 +243,9 @@ const ProjectsPage: FC = () => {
                     <tr key={p.id_project} onClick={() => router.push(`/logged/pages/account-management/projects/${p.id_project}`)} className={rowClass}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{p.id_project}</td>
                       <td className="px-6 py-4 text-sm text-gray-900">{getCompanyName(p.id_contract)}</td>
+                      <td className="max-w-[10rem] truncate px-6 py-4 text-sm text-gray-900" title={resolveAgentDisplayName(getContractAgentId(p.id_contract), agentIdToName)}>
+                        {resolveAgentDisplayName(getContractAgentId(p.id_contract), agentIdToName)}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{getServiceName(p.service)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <span className={`px-2 py-1 rounded text-xs font-medium ${p.status === "published" ? "bg-green-100 text-green-800" :

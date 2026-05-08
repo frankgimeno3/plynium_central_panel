@@ -35,6 +35,7 @@ import NotificationCompanyContentDbModel from "../features/notification_db/Notif
 import NotificationAdvertisementDbModel from "../features/notification_db/NotificationAdvertisementDbModel.js";
 import PublicationSlotDbModel from "../features/publication_workflow/PublicationSlotDbModel.js";
 import PublicationSlotContentDbModel from "../features/publication_workflow/PublicationSlotContentDbModel.js";
+import PublicationPreferentialSlotDbModel from "../features/publication_workflow/PublicationPreferentialSlotDbModel.js";
 import OfferedPreferentialPageDbModel from "../features/publication_workflow/OfferedPreferentialPageDbModel.js";
 import {defineAssociations} from "./associations.js";
 
@@ -583,8 +584,6 @@ CustomerDbModel.init({
     status: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "active", field: "customer_status" },
     tags: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: true, defaultValue: [], field: "customer_tags" },
     related_accounts: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: true, defaultValue: [], field: "customer_related_accounts" },
-    customer_company_id_array: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: true, defaultValue: [], field: "customer_company_id_array" },
-    customer_product_id_array: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: true, defaultValue: [], field: "customer_product_id_array" }
 }, {
     sequelize,
     modelName: "customer_db",
@@ -894,7 +893,17 @@ ProposalServiceLineDbModel.init({
         allowNull: false,
         defaultValue: 0,
         field: "proposal_service_discount"
-    }
+    },
+    proposal_service_publication_date: {
+        type: DataTypes.DATEONLY,
+        allowNull: true,
+        field: "proposal_service_publication_date",
+    },
+    proposal_service_unit_details: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+        field: "proposal_service_unit_details",
+    },
 }, {
     sequelize,
     modelName: "proposal_service_line_db",
@@ -924,7 +933,13 @@ ProposalPaymentDbModel.init({
         allowNull: false,
         defaultValue: "",
         field: "proposal_payment_number"
-    }
+    },
+    proposal_payment_ordinal: {
+        type: DataTypes.STRING(32),
+        allowNull: false,
+        defaultValue: "1/1",
+        field: "proposal_payment_ordinal",
+    },
 }, {
     sequelize,
     modelName: "proposal_payment_db",
@@ -935,19 +950,22 @@ ProposalPaymentDbModel.init({
 });
 
 ContractDbModel.init({
-    id_contract: { type: DataTypes.STRING(64), primaryKey: true, unique: true },
-    id_proposal: { type: DataTypes.STRING(64), allowNull: false },
-    id_customer: { type: DataTypes.STRING(64), allowNull: false },
-    agent: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "" },
-    process_state: { type: DataTypes.STRING(64), allowNull: false },
-    payment_state: { type: DataTypes.STRING(64), allowNull: false },
-    title: { type: DataTypes.STRING(512), allowNull: false },
-    amount_eur: { type: DataTypes.DECIMAL(14, 2), allowNull: true, defaultValue: 0 }
+    id_contract: { type: DataTypes.STRING(64), primaryKey: true, unique: true, field: "contract_id" },
+    id_proposal: { type: DataTypes.STRING(64), allowNull: false, field: "proposal_id" },
+    id_customer: { type: DataTypes.STRING(64), allowNull: false, field: "customer_id" },
+    agent: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "", field: "agent_id" },
+    process_state: { type: DataTypes.STRING(64), allowNull: false, field: "contract_process_state" },
+    payment_state: { type: DataTypes.STRING(64), allowNull: false, field: "contract_payment_state" },
+    title: { type: DataTypes.STRING(512), allowNull: false, field: "contract_title" },
+    amount_eur: { type: DataTypes.DECIMAL(14, 2), allowNull: true, defaultValue: 0, field: "contract_amount_eur" }
 }, {
     sequelize,
     modelName: "contract_db",
     underscored: true,
     tableName: "contracts_db",
+    timestamps: true,
+    createdAt: "contract_created_at",
+    updatedAt: "contract_updated_at",
     indexes: [
         { fields: ["id_customer"] },
         { fields: ["id_proposal"] },
@@ -958,19 +976,22 @@ ContractDbModel.init({
 });
 
 ProjectDbModel.init({
-    id_project: { type: DataTypes.STRING(64), primaryKey: true, unique: true },
-    id_contract: { type: DataTypes.STRING(64), allowNull: false },
-    title: { type: DataTypes.STRING(512), allowNull: false },
-    status: { type: DataTypes.STRING(64), allowNull: false },
-    service: { type: DataTypes.STRING(64), allowNull: false },
-    publication_date: { type: DataTypes.DATEONLY, allowNull: true },
-    publication_id: { type: DataTypes.STRING(64), allowNull: true },
-    pm_events_array: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: true, defaultValue: [] }
+    id_project: { type: DataTypes.STRING(64), primaryKey: true, unique: true, field: "project_id" },
+    id_contract: { type: DataTypes.STRING(64), allowNull: false, field: "contract_id" },
+    title: { type: DataTypes.STRING(512), allowNull: false, field: "project_title" },
+    status: { type: DataTypes.STRING(64), allowNull: false, field: "project_status" },
+    service: { type: DataTypes.STRING(255), allowNull: false, field: "service_id" },
+    publication_date: { type: DataTypes.DATEONLY, allowNull: true, field: "project_publication_date" },
+    publication_id: { type: DataTypes.STRING(64), allowNull: true, field: "publication_id" },
+    pm_events_array: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: true, defaultValue: [], field: "pm_events_id_array" }
 }, {
     sequelize,
     modelName: "project_db",
     underscored: true,
     tableName: "projects_db",
+    timestamps: true,
+    createdAt: "project_created_at",
+    updatedAt: "project_updated_at",
     indexes: [
         { fields: ["id_contract"] },
         { fields: ["status"] },
@@ -1033,35 +1054,43 @@ IssuedInvoiceDbModel.init({
 });
 
 OrderDbModel.init({
-    order_code: { type: DataTypes.STRING(64), primaryKey: true, unique: true },
-    invoice_id: { type: DataTypes.STRING(64), allowNull: false, references: { model: "issued_invoices_db", key: "invoice_id" } },
-    id_contract: { type: DataTypes.STRING(64), allowNull: true },
-    contract_code: { type: DataTypes.STRING(64), allowNull: true },
-    client_id: { type: DataTypes.STRING(64), allowNull: true },
-    client_name: { type: DataTypes.STRING(512), allowNull: true },
-    agent: { type: DataTypes.STRING(255), allowNull: true },
-    id_contact: { type: DataTypes.STRING(64), allowNull: true },
-    collection_date: { type: DataTypes.DATEONLY, allowNull: false },
-    payment_status: { type: DataTypes.STRING(64), allowNull: false },
-    amount_eur: { type: DataTypes.DECIMAL(14, 2), allowNull: false, defaultValue: 0 }
+    order_id: { type: DataTypes.STRING(255), primaryKey: true },
+    invoice_id: { type: DataTypes.STRING(255), allowNull: true, references: { model: "issued_invoices_db", key: "invoice_id" } },
+    contract_id: { type: DataTypes.STRING(255), allowNull: true },
+    customer_id: { type: DataTypes.STRING(255), allowNull: true },
+    customer_company_name: { type: DataTypes.STRING(512), allowNull: true },
+    agent_id: { type: DataTypes.STRING(255), allowNull: true },
+    order_payment_status: { type: DataTypes.STRING(64), allowNull: false, defaultValue: "pending" },
+    order_total_amount_eur: { type: DataTypes.DECIMAL(14, 2), allowNull: false, defaultValue: 0 },
+    revenue_id: { type: DataTypes.STRING(255), allowNull: true },
+    order_collection_date: { type: DataTypes.DATEONLY, allowNull: true },
+    order_created_at: { type: DataTypes.DATE, allowNull: true },
+    order_updated_at: { type: DataTypes.DATE, allowNull: true }
 }, {
     sequelize,
     modelName: "order_db",
-    underscored: true,
+    underscored: false,
     tableName: "orders_db",
+    createdAt: "order_created_at",
+    updatedAt: "order_updated_at",
+    timestamps: true,
     indexes: [
         { fields: ["invoice_id"] },
-        { fields: ["id_contract"] },
-        { fields: ["client_id"] },
-        { fields: ["collection_date"] },
-        { fields: ["payment_status"] }
+        { fields: ["contract_id"] },
+        { fields: ["customer_id"] },
+        { fields: ["revenue_id"] },
+        { fields: ["order_payment_status"] }
     ]
 });
 
 ServiceGroupDbModel.init({
     service_group_id: { type: DataTypes.UUID, primaryKey: true },
     service_group_name: { type: DataTypes.STRING(255), allowNull: false },
-    service_group_channel: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" }
+    shown_name: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" },
+    service_group_channel: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" },
+    tariff_price_eur: { type: DataTypes.DECIMAL(14, 2), allowNull: false, defaultValue: 0 },
+    service_specifications: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    service_base_description: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
 }, {
     sequelize,
     modelName: "service_group",
@@ -1073,6 +1102,7 @@ ServiceGroupDbModel.init({
 ServiceDbModel.init({
     service_id: { type: DataTypes.STRING(64), primaryKey: true, unique: true },
     service_full_name: { type: DataTypes.STRING(512), allowNull: false, defaultValue: "" },
+    shown_name: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" },
     service_group_id: { type: DataTypes.UUID, allowNull: false },
     service_portal: { type: DataTypes.INTEGER, allowNull: false },
     service_format: { type: DataTypes.STRING(512), allowNull: false, defaultValue: "" },
@@ -1254,6 +1284,52 @@ OfferedPreferentialPageDbModel.init({
     ]
 });
 
+PublicationPreferentialSlotDbModel.init({
+    preferential_slot_id: {
+        type: DataTypes.UUID,
+        primaryKey: true,
+        defaultValue: DataTypes.UUIDV4,
+    },
+    magazine_id: { type: DataTypes.STRING(255), allowNull: false },
+    publication_id: { type: DataTypes.STRING(255), allowNull: false },
+    position_in_magazine: { type: DataTypes.STRING(255), allowNull: false },
+    publication_slot_id: { type: DataTypes.INTEGER, allowNull: false },
+    service_group_id: {
+        type: DataTypes.UUID,
+        allowNull: false,
+        references: { model: "service_groups", key: "service_group_id" },
+    },
+    state: {
+        type: DataTypes.STRING(32),
+        allowNull: false,
+        defaultValue: "available",
+    },
+    proposal_id_array: {
+        type: DataTypes.ARRAY(DataTypes.TEXT),
+        allowNull: false,
+        defaultValue: [],
+    },
+    assigned_customer_id: { type: DataTypes.STRING(255), allowNull: true },
+    contract_id: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        references: { model: "contracts_db", key: "contract_id" },
+        field: "contract_id",
+    },
+}, {
+    sequelize,
+    modelName: "publication_preferential_slot",
+    underscored: true,
+    tableName: "publication_preferential_slots",
+    timestamps: false,
+    indexes: [
+        { fields: ["magazine_id"] },
+        { fields: ["publication_id"] },
+        { fields: ["service_group_id"] },
+        { unique: true, fields: ["publication_id", "position_in_magazine"] },
+    ],
+});
+
 OfferedPreferentialPageDbModel.belongsTo(PublicationSlotDbModel, { foreignKey: "publication_slot_id", as: "slot" });
 
 PublicationSlotDbModel.hasMany(PublicationSlotContentDbModel, { foreignKey: "publication_slot_id", as: "slot_contents", onDelete: "CASCADE" });
@@ -1263,5 +1339,5 @@ PublicationSlotContentDbModel.belongsTo(PublicationModel, { foreignKey: "publica
 defineAssociations();
 }
 
-export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceGroupDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, NotificationAdvertisementDbModel, PublicationSlotDbModel, PublicationSlotContentDbModel, OfferedPreferentialPageDbModel };
+export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceGroupDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, NotificationAdvertisementDbModel, PublicationSlotDbModel, PublicationSlotContentDbModel, PublicationPreferentialSlotDbModel, OfferedPreferentialPageDbModel };
 

@@ -73,6 +73,8 @@ export interface UnifiedNotification {
   date: string;
   brief_description: string;
   description: string;
+  /** Set by PUT after company-directory fulfillment so the client can redirect without parsing JSONB. */
+  fulfilled_company_id?: string;
   interest?: string;
   /** Populated for `advertisement` tickets from `panel_ticket_advertisement.services_array`. */
   services_array?: string[];
@@ -90,17 +92,36 @@ export interface UnifiedNotification {
   panel_ticket_updates_array?: PanelTicketUpdateEntry[];
 }
 
+/** Normalizes JSONB / API payloads that may be an array or a JSON string. */
+export function panelTicketUpdatesAsArray(
+  updates: PanelTicketUpdateEntry[] | string | undefined | null
+): PanelTicketUpdateEntry[] {
+  if (!updates) return [];
+  if (Array.isArray(updates)) return updates;
+  if (typeof updates === 'string') {
+    try {
+      const parsed = JSON.parse(updates) as unknown;
+      return Array.isArray(parsed) ? (parsed as PanelTicketUpdateEntry[]) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [];
+}
+
 /** After company directory fulfillment, the new RDS `company_id` is stored on the ticket updates. */
 export function fulfilledCompanyIdFromPanelTicketUpdates(
-  updates: PanelTicketUpdateEntry[] | undefined | null
+  updates: PanelTicketUpdateEntry[] | string | undefined | null
 ): string | null {
-  if (!Array.isArray(updates) || updates.length === 0) return null;
-  for (let i = updates.length - 1; i >= 0; i--) {
-    const e = updates[i];
+  const list = panelTicketUpdatesAsArray(updates);
+  if (list.length === 0) return null;
+  for (let i = list.length - 1; i >= 0; i--) {
+    const e = list[i];
     if (!e || typeof e !== 'object') continue;
-    if (String(e.action) === 'company_directory_fulfilled') {
-      const cid = e.company_id;
-      if (typeof cid === 'string' && cid.trim()) return cid.trim();
+    if (String((e as { action?: string }).action) === 'company_directory_fulfilled') {
+      const raw = (e as { company_id?: unknown }).company_id;
+      const cid = typeof raw === 'string' ? raw : raw != null ? String(raw) : '';
+      if (cid.trim()) return cid.trim();
     }
   }
   return null;

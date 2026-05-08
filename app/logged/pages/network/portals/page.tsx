@@ -57,11 +57,11 @@ const PortalsPage: FC = () => {
   return (
     <>
       <PageContentSection>
-        <div className="flex flex-col w-full mt-12">
+        <div className="flex flex-col w-full mt-6 md:mt-8">
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6">
               {loading ? (
-                <div className="text-center py-10">
+                <div className="text-center py-6">
                   <p className="text-gray-500">Loading portals...</p>
                 </div>
               ) : (

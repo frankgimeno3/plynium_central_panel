@@ -8,7 +8,9 @@ export default function PublishedDetailLegacyRedirectPage({ params }: { params: 
   const router = useRouter();
   const { id_publication } = use(params);
   useEffect(() => {
-    router.replace(`/logged/pages/production/publications/${encodeURIComponent(id_publication)}`);
+    router.replace(
+      `/logged/pages/production/publications/issues/${encodeURIComponent(id_publication)}`
+    );
   }, [router, id_publication]);
   return (
     <PageContentSection>

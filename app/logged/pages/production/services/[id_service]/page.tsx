@@ -4,6 +4,7 @@ import React, { FC, use, useEffect, useState } from "react";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { ServiceService } from "@/app/service/ServiceService";
+import { ServiceGroupService } from "@/app/service/ServiceGroupService";
 
 type ServiceType = "newsletter" | "portal" | "magazine" | "other";
 
@@ -14,6 +15,10 @@ type Service = {
   service_price?: number;
   service_type?: ServiceType;
   service_description?: string;
+  service_group_id?: string | null;
+  service_group_name?: string | null;
+  service_group_specifications?: string;
+  service_group_base_description?: string;
 };
 
 const SERVICE_TYPES: { value: ServiceType; label: string }[] = [
@@ -44,6 +49,7 @@ const ServiceDetailPage: FC<{ params: Promise<{ id_service: string }> }> = ({ pa
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<EditFormState>(initialEditForm);
+  const [baseDescription, setBaseDescription] = useState("");
 
   const normalizeServiceType = (value?: string): ServiceType | "" => {
     if (!value) return "";
@@ -65,6 +71,7 @@ const ServiceDetailPage: FC<{ params: Promise<{ id_service: string }> }> = ({ pa
       service_description: service.service_description ?? "",
       service_price: service.tariff_price_eur ?? service.service_price ?? 0,
     });
+    setBaseDescription(String(service.service_group_base_description ?? ""));
   }, [service]);
   const { setPageMeta } = usePageContent();
 
@@ -128,6 +135,7 @@ const ServiceDetailPage: FC<{ params: Promise<{ id_service: string }> }> = ({ pa
       service_description: service.service_description ?? "",
       service_price: service.tariff_price_eur ?? service.service_price ?? 0,
     });
+    setBaseDescription(String(service.service_group_base_description ?? ""));
   };
 
   const handleSave = async () => {
@@ -141,7 +149,13 @@ const ServiceDetailPage: FC<{ params: Promise<{ id_service: string }> }> = ({ pa
         service_description: form.service_description.trim(),
         tariff_price_eur: form.service_price,
       });
-      setService(updated);
+      if (service?.service_group_id) {
+        await ServiceGroupService.updateServiceGroup(String(service.service_group_id), {
+          service_base_description: baseDescription,
+        });
+      }
+      const refreshed = await ServiceService.getServiceById(id_service);
+      setService(refreshed ?? updated);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Failed to update service");
     } finally {
@@ -228,6 +242,42 @@ const ServiceDetailPage: FC<{ params: Promise<{ id_service: string }> }> = ({ pa
                       className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       placeholder="Describe the service"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Service base description</label>
+                    <textarea
+                      value={baseDescription}
+                      onChange={(e) => setBaseDescription(e.target.value)}
+                      rows={5}
+                      className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      placeholder="Base description inherited from the service group."
+                      disabled={!service.service_group_id || saving}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs text-gray-600 mb-1">Service specifications (inherited)</label>
+                    <textarea
+                      value={String(service.service_group_specifications ?? "")}
+                      readOnly
+                      rows={5}
+                      className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700"
+                      placeholder="No specifications set at the service group level."
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      This field is inherited from the service group and cannot be edited here.{" "}
+                      {service.service_group_id ? (
+                        <a
+                          href={`/logged/pages/production/service_groups/${encodeURIComponent(String(service.service_group_id))}`}
+                          className="text-blue-600 hover:underline"
+                        >
+                          Go to the service group to edit it.
+                        </a>
+                      ) : (
+                        <span>Go to the service group to edit it.</span>
+                      )}
+                    </p>
                   </div>
 
                   <div>

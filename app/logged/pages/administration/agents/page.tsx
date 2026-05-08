@@ -128,7 +128,7 @@ const AgentsPage: FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-gray-500 text-sm">
+                  <td colSpan={5} className="px-4 py-5 text-center text-gray-500 text-sm">
                     {all.length === 0 ? "No agents yet." : "No agents match the filters."}
                   </td>
                 </tr>

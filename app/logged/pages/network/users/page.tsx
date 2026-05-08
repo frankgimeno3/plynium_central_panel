@@ -49,7 +49,7 @@ const Users: FC = () => {
   return (
     <>
       <PageContentSection className="p-0 overflow-hidden flex flex-col flex-1 min-h-0">
-        <div className="mt-12 flex flex-col w-full">
+        <div className="mt-6 md:mt-8 flex flex-col w-full">
           <div className="bg-white rounded-b-lg overflow-hidden flex-1 min-h-0 overflow-auto p-6">
             {error && (
               <div className="rounded-md bg-red-50 p-4 text-red-700">

@@ -89,7 +89,7 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
   useEffect(() => {
     if (!contact) {
       setPageMeta({
-        pageTitle: "Contacto no encontrado",
+        pageTitle: "Contact not found",
         breadcrumbs: [{ label: "Account management", href: "/logged/pages/account-management/customers_db" }, { label: "Contacts DB", href: "/logged/pages/account-management/contacts_db" }],
         buttons: [{ label: "Back to Contacts", href: "/logged/pages/account-management/contacts_db" }],
       });
@@ -123,7 +123,7 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
       <PageContentSection>
         <div className="flex flex-col w-full">
           <div className="bg-white rounded-b-lg overflow-hidden p-6">
-            <p className="text-gray-500">Contacto no encontrado.</p>
+            <p className="text-gray-500">Contact not found.</p>
           </div>
         </div>
       </PageContentSection>
@@ -169,10 +169,10 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Contact details</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 w-full">
                 <Field label="Name" value={contact.name} />
-                <Field label="Rol" value={contact.role} />
+                <Field label="Role" value={contact.role} />
                 <Field label="Email" value={contact.email} link={contact.email ? `mailto:${contact.email}` : undefined} />
                 <Field label="Phone" value={contact.phone} link={contact.phone ? `tel:${contact.phone}` : undefined} />
-                <Field label="Empresa" value={contact.company_name} className="lg:col-span-2" />
+                <Field label="Company" value={contact.company_name} className="lg:col-span-2" />
                 <Field
                   label="Link to LinkedIn profile"
                   value={contact.linkedin_profile ? "LinkedIn profile" : undefined}
@@ -181,7 +181,7 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
                 />
                 {contact.id_customer && (
                   <div className="lg:col-span-3">
-                    <p className="text-xs text-gray-500 uppercase mb-0.5">Cliente</p>
+                    <p className="text-xs text-gray-500 uppercase mb-0.5">Customer</p>
                     <button
                       type="button"
                       onClick={() => router.push(`/logged/pages/account-management/customers_db/${contact.id_customer}`)}
@@ -195,7 +195,7 @@ const ContactDetailPage: FC<{ params: Promise<{ id_contact: string }> }> = ({ pa
             </section>
 
             <section className="w-full bg-gray-50 rounded-xl p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Plynium user profile vinculation</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">Plynium user profile link</h2>
               {contact.id_user ? (
                 <>
                   <p className="text-sm text-gray-600 mb-2">This contact is linked to the following Plynium user:</p>

@@ -1,6 +1,7 @@
 import { createEndpoint } from "../../../../../server/createEndpoint.js";
 import { NextResponse } from "next/server";
-import { getMediaById, deleteMedia } from "../../../../../server/features/media/MediaService.js";
+import { getMediaById, deleteMedia, updateMedia } from "../../../../../server/features/media/MediaService.js";
+import Joi from "joi";
 
 export const runtime = "nodejs";
 
@@ -33,5 +34,21 @@ export const DELETE = createEndpoint(
         return NextResponse.json(result);
     },
     null,
+    true
+);
+
+const patchSchema = Joi.object({
+    contentName: Joi.string().trim().min(1).optional(),
+    name: Joi.string().trim().min(1).optional(),
+    folderPath: Joi.string().optional().allow(""),
+}).or("contentName", "name", "folderPath");
+
+export const PATCH = createEndpoint(
+    async (request, body) => {
+        const mediaId = getMediaIdFromRequest(request);
+        const updated = await updateMedia(mediaId, body);
+        return NextResponse.json(updated);
+    },
+    patchSchema,
     true
 );

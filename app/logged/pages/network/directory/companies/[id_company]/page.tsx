@@ -8,10 +8,14 @@ import PageContentSection from '@/app/logged/logged_components/context_content/P
 import { CompanyService } from '@/app/service/CompanyService';
 import { PortalService } from '@/app/service/PortalService';
 import { ProductService } from '@/app/service/ProductService';
+import { CustomerService } from '@/app/service/CustomerService';
 import { Company } from '@/app/contents/interfaces';
+import { COMPANIES_MEDIA_LIBRARY_PATH } from '@/app/contents/mediatecaPaths';
 import MediatecaModal from '@/app/logged/logged_components/modals/MediatecaModal';
 import CategoriesModal from '@/app/logged/logged_components/modals/CategoriesModal';
+import CustomerSelectModal from '@/app/logged/logged_components/modals/CustomerSelectModal';
 import countriesRegions from '@/app/contents/countries_regions.json';
+import { RichTextEditor } from '@/app/logged/logged_components/RichTextEditor';
 
 type RegionValue =
   | 'europe'
@@ -68,6 +72,11 @@ const IdCompany: FC = () => {
   const [deleteCompanyConfirmInput, setDeleteCompanyConfirmInput] = useState('');
   const [deleteCompanyLoading, setDeleteCompanyLoading] = useState(false);
   const [countryError, setCountryError] = useState<string | null>(null);
+  const [customerAccountRels, setCustomerAccountRels] = useState<
+    { customer_company_relation_id: string; customer_id: string; company_id: string; customer_name: string }[]
+  >([]);
+  const [customerRelsLoading, setCustomerRelsLoading] = useState(true);
+  const [linkCustomerOpen, setLinkCustomerOpen] = useState(false);
   const { setPageMeta } = usePageContent();
 
   const availableCountries = useMemo(() => {
@@ -160,6 +169,22 @@ const IdCompany: FC = () => {
   }, [companyId]);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setCustomerRelsLoading(true);
+      try {
+        const list = await CustomerService.getCustomerCompanyRelations({ companyId });
+        if (!cancelled) setCustomerAccountRels(Array.isArray(list) ? list : []);
+      } catch {
+        if (!cancelled) setCustomerAccountRels([]);
+      } finally {
+        if (!cancelled) setCustomerRelsLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [companyId]);
+
+  useEffect(() => {
     if (company && formData) {
       const titleName = formData.commercialName?.trim() || companyId || "Company";
       setPageMeta({
@@ -170,6 +195,15 @@ const IdCompany: FC = () => {
         ],
         buttons: [
           { label: "Back to Companies", href: "/logged/pages/network/directory/companies", variant: "primary" },
+          ...(customerAccountRels.length === 0
+            ? [
+                {
+                  label: "Create customer",
+                  href: `/logged/pages/account-management/customers_db/create/from_company/${encodeURIComponent(companyId)}`,
+                  variant: "primary" as "primary" | "danger" | undefined,
+                },
+              ]
+            : []),
           {
             label: deleteCompanyLoading ? "Deleting..." : "Delete company",
             onClick: () => {
@@ -190,7 +224,7 @@ const IdCompany: FC = () => {
         buttons: [{ label: "Back to Companies", href: "/logged/pages/network/directory/companies", variant: "primary" }],
       });
     }
-  }, [setPageMeta, company, formData, companyId, deleteCompanyLoading]);
+  }, [setPageMeta, company, formData, companyId, deleteCompanyLoading, customerAccountRels.length]);
 
   useEffect(() => {
     if (!deleteProductConfirm) return;
@@ -300,20 +334,22 @@ const IdCompany: FC = () => {
         <div className="flex flex-col w-full">
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6">
-          {/* Main image at top - large, with Search or Add overlay bottom-right */}
-          <div className="relative w-full mb-8 rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
+          {/* Main image: wide banner for logos; keep centered (contain) */}
+          <div className="relative mb-8 aspect-[5/2] w-full max-h-[220px] min-h-[7.5rem] overflow-hidden rounded-xl border border-gray-200 bg-white sm:max-h-[240px]">
             {formData.mainImage ? (
               <img
                 src={formData.mainImage}
                 alt={formData.commercialName || 'Company'}
-                className="w-full max-h-[420px] object-contain"
+                className="h-full w-full object-contain object-center p-6"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                   (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
                 }}
               />
             ) : null}
-            <div className={`w-full h-64 flex items-center justify-center text-gray-400 ${formData.mainImage ? 'hidden' : ''}`}>
+            <div
+              className={`absolute inset-0 flex items-center justify-center text-gray-400 ${formData.mainImage ? 'hidden' : ''}`}
+            >
               No image
             </div>
             <div className="absolute bottom-3 right-3 rounded-xl shadow-lg bg-white/80 p-3 flex flex-col gap-2 min-w-[200px]">
@@ -326,19 +362,21 @@ const IdCompany: FC = () => {
                 Update image
               </button>
               {formData.mainImage && (
-                <div className="flex items-center gap-2">
-                  <img
-                    src={formData.mainImage}
-                    alt=""
-                    className="w-10 h-10 object-cover rounded border border-gray-200 flex-shrink-0"
-                    onError={(e) => {
-                      (e.target as HTMLImageElement).style.display = 'none';
-                    }}
-                  />
+                <div className="flex w-full min-w-0 flex-col gap-2">
+                  <div className="relative aspect-[5/2] w-full max-h-24 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                    <img
+                      src={formData.mainImage}
+                      alt=""
+                      className="h-full w-full object-contain object-center p-2"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                  </div>
                   <button
                     type="button"
                     onClick={() => handleInputChange('mainImage', '')}
-                    className="text-xs text-red-600 hover:text-red-800 font-medium"
+                    className="self-start text-xs font-medium text-red-600 hover:text-red-800"
                   >
                     Clear
                   </button>
@@ -456,11 +494,11 @@ const IdCompany: FC = () => {
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Main Description
               </label>
-              <textarea
+              <RichTextEditor
                 value={formData.mainDescription}
-                onChange={(e) => handleInputChange('mainDescription', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                rows={4}
+                onChange={(html) => handleInputChange('mainDescription', html)}
+                placeholder="Write company description..."
+                minHeight="180px"
               />
             </div>
 
@@ -596,6 +634,58 @@ const IdCompany: FC = () => {
             </div>
 
             <div className="md:col-span-2">
+              <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <label className="block text-sm font-semibold text-gray-700">
+                  Linked customer accounts (CRM)
+                </label>
+                <div className="flex flex-wrap items-center gap-2">
+                  {!customerRelsLoading && customerAccountRels.length === 0 && (
+                    <Link
+                      href={`/logged/pages/account-management/customers_db/create/from_company/${encodeURIComponent(companyId)}`}
+                      className="rounded-lg border border-blue-950 bg-white px-4 py-2 text-sm font-medium text-blue-950 transition-colors hover:bg-blue-50"
+                    >
+                      Create customer account
+                    </Link>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setLinkCustomerOpen(true)}
+                    className="rounded-lg bg-blue-950 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-900"
+                  >
+                    Link customer account
+                  </button>
+                </div>
+              </div>
+              {customerRelsLoading ? (
+                <p className="text-sm text-gray-500">Loading…</p>
+              ) : customerAccountRels.length === 0 ? (
+                <p className="text-sm text-gray-500">No customer accounts linked.</p>
+              ) : (
+                <ul className="space-y-2 border border-gray-200 rounded-lg p-3 bg-white">
+                  {customerAccountRels.map((row) => (
+                    <li
+                      key={row.customer_company_relation_id}
+                      className="flex flex-wrap items-center justify-between gap-2 text-sm"
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          router.push(
+                            `/logged/pages/account-management/customers_db/${encodeURIComponent(row.customer_id)}`
+                          )
+                        }
+                        className="text-left text-blue-700 hover:underline font-medium"
+                      >
+                        {row.customer_name}
+                      </button>
+                      <span className="text-gray-500 font-mono text-xs">{row.customer_id}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="md:col-span-2">
               <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <label className="block text-sm font-semibold text-gray-700">
                   Products (linked to this company)
@@ -701,6 +791,22 @@ const IdCompany: FC = () => {
           Articles about this company
         </h2>
         <div className="rounded-xl border border-gray-200 bg-gray-50 p-6">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <p className="text-sm font-semibold text-gray-700">
+              Create a new article for this company
+            </p>
+            <button
+              type="button"
+              onClick={() =>
+                router.push(
+                  `/logged/pages/network/contents/articles/create/from_company/${encodeURIComponent(companyId)}`
+                )
+              }
+              className="px-4 py-2 rounded-lg bg-blue-950 text-white text-sm font-medium hover:bg-blue-900 transition-colors"
+            >
+              Create article
+            </button>
+          </div>
           <p className="text-gray-600 text-sm">
             No related articles yet.
           </p>
@@ -781,6 +887,32 @@ const IdCompany: FC = () => {
           </div>
         </div>
       )}
+      <CustomerSelectModal
+        open={linkCustomerOpen}
+        onClose={() => setLinkCustomerOpen(false)}
+        confirmLabel="Link account"
+        onSelectCustomer={(cust) => {
+          void (async () => {
+            try {
+              await CustomerService.createCustomerCompanyRelation({
+                customer_id: cust.id_customer,
+                company_id: companyId,
+              });
+              const list = await CustomerService.getCustomerCompanyRelations({ companyId });
+              setCustomerAccountRels(Array.isArray(list) ? list : []);
+            } catch (e: unknown) {
+              const msg =
+                typeof e === "string"
+                  ? e
+                  : (e as { message?: string })?.message
+                    || (e as { data?: { message?: string } })?.data?.message
+                    || "Could not link account";
+              alert(msg);
+            }
+          })();
+        }}
+      />
+
       <MediatecaModal
         open={mediatecaOpen}
         onClose={() => setMediatecaOpen(false)}
@@ -788,6 +920,7 @@ const IdCompany: FC = () => {
           handleInputChange('mainImage', imageUrl);
           setMediatecaOpen(false);
         }}
+        initialPath={COMPANIES_MEDIA_LIBRARY_PATH}
       />
 
       {deleteProductConfirm && (

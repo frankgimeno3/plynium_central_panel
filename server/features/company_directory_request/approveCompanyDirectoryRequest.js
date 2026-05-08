@@ -50,6 +50,25 @@ function panelTicketUpdatesHasFulfillment(updates) {
     return panelTicketUpdatesAsArray(updates).some((e) => e && String(e.action) === "company_directory_fulfilled");
 }
 
+/**
+ * Reads `company_id` from the latest `company_directory_fulfilled` entry (used by API + UI).
+ * @param {unknown} updates
+ * @returns {string | null}
+ */
+export function readFulfilledCompanyIdFromPanelTicketUpdates(updates) {
+    const arr = panelTicketUpdatesAsArray(updates);
+    for (let i = arr.length - 1; i >= 0; i--) {
+        const e = arr[i];
+        if (!e || typeof e !== "object") continue;
+        if (String(e.action) === "company_directory_fulfilled") {
+            const cid = e.company_id;
+            if (typeof cid === "string" && cid.trim()) return cid.trim();
+            if (cid != null && String(cid).trim()) return String(cid).trim();
+        }
+    }
+    return null;
+}
+
 function newCompanyId() {
     return `comp_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -87,12 +106,13 @@ async function insertCompanyPortalRow(sequelize, companyId, portalId, commercial
  * @param {string} previousState
  * @param {string} newState
  * @param {{ portalId?: number, portalIds?: number[] }} [options]
+ * @returns {Promise<string | null>} New or existing fulfilled `company_id`, or null if nothing ran / not applicable.
  */
 export async function maybeFulfillCompanyDirectoryRequest(ticketId, previousState, newState, options = {}) {
-    if (!NotificationDbModel.sequelize) return;
+    if (!NotificationDbModel.sequelize) return null;
     const prev = String(previousState ?? "").toLowerCase();
     const next = String(newState ?? "").toLowerCase();
-    if (next !== "solved" || prev === "solved") return;
+    if (next !== "solved" || prev === "solved") return null;
 
     const companyContentInc = await notificationCompanyContentInclude(
         NotificationCompanyContentDbModel,
@@ -101,22 +121,22 @@ export async function maybeFulfillCompanyDirectoryRequest(ticketId, previousStat
     const row = await NotificationDbModel.findByPk(ticketId, {
         include: [companyContentInc],
     });
-    if (!row) return;
+    if (!row) return null;
     const plain = row.get ? row.get({ plain: true }) : row;
-    if (String(plain.panel_ticket_type ?? "").toLowerCase() !== "company") return;
+    if (String(plain.panel_ticket_type ?? "").toLowerCase() !== "company") return null;
 
     if (panelTicketUpdatesHasFulfillment(plain.panel_ticket_updates_array)) {
-        return;
+        return readFulfilledCompanyIdFromPanelTicketUpdates(plain.panel_ticket_updates_array);
     }
 
     const cc = plain.company_content;
-    if (!cc) return;
+    if (!cc) return null;
 
     const userArr = plain.panel_ticket_related_to_user_id_array;
     const requesterUserId = Array.isArray(userArr) && userArr.length ? String(userArr[0]).trim() : "";
     if (!requesterUserId) {
         console.warn("[approveCompanyDirectoryRequest] ticket has no related user id:", ticketId);
-        return;
+        return null;
     }
 
     const commercialName = String(cc.ticket_company_name ?? "").trim();
@@ -245,4 +265,5 @@ export async function maybeFulfillCompanyDirectoryRequest(ticketId, previousStat
             { replacements: { entry: fulfillmentEntry, ticketId }, transaction }
         );
     });
+    return companyId;
 }

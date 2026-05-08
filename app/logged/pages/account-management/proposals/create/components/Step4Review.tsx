@@ -16,7 +16,9 @@ type Props = {
   paymentsSum: number;
   paymentsMatchTotal: boolean;
   onBack: () => void;
-  onCreate: () => void;
+  onCreate: () => void | Promise<void>;
+  createSaving?: boolean;
+  createError?: string | null;
 };
 
 const Step4Review: FC<Props> = ({
@@ -33,6 +35,8 @@ const Step4Review: FC<Props> = ({
   paymentsMatchTotal,
   onBack,
   onCreate,
+  createSaving = false,
+  createError = null,
 }) => {
   const selectedCustomer = customers.find((c) => c.id_customer === form.id_customer);
   const selectedContact = contacts.find((c) => c.id_contact === form.id_contact);
@@ -160,20 +164,28 @@ const Step4Review: FC<Props> = ({
         )}
       </div>
 
+      {createError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+          {createError}
+        </div>
+      )}
+
       <div className="flex gap-3">
         <button
           type="button"
           onClick={onBack}
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300"
+          disabled={createSaving}
+          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-300 disabled:opacity-50"
         >
           Back
         </button>
         <button
           type="button"
-          onClick={onCreate}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
+          onClick={() => void onCreate()}
+          disabled={createSaving}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          Create proposal
+          {createSaving ? "Creating…" : "Create proposal"}
         </button>
       </div>
     </div>

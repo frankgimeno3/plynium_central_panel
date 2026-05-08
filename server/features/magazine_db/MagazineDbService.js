@@ -90,6 +90,65 @@ export async function createMagazine(data) {
   return getMagazineById(data.id_magazine);
 }
 
+export async function deleteMagazineWithCascade(idMagazine) {
+  const mid = String(idMagazine ?? "").trim();
+  if (!mid) {
+    throw new Error("Invalid magazine id");
+  }
+  if (!(await ensureModels())) {
+    throw new Error("MagazineDbModel not initialized");
+  }
+  const sequelize = MagazineDbModel.sequelize;
+  if (!sequelize) {
+    throw new Error("MagazineDbModel sequelize not available");
+  }
+  const exists = await MagazineDbModel.findByPk(mid);
+  if (!exists) {
+    throw new Error(`Magazine with id ${idMagazine} not found`);
+  }
+
+  const replacements = { mid };
+
+  await sequelize.transaction(async (transaction) => {
+    await sequelize.query(
+      `DELETE FROM public.offered_preferential_pages o
+       WHERE o.publication_id IN (SELECT publication_id FROM public.publications_db WHERE magazine_id = :mid)
+          OR o.publication_slot_id IN (
+               SELECT publication_slot_id FROM public.publication_slots_db ps
+               WHERE ps.publication_id IN (SELECT publication_id FROM public.publications_db WHERE magazine_id = :mid)
+             )`,
+      { replacements, transaction }
+    );
+
+    await sequelize.query(
+      `DELETE FROM public.publication_slot_content
+       WHERE publication_id IN (SELECT publication_id FROM public.publications_db WHERE magazine_id = :mid)`,
+      { replacements, transaction }
+    );
+
+    await sequelize.query(
+      `DELETE FROM public.publication_slots_db
+       WHERE publication_id IN (SELECT publication_id FROM public.publications_db WHERE magazine_id = :mid)`,
+      { replacements, transaction }
+    );
+
+    await sequelize.query(`DELETE FROM public.publications_db WHERE magazine_id = :mid`, {
+      replacements,
+      transaction,
+    });
+
+    await sequelize.query(`DELETE FROM public.magazine_portals WHERE magazine_id = :mid`, {
+      replacements,
+      transaction,
+    });
+
+    const destroyed = await MagazineDbModel.destroy({ where: { id_magazine: mid }, transaction });
+    if (!destroyed) {
+      throw new Error(`Magazine with id ${idMagazine} not found`);
+    }
+  });
+}
+
 export async function updateMagazine(idMagazine, body) {
   const row = await MagazineDbModel.findByPk(idMagazine);
   if (!row) {

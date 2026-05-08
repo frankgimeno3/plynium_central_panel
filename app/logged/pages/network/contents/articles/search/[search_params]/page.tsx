@@ -168,7 +168,7 @@ const ArticleSearchResultsContent: FC = () => {
         <ArticleFilter />
       </PageContentSection>
       <PageContentSection>
-      <div className='flex flex-col py-5 gap-12 mx-auto'>
+      <div className='flex flex-col py-5 gap-6 md:gap-4 md:gap-6 mx-auto'>
         <div className='flex flex-row gap-5 flex-wrap'>
           {filteredArticles.length > 0 ? (
             filteredArticles.map((a) => (
@@ -183,7 +183,7 @@ const ArticleSearchResultsContent: FC = () => {
               />
             ))
           ) : (
-            <div className='flex flex-col items-center justify-center py-12 w-full'>
+            <div className='flex flex-col items-center justify-center py-6 md:py-8 w-full'>
               <p className='text-gray-500 text-lg'>No results found for your query</p>
             </div>
           )}

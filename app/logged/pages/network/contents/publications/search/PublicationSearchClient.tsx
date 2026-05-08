@@ -42,7 +42,7 @@ const PublicationSearchClient: FC<PublicationSearchClientProps> = ({ filteredPub
 
   const filterNode = <PublicationFilter />;
   const contentNode = (
-    <div className="flex flex-wrap py-5 gap-12 justify-center">
+    <div className="flex flex-wrap py-5 gap-6 md:gap-4 md:gap-6 justify-center">
       {filteredPublications.length > 0 ? (
         filteredPublications.map((pub: any, index: number) => (
           <Link
@@ -62,7 +62,7 @@ const PublicationSearchClient: FC<PublicationSearchClientProps> = ({ filteredPub
           </Link>
         ))
       ) : (
-        <div className="flex flex-col items-center justify-center py-12">
+        <div className="flex flex-col items-center justify-center py-6 md:py-8">
           <p className="text-gray-500 text-lg">No results found for your query</p>
         </div>
       )}

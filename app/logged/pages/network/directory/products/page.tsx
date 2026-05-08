@@ -19,8 +19,6 @@ const Products: FC<ProductsProps> = ({ }) => {
   const [filters, setFilters] = useState({
     productId: '',
     productName: '',
-    priceFrom: '',
-    priceTo: '',
     company: ''
   });
 
@@ -62,20 +60,6 @@ const Products: FC<ProductsProps> = ({ }) => {
       filtered = filtered.filter(product =>
         product.productName.toLowerCase().includes(filters.productName.toLowerCase())
       );
-    }
-
-    if (filters.priceFrom) {
-      const priceFromNum = parseFloat(filters.priceFrom);
-      if (!isNaN(priceFromNum)) {
-        filtered = filtered.filter(product => Number(product.price) >= priceFromNum);
-      }
-    }
-
-    if (filters.priceTo) {
-      const priceToNum = parseFloat(filters.priceTo);
-      if (!isNaN(priceToNum)) {
-        filtered = filtered.filter(product => Number(product.price) <= priceToNum);
-      }
     }
 
     if (filters.company) {
@@ -120,7 +104,7 @@ const Products: FC<ProductsProps> = ({ }) => {
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6">
               <p className="text-sm font-semibold mb-4 text-gray-700">Filter Products</p>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                 <div>
                   <label className="block text-xs text-gray-600 mb-1">Product ID</label>
                   <input
@@ -142,30 +126,6 @@ const Products: FC<ProductsProps> = ({ }) => {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs text-gray-600 mb-1">Price From</label>
-                  <input
-                    type="number"
-                    value={filters.priceFrom}
-                    onChange={(e) => handleFilterChange('priceFrom', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                    placeholder="Min Price"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs text-gray-600 mb-1">Price To</label>
-                  <input
-                    type="number"
-                    value={filters.priceTo}
-                    onChange={(e) => handleFilterChange('priceTo', e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-950"
-                    placeholder="Max Price"
-                    min="0"
-                    step="0.01"
-                  />
-                </div>
-                <div>
                   <label className="block text-xs text-gray-600 mb-1">Company</label>
                   <input
                     type="text"
@@ -178,7 +138,7 @@ const Products: FC<ProductsProps> = ({ }) => {
               </div>
 
               {loading ? (
-                <div className="text-center py-10 mt-6">
+                <div className="text-center py-6 mt-6">
                   <p className="text-gray-500">Loading products...</p>
                 </div>
               ) : (
@@ -186,7 +146,7 @@ const Products: FC<ProductsProps> = ({ }) => {
                   <table className="min-w-full divide-y divide-gray-200 border border-gray-300" style={{ tableLayout: 'fixed' }}>
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300" style={{ width: 84, minWidth: 84 }}>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300" style={{ width: 168, minWidth: 168 }}>
                     Image
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
@@ -194,9 +154,6 @@ const Products: FC<ProductsProps> = ({ }) => {
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
                     Product Name
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
-                    Price
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider border-b border-gray-300">
                     Company
@@ -209,7 +166,7 @@ const Products: FC<ProductsProps> = ({ }) => {
               <tbody className="bg-white divide-y divide-gray-200">
                 {filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                    <td colSpan={5} className="px-6 py-4 text-center text-sm text-gray-500">
                       No products found matching your filters
                     </td>
                   </tr>
@@ -220,16 +177,16 @@ const Products: FC<ProductsProps> = ({ }) => {
                       onClick={() => router.push(`/logged/pages/network/directory/products/${product.productId}`)}
                       className="hover:bg-gray-50 cursor-pointer"
                     >
-                      <td className="px-3 py-2 border-b border-gray-200 align-middle" style={{ width: 84, minWidth: 84, verticalAlign: 'middle' }}>
+                      <td className="px-3 py-2 border-b border-gray-200 align-middle" style={{ width: 168, minWidth: 168, verticalAlign: 'middle' }}>
                         <div
-                          className="relative rounded-lg overflow-hidden bg-gray-100 border border-gray-200 shadow flex items-center justify-center"
-                          style={{ width: 60, height: 60, minWidth: 60, minHeight: 60, boxSizing: 'border-box' }}
+                          className="relative flex aspect-[5/2] w-[152px] max-w-full items-center justify-center overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow"
+                          style={{ boxSizing: 'border-box' }}
                         >
                           {product.mainImageSrc ? (
                             <img
                               src={product.mainImageSrc}
                               alt=""
-                              className="absolute inset-0 w-full h-full object-cover"
+                              className="absolute inset-0 h-full w-full object-cover object-center"
                               style={{ display: 'block' }}
                               onError={(e) => {
                                 (e.target as HTMLImageElement).style.display = 'none';
@@ -247,9 +204,6 @@ const Products: FC<ProductsProps> = ({ }) => {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900 border-b border-gray-200">
                         {product.productName}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-gray-200">
-                        ${Number(product.price).toFixed(2)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 border-b border-gray-200">
                         {getCompanyName(product.company)}
