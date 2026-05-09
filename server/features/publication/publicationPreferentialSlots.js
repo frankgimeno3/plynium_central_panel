@@ -21,6 +21,17 @@ export function serviceGroupIdForMagazinePreferentialPosition(position_in_magazi
     return SERVICE_GROUP_MAGAZINE_PREMIUM_PAGE;
 }
 
+/** UI title for a `position_in_magazine` value stored in `publication_preferential_slots`. */
+export function displayTitleForPreferentialPosition(dbPosition) {
+    const p = String(dbPosition ?? "").trim();
+    if (p === "Cover page") return "Cover Page";
+    if (p === "Inside Cover") return "Inside Cover";
+    if (p === "End page") return "End Page";
+    const m = /^Preferential page (\d+)$/i.exec(p);
+    if (m) return `Preferential Page ${m[1]}`;
+    return p || "—";
+}
+
 /** Ordered labels for default preferential placements on a magazine publication. */
 export const MAGAZINE_PREFERENTIAL_POSITIONS = [
     "Cover page",
@@ -34,7 +45,24 @@ export const MAGAZINE_PREFERENTIAL_POSITIONS = [
     "Preferential page 7",
     "Preferential page 8",
     "Preferential page 9",
+    "End page",
 ];
+
+/**
+ * Default `publication_slots_db.slot_content_type` for a freshly created
+ * preferential placement. Most pages are sold as adverts; preferential page 2
+ * is reserved for the magazine summary, and preferential page 4 for the
+ * advertiser index.
+ *
+ * @param {string} position_in_magazine
+ * @returns {"advert" | "summary" | "index"}
+ */
+export function defaultSlotContentTypeForMagazinePreferentialPosition(position_in_magazine) {
+    const p = String(position_in_magazine ?? "").trim();
+    if (p === "Preferential page 2") return "summary";
+    if (p === "Preferential page 4") return "index";
+    return "advert";
+}
 
 /**
  * For a magazine-linked publication: creates publication_slots_db rows (preferential_page / advert / pending / flipbook)
@@ -51,12 +79,13 @@ export async function createPreferentialSlotsForMagazinePublication(params, opti
 
     for (const position_in_magazine of MAGAZINE_PREFERENTIAL_POSITIONS) {
         const service_group_id = serviceGroupIdForMagazinePreferentialPosition(position_in_magazine);
+        const slot_content_type = defaultSlotContentTypeForMagazinePreferentialPosition(position_in_magazine);
         const slot = await PublicationSlotDbModel.create(
             {
                 publication_id: publicationId,
                 publication_format: "flipbook",
                 slot_key: "preferential_page",
-                slot_content_type: "advert",
+                slot_content_type,
                 slot_state: "pending",
             },
             { transaction }

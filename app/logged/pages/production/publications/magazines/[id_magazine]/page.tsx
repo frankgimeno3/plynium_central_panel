@@ -89,6 +89,7 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
   const { setPageMeta } = usePageContent();
 
   const [editableName, setEditableName] = useState("");
+  const [editableSubtitle, setEditableSubtitle] = useState("");
   const [editableDescription, setEditableDescription] = useState("");
   const [editablePeriodicity, setEditablePeriodicity] = useState("");
   const [editableSubscriberNumber, setEditableSubscriberNumber] = useState("");
@@ -118,7 +119,21 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
     setDeleteSubmitting(true);
     setDeleteError(null);
     try {
-      await MagazineService.deleteMagazine(magazine.id_magazine);
+      const res = await fetch(
+        `/api/v1/magazines/${encodeURIComponent(magazine.id_magazine)}`,
+        { method: "DELETE", credentials: "include" }
+      );
+      if (!res.ok) {
+        let serverMessage = "";
+        try {
+          const payload = (await res.json()) as { message?: unknown };
+          if (payload && typeof payload.message === "string") {
+            serverMessage = payload.message;
+          }
+        } catch {
+        }
+        throw new Error(serverMessage || `Delete failed (${res.status}).`);
+      }
       setDeleteModalOpen(false);
       router.push(BASE);
     } catch (e: unknown) {
@@ -171,17 +186,19 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
   useEffect(() => {
     if (magazine) {
       setEditableName(magazine.name ?? "");
+      setEditableSubtitle(magazine.subtitle ?? "");
       setEditableDescription(magazine.description ?? "");
       setEditablePeriodicity(magazine.periodicity ?? "");
       setEditableSubscriberNumber(
         magazine.subscriber_number != null ? String(magazine.subscriber_number) : ""
       );
     }
-  }, [magazine?.id_magazine, magazine?.name, magazine?.description, magazine?.periodicity, magazine?.subscriber_number]);
+  }, [magazine?.id_magazine, magazine?.name, magazine?.subtitle, magazine?.description, magazine?.periodicity, magazine?.subscriber_number]);
 
   const hasChanges = Boolean(
     magazine &&
       (editableName !== (magazine.name ?? "") ||
+        editableSubtitle !== (magazine.subtitle ?? "") ||
         editableDescription !== (magazine.description ?? "") ||
         editablePeriodicity !== (magazine.periodicity ?? "") ||
         editableSubscriberNumber !==
@@ -333,12 +350,14 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
         if (subscriber_number != null && Number.isNaN(subscriber_number)) subscriber_number = null;
         const updated = await MagazineService.updateMagazine(magazine.id_magazine, {
           name: editableName.trim(),
+          subtitle: editableSubtitle.trim(),
           description: editableDescription.trim(),
           periodicity: editablePeriodicity.trim(),
           subscriber_number,
         });
         setMagazine(updated);
         setEditableName(updated.name ?? "");
+        setEditableSubtitle(updated.subtitle ?? "");
         setEditableDescription(updated.description ?? "");
         setEditablePeriodicity(updated.periodicity ?? "");
         setEditableSubscriberNumber(
@@ -436,6 +455,16 @@ const MagazineDetailPage: FC<{ params: Promise<{ id_magazine: string }> }> = ({ 
                   value={editableName}
                   onChange={(e) => setEditableName(e.target.value)}
                   className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 font-medium"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <p className="text-xs text-gray-500 uppercase">Magazine subtitle</p>
+                <input
+                  type="text"
+                  value={editableSubtitle}
+                  onChange={(e) => setEditableSubtitle(e.target.value)}
+                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-800"
+                  placeholder="Example: Plano e industrias afines"
                 />
               </div>
               <div className="md:col-span-2">

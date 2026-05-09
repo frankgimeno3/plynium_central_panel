@@ -16,6 +16,7 @@ const PROTECTED_FOLDER_PATHS = new Set([
     "structural media/invoices/providers invoices",
     "structural media/production media/newsletters media",
     "structural media/production media/publications media",
+    "structural media/production media/publications media/magazines media",
     "structural media/network media/content media",
     "structural media/network media/directory media",
     "structural media/network media/content media/articles media",

@@ -128,6 +128,7 @@ export interface MagazineIssue {
 export interface Magazine {
   id_magazine: string;
   name: string;
+  subtitle?: string;
   description?: string;
   first_year?: number;
   /** e.g. monthly, quarterly */

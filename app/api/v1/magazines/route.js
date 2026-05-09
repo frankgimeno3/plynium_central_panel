@@ -21,6 +21,7 @@ export const GET = createEndpoint(
 const postSchema = Joi.object({
   id_magazine: Joi.string().trim().optional(),
   name: Joi.string().required().trim().min(1),
+  subtitle: Joi.string().allow("").optional(),
   description: Joi.string().allow("").optional(),
   first_year: Joi.number().integer().optional(),
   periodicity: Joi.string().allow("").optional(),
@@ -42,6 +43,7 @@ export const POST = createEndpoint(
     const newMagazine = await createMagazine({
       id_magazine,
       name: String(body.name).trim(),
+      subtitle: body.subtitle != null ? String(body.subtitle).trim() : undefined,
       description: body.description != null ? String(body.description).trim() : undefined,
       first_year: body.first_year != null ? Number(body.first_year) : undefined,
       periodicity: body.periodicity != null ? String(body.periodicity).trim() : undefined,

@@ -1,7 +1,12 @@
 import { createEndpoint } from "../../../../../../server/createEndpoint.js";
 import { NextResponse } from "next/server";
 import Joi from "joi";
-import { PublicationSlotDbModel } from "../../../../../../server/database/models.js";
+import { Op } from "sequelize";
+import {
+  PublicationSlotDbModel,
+  ProjectDbModel,
+  CustomerDbModel,
+} from "../../../../../../server/database/models.js";
 import "../../../../../../server/database/models.js";
 
 export const runtime = "nodejs";
@@ -26,7 +31,61 @@ function toApiSlot(row) {
     slot_article_id: s.slot_article_id ?? null,
     slot_created_at: s.slot_created_at ?? null,
     slot_updated_at: s.slot_updated_at ?? null,
+    customer_name: null,
+    project_contract_id: null,
   };
+}
+
+async function enrichSlotsWithProjectAndCustomer(slots) {
+  if (!Array.isArray(slots) || slots.length === 0) return;
+
+  const projectIds = [
+    ...new Set(
+      slots
+        .map((s) => (s.project_id != null ? String(s.project_id).trim() : ""))
+        .filter((v) => v !== "")
+    ),
+  ];
+  const customerIds = [
+    ...new Set(
+      slots
+        .map((s) => (s.customer_id != null ? String(s.customer_id).trim() : ""))
+        .filter((v) => v !== "")
+    ),
+  ];
+
+  const projectContractById = new Map();
+  if (projectIds.length && ProjectDbModel?.sequelize) {
+    const projects = await ProjectDbModel.findAll({
+      where: { id_project: { [Op.in]: projectIds } },
+      attributes: ["id_project", "id_contract"],
+    });
+    for (const p of projects) {
+      const pl = p.get({ plain: true });
+      const id = pl.id_project != null ? String(pl.id_project).trim() : "";
+      if (id) projectContractById.set(id, pl.id_contract != null ? String(pl.id_contract) : null);
+    }
+  }
+
+  const customerNameById = new Map();
+  if (customerIds.length && CustomerDbModel?.sequelize) {
+    const customers = await CustomerDbModel.findAll({
+      where: { id_customer: { [Op.in]: customerIds } },
+      attributes: ["id_customer", "name"],
+    });
+    for (const c of customers) {
+      const cl = c.get({ plain: true });
+      const id = cl.id_customer != null ? String(cl.id_customer).trim() : "";
+      if (id) customerNameById.set(id, cl.name != null ? String(cl.name) : null);
+    }
+  }
+
+  for (const s of slots) {
+    const pid = s.project_id != null ? String(s.project_id).trim() : "";
+    const cid = s.customer_id != null ? String(s.customer_id).trim() : "";
+    s.project_contract_id = pid ? projectContractById.get(pid) ?? null : null;
+    s.customer_name = cid ? customerNameById.get(cid) ?? null : null;
+  }
 }
 
 function slotSortKey(slotKey) {
@@ -51,6 +110,7 @@ export const GET = createEndpoint(
     });
 
     const list = rows.map(toApiSlot).filter(Boolean);
+    await enrichSlotsWithProjectAndCustomer(list);
     list.sort((a, b) => {
       const ka = slotSortKey(a.slot_key);
       const kb = slotSortKey(b.slot_key);

@@ -650,6 +650,7 @@ Inbox tickets use `panel_ticket_type` ∈ `account_management`, `production`, `a
 | service_id | character varying | NO |  |
 | project_publication_date | date | YES |  |
 | publication_id | character varying | YES |  |
+| publication_slot_id | integer | YES |  |
 | pm_events_id_array | ARRAY | YES | `'{}'::text[]` |
 | project_created_at | timestamp with time zone | NO | `now()` |
 | project_updated_at | timestamp with time zone | NO | `now()` |
@@ -738,6 +739,7 @@ Inbox tickets use `panel_ticket_type` ∈ `account_management`, `production`, `a
 | publication_slot_position | integer | NO | `0` |
 | slot_content_format | character varying | NO | `''::character varying` |
 | slot_content_object_array | jsonb | NO | `'[]'::jsonb` |
+| article_id | text | YES |  |
 
 ## publication_slots_db
 
@@ -793,6 +795,10 @@ Inbox tickets use `panel_ticket_type` ∈ `account_management`, `production`, `a
 | publication_theme | character varying | YES | `''::character varying` |
 | publication_status | character varying | NO | `'draft'::character varying` |
 | publication_format | character varying | NO | `'flipbook'::character varying` |
+| mediateca_folder_id | uuid | YES |  |
+| publication_header_domain | character varying | YES | `''::character varying` |
+| red_box_header | character varying | YES | `''::character varying` |
+| red_box_body | character varying | YES | `''::character varying` |
 
 ## revenues_db
 

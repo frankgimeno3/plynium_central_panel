@@ -11,6 +11,8 @@ function toApiProject(row) {
     service: row.service ?? row.service_id ?? "",
     publication_date: row.publication_date ?? row.project_publication_date ?? "",
     publication_id: row.publication_id ?? "",
+    publication_slot_id:
+      row.publication_slot_id != null ? Number(row.publication_slot_id) : null,
     pm_events_array: Array.isArray(row.pm_events_array) ? row.pm_events_array : [],
   };
 }

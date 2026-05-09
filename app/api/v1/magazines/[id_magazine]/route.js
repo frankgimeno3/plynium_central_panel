@@ -35,6 +35,7 @@ export const GET = createEndpoint(
 
 const patchSchema = Joi.object({
   name: Joi.string().trim().min(1).optional(),
+  subtitle: Joi.string().allow("").optional(),
   description: Joi.string().allow("").optional(),
   first_year: Joi.number().integer().optional(),
   periodicity: Joi.string().allow("").optional(),

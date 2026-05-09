@@ -170,7 +170,15 @@ PublicationModel.init({
     is_special_edition: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     publication_theme: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "" },
     publication_status: { type: DataTypes.STRING(64), allowNull: false, defaultValue: "draft" },
-    publication_format: { type: DataTypes.STRING(32), allowNull: false, defaultValue: "flipbook" }
+    publication_format: { type: DataTypes.STRING(32), allowNull: false, defaultValue: "flipbook" },
+    // Cover preview variables (vertical domain + red angled stamp).
+    publication_header_domain: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "" },
+    red_box_header: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "" },
+    red_box_body: { type: DataTypes.STRING(2048), allowNull: true, defaultValue: "" },
+    // Folder under "Structural media/Production media/publications media/magazines media"
+    // that holds every media asset (cover, etc.) for this publication. Created at
+    // publication creation time; renamed when publication_edition_name changes.
+    mediateca_folder_id: { type: DataTypes.UUID, allowNull: true }
 }, {
     sequelize,
     modelName: 'publication',
@@ -182,7 +190,8 @@ PublicationModel.init({
         { fields: ["magazine_id"] },
         { fields: ["publication_year"] },
         { fields: ["publication_status"] },
-        { fields: ["real_publication_month_date"] }
+        { fields: ["real_publication_month_date"] },
+        { fields: ["mediateca_folder_id"] }
     ]
 });
 
@@ -696,6 +705,7 @@ MagazineDbModel.init({
         field: "magazine_id"
     },
     name: { type: DataTypes.STRING(512), allowNull: false, field: "magazine_name" },
+    subtitle: { type: DataTypes.STRING(512), allowNull: true, defaultValue: "", field: "magazine_subtitle" },
     description: { type: DataTypes.TEXT, allowNull: true, defaultValue: "", field: "magazine_description" },
     first_year: { type: DataTypes.INTEGER, allowNull: true, field: "magazine_starting_year" },
     periodicity: {
@@ -983,6 +993,9 @@ ProjectDbModel.init({
     service: { type: DataTypes.STRING(255), allowNull: false, field: "service_id" },
     publication_date: { type: DataTypes.DATEONLY, allowNull: true, field: "project_publication_date" },
     publication_id: { type: DataTypes.STRING(64), allowNull: true, field: "publication_id" },
+    // Back-pointer to the publication_slots_db row that hosts this project's
+    // content. Populated when a project is assigned to a slot from the panel.
+    publication_slot_id: { type: DataTypes.INTEGER, allowNull: true, field: "publication_slot_id" },
     pm_events_array: { type: DataTypes.ARRAY(DataTypes.TEXT), allowNull: true, defaultValue: [], field: "pm_events_id_array" }
 }, {
     sequelize,
@@ -996,7 +1009,8 @@ ProjectDbModel.init({
         { fields: ["id_contract"] },
         { fields: ["status"] },
         { fields: ["service"] },
-        { fields: ["publication_date"] }
+        { fields: ["publication_date"] },
+        { fields: ["publication_slot_id"] }
     ]
 });
 
@@ -1243,7 +1257,8 @@ PublicationSlotContentDbModel.init({
     publication_slot_id: { type: DataTypes.INTEGER, allowNull: false },
     publication_slot_position: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
     slot_content_format: { type: DataTypes.STRING(64), allowNull: false, defaultValue: "" },
-    slot_content_object_array: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] }
+    slot_content_object_array: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
+    article_id: { type: DataTypes.STRING, allowNull: true }
 }, {
     sequelize,
     modelName: "publication_slot_content",
@@ -1253,7 +1268,8 @@ PublicationSlotContentDbModel.init({
     indexes: [
         { fields: ["publication_id"] },
         { fields: ["publication_slot_id"] },
-        { fields: ["publication_id", "publication_slot_id", "publication_slot_position"] }
+        { fields: ["publication_id", "publication_slot_id", "publication_slot_position"] },
+        { fields: ["article_id"] }
     ]
 });
 

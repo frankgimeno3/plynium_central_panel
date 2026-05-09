@@ -1,6 +1,13 @@
 import { Op, Transaction } from "sequelize";
 import PublicationPreferentialSlotDbModel from "../publication_workflow/PublicationPreferentialSlotDbModel.js";
+import PublicationSlotDbModel from "../publication_workflow/PublicationSlotDbModel.js";
 import ProposalDbModel from "../proposal_db/ProposalDbModel.js";
+import CustomerDbModel from "../customer_db/CustomerDbModel.js";
+import {
+    MAGAZINE_PREFERENTIAL_POSITIONS,
+    displayTitleForPreferentialPosition,
+    defaultSlotContentTypeForMagazinePreferentialPosition,
+} from "./publicationPreferentialSlots.js";
 import "../../database/models.js";
 
 function httpError(statusCode, message) {
@@ -96,6 +103,178 @@ export async function getPreferentialSlotAvailabilityRow(publication_id, service
                         : null
                 : null,
     };
+}
+
+/**
+ * Ordered summary of `publication_preferential_slots` for a publication (canonical magazine positions).
+ * @param {string} publication_id
+ * @param {{ sequelize?: import("sequelize").Sequelize }} [opts]
+ */
+export async function listPreferentialSlotsForPublication(publication_id, opts = {}) {
+    const sequelize = opts.sequelize ?? PublicationPreferentialSlotDbModel.sequelize;
+    if (!sequelize) {
+        throw new Error("PublicationPreferentialSlotDbModel not initialized");
+    }
+    const pid = String(publication_id ?? "").trim();
+    if (!pid) return { slots: [] };
+
+    const rows = await PublicationPreferentialSlotDbModel.findAll({
+        where: { publication_id: pid },
+    });
+
+    const plainRows = rows.map((r) => r.get({ plain: true }));
+    const byPos = new Map();
+    for (const row of plainRows) {
+        byPos.set(String(row.position_in_magazine ?? "").trim(), row);
+    }
+
+    const publicationSlotIds = plainRows
+        .map((row) => row.publication_slot_id)
+        .filter((id) => id != null)
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id));
+    const slotContentTypeById = new Map();
+    if (publicationSlotIds.length) {
+        const slotRows = await PublicationSlotDbModel.findAll({
+            where: { publication_slot_id: { [Op.in]: publicationSlotIds } },
+            attributes: ["publication_slot_id", "slot_content_type"],
+        });
+        for (const slot of slotRows) {
+            const plain = slot.get({ plain: true });
+            const id = Number(plain.publication_slot_id);
+            if (Number.isFinite(id)) {
+                slotContentTypeById.set(id, plain.slot_content_type != null ? String(plain.slot_content_type) : null);
+            }
+        }
+    }
+
+    const proposalSet = new Set();
+    const customerSet = new Set();
+
+    for (const row of plainRows) {
+        const st = String(row.state ?? "").toLowerCase();
+        const assigned = row.assigned_customer_id != null ? String(row.assigned_customer_id).trim() : "";
+        const prArr = coerceProposalIdArray(row.proposal_id_array);
+        prArr.forEach((id) => proposalSet.add(id));
+        if (st === "bought" && assigned) customerSet.add(assigned);
+        if (st === "assigned" && assigned && !["summary", "advertiser_index"].includes(assigned.toLowerCase())) {
+            customerSet.add(assigned);
+        }
+    }
+
+    const proposalIds = [...proposalSet];
+    /** @type {Map<string, { id_proposal: string, id_customer: string | null, status: string | null, title: string | null }>} */
+    const proposalsById = new Map();
+    if (proposalIds.length) {
+        const props = await ProposalDbModel.findAll({
+            where: { id_proposal: { [Op.in]: proposalIds } },
+            attributes: ["id_proposal", "id_customer", "status", "title"],
+        });
+        for (const p of props) {
+            const pl = p.get({ plain: true });
+            const id = String(pl.id_proposal ?? "").trim();
+            if (!id) continue;
+            const cid = pl.id_customer != null ? String(pl.id_customer).trim() : null;
+            if (cid) customerSet.add(cid);
+            proposalsById.set(id, {
+                id_proposal: id,
+                id_customer: cid,
+                status: pl.status != null ? String(pl.status) : null,
+                title: pl.title != null ? String(pl.title) : null,
+            });
+        }
+    }
+
+    const customerIds = [...customerSet];
+    const customerNameById = new Map();
+    if (customerIds.length) {
+        const custs = await CustomerDbModel.findAll({
+            where: { id_customer: { [Op.in]: customerIds } },
+            attributes: ["id_customer", "name"],
+        });
+        for (const c of custs) {
+            const cl = c.get({ plain: true });
+            const id = String(cl.id_customer ?? "").trim();
+            if (id) customerNameById.set(id, cl.name != null ? String(cl.name).trim() : "");
+        }
+    }
+
+    const slots = MAGAZINE_PREFERENTIAL_POSITIONS.map((position_in_magazine) => {
+        const posKey = String(position_in_magazine ?? "").trim();
+        const row = byPos.get(posKey);
+        const section_title = displayTitleForPreferentialPosition(posKey);
+
+        if (!row) {
+            const fallbackType = defaultSlotContentTypeForMagazinePreferentialPosition(posKey);
+            return {
+                position_in_magazine: posKey,
+                section_title,
+                missing: true,
+                preferential_slot_id: null,
+                publication_slot_id: null,
+                state: null,
+                contract_id: null,
+                assigned_customer_id: null,
+                assigned_kind: null,
+                assigned_customer_name: null,
+                slot_content_type:
+                    fallbackType === "summary" || fallbackType === "index" ? fallbackType : null,
+                proposal_summaries: [],
+            };
+        }
+
+        const st = String(row.state ?? "").toLowerCase();
+        const assigned = row.assigned_customer_id != null ? String(row.assigned_customer_id).trim() : "";
+        const pids = coerceProposalIdArray(row.proposal_id_array);
+
+        let assignedKind = null;
+        if (st === "assigned" && assigned) {
+            const al = assigned.toLowerCase();
+            if (al === "summary") assignedKind = "summary";
+            else if (al === "advertiser_index") assignedKind = "advertiser_index";
+            else assignedKind = "customer";
+        }
+
+        const proposal_summaries = pids.map((propId) => {
+            const pr = proposalsById.get(propId);
+            const cid = pr?.id_customer ?? null;
+            return {
+                proposal_id: propId,
+                customer_id: cid,
+                customer_name: cid ? customerNameById.get(cid) ?? null : null,
+                proposal_status: pr?.status ?? null,
+                title: pr?.title ?? null,
+            };
+        });
+
+        const assigned_customer_name =
+            assigned &&
+            !["summary", "advertiser_index"].includes(assigned.toLowerCase()) &&
+            (st === "bought" || st === "assigned")
+                ? customerNameById.get(assigned) ?? null
+                : null;
+
+        return {
+            position_in_magazine: posKey,
+            section_title,
+            missing: false,
+            preferential_slot_id: row.preferential_slot_id != null ? String(row.preferential_slot_id) : "",
+            publication_slot_id:
+                row.publication_slot_id != null ? Number(row.publication_slot_id) : null,
+            state: row.state != null ? String(row.state) : "",
+            contract_id: row.contract_id != null ? String(row.contract_id) : null,
+            assigned_customer_id: assigned || null,
+            assigned_kind: assignedKind,
+            assigned_customer_name,
+            slot_content_type:
+                row.publication_slot_id != null
+                    ? slotContentTypeById.get(Number(row.publication_slot_id)) ?? null
+                    : null,
+            proposal_summaries,
+        };
+    });
+
+    return { slots };
 }
 
 function lockLevel(transaction) {

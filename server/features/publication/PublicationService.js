@@ -3,6 +3,7 @@ import PublicationModel from "./PublicationModel.js";
 import "../../database/models.js";
 import { QueryTypes } from "sequelize";
 import { createPreferentialSlotsForMagazinePublication } from "./publicationPreferentialSlots.js";
+import { ensurePublicationMediatecaFolder } from "./PublicationMediatecaFolderService.js";
 
 function toApiShape(p) {
     const row = p && typeof p.get === "function" ? p.get({ plain: true }) : p;
@@ -16,7 +17,8 @@ function toApiShape(p) {
         revista: row.publication_theme || "",
         número:
             row.magazine_this_year_issue != null ? String(row.magazine_this_year_issue) : "",
-        publication_main_image_url: row.publication_main_image_url || ""
+        publication_main_image_url: row.publication_main_image_url || "",
+        mediateca_folder_id: row.mediateca_folder_id || null
     };
 }
 
@@ -106,6 +108,7 @@ export function toPublicationMagazineAdminApi(p) {
         is_special_edition: Boolean(row.is_special_edition),
         publication_edition_name: row.publication_edition_name ?? "",
         real_publication_month_date: row.real_publication_month_date ?? null,
+        mediateca_folder_id: row.mediateca_folder_id ?? null,
     };
 }
 
@@ -200,6 +203,7 @@ export async function createMagazineIssuePublication({
             { publicationId: id, magazineId: mid },
             { transaction }
         );
+        await ensurePublicationMediatecaFolder(created, { transaction });
         return created;
     });
 
@@ -269,9 +273,14 @@ export async function createPublication(publicationData) {
                           },
                           { transaction }
                       );
+                      await ensurePublicationMediatecaFolder(created, { transaction });
                       return created;
                   })
-                : await PublicationModel.create(createPayload);
+                : await (async () => {
+                      const created = await PublicationModel.create(createPayload);
+                      await ensurePublicationMediatecaFolder(created);
+                      return created;
+                  })();
 
         console.log(`[PublicationService] [${requestId}] Publication created successfully:`, publication.toJSON());
 
@@ -369,6 +378,14 @@ export async function updatePublication(idPublication, publicationData) {
         }
 
         await publication.save();
+
+        // Keep the linked mediateca folder name aligned with publication_edition_name.
+        // Also lazily backfills the folder for legacy publications without one.
+        try {
+            await ensurePublicationMediatecaFolder(publication);
+        } catch (folderErr) {
+            console.warn("ensurePublicationMediatecaFolder failed:", folderErr?.message ?? folderErr);
+        }
 
         return toApiShape(publication);
     } catch (error) {

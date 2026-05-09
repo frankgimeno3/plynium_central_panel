@@ -12,11 +12,28 @@ function toApiMagazine(row) {
   return {
     id_magazine: p.id_magazine,
     name: p.name ?? "",
+    subtitle: p.subtitle ?? "",
     description: p.description ?? undefined,
     first_year: p.first_year ?? undefined,
     periodicity: p.periodicity ?? "",
     subscriber_number: p.subscriber_number ?? undefined,
   };
+}
+
+const MAGAZINE_ATTRIBUTES_WITHOUT_SUBTITLE = [
+  "id_magazine",
+  "name",
+  "description",
+  "first_year",
+  "periodicity",
+  "subscriber_number",
+];
+
+function isMissingMagazineSubtitleColumn(error) {
+  return (
+    error?.name === "SequelizeDatabaseError" &&
+    String(error?.message ?? "").includes("magazine_subtitle")
+  );
 }
 
 async function ensureModels() {
@@ -30,9 +47,18 @@ async function ensureModels() {
 export async function getAllMagazines() {
   try {
     if (!(await ensureModels())) return [];
-    const rows = await MagazineDbModel.findAll({
-      order: [["name", "ASC"]],
-    });
+    let rows;
+    try {
+      rows = await MagazineDbModel.findAll({
+        order: [["name", "ASC"]],
+      });
+    } catch (error) {
+      if (!isMissingMagazineSubtitleColumn(error)) throw error;
+      rows = await MagazineDbModel.findAll({
+        attributes: MAGAZINE_ATTRIBUTES_WITHOUT_SUBTITLE,
+        order: [["name", "ASC"]],
+      });
+    }
     return rows.map((r) => toApiMagazine(r));
   } catch (error) {
     console.error("Error fetching magazines from database:", error);
@@ -53,7 +79,15 @@ export async function getAllMagazines() {
 }
 
 export async function getMagazineById(idMagazine) {
-  const row = await MagazineDbModel.findByPk(idMagazine);
+  let row;
+  try {
+    row = await MagazineDbModel.findByPk(idMagazine);
+  } catch (error) {
+    if (!isMissingMagazineSubtitleColumn(error)) throw error;
+    row = await MagazineDbModel.findByPk(idMagazine, {
+      attributes: MAGAZINE_ATTRIBUTES_WITHOUT_SUBTITLE,
+    });
+  }
   if (!row) {
     throw new Error(`Magazine with id ${idMagazine} not found`);
   }
@@ -69,6 +103,7 @@ export async function createMagazine(data) {
   const payload = {
     id_magazine: data.id_magazine,
     name: data.name,
+    subtitle: data.subtitle ?? "",
     description: data.description ?? "",
     first_year: data.first_year ?? null,
     periodicity: data.periodicity != null ? String(data.periodicity).trim() : "",
@@ -156,6 +191,7 @@ export async function updateMagazine(idMagazine, body) {
   }
   const updates = {};
   if (body.name !== undefined) updates.name = String(body.name).trim();
+  if (body.subtitle !== undefined) updates.subtitle = String(body.subtitle ?? "").trim();
   if (body.description !== undefined) updates.description = (body.description ?? "").trim() || "";
   if (body.first_year !== undefined) updates.first_year = body.first_year == null ? null : Number(body.first_year);
   if (body.periodicity !== undefined) updates.periodicity = String(body.periodicity ?? "").trim();
