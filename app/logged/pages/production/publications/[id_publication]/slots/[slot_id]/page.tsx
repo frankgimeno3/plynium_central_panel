@@ -100,7 +100,11 @@ function allowedSlotContentTypes(slotKey: string | null | undefined): SlotConten
 function pickFirstUrl(objects: unknown[]): string | null {
   if (!Array.isArray(objects)) return null;
   for (const obj of objects) {
-    if (obj && typeof obj === "object" && "url" in obj) {
+    if (obj && typeof obj === "object") {
+      // New Contents Manager shape uses `advert_media_src`; legacy rows used
+      // `url`. Honour both so the preview keeps working across the migration.
+      const advertSrc = (obj as { advert_media_src?: unknown }).advert_media_src;
+      if (typeof advertSrc === "string" && advertSrc) return advertSrc;
       const url = (obj as { url?: unknown }).url;
       if (typeof url === "string" && url) return url;
     }

@@ -9,19 +9,10 @@ import AddScheduledNewsletterModal, { type AddScheduledNewsletterForm } from "..
 import AddCampaignPortalsModal from "../../components/AddCampaignPortalsModal";
 import ConfirmRemoveCampaignPortalModal from "../../components/ConfirmRemoveCampaignPortalModal";
 import { NewsletterService } from "@/app/service/NewsletterService";
+import { CampaignDataTab, type CampaignFormState } from "./_tabs/CampaignDataTab";
+import { NewsletterLayoutDesignerTab } from "./_tabs/NewsletterLayoutDesignerTab";
 
 const BASE = "/logged/pages/production/newsletters";
-
-const FREQUENCY_OPTIONS = [
-  { value: "daily", label: "Daily" },
-  { value: "weekly", label: "Weekly" },
-  { value: "biweekly", label: "Biweekly" },
-  { value: "monthly", label: "Monthly" },
-  { value: "bimonthly", label: "Bimonthly" },
-  { value: "quarterly", label: "Quarterly" },
-  { value: "biannual", label: "Biannual" },
-  { value: "annual", label: "Yearly" },
-];
 
 function nextNewsletterId(existing: Newsletter[]): string {
   const nums = existing
@@ -31,16 +22,8 @@ function nextNewsletterId(existing: Newsletter[]): string {
   return `nl-${String(max + 1).padStart(3, "0")}`;
 }
 
-type CampaignFormState = {
-  name: string;
-  description: string;
-  newsletterType: "main" | "specific";
-  contentTheme: string;
-  frequency: string;
-  status: string;
-};
-
 type PortalTag = { id: number; key: string; name: string };
+type CampaignTabId = "data" | "layoutDesigner";
 
 function toFormState(c: NewsletterCampaign): CampaignFormState {
   const t = String(c.newsletterType ?? "main").trim().toLowerCase();
@@ -229,7 +212,21 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
     }
   }, [BASE, campaign, confirmMode, removePortal, reload, resetConfirmModal, router]);
 
+  const [activeTab, setActiveTab] = useState<CampaignTabId>("data");
   const [modalOpen, setModalOpen] = useState(false);
+  const handleLayoutConfigSaved = useCallback(
+    (next: { layoutConfig: NewsletterCampaign["layoutConfig"]; updatedAt: string }) => {
+      setCampaigns((prev) =>
+        prev.map((item) =>
+          item.id === id_campaign
+            ? { ...item, layoutConfig: next.layoutConfig, updatedAt: next.updatedAt }
+            : item
+        )
+      );
+    },
+    [id_campaign]
+  );
+
   const handleAddScheduled = useCallback(
     async (data: AddScheduledNewsletterForm) => {
       if (!campaign) return;
@@ -252,7 +249,6 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
   useEffect(() => {
     if (campaign) {
       setPageMeta({
-        // Midnav title format: "NEWSLETTER CAMPAIGN - NAME"
         pageTitle: `NEWSLETTER CAMPAIGN - ${campaign.name}`,
         breadcrumbs: [
           { label: "Production", href: "/logged/pages/production/services" },
@@ -313,219 +309,66 @@ const CampaignDetailPage: FC<{ params: Promise<{ id_campaign: string }> }> = ({ 
     );
   }
 
-  const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
-
   return (
     <>
-      <PageContentSection>
+      <PageContentSection className="pt-4">
         <div className="flex flex-col w-full">
+          <div className="flex border-b border-gray-200 bg-white rounded-t-lg overflow-hidden px-2">
+            <button
+              type="button"
+              onClick={() => setActiveTab("data")}
+              className={`px-5 py-3 text-sm font-medium transition-colors ${
+                activeTab === "data"
+                  ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              Campaign data
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("layoutDesigner")}
+              className={`px-5 py-3 text-sm font-medium transition-colors ${
+                activeTab === "layoutDesigner"
+                  ? "text-blue-950 border-b-2 border-blue-950 bg-blue-50"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+              }`}
+            >
+              Newsletter Layout Designer
+            </button>
+          </div>
+
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6">
-        <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900">Campaign data</h2>
-            <p className="text-sm text-gray-500">Edit and save campaign fields.</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <button
-              type="button"
-              onClick={openDeleteCampaign}
-              disabled={saving || removing || relatedLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
-            >
-              Delete Newsletter Campaign
-            </button>
-            <button
-              type="button"
-              onClick={handleCancelEdit}
-              disabled={!isDirty || saving}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleSave}
-              disabled={!isDirty || saving || !form?.name.trim() || !form?.frequency.trim()}
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? "Saving…" : "Save"}
-            </button>
-          </div>
-        </div>
-
-        {saveError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {saveError}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-xs text-gray-500 uppercase mb-1">Name</label>
-            <input
-              type="text"
-              value={form?.name ?? ""}
-              onChange={(e) => setForm((f) => (f ? { ...f, name: e.target.value } : f))}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              disabled={saving}
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 uppercase mb-1">Portal</label>
-            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-              {campaignPortals.map((p) => (
-                <span
-                  key={p.id}
-                  className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-sm font-medium text-gray-800 border border-gray-200"
-                >
-                  {p.key}
-                  <button
-                    type="button"
-                    onClick={() => openRemovePortal(p)}
-                    className="text-gray-500 hover:text-gray-800"
-                    aria-label={`Remove ${p.key}`}
-                    disabled={saving}
-                  >
-                    ×
-                  </button>
-                </span>
-              ))}
-              {campaignPortals.length === 0 && (
-                <span className="text-sm text-gray-500">No portals</span>
-              )}
-              <button
-                type="button"
-                onClick={() => setPortalsModalOpen(true)}
-                className="ml-auto inline-flex h-8 w-8 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700"
-                aria-label="Add portal"
-                disabled={saving}
-              >
-                +
-              </button>
-            </div>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 uppercase mb-1">Type</label>
-            <select
-              value={form?.newsletterType ?? "main"}
-              onChange={(e) =>
-                setForm((f) =>
-                  f
-                    ? { ...f, newsletterType: (e.target.value === "specific" ? "specific" : "main") }
-                    : f
-                )
-              }
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              disabled={saving}
-            >
-              <option value="main">main</option>
-              <option value="specific">specific</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 uppercase mb-1">Status</label>
-            <input
-              type="text"
-              value={form?.status ?? ""}
-              onChange={(e) => setForm((f) => (f ? { ...f, status: e.target.value } : f))}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              disabled={saving}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 uppercase mb-1">Content theme</label>
-            <input
-              type="text"
-              value={form?.contentTheme ?? ""}
-              onChange={(e) => setForm((f) => (f ? { ...f, contentTheme: e.target.value } : f))}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              disabled={saving}
-            />
-          </div>
-          <div>
-            <label className="block text-xs text-gray-500 uppercase mb-1">Frequency</label>
-            <select
-              value={form?.frequency ?? ""}
-              onChange={(e) => setForm((f) => (f ? { ...f, frequency: e.target.value } : f))}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              disabled={saving}
-              required
-            >
-              <option value="">Select frequency</option>
-              {FREQUENCY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-              {form?.frequency &&
-                !FREQUENCY_OPTIONS.some((opt) => opt.value === form.frequency) && (
-                  <option value={form.frequency}>{form.frequency}</option>
-                )}
-            </select>
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-xs text-gray-500 uppercase mb-1">Description</label>
-            <textarea
-              value={form?.description ?? ""}
-              onChange={(e) => setForm((f) => (f ? { ...f, description: e.target.value } : f))}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              rows={4}
-              disabled={saving}
-            />
-          </div>
-        </div>
-            </div>
-          </div>
-        </div>
-      </PageContentSection>
-
-      <PageContentSection>
-        <div className="flex flex-col w-full">
-          <div className="bg-white rounded-b-lg overflow-hidden">
-            <div className="p-6">
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Related newsletters</h2>
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
-          >
-            Add scheduled newsletter
-          </button>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200 border border-gray-200 rounded-lg">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Topic</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estimated publish date</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User newsletter list</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {campaignNewsletters.map((n) => (
-                <tr
-                  key={n.id}
-                  onClick={() => router.push(`${BASE}/${n.id}`)}
-                  className={rowClass}
-                >
-                  <td className="px-6 py-4 text-sm font-mono text-gray-900">{n.id}</td>
-                  <td className="px-6 py-4 text-sm text-gray-900">{n.topic}</td>
-                  <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{n.estimatedPublishDate}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{n.userNewsletterListId ?? "—"}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{n.status}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {campaignNewsletters.length === 0 && (
-          <p className="text-sm text-gray-500 py-4">No newsletters in this campaign.</p>
-        )}
+              {activeTab === "data" && form ? (
+                <CampaignDataTab
+                  form={form}
+                  setForm={setForm}
+                  campaignPortals={campaignPortals}
+                  saving={saving}
+                  saveError={saveError}
+                  isDirty={isDirty}
+                  relatedLoading={relatedLoading}
+                  removing={removing}
+                  onSave={handleSave}
+                  onCancelEdit={handleCancelEdit}
+                  onDeleteCampaign={openDeleteCampaign}
+                  onOpenPortalsModal={() => setPortalsModalOpen(true)}
+                  onRemovePortal={openRemovePortal}
+                  campaignNewsletters={campaignNewsletters}
+                  newslettersBase={BASE}
+                  onOpenAddScheduled={() => setModalOpen(true)}
+                  onOpenNewsletter={(newsletterId) => router.push(`${BASE}/${newsletterId}`)}
+                />
+              ) : campaign ? (
+                <NewsletterLayoutDesignerTab
+                  campaignId={id_campaign}
+                  layoutConfig={campaign.layoutConfig}
+                  campaignNewsletterType={campaign.newsletterType}
+                  persistedUpdatedAt={campaign.updatedAt}
+                  onLayoutConfigSaved={handleLayoutConfigSaved}
+                />
+              ) : null}
             </div>
           </div>
         </div>

@@ -36,6 +36,7 @@ export const NAV_ROUTE_LABELS: Record<string, string> = {
   [`${BASE}/production/publications`]: "Publications",
   [`${BASE}/production/publications/magazines`]: "Magazine titles",
   [`${BASE}/production/publications/issues`]: "Issues",
+  [`${BASE}/production/publications/preferential-pages`]: "Preferential pages",
   // Administration
   [`${BASE}/administration`]: "Orders",
   [`${BASE}/administration/banks`]: "Banks",

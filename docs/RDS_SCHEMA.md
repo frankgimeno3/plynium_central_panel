@@ -729,7 +729,55 @@ Inbox tickets use `panel_ticket_type` ∈ `account_management`, `production`, `a
 | provider_created_at | timestamp with time zone | NO | `now()` |
 | provider_updated_at | timestamp with time zone | NO | `now()` |
 
+## publication_articles
+
+Maps a magazine publication to a source portal article that is being adapted
+into one or more magazine pages. `publication_slots_id_array` is the ordered
+list of `publication_slots_db.publication_slot_id` rows the article occupies.
+A unique index on `(publication_id, article_id)` prevents picking the same
+source article twice for the same publication.
+
+| column | type | null | default |
+|---|---|---:|---|
+| publication_article_id | uuid | NO | `gen_random_uuid()` |
+| publication_id | character varying | NO |  |
+| article_id | text | NO |  |
+| publication_slots_id_array | ARRAY (integer) | NO | `'{}'::integer[]` |
+| desired_page_count | integer | NO | `1` (CHECK >= 1) |
+| publication_article_created_at | timestamp with time zone | NO | `now()` |
+| publication_article_updated_at | timestamp with time zone | NO | `now()` |
+
+## publication_article_chunks
+
+Editable building blocks (paragraphs / images) that belong to a magazine page
+of a `publication_article`. `publication_slot_content_id` is nullable so a
+chunk can exist before being placed on a magazine page; `chunk_position`
+defines its order inside the page. `original_article_content_id` points back
+to `article_contents.article_content_id` for chunks imported from the source
+portal article (null for chunks added from scratch in the article builder).
+
+| column | type | null | default |
+|---|---|---:|---|
+| publication_article_chunk_id | uuid | NO | `gen_random_uuid()` |
+| publication_article_id | uuid | NO |  |
+| publication_id | character varying | NO |  |
+| publication_slot_content_id | integer | YES |  |
+| publication_article_chunk_format | character varying | NO | `'only_text'::character varying` (CHECK in title/subtitle/only_text/only_image/text_image/image_text) |
+| chunk_html | text | NO | `''::text` |
+| chunk_position | integer | NO | `0` |
+| original_article_content_id | character varying | YES |  |
+| publication_article_chunk_created_at | timestamp with time zone | NO | `now()` |
+| publication_article_chunk_updated_at | timestamp with time zone | NO | `now()` |
+
 ## publication_slot_content
+
+`slot_content_object_array` is a JSONB array of objects shaped as
+`{ position: <int>, publication_article_chunk_id: <uuid|null>,
+   advert_media_src: <string|null> }`. For `slot_content_format = 'article'`
+each entry references a `publication_article_chunks.publication_article_chunk_id`
+(advert_media_src is null). For `slot_content_format = 'advert'` there is a
+single entry with `advert_media_src` set to the media library URL and
+`publication_article_chunk_id` null.
 
 | column | type | null | default |
 |---|---|---:|---|
@@ -792,6 +840,7 @@ Inbox tickets use `panel_ticket_type` ∈ `account_management`, `production`, `a
 | real_publication_month_date | date | YES |  |
 | publication_materials_deadline | date | YES |  |
 | is_special_edition | boolean | NO | `false` |
+| special_edition_subtitle | character varying | YES | `''::character varying` |
 | publication_theme | character varying | YES | `''::character varying` |
 | publication_status | character varying | NO | `'draft'::character varying` |
 | publication_format | character varying | NO | `'flipbook'::character varying` |

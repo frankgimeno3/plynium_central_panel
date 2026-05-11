@@ -71,36 +71,140 @@ export function defaultSlotContentTypeForMagazinePreferentialPosition(position_i
  * @param {{ publicationId: string, magazineId: string }} params
  * @param {{ transaction?: import("sequelize").Transaction }} options
  */
+async function createPreferentialSlotAtPosition(
+    publicationId,
+    magazineId,
+    position_in_magazine,
+    options = {}
+) {
+    const { transaction } = options;
+    const service_group_id = serviceGroupIdForMagazinePreferentialPosition(position_in_magazine);
+    const slot_content_type = defaultSlotContentTypeForMagazinePreferentialPosition(position_in_magazine);
+    const slot = await PublicationSlotDbModel.create(
+        {
+            publication_id: publicationId,
+            publication_format: "flipbook",
+            slot_key: "preferential_page",
+            slot_content_type,
+            slot_state: "pending",
+        },
+        { transaction }
+    );
+    const publication_slot_id = slot.get("publication_slot_id");
+    await PublicationPreferentialSlotDbModel.create(
+        {
+            magazine_id: magazineId,
+            publication_id: publicationId,
+            position_in_magazine,
+            publication_slot_id,
+            service_group_id,
+            state: "available",
+        },
+        { transaction }
+    );
+}
+
 export async function createPreferentialSlotsForMagazinePublication(params, options = {}) {
     const publicationId = String(params.publicationId ?? "").trim();
     const magazineId = String(params.magazineId ?? "").trim();
     if (!publicationId || !magazineId) return;
-    const { transaction } = options;
 
     for (const position_in_magazine of MAGAZINE_PREFERENTIAL_POSITIONS) {
-        const service_group_id = serviceGroupIdForMagazinePreferentialPosition(position_in_magazine);
-        const slot_content_type = defaultSlotContentTypeForMagazinePreferentialPosition(position_in_magazine);
-        const slot = await PublicationSlotDbModel.create(
-            {
-                publication_id: publicationId,
-                publication_format: "flipbook",
-                slot_key: "preferential_page",
-                slot_content_type,
-                slot_state: "pending",
-            },
-            { transaction }
-        );
-        const publication_slot_id = slot.get("publication_slot_id");
-        await PublicationPreferentialSlotDbModel.create(
-            {
-                magazine_id: magazineId,
-                publication_id: publicationId,
-                position_in_magazine,
-                publication_slot_id,
-                service_group_id,
-                state: "available",
-            },
-            { transaction }
+        await createPreferentialSlotAtPosition(
+            publicationId,
+            magazineId,
+            position_in_magazine,
+            options
         );
     }
+}
+
+/**
+ * Lazily creates missing `publication_preferential_slots` rows (and backing
+ * `publication_slots_db` rows) for magazine-linked publications.
+ *
+ * @param {{ publicationId: string, magazineId: string }} params
+ * @param {{ transaction?: import("sequelize").Transaction }} options
+ * @returns {Promise<boolean>} false when ids are missing
+ */
+export async function ensurePreferentialSlotsForMagazinePublication(params, options = {}) {
+    const publicationId = String(params.publicationId ?? "").trim();
+    const magazineId = String(params.magazineId ?? "").trim();
+    if (!publicationId || !magazineId) return false;
+
+    const { transaction } = options;
+    const existing = await PublicationPreferentialSlotDbModel.findAll({
+        where: { publication_id: publicationId },
+        transaction,
+    });
+    const existingPositions = new Set(
+        existing.map((row) => String(row.get("position_in_magazine") ?? "").trim())
+    );
+
+    for (const position_in_magazine of MAGAZINE_PREFERENTIAL_POSITIONS) {
+        if (existingPositions.has(position_in_magazine)) continue;
+        await createPreferentialSlotAtPosition(
+            publicationId,
+            magazineId,
+            position_in_magazine,
+            options
+        );
+    }
+
+    return true;
+}
+
+/**
+ * Creates only the requested canonical positions that are still missing.
+ *
+ * @param {{ publicationId: string, magazineId: string, positions?: string[] }} params
+ * @param {{ transaction?: import("sequelize").Transaction }} options
+ */
+export async function createMissingPreferentialSlotsAtPositions(params, options = {}) {
+    const publicationId = String(params.publicationId ?? "").trim();
+    const magazineId = String(params.magazineId ?? "").trim();
+    const requested = Array.isArray(params.positions) ? params.positions : [];
+    if (!publicationId || !magazineId) {
+        return { created: [], skipped: requested.map((p) => String(p ?? "").trim()).filter(Boolean) };
+    }
+
+    const allowed = new Set(MAGAZINE_PREFERENTIAL_POSITIONS);
+    const normalized = [
+        ...new Set(
+            requested
+                .map((position) => String(position ?? "").trim())
+                .filter((position) => position && allowed.has(position))
+        ),
+    ];
+    if (!normalized.length) {
+        return { created: [], skipped: [] };
+    }
+
+    const { transaction } = options;
+    const existing = await PublicationPreferentialSlotDbModel.findAll({
+        where: { publication_id: publicationId },
+        transaction,
+    });
+    const existingPositions = new Set(
+        existing.map((row) => String(row.get("position_in_magazine") ?? "").trim())
+    );
+
+    const created = [];
+    const skipped = [];
+    for (const position_in_magazine of normalized) {
+        if (existingPositions.has(position_in_magazine)) {
+            skipped.push(position_in_magazine);
+            continue;
+        }
+        await createPreferentialSlotAtPosition(
+            publicationId,
+            magazineId,
+            position_in_magazine,
+            options
+        );
+        existingPositions.add(position_in_magazine);
+        created.push(position_in_magazine);
+    }
+
+    return { created, skipped };
 }

@@ -6,6 +6,11 @@ export class NewsletterService {
     return response.data;
   }
 
+  static async createNewsletterCampaign(payload) {
+    const response = await apiClient.post("/api/v1/newsletter-campaigns", payload ?? {});
+    return response.data;
+  }
+
   static async updateNewsletterCampaign(idCampaign, patch) {
     const response = await apiClient.put(
       `/api/v1/newsletter-campaigns/${encodeURIComponent(idCampaign)}`,
@@ -76,6 +81,29 @@ export class NewsletterService {
     return response.data;
   }
 
+  static async getNewsletterRelatedProjects(idNewsletter) {
+    const response = await apiClient.get(
+      `/api/v1/newsletters/${encodeURIComponent(idNewsletter)}/related-projects`
+    );
+    return response.data;
+  }
+
+  static async createNewsletterContentBlocks(idNewsletter, blocks) {
+    const response = await apiClient.post(
+      `/api/v1/newsletters/${encodeURIComponent(idNewsletter)}/blocks`,
+      { blocks }
+    );
+    return response.data;
+  }
+
+  static async reorderNewsletterContentBlocks(idNewsletter, orderedBlockIds) {
+    const response = await apiClient.put(
+      `/api/v1/newsletters/${encodeURIComponent(idNewsletter)}/blocks`,
+      { orderedBlockIds }
+    );
+    return response.data;
+  }
+
   static async updateNewsletterStatus(idNewsletter, { status, userNewsletterListId }) {
     const response = await apiClient.put(
       `/api/v1/newsletters/${encodeURIComponent(idNewsletter)}`,
@@ -83,6 +111,14 @@ export class NewsletterService {
         status,
         userNewsletterListId: userNewsletterListId ?? null,
       }
+    );
+    return response.data;
+  }
+
+  static async updateNewsletter(idNewsletter, patch = {}) {
+    const response = await apiClient.put(
+      `/api/v1/newsletters/${encodeURIComponent(idNewsletter)}`,
+      patch ?? {}
     );
     return response.data;
   }

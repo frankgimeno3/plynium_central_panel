@@ -36,7 +36,7 @@ interface MoveContentTypeModalProps {
    * API call itself; the parent owns the request and refresh logic. The
    * promise's resolution closes the modal automatically.
    */
-  onConfirm: (targetPosition: string) => Promise<void>;
+  onConfirm: (targetPosition: string, displacedPosition?: string | null) => Promise<void>;
 }
 
 const ALLOWED_TARGET_POSITIONS: { value: string; label: string }[] = [
@@ -58,6 +58,8 @@ const MoveContentTypeModal: FC<MoveContentTypeModalProps> = ({
   onConfirm,
 }) => {
   const [target, setTarget] = useState<string>("");
+  const [manualRepositionEnabled, setManualRepositionEnabled] = useState(false);
+  const [displacedTarget, setDisplacedTarget] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,10 +87,18 @@ const MoveContentTypeModal: FC<MoveContentTypeModalProps> = ({
         (p) => p.value === initialTarget
       );
       setTarget(allowed && initialTarget ? initialTarget : "");
+      setManualRepositionEnabled(false);
+      setDisplacedTarget("");
       setError(null);
       setSubmitting(false);
     }
   }, [open, contentType, initialTarget]);
+
+  useEffect(() => {
+    if (!open) return;
+    setManualRepositionEnabled(false);
+    setDisplacedTarget("");
+  }, [open, target]);
 
   useEffect(() => {
     if (!open) return;
@@ -98,6 +108,25 @@ const MoveContentTypeModal: FC<MoveContentTypeModalProps> = ({
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [open, onClose, submitting]);
+
+  const reservedConflict = useMemo(() => {
+    if (!target || target === currentPosition) return null;
+    const targetSlot = slotsByPosition.get(target);
+    const targetType = String(targetSlot?.slot_content_type ?? "")
+      .trim()
+      .toLowerCase();
+    if (targetType !== "summary" && targetType !== "index") return null;
+    if (targetType === contentType) return null;
+    return {
+      otherType: targetType as MovableContentType,
+      otherLabel: targetType === "summary" ? "Summary" : "Index",
+    };
+  }, [target, currentPosition, contentType, slotsByPosition]);
+
+  const displacedTargetOptions = useMemo(
+    () => ALLOWED_TARGET_POSITIONS.filter((position) => position.value !== target),
+    [target]
+  );
 
   const conflictMessage = useMemo<{
     tone: "info" | "warning" | "error" | "success";
@@ -110,26 +139,36 @@ const MoveContentTypeModal: FC<MoveContentTypeModalProps> = ({
         text: `${readableLabel(contentType)} is already at ${target}. Nothing to change.`,
       };
     }
-    const targetSlot = slotsByPosition.get(target);
-    const targetType = String(targetSlot?.slot_content_type ?? "")
-      .trim()
-      .toLowerCase();
-    if (targetType === "summary" || targetType === "index") {
-      const otherLabel =
-        targetType === "summary" ? "Summary" : "Index";
+    if (reservedConflict) {
+      if (manualRepositionEnabled) {
+        if (!displacedTarget) {
+          return {
+            tone: "warning",
+            text: `Conflict: ${target} is currently reserved for the ${reservedConflict.otherLabel}. Choose where to move the ${reservedConflict.otherLabel} before confirming.`,
+          };
+        }
+        return {
+          tone: "warning",
+          text: `Conflict: ${readableLabel(contentType)} will move to ${target} and the ${reservedConflict.otherLabel} will move to ${displacedTarget}.${
+            currentPosition
+              ? ` ${currentPosition} will become an advert.`
+              : ""
+          }`,
+        };
+      }
       if (currentPosition) {
         return {
           tone: "warning",
-          text: `Conflict: ${target} is currently reserved for the ${otherLabel}. Confirming will swap positions — ${readableLabel(
+          text: `Conflict: ${target} is currently reserved for the ${reservedConflict.otherLabel}. Confirming will swap positions — ${readableLabel(
             contentType
-          )} moves to ${target} and the ${otherLabel} moves to ${currentPosition}.`,
+          )} moves to ${target} and the ${reservedConflict.otherLabel} moves to ${currentPosition}.`,
         };
       }
       return {
         tone: "warning",
-        text: `Conflict: ${target} is currently reserved for the ${otherLabel}. Confirming will replace it with ${readableLabel(
+        text: `Conflict: ${target} is currently reserved for the ${reservedConflict.otherLabel}. Confirming will replace it with ${readableLabel(
           contentType
-        )} (the ${otherLabel} will be cleared and become an advert).`,
+        )} (the ${reservedConflict.otherLabel} will be cleared and become an advert).`,
       };
     }
     if (currentPosition) {
@@ -146,17 +185,32 @@ const MoveContentTypeModal: FC<MoveContentTypeModalProps> = ({
         contentType
       )}.`,
     };
-  }, [target, currentPosition, contentType, slotsByPosition]);
+  }, [
+    target,
+    currentPosition,
+    contentType,
+    reservedConflict,
+    manualRepositionEnabled,
+    displacedTarget,
+  ]);
 
   const canConfirm =
-    !submitting && !!target && target !== currentPosition;
+    !submitting &&
+    !!target &&
+    target !== currentPosition &&
+    (!reservedConflict ||
+      !manualRepositionEnabled ||
+      (!!displacedTarget && displacedTarget !== target));
 
   const handleConfirm = useCallback(async () => {
     if (!canConfirm) return;
     setSubmitting(true);
     setError(null);
     try {
-      await onConfirm(target);
+      await onConfirm(
+        target,
+        reservedConflict && manualRepositionEnabled ? displacedTarget : null
+      );
       onClose();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to move location.";
@@ -164,7 +218,15 @@ const MoveContentTypeModal: FC<MoveContentTypeModalProps> = ({
     } finally {
       setSubmitting(false);
     }
-  }, [canConfirm, onConfirm, target, onClose]);
+  }, [
+    canConfirm,
+    onConfirm,
+    target,
+    reservedConflict,
+    manualRepositionEnabled,
+    displacedTarget,
+    onClose,
+  ]);
 
   if (!open) return null;
 
@@ -251,6 +313,74 @@ const MoveContentTypeModal: FC<MoveContentTypeModalProps> = ({
               }
             >
               {conflictMessage.text}
+            </div>
+          ) : null}
+
+          {reservedConflict ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm text-gray-700">
+                  Reposition the {reservedConflict.otherLabel} manually?
+                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-sm ${
+                      manualRepositionEnabled ? "text-gray-500" : "font-medium text-gray-900"
+                    }`}
+                  >
+                    No
+                  </span>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={manualRepositionEnabled}
+                    aria-label={`Reposition the ${reservedConflict.otherLabel} manually`}
+                    onClick={() => setManualRepositionEnabled((prev) => !prev)}
+                    disabled={submitting}
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50 ${
+                      manualRepositionEnabled ? "bg-blue-600" : "bg-gray-200"
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition ${
+                        manualRepositionEnabled ? "translate-x-5" : "translate-x-1"
+                      }`}
+                    />
+                  </button>
+                  <span
+                    className={`text-sm ${
+                      manualRepositionEnabled ? "font-medium text-gray-900" : "text-gray-500"
+                    }`}
+                  >
+                    Yes
+                  </span>
+                </div>
+              </div>
+
+              {manualRepositionEnabled ? (
+                <div>
+                  <label
+                    htmlFor="move-content-type-displaced-target"
+                    className="mb-1 block text-xs uppercase tracking-wide text-gray-500"
+                  >
+                    Move {reservedConflict.otherLabel} to
+                  </label>
+                  <select
+                    id="move-content-type-displaced-target"
+                    value={displacedTarget}
+                    onChange={(event) => setDisplacedTarget(event.target.value)}
+                    className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    disabled={submitting}
+                  >
+                    <option value="">Select page for the {reservedConflict.otherLabel}…</option>
+                    {displacedTargetOptions.map((position) => (
+                      <option key={position.value} value={position.value}>
+                        {position.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : null}
             </div>
           ) : null}
 

@@ -9,9 +9,9 @@ export const runtime = "nodejs";
 
 /**
  * Attribute set used as a fallback when one of the new cover-header columns
- * (publication_header_domain / red_box_header / red_box_body) is not yet
- * present in the RDS schema. Lets the API keep responding while migration
- * 032 is pending.
+ * (publication_header_domain / red_box_header / red_box_body) or the special
+ * edition subtitle column is not yet present in the RDS schema. Lets the API
+ * keep responding while migrations 032 / 033 are pending.
  */
 const PUBLICATION_ATTRIBUTES_WITHOUT_COVER_HEADER = [
   "publication_id",
@@ -35,6 +35,7 @@ const COVER_HEADER_COLUMN_NAMES = [
   "publication_header_domain",
   "red_box_header",
   "red_box_body",
+  "special_edition_subtitle",
 ];
 
 function isMissingCoverHeaderColumn(error) {
@@ -63,6 +64,7 @@ function toApiPublication(row) {
     real_publication_month_date: p.real_publication_month_date ?? null,
     publication_materials_deadline: p.publication_materials_deadline ?? null,
     is_special_edition: Boolean(p.is_special_edition),
+    special_edition_subtitle: p.special_edition_subtitle ?? "",
     publication_theme: p.publication_theme ?? "",
     publication_status: p.publication_status ?? "draft",
     publication_format: p.publication_format ?? "flipbook",
@@ -95,6 +97,7 @@ const putSchema = Joi.object({
   real_publication_month_date: Joi.string().allow(null, "").optional(), // YYYY-MM-DD
   publication_materials_deadline: Joi.string().allow(null, "").optional(), // YYYY-MM-DD
   is_special_edition: Joi.boolean().optional(),
+  special_edition_subtitle: Joi.string().allow("").max(255).optional(),
   publication_theme: Joi.string().allow("").optional(),
   publication_status: Joi.string().valid("planned", "draft", "published").optional(),
   publication_format: Joi.string().valid("flipbook", "informer").optional(),
@@ -146,6 +149,9 @@ export const PUT = createEndpoint(
     if (body.real_publication_month_date !== undefined) updates.real_publication_month_date = body.real_publication_month_date || null;
     if (body.publication_materials_deadline !== undefined) updates.publication_materials_deadline = body.publication_materials_deadline || null;
     if (body.is_special_edition !== undefined) updates.is_special_edition = Boolean(body.is_special_edition);
+    if (body.special_edition_subtitle !== undefined) {
+      updates.special_edition_subtitle = String(body.special_edition_subtitle ?? "");
+    }
     if (body.publication_theme !== undefined) updates.publication_theme = String(body.publication_theme ?? "");
     if (body.publication_status !== undefined) updates.publication_status = String(body.publication_status);
     if (body.publication_format !== undefined) updates.publication_format = String(body.publication_format);

@@ -30,6 +30,7 @@ type FormState = {
   name: string;
   description: string;
   portalCode: string;
+  newsletterType: "main" | "specific";
   contentTheme: string;
   frequency: string;
   startDate: string;
@@ -41,11 +42,12 @@ const initialForm: FormState = {
   name: "",
   description: "",
   portalCode: "plynium",
+  newsletterType: "main",
   contentTheme: "",
   frequency: "quarterly",
   startDate: "",
   endDate: "",
-  status: "active",
+  status: "draft",
 };
 
 const CreateNewsletterCampaignPage: FC = () => {
@@ -53,6 +55,8 @@ const CreateNewsletterCampaignPage: FC = () => {
   const [form, setForm] = useState<FormState>(initialForm);
   const [campaigns, setCampaigns] = useState<NewsletterCampaign[]>([]);
   const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const breadcrumbs = [
     { label: "Production", href: "/logged/pages/production/services" },
@@ -87,11 +91,29 @@ const CreateNewsletterCampaignPage: FC = () => {
       cancelled = true;
     };
   }, []);
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.name.trim() || !form.startDate || !form.endDate) return;
-    // No backend: just redirect. In a real app you would POST the campaign.
-    router.push(BASE);
+    if (!form.name.trim() || !form.frequency.trim() || submitting) return;
+
+    const id = nextCampaignId(campaigns);
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      const created = await NewsletterService.createNewsletterCampaign({
+        id,
+        name: form.name.trim(),
+        description: form.description,
+        portalCode: form.portalCode.trim(),
+        newsletterType: form.newsletterType,
+        contentTheme: form.contentTheme,
+        frequency: form.frequency,
+        status: form.status,
+      });
+      router.push(`${BASE}/campaigns/${created.id}`);
+    } catch (error: unknown) {
+      setSubmitError(error instanceof Error ? error.message : "Failed to create campaign");
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -101,6 +123,11 @@ const CreateNewsletterCampaignPage: FC = () => {
           <div className="bg-white rounded-b-lg overflow-hidden">
             <div className="p-6">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">New newsletter campaign</h2>
+        {submitError ? (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {submitError}
+          </div>
+        ) : null}
         <form onSubmit={handleSubmit} className="max-w-2xl space-y-4">
           <div>
             <label htmlFor="camp-name" className="block text-sm font-medium text-gray-700 mb-1">
@@ -157,22 +184,43 @@ const CreateNewsletterCampaignPage: FC = () => {
               />
             </div>
           </div>
-          <div>
-            <label htmlFor="camp-frequency" className="block text-sm font-medium text-gray-700 mb-1">
-              Frequency
-            </label>
-            <select
-              id="camp-frequency"
-              value={form.frequency}
-              onChange={(e) => setForm((f) => ({ ...f, frequency: e.target.value }))}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-            >
-              {FREQUENCY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label htmlFor="camp-type" className="block text-sm font-medium text-gray-700 mb-1">
+                Campaign type
+              </label>
+              <select
+                id="camp-type"
+                value={form.newsletterType}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    newsletterType: e.target.value === "specific" ? "specific" : "main",
+                  }))
+                }
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="main">Main</option>
+                <option value="specific">Specific</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="camp-frequency" className="block text-sm font-medium text-gray-700 mb-1">
+                Frequency
+              </label>
+              <select
+                id="camp-frequency"
+                value={form.frequency}
+                onChange={(e) => setForm((f) => ({ ...f, frequency: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+              >
+                {FREQUENCY_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -185,7 +233,6 @@ const CreateNewsletterCampaignPage: FC = () => {
                 value={form.startDate}
                 onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                required
               />
             </div>
             <div>
@@ -198,7 +245,6 @@ const CreateNewsletterCampaignPage: FC = () => {
                 value={form.endDate}
                 onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
                 className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-                required
               />
             </div>
           </div>
@@ -212,6 +258,7 @@ const CreateNewsletterCampaignPage: FC = () => {
               onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
             >
+              <option value="draft">Draft</option>
               <option value="active">Active</option>
               <option value="finished">Finished</option>
             </select>
@@ -226,14 +273,16 @@ const CreateNewsletterCampaignPage: FC = () => {
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+              disabled={submitting || !form.name.trim() || !form.frequency.trim()}
+              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
             >
-              Create campaign
+              {submitting ? "Creating…" : "Create campaign"}
             </button>
           </div>
         </form>
         <p className="mt-4 text-xs text-gray-500">
-          New campaign ID would be: {loading ? "…" : nextCampaignId(campaigns)} (no persistence in this demo).
+          New campaign ID: {loading ? "…" : nextCampaignId(campaigns)}. A default newsletter layout template is created
+          with the campaign.
         </p>
             </div>
           </div>

@@ -2,12 +2,17 @@ import { Op, Transaction } from "sequelize";
 import PublicationPreferentialSlotDbModel from "../publication_workflow/PublicationPreferentialSlotDbModel.js";
 import PublicationSlotDbModel from "../publication_workflow/PublicationSlotDbModel.js";
 import ProposalDbModel from "../proposal_db/ProposalDbModel.js";
+import ProposalServiceLineDbModel from "../proposal_db/ProposalServiceLineDbModel.js";
+import ServiceDbModel from "../service_db/ServiceDbModel.js";
+import AgentDbModel from "../agent_db/AgentDbModel.js";
 import CustomerDbModel from "../customer_db/CustomerDbModel.js";
 import {
     MAGAZINE_PREFERENTIAL_POSITIONS,
     displayTitleForPreferentialPosition,
     defaultSlotContentTypeForMagazinePreferentialPosition,
+    ensurePreferentialSlotsForMagazinePublication,
 } from "./publicationPreferentialSlots.js";
+import PublicationModel from "../publication/PublicationModel.js";
 import "../../database/models.js";
 
 function httpError(statusCode, message) {
@@ -117,6 +122,29 @@ export async function listPreferentialSlotsForPublication(publication_id, opts =
     }
     const pid = String(publication_id ?? "").trim();
     if (!pid) return { slots: [] };
+    const ensureMissing = opts.ensureMissing !== false;
+
+    const publication = await PublicationModel.findOne({
+        where: { publication_id: pid },
+        attributes: ["publication_id", "magazine_id"],
+    });
+    const magazineId =
+        publication?.get("magazine_id") != null
+            ? String(publication.get("magazine_id")).trim()
+            : "";
+    if (ensureMissing && magazineId) {
+        try {
+            await ensurePreferentialSlotsForMagazinePublication({
+                publicationId: pid,
+                magazineId,
+            });
+        } catch (ensureErr) {
+            console.warn(
+                "ensurePreferentialSlotsForMagazinePublication failed:",
+                ensureErr?.message ?? ensureErr
+            );
+        }
+    }
 
     const rows = await PublicationPreferentialSlotDbModel.findAll({
         where: { publication_id: pid },
@@ -163,25 +191,118 @@ export async function listPreferentialSlotsForPublication(publication_id, opts =
     }
 
     const proposalIds = [...proposalSet];
-    /** @type {Map<string, { id_proposal: string, id_customer: string | null, status: string | null, title: string | null }>} */
+    /**
+     * @type {Map<string, {
+     *   id_proposal: string,
+     *   id_customer: string | null,
+     *   status: string | null,
+     *   title: string | null,
+     *   amount_eur: number | null,
+     *   general_discount_pct: number | null,
+     *   agent_id: string | null,
+     * }>}
+     */
     const proposalsById = new Map();
+    /** @type {Map<string, { full_name: string, unit_price: number }>} */
+    const serviceCatalog = new Map();
+    /** @type {Map<string, Array<{ proposal_service_line_id: string, service_id: string | null, proposal_service_custom_name: string, proposal_service_discount: number }>>} */
+    const serviceLinesByProposalId = new Map();
+    /** @type {Map<string, string>} */
+    const agentNameById = new Map();
+
     if (proposalIds.length) {
         const props = await ProposalDbModel.findAll({
             where: { id_proposal: { [Op.in]: proposalIds } },
-            attributes: ["id_proposal", "id_customer", "status", "title"],
+            attributes: [
+                "id_proposal",
+                "id_customer",
+                "status",
+                "title",
+                "amount_eur",
+                "general_discount_pct",
+                "agent",
+            ],
         });
+        const agentIdsSet = new Set();
         for (const p of props) {
             const pl = p.get({ plain: true });
             const id = String(pl.id_proposal ?? "").trim();
             if (!id) continue;
             const cid = pl.id_customer != null ? String(pl.id_customer).trim() : null;
             if (cid) customerSet.add(cid);
+            const agentId = pl.agent != null ? String(pl.agent).trim() : null;
+            if (agentId) agentIdsSet.add(agentId);
             proposalsById.set(id, {
                 id_proposal: id,
                 id_customer: cid,
                 status: pl.status != null ? String(pl.status) : null,
                 title: pl.title != null ? String(pl.title) : null,
+                amount_eur: pl.amount_eur != null ? Number(pl.amount_eur) : null,
+                general_discount_pct:
+                    pl.general_discount_pct != null ? Number(pl.general_discount_pct) : null,
+                agent_id: agentId || null,
             });
+        }
+
+        if (agentIdsSet.size) {
+            const agents = await AgentDbModel.findAll({
+                where: { id_agent: { [Op.in]: [...agentIdsSet] } },
+                attributes: ["id_agent", "name"],
+            });
+            for (const a of agents) {
+                const ap = a.get({ plain: true });
+                const aid = String(ap.id_agent ?? "").trim();
+                if (aid) agentNameById.set(aid, ap.name != null ? String(ap.name).trim() : "");
+            }
+        }
+
+        const lineRows = await ProposalServiceLineDbModel.findAll({
+            where: { proposal_id: { [Op.in]: proposalIds } },
+            attributes: [
+                "proposal_service_line_id",
+                "proposal_id",
+                "service_id",
+                "proposal_service_custom_name",
+                "proposal_service_discount",
+            ],
+        });
+        const serviceIdsSet = new Set();
+        for (const lr of lineRows) {
+            const lp = lr.get({ plain: true });
+            const propId = String(lp.proposal_id ?? "").trim();
+            if (!propId) continue;
+            const sid = lp.service_id != null ? String(lp.service_id).trim() : "";
+            if (sid) serviceIdsSet.add(sid);
+            if (!serviceLinesByProposalId.has(propId)) {
+                serviceLinesByProposalId.set(propId, []);
+            }
+            serviceLinesByProposalId.get(propId).push({
+                proposal_service_line_id:
+                    lp.proposal_service_line_id != null ? String(lp.proposal_service_line_id) : "",
+                service_id: sid || null,
+                proposal_service_custom_name:
+                    lp.proposal_service_custom_name != null
+                        ? String(lp.proposal_service_custom_name)
+                        : "",
+                proposal_service_discount:
+                    lp.proposal_service_discount != null ? Number(lp.proposal_service_discount) : 0,
+            });
+        }
+
+        if (serviceIdsSet.size) {
+            const svc = await ServiceDbModel.findAll({
+                where: { service_id: { [Op.in]: [...serviceIdsSet] } },
+                attributes: ["service_id", "service_full_name", "service_unit_price"],
+            });
+            for (const s of svc) {
+                const sp = s.get({ plain: true });
+                const sid = String(sp.service_id ?? "").trim();
+                if (!sid) continue;
+                serviceCatalog.set(sid, {
+                    full_name: sp.service_full_name != null ? String(sp.service_full_name) : "",
+                    unit_price: sp.service_unit_price != null ? Number(sp.service_unit_price) : 0,
+                });
+            }
         }
     }
 
@@ -238,12 +359,37 @@ export async function listPreferentialSlotsForPublication(publication_id, opts =
         const proposal_summaries = pids.map((propId) => {
             const pr = proposalsById.get(propId);
             const cid = pr?.id_customer ?? null;
+            const linesRaw = serviceLinesByProposalId.get(propId) ?? [];
+            const service_lines = linesRaw.map((l) => {
+                const cat = l.service_id ? serviceCatalog.get(l.service_id) : null;
+                const unit_price = cat?.unit_price != null ? Number(cat.unit_price) : 0;
+                const discountPct = Number.isFinite(l.proposal_service_discount)
+                    ? Number(l.proposal_service_discount)
+                    : 0;
+                const line_value_eur = Number(
+                    (unit_price * (1 - discountPct / 100)).toFixed(2)
+                );
+                return {
+                    proposal_service_line_id: l.proposal_service_line_id,
+                    service_id: l.service_id,
+                    service_full_name: cat?.full_name ?? null,
+                    proposal_service_custom_name: l.proposal_service_custom_name,
+                    service_unit_price: unit_price,
+                    proposal_service_discount_pct: discountPct,
+                    line_value_eur,
+                };
+            });
             return {
                 proposal_id: propId,
                 customer_id: cid,
                 customer_name: cid ? customerNameById.get(cid) ?? null : null,
                 proposal_status: pr?.status ?? null,
                 title: pr?.title ?? null,
+                proposal_amount_eur: pr?.amount_eur ?? null,
+                general_discount_pct: pr?.general_discount_pct ?? null,
+                agent_id: pr?.agent_id ?? null,
+                agent_name: pr?.agent_id ? agentNameById.get(pr.agent_id) ?? null : null,
+                service_lines,
             };
         });
 

@@ -62,7 +62,10 @@ const MagazinesPage: FC = () => {
     setPageMeta({
       pageTitle: "Magazine titles",
       breadcrumbs,
-      buttons: [{ label: "Create magazine", href: "/logged/pages/production/publications/magazines/create" }],
+      buttons: [
+        { label: "Create magazine", href: "/logged/pages/production/publications/magazines/create" },
+        { label: "Issue Bulk Creation", href: "/logged/pages/production/publications/issues/bulk-creation" },
+      ],
     });
   }, [setPageMeta, breadcrumbs]);
 

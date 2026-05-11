@@ -241,6 +241,13 @@ const Leftnav: FC<LeftnavProps> = () => {
                       label="Issues"
                       active={pathname.startsWith("/logged/pages/production/publications/issues")}
                     />
+                    <NavLink
+                      href="/logged/pages/production/publications/preferential-pages"
+                      label="Preferential pages"
+                      active={pathname.startsWith(
+                        "/logged/pages/production/publications/preferential-pages"
+                      )}
+                    />
                   </div>
                 )}
               </div>

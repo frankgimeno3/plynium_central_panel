@@ -47,10 +47,13 @@ function toApi(publication, slot, content) {
   const objects = Array.isArray(c?.slot_content_object_array)
     ? c.slot_content_object_array
     : [];
+  // Honour both the new Contents Manager shape (`advert_media_src`) and the
+  // legacy `url` field so existing rows keep rendering without a backfill.
+  const head = objects[0] && typeof objects[0] === "object" ? objects[0] : null;
   const url =
-    objects.length > 0 && objects[0] && typeof objects[0].url === "string"
-      ? objects[0].url
-      : (p?.publication_main_image_url || "");
+    (head && typeof head.advert_media_src === "string" && head.advert_media_src) ||
+    (head && typeof head.url === "string" && head.url) ||
+    (p?.publication_main_image_url || "");
   return {
     publication_id: p?.publication_id ?? null,
     publication_slot_id: s?.publication_slot_id ?? null,
@@ -126,7 +129,17 @@ export const PUT = createEndpoint(
       }
 
       const slotId = slot.get("publication_slot_id");
-      const objects = [{ url: imageUrl }];
+      // New canonical Contents Manager shape with the legacy `url` key kept
+      // alongside `advert_media_src` for backward compatibility with older
+      // readers (cover thumbnail, etc.).
+      const objects = [
+        {
+          position: 1,
+          publication_article_chunk_id: null,
+          advert_media_src: imageUrl,
+          url: imageUrl,
+        },
+      ];
 
       const existingContent = await PublicationSlotContentDbModel.findOne({
         attributes: SLOT_CONTENT_ATTRIBUTES_WITHOUT_ARTICLE,

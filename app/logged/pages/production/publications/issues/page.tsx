@@ -122,6 +122,7 @@ const IssuesPage: FC = () => {
         { label: "Publications", href: `${BASE}/issues` },
         { label: "Issues" },
       ],
+      buttons: [{ label: "Issue Bulk Creation", href: `${BASE}/issues/bulk-creation` }],
     });
   }, [setPageMeta]);
 
@@ -162,7 +163,7 @@ const IssuesPage: FC = () => {
   const rowClass = "cursor-pointer hover:bg-blue-50/80 transition-colors";
 
   return (
-    <PageContentSection>
+    <PageContentSection className="pt-4">
       <div className="flex flex-col w-full">
         <div className="flex border-b border-gray-200 bg-white rounded-t-lg overflow-hidden px-2">
           {portalTabs.map((p) => (

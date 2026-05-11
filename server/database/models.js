@@ -36,6 +36,8 @@ import NotificationAdvertisementDbModel from "../features/notification_db/Notifi
 import PublicationSlotDbModel from "../features/publication_workflow/PublicationSlotDbModel.js";
 import PublicationSlotContentDbModel from "../features/publication_workflow/PublicationSlotContentDbModel.js";
 import PublicationPreferentialSlotDbModel from "../features/publication_workflow/PublicationPreferentialSlotDbModel.js";
+import PublicationArticleDbModel from "../features/publication_workflow/PublicationArticleDbModel.js";
+import PublicationArticleChunkDbModel from "../features/publication_workflow/PublicationArticleChunkDbModel.js";
 import OfferedPreferentialPageDbModel from "../features/publication_workflow/OfferedPreferentialPageDbModel.js";
 import {defineAssociations} from "./associations.js";
 
@@ -168,6 +170,9 @@ PublicationModel.init({
     publication_main_image_url: { type: DataTypes.STRING(512), allowNull: true },
     publication_edition_name: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "" },
     is_special_edition: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    // Optional tagline shown under the magazine subtitle on the cover preview
+    // exclusively when is_special_edition is true.
+    special_edition_subtitle: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "" },
     publication_theme: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "" },
     publication_status: { type: DataTypes.STRING(64), allowNull: false, defaultValue: "draft" },
     publication_format: { type: DataTypes.STRING(32), allowNull: false, defaultValue: "flipbook" },
@@ -1273,6 +1278,76 @@ PublicationSlotContentDbModel.init({
     ]
 });
 
+PublicationArticleDbModel.init({
+    publication_article_id: {
+        type: DataTypes.UUID,
+        primaryKey: true,
+        defaultValue: DataTypes.UUIDV4
+    },
+    publication_id: { type: DataTypes.STRING(255), allowNull: false },
+    article_id: { type: DataTypes.TEXT, allowNull: false },
+    publication_slots_id_array: {
+        type: DataTypes.ARRAY(DataTypes.INTEGER),
+        allowNull: false,
+        defaultValue: []
+    },
+    desired_page_count: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        defaultValue: 1,
+        validate: { min: 1 }
+    }
+}, {
+    sequelize,
+    modelName: "publication_article",
+    underscored: true,
+    tableName: "publication_articles",
+    timestamps: true,
+    createdAt: "publication_article_created_at",
+    updatedAt: "publication_article_updated_at",
+    indexes: [
+        { fields: ["publication_id"] },
+        { fields: ["article_id"] },
+        { unique: true, fields: ["publication_id", "article_id"], name: "publication_articles_pub_article_uniq" }
+    ]
+});
+
+PublicationArticleChunkDbModel.init({
+    publication_article_chunk_id: {
+        type: DataTypes.UUID,
+        primaryKey: true,
+        defaultValue: DataTypes.UUIDV4
+    },
+    publication_article_id: { type: DataTypes.UUID, allowNull: false },
+    publication_id: { type: DataTypes.STRING(255), allowNull: false },
+    publication_slot_content_id: { type: DataTypes.INTEGER, allowNull: true },
+    publication_article_chunk_format: {
+        type: DataTypes.STRING(64),
+        allowNull: false,
+        defaultValue: "only_text",
+        validate: {
+            isIn: [["title", "subtitle", "only_text", "only_image", "text_image", "image_text"]]
+        }
+    },
+    chunk_html: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
+    chunk_position: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    original_article_content_id: { type: DataTypes.STRING(255), allowNull: true }
+}, {
+    sequelize,
+    modelName: "publication_article_chunk",
+    underscored: true,
+    tableName: "publication_article_chunks",
+    timestamps: true,
+    createdAt: "publication_article_chunk_created_at",
+    updatedAt: "publication_article_chunk_updated_at",
+    indexes: [
+        { fields: ["publication_article_id"] },
+        { fields: ["publication_id"] },
+        { fields: ["publication_slot_content_id"] },
+        { fields: ["publication_slot_content_id", "chunk_position"] }
+    ]
+});
+
 OfferedPreferentialPageDbModel.init({
     offered_page_id: {
         type: DataTypes.UUID,
@@ -1355,5 +1430,5 @@ PublicationSlotContentDbModel.belongsTo(PublicationModel, { foreignKey: "publica
 defineAssociations();
 }
 
-export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceGroupDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, NotificationAdvertisementDbModel, PublicationSlotDbModel, PublicationSlotContentDbModel, PublicationPreferentialSlotDbModel, OfferedPreferentialPageDbModel };
+export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ProposalServiceLineDbModel, ProposalPaymentDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceGroupDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, NotificationAdvertisementDbModel, PublicationSlotDbModel, PublicationSlotContentDbModel, PublicationPreferentialSlotDbModel, PublicationArticleDbModel, PublicationArticleChunkDbModel, OfferedPreferentialPageDbModel };
 

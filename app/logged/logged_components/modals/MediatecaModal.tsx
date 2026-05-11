@@ -57,7 +57,7 @@ function formatFolderLabel(segment: string): string {
 interface MediatecaModalProps {
   open: boolean;
   onClose: () => void;
-  onSelectImage: (imageUrl: string) => void;
+  onSelectImage: (imageUrl: string, content?: Pick<MediatecaContent, "id" | "name">) => void;
   initialPath?: string;
 }
 
@@ -216,7 +216,10 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
 
   const handleUseImage = () => {
     if (!selectedContent || selectedContent.content_type !== "image") return;
-    onSelectImage(selectedContent.src);
+    onSelectImage(selectedContent.src, {
+      id: selectedContent.id,
+      name: selectedContent.name,
+    });
     onClose();
   };
 

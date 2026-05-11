@@ -3,9 +3,11 @@ import { NextResponse } from "next/server";
 import Joi from "joi";
 import { Op } from "sequelize";
 import {
+    PublicationModel,
     PublicationPreferentialSlotDbModel,
     PublicationSlotDbModel,
 } from "../../../../../../../server/database/models.js";
+import { ensurePreferentialSlotsForMagazinePublication } from "../../../../../../../server/features/publication/publicationPreferentialSlots.js";
 import "../../../../../../../server/database/models.js";
 
 export const runtime = "nodejs";
@@ -27,6 +29,9 @@ const bodySchema = Joi.object({
     target_position: Joi.string()
         .valid(...ALLOWED_TARGET_POSITIONS)
         .required(),
+    displaced_position: Joi.string()
+        .valid(...ALLOWED_TARGET_POSITIONS)
+        .optional(),
 });
 
 function getPublicationIdFromRequest(request) {
@@ -61,6 +66,22 @@ export const POST = createEndpoint(
         }
 
         const result = await sequelize.transaction(async (transaction) => {
+            const publication = await PublicationModel.findOne({
+                where: { publication_id: publicationId },
+                transaction,
+                lock: transaction.LOCK.UPDATE,
+            });
+            const magazineId =
+                publication?.get("magazine_id") != null
+                    ? String(publication.get("magazine_id")).trim()
+                    : "";
+            if (magazineId) {
+                await ensurePreferentialSlotsForMagazinePublication(
+                    { publicationId, magazineId },
+                    { transaction }
+                );
+            }
+
             const prefRows = await PublicationPreferentialSlotDbModel.findAll({
                 where: { publication_id: publicationId },
                 transaction,
@@ -140,6 +161,113 @@ export const POST = createEndpoint(
             )
                 .trim()
                 .toLowerCase();
+
+            if (body.displaced_position) {
+                if (body.displaced_position === body.target_position) {
+                    return {
+                        status: 400,
+                        payload: {
+                            message:
+                                "The displaced position must be different from the target position.",
+                        },
+                    };
+                }
+                if (
+                    !RESERVED_CONTENT_TYPES.has(targetType) ||
+                    targetType === body.content_type
+                ) {
+                    return {
+                        status: 400,
+                        payload: {
+                            message:
+                                "Manual reposition is only available when the target already holds the other reserved type.",
+                        },
+                    };
+                }
+
+                const displacedPref = prefRows.find(
+                    (r) =>
+                        String(r.get("position_in_magazine") ?? "").trim() ===
+                        body.displaced_position
+                );
+                if (!displacedPref) {
+                    return {
+                        status: 404,
+                        payload: {
+                            message: `Preferential placement for '${body.displaced_position}' not found on this publication.`,
+                        },
+                    };
+                }
+                const displacedSlotId = Number(
+                    displacedPref.get("publication_slot_id")
+                );
+                const displacedSlot = Number.isFinite(displacedSlotId)
+                    ? slotById.get(displacedSlotId)
+                    : null;
+                if (!displacedSlot) {
+                    return {
+                        status: 404,
+                        payload: {
+                            message: `publication_slots_db row for '${body.displaced_position}' not found.`,
+                        },
+                    };
+                }
+
+                const conflictingType = targetType;
+                const displacedSlotIdValue = Number(
+                    displacedSlot.get("publication_slot_id")
+                );
+                const targetSlotIdValue = Number(
+                    targetSlot.get("publication_slot_id")
+                );
+
+                await targetSlot.update(
+                    { slot_content_type: body.content_type },
+                    { transaction }
+                );
+                await displacedSlot.update(
+                    { slot_content_type: conflictingType },
+                    { transaction }
+                );
+
+                if (sourceSlot) {
+                    const sourceSlotIdValue = Number(
+                        sourceSlot.get("publication_slot_id")
+                    );
+                    if (
+                        sourceSlotIdValue !== displacedSlotIdValue &&
+                        sourceSlotIdValue !== targetSlotIdValue
+                    ) {
+                        await sourceSlot.update(
+                            { slot_content_type: "advert" },
+                            { transaction }
+                        );
+                    }
+                }
+
+                return {
+                    status: 200,
+                    payload: {
+                        ok: true,
+                        swapped: false,
+                        moved_content_type: body.content_type,
+                        target_position: body.target_position,
+                        displaced_position: body.displaced_position,
+                        displaced_content_type: conflictingType,
+                        target_publication_slot_id: targetSlotIdValue,
+                        displaced_publication_slot_id: displacedSlotIdValue,
+                        target_previous_content_type: targetType || null,
+                        source_position: sourcePref
+                            ? String(
+                                  sourcePref.get("position_in_magazine") ?? ""
+                              )
+                            : null,
+                        source_publication_slot_id: sourceSlot
+                            ? Number(sourceSlot.get("publication_slot_id"))
+                            : null,
+                    },
+                };
+            }
 
             if (
                 sourceSlot &&

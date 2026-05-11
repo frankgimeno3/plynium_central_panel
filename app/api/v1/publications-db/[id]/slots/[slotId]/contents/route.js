@@ -7,7 +7,11 @@
  *            - `publication_slot_position` defaults to -1 for the cover slot
  *              (per spec) and 0 for any other slot, so a regular advert page
  *              has at most one canonical content row.
- *            - advert rows use `slot_content_object_array = [{ url: <image_url> }]`.
+ *            - advert rows use the new shape
+ *              `slot_content_object_array = [{ position: 1, publication_article_chunk_id: null,
+ *                                               advert_media_src: <image_url>, url: <image_url> }]`.
+ *              The legacy `url` key is kept alongside `advert_media_src` so older
+ *              consumers (cover thumbnail, etc.) keep reading the same field.
  *            - article rows use `article_id` and mirror it to publication_slots_db.slot_article_id.
  *          The publication_main_image_url mirror is updated only for the cover
  *          slot, so the existing thumbnail UI keeps working.
@@ -162,7 +166,22 @@ export const PUT = createEndpoint(
 
     const sequelize = PublicationSlotDbModel.sequelize;
     const result = await sequelize.transaction(async (transaction) => {
-      const objects = imageUrl ? [{ url: imageUrl }] : [];
+      // New canonical shape requested by the Contents Manager:
+      //   [{ position, publication_article_chunk_id, advert_media_src }]
+      // For adverts there is a single position-1 entry whose
+      // `advert_media_src` carries the image URL. We also keep the legacy
+      // `url` key so older consumers that still read it (e.g. cover
+      // thumbnail in the Data tab) keep working without an extra migration.
+      const objects = imageUrl
+        ? [
+            {
+              position: 1,
+              publication_article_chunk_id: null,
+              advert_media_src: imageUrl,
+              url: imageUrl,
+            },
+          ]
+        : [];
       const existing = await PublicationSlotContentDbModel.findOne({
         attributes: articleId ? SLOT_CONTENT_ATTRIBUTES : SLOT_CONTENT_ATTRIBUTES_WITHOUT_ARTICLE,
         where: {

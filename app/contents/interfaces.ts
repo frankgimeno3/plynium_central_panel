@@ -1,3 +1,5 @@
+import type { NewsletterCampaignLayoutConfig } from "./newsletterCampaignLayout";
+
 export interface articleInterface {
   id_article: string;
   articleTitle: string;
@@ -293,6 +295,7 @@ export interface NewsletterCampaign {
   contentTheme: string;
   frequency: string;
   status: string;
+  layoutConfig: NewsletterCampaignLayoutConfig;
   createdAt: string;
   updatedAt: string;
 }
@@ -309,9 +312,12 @@ export interface Newsletter {
   realPublicationDate?: string;
   topic: string;
   status: NewsletterStatus;
+  /** Assigned user newsletter list ids (from userLists). */
+  userNewsletterListIds?: string[];
   /** User newsletter list id (from userLists) for scheduled/target send list. */
   userNewsletterListId?: string | null;
   sentToLists: string[] | null;
+  layoutEditionConfig?: NewsletterCampaignLayoutConfig | null;
   createdAt: string;
   updatedAt: string;
 }
