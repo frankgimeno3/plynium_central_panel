@@ -1,0 +1,1 @@
+export const COMPANY_SELECT_PAGE_SIZE = 20;

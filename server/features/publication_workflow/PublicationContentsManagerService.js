@@ -114,29 +114,95 @@ export async function listProjectsForPublication(publicationId) {
     }));
 }
 
+function mapPortalRows(rows) {
+    return (rows || []).map((r) => ({
+        portal_id: Number(r.portal_id),
+        portal_name: r.portal_name ?? "",
+    }));
+}
+
 /**
- * Returns a `{ portal_id, portal_name }[]` for every portal that publishes the
- * publication's magazine. Falls back to an empty list when the relationship
- * cannot be resolved.
+ * Returns `{ magazine_id, magazine_name }` for the publication's magazine, or
+ * null when the publication has no magazine assigned.
  */
-async function listPortalsForPublication(sequelize, publicationId) {
+async function getMagazineForPublication(sequelize, publicationId) {
     try {
         const rows = await sequelize.query(
-            `SELECT po.portal_id, po.portal_name
+            `SELECT pub.magazine_id,
+                    m.magazine_name
              FROM public.publications_db pub
-             JOIN public.portals_db po
-               ON pub.magazine_id = ANY(po.magazine_id_array)
+             LEFT JOIN public.magazines_db m
+               ON m.magazine_id = pub.magazine_id
              WHERE pub.publication_id = :pid`,
             {
                 replacements: { pid: String(publicationId) },
                 type: QueryTypes.SELECT,
             }
         );
-        return rows.map((r) => ({
-            portal_id: Number(r.portal_id),
-            portal_name: r.portal_name ?? "",
-        }));
+        const row = rows?.[0];
+        const magazineId = row?.magazine_id != null ? String(row.magazine_id).trim() : "";
+        if (!magazineId) return null;
+        return {
+            magazine_id: magazineId,
+            magazine_name: row?.magazine_name != null ? String(row.magazine_name) : magazineId,
+        };
     } catch (error) {
+        console.warn(
+            "[PublicationContentsManagerService] getMagazineForPublication failed:",
+            error?.message ?? error
+        );
+        return null;
+    }
+}
+
+/**
+ * Returns a `{ portal_id, portal_name }[]` for every portal linked to the
+ * publication's magazine through `magazine_portals`. Falls back to
+ * `portals_db.magazine_id_array` when the bridge table is unavailable.
+ */
+async function listPortalsForPublication(sequelize, publicationId) {
+    const replacements = { pid: String(publicationId) };
+    try {
+        const rows = await sequelize.query(
+            `SELECT po.portal_id, po.portal_name
+             FROM public.publications_db pub
+             JOIN public.magazine_portals mp
+               ON mp.magazine_id = pub.magazine_id
+             JOIN public.portals_db po
+               ON po.portal_id = mp.portal_id
+             WHERE pub.publication_id = :pid
+             ORDER BY po.portal_name ASC`,
+            {
+                replacements,
+                type: QueryTypes.SELECT,
+            }
+        );
+        return mapPortalRows(rows);
+    } catch (error) {
+        const message = String(error?.message ?? "");
+        if (message.includes("magazine_portals") && message.includes("does not exist")) {
+            try {
+                const rows = await sequelize.query(
+                    `SELECT po.portal_id, po.portal_name
+                     FROM public.publications_db pub
+                     JOIN public.portals_db po
+                       ON pub.magazine_id = ANY(po.magazine_id_array)
+                     WHERE pub.publication_id = :pid
+                     ORDER BY po.portal_name ASC`,
+                    {
+                        replacements,
+                        type: QueryTypes.SELECT,
+                    }
+                );
+                return mapPortalRows(rows);
+            } catch (fallbackError) {
+                console.warn(
+                    "[PublicationContentsManagerService] listPortalsForPublication fallback failed:",
+                    fallbackError?.message ?? fallbackError
+                );
+                return [];
+            }
+        }
         console.warn(
             "[PublicationContentsManagerService] listPortalsForPublication failed:",
             error?.message ?? error
@@ -152,6 +218,57 @@ async function listPortalsForPublication(sequelize, publicationId) {
  * the same magazine. Falls back to null (= no lower bound) when no prior
  * publication exists.
  */
+async function getPublicationLinksByArticleIds(sequelize, articleIds, currentPublicationId) {
+    const ids = [...new Set((articleIds || []).map((id) => String(id).trim()).filter(Boolean))];
+    if (!ids.length) return new Map();
+
+    try {
+        const rows = await sequelize.query(
+            `SELECT pa.article_id,
+                    pa.publication_id,
+                    pub.publication_edition_name,
+                    pub.publication_status,
+                    pub.magazine_id
+             FROM public.publication_articles pa
+             JOIN public.publications_db pub
+               ON pub.publication_id = pa.publication_id
+             WHERE pa.article_id IN (:article_ids)
+             ORDER BY pub.publication_year DESC NULLS LAST,
+                      pub.publication_expected_publication_month DESC NULLS LAST,
+                      pub.publication_edition_name ASC`,
+            {
+                replacements: { article_ids: ids },
+                type: QueryTypes.SELECT,
+            }
+        );
+        const linksByArticleId = new Map();
+        for (const row of rows || []) {
+            const articleId = String(row.article_id ?? "").trim();
+            if (!articleId) continue;
+            if (!linksByArticleId.has(articleId)) {
+                linksByArticleId.set(articleId, []);
+            }
+            linksByArticleId.get(articleId).push({
+                publication_id: row.publication_id ?? "",
+                publication_edition_name: row.publication_edition_name ?? "",
+                publication_status: row.publication_status ?? "",
+                magazine_id: row.magazine_id ?? null,
+                is_current_publication:
+                    String(row.publication_id ?? "") === String(currentPublicationId ?? ""),
+            });
+        }
+        return linksByArticleId;
+    } catch (error) {
+        if (!isMissingContentsManagerTable(error)) {
+            console.warn(
+                "[PublicationContentsManagerService] getPublicationLinksByArticleIds failed:",
+                error?.message ?? error
+            );
+        }
+        return new Map();
+    }
+}
+
 async function getMagazineLastPublishedDate(sequelize, publicationId) {
     try {
         const rows = await sequelize.query(
@@ -188,43 +305,23 @@ async function getMagazineLastPublishedDate(sequelize, publicationId) {
  * - Restricts `article_published_at` to the window
  *   `(last published publication date, now()]`. When no prior publication
  *   exists, the lower bound is dropped.
- * - Excludes any article already linked through `publication_articles` to
- *   this publication.
+ * - Enriches each row with every `publication_articles` link for that article.
  * - Optional client filters: `q` (id_article ILIKE / article_title ILIKE) and
  *   `portal_id` (limit to one of the magazine's portals).
  */
 export async function listAvailablePortalArticles(publicationId, filters = {}) {
     const sequelize = PublicationArticleDbModel.sequelize;
-    if (!sequelize) return { items: [], portals: [], cutoff_date: null };
+    if (!sequelize) return { items: [], portals: [], cutoff_date: null, magazine: null };
     const pid = String(publicationId ?? "").trim();
-    if (!pid) return { items: [], portals: [], cutoff_date: null };
+    if (!pid) return { items: [], portals: [], cutoff_date: null, magazine: null };
 
+    const magazine = await getMagazineForPublication(sequelize, pid);
     const portals = await listPortalsForPublication(sequelize, pid);
+    const cutoffDateIso = await getMagazineLastPublishedDate(sequelize, pid);
     if (!portals.length) {
-        return { items: [], portals: [], cutoff_date: null };
+        return { items: [], portals: [], cutoff_date: cutoffDateIso, magazine };
     }
     const allowedPortalIds = portals.map((p) => p.portal_id);
-
-    const cutoffDateIso = await getMagazineLastPublishedDate(sequelize, pid);
-
-    let alreadySelectedIds = new Set();
-    try {
-        const rows = await PublicationArticleDbModel.findAll({
-            where: { publication_id: pid },
-            attributes: ["article_id"],
-        });
-        for (const r of rows) {
-            const a = r.get("article_id");
-            if (a != null) alreadySelectedIds.add(String(a));
-        }
-    } catch (error) {
-        if (!isMissingContentsManagerTable(error)) {
-            console.warn(
-                "[PublicationContentsManagerService] alreadySelectedIds lookup failed:",
-                error?.message ?? error
-            );
-        }
-    }
 
     const portalIdFilter = Number(filters?.portal_id);
     const portalIdsToUse =
@@ -285,9 +382,16 @@ export async function listAvailablePortalArticles(publicationId, filters = {}) {
         rows = [];
     }
 
-    const items = rows
-        .filter((r) => !alreadySelectedIds.has(String(r.id_article)))
-        .map((r) => ({
+    const publicationLinksByArticleId = await getPublicationLinksByArticleIds(
+        sequelize,
+        rows.map((row) => row.id_article),
+        pid
+    );
+
+    const items = rows.map((r) => {
+        const linkedPublications =
+            publicationLinksByArticleId.get(String(r.id_article)) ?? [];
+        return {
             id_article: r.id_article,
             article_title: r.article_title ?? "",
             article_subtitle: r.article_subtitle ?? null,
@@ -298,11 +402,18 @@ export async function listAvailablePortalArticles(publicationId, filters = {}) {
             portal_name:
                 portals.find((p) => p.portal_id === Number(r.portal_id))?.portal_name ?? null,
             article_status: r.article_status ?? null,
-        }));
+            linked_publications: linkedPublications,
+            in_publication: linkedPublications.length > 0,
+            in_current_publication: linkedPublications.some(
+                (link) => link.is_current_publication
+            ),
+        };
+    });
 
     return {
         items,
         portals,
         cutoff_date: cutoffDateIso,
+        magazine,
     };
 }

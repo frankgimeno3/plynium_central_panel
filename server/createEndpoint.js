@@ -29,13 +29,13 @@ async function validate(request, schema) {
         body = await request.formData();
         data = Object.fromEntries(body);
     } else {
-        throw Error('Solicitud incorrecta');
+        throw Error('Invalid request');
     }
 
     if (schema) {
         const { error } = schema.validate(data);
         if (error) {
-            throw new Error(`Solicitud no paso validacion: ${error}`);
+            throw new Error(`Request failed validation: ${error}`);
         }
     }
 
@@ -47,7 +47,7 @@ async function checkTokens(request, response) {
     const username = request.cookies.get(`${baseKey}.LastAuthUser`)?.value;
 
     if (!username) {
-        throw new Error('Falta  cookie con el nombre de usuario')
+        throw new Error('Missing cookie with username')
     }
 
     let isRefreshed = false;
@@ -105,7 +105,7 @@ export function createEndpoint(callback, schema = null, isProtected = false, rol
         if (isProtected && roles.length > 0) {
             try {
                 let userRoles = await getUserRoles(username);
-                // Fallback: si no tiene grupos en Cognito, usar custom:role del token (común con Amplify)
+                // Fallback: when Cognito groups are missing, use custom:role from the token (common with Amplify).
                 if (userRoles.length === 0 && tokenPayload) {
                     const customRole = tokenPayload['custom:role'] ?? tokenPayload.role;
                     if (customRole) userRoles = [customRole];

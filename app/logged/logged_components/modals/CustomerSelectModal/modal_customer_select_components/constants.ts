@@ -1,0 +1,1 @@
+export const CUSTOMER_SELECT_DEFAULT_PAGE_SIZE = 10;

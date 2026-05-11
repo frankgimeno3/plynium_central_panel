@@ -11,6 +11,7 @@ import {
   resolveCampaignLayout,
   resolveEffectiveNewsletterLayout,
 } from "../../../utils/newsletterLayoutModel";
+import { NewsletterRichTextField } from "../../../components/NewsletterRichTextField";
 type EditionTabProps = {
   newsletter: Newsletter;
   campaign: NewsletterCampaign | null;
@@ -203,10 +204,12 @@ export function EditionTab({
               value={config.headerTextRight}
               onChange={(value) => patch({ headerTextRight: value })}
             />
-            <TextField
+            <NewsletterRichTextField
               label="Header subtitle"
+              labelClassName="block text-xs text-gray-500 uppercase mb-1"
               value={config.headerSubtitle}
               onChange={(value) => patch({ headerSubtitle: value })}
+              minHeight="100px"
             />
           </div>
         </section>

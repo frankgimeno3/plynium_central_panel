@@ -1,0 +1,1 @@
+export const COMPANY_PICKER_PAGE_SIZE = 15;

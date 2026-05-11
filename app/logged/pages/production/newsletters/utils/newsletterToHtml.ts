@@ -1,4 +1,5 @@
 import type { NewsletterContentBlock } from "@/app/contents/interfaces";
+import { newsletterRichTextToHtml } from "./newsletterRichText";
 
 function escapeHtml(s: string): string {
   return s
@@ -13,14 +14,14 @@ function blockToHtml(block: NewsletterContentBlock): string {
 
   switch (block.type) {
     case "header": {
-      const title = escapeHtml((d.title as string) ?? "");
-      const subtitle = escapeHtml((d.subtitle as string) ?? "");
+      const title = newsletterRichTextToHtml((d.title as string) ?? "");
+      const subtitle = newsletterRichTextToHtml((d.subtitle as string) ?? "");
       const logoUrl = escapeHtml((d.logoUrl as string) ?? "");
       const logo = logoUrl ? `<img src="${logoUrl}" alt="" style="height:40px;margin-bottom:8px;" />` : "";
       return `<header style="border-bottom:1px solid #e5e7eb;padding-bottom:16px;margin-bottom:16px;">${logo}<h1 style="font-size:1.25rem;font-weight:600;color:#111827;">${title}</h1>${subtitle ? `<p style="font-size:0.875rem;color:#4b5563;">${subtitle}</p>` : ""}</header>`;
     }
     case "footer": {
-      const text = escapeHtml((d.text as string) ?? "");
+      const text = newsletterRichTextToHtml((d.text as string) ?? "");
       const links = (d.links as Array<{ label: string; url: string }>) ?? [];
       const linksHtml = links
         .map((l) => `<a href="${escapeHtml(l.url)}" style="color:#2563eb;">${escapeHtml(l.label)}</a>`)
@@ -34,8 +35,8 @@ function blockToHtml(block: NewsletterContentBlock): string {
       return `<div style="margin:16px 0;"><a href="${redirectUrl}" target="_blank" rel="noopener"><img src="${imageSrc}" alt="${alt}" style="width:100%;max-height:192px;object-fit:cover;border-radius:8px;" /></a></div>`;
     }
     case "portal_article_preview": {
-      const title = escapeHtml((d.title as string) ?? "");
-      const briefing = escapeHtml((d.briefing as string) ?? "");
+      const title = newsletterRichTextToHtml((d.title as string) ?? "");
+      const briefing = newsletterRichTextToHtml((d.briefing as string) ?? "");
       const imageSrc = (d.imageSrc as string) ?? "";
       const link = escapeHtml((d.link as string) ?? "#");
       const img = imageSrc ? `<img src="${escapeHtml(imageSrc)}" alt="" style="width:100%;aspect-ratio:16/10;object-fit:cover;border-radius:8px;margin-bottom:12px;" />` : "";

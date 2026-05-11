@@ -12,6 +12,7 @@ import {
   type LayoutDesignerConfig,
 } from "../_layout/layoutDesignerTypes";
 import { NewsletterLayoutPreview } from "./NewsletterLayoutPreview";
+import { NewsletterRichTextField } from "../../../components/NewsletterRichTextField";
 
 type PortalOption = { id: number; key: string; name: string };
 
@@ -377,10 +378,12 @@ export function NewsletterLayoutDesignerTab({
                 value={config.headerTextRight}
                 onChange={(value) => patch({ headerTextRight: value })}
               />
-              <TextField
+              <NewsletterRichTextField
                 label="Header subtitle"
+                labelClassName="block text-xs text-gray-500 uppercase mb-1"
                 value={config.headerSubtitle}
                 onChange={(value) => patch({ headerSubtitle: value })}
+                minHeight="100px"
               />
             </div>
           ) : null}

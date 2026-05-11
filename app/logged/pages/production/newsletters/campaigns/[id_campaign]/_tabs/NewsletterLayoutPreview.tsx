@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { LayoutDesignerConfig } from "../_layout/layoutDesignerTypes";
+import { RichTextContent } from "@/app/logged/logged_components/RichTextEditor";
 
 const LOREM_TITLE = "Lorem ipsum dolor sit amet";
 const LOREM_SUBTITLE =
@@ -72,7 +73,11 @@ export function NewsletterLayoutPreview({
               <span className="text-sm font-semibold">{config.headerLogoLabel}</span>
               <span className="text-xs font-semibold uppercase tracking-wide">{config.headerTextRight}</span>
             </div>
-            <p className="mt-2 border-t border-white/20 pt-2 text-[11px]">{config.headerSubtitle}</p>
+            <RichTextContent
+              htmlOrPlain={config.headerSubtitle}
+              className="mt-2 border-t border-white/20 pt-2 text-[11px]"
+              as="p"
+            />
           </div>
         ) : null}
 

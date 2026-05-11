@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { Newsletter } from "@/app/contents/interfaces";
+import { NewsletterRichTextField } from "../../../components/NewsletterRichTextField";
 
 const FREQUENCY_OPTIONS = [
   { value: "daily", label: "Daily" },
@@ -211,13 +212,11 @@ export function CampaignDataTab({
             </select>
           </div>
           <div className="md:col-span-2">
-            <label className="block text-xs text-gray-500 uppercase mb-1">Description</label>
-            <textarea
+            <NewsletterRichTextField
+              label="Description"
               value={form.description}
-              onChange={(event) => setForm((prev) => (prev ? { ...prev, description: event.target.value } : prev))}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
-              rows={4}
-              disabled={saving}
+              onChange={(value) => setForm((prev) => (prev ? { ...prev, description: value } : prev))}
+              minHeight="140px"
             />
           </div>
         </div>

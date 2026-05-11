@@ -60,7 +60,7 @@ export default function NewsletterHtmlPreviewModal({
               HTML generated from the Edition preview in Contents Manager. Press Esc to close.
             </p>
           </div>
-          <motion className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => void handleCopy()}
@@ -76,7 +76,7 @@ export default function NewsletterHtmlPreviewModal({
             >
               Close
             </button>
-          </motion>
+          </div>
         </div>
 
         <pre className="max-h-[70vh] overflow-auto whitespace-pre-wrap break-words bg-gray-50 px-5 py-4 font-mono text-xs text-gray-800">

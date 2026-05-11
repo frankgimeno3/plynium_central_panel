@@ -3,6 +3,7 @@
 import React, { FC, useEffect, useMemo, useState } from "react";
 import type { NewsletterContentBlock } from "@/app/contents/interfaces";
 import MediatecaModal from "@/app/logged/logged_components/modals/MediatecaModal";
+import { NewsletterRichTextField } from "./NewsletterRichTextField";
 
 type ImageField = "imageSrc" | "logoUrl";
 
@@ -67,9 +68,9 @@ const NewsletterBlockEditModal: FC<NewsletterBlockEditModalProps> = ({
       });
       setIsSaving(false);
       onClose();
-    } catch (e: any) {
+    } catch (e: unknown) {
       setIsSaving(false);
-      setError(e?.message ? String(e.message) : "Failed to save block");
+      setError(e instanceof Error ? e.message : "Failed to save block");
     }
   };
 
@@ -85,12 +86,10 @@ const NewsletterBlockEditModal: FC<NewsletterBlockEditModalProps> = ({
       >
         <div
           className="relative w-full max-w-xl rounded-lg bg-white shadow-xl overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
+          onClick={(event) => event.stopPropagation()}
         >
           <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between gap-4">
-            <h2 className="text-lg font-semibold text-gray-900">
-              Edit block: {block.type}
-            </h2>
+            <h2 className="text-lg font-semibold text-gray-900">Edit block: {block.type}</h2>
             <button
               type="button"
               className="text-gray-500 hover:text-gray-700 text-2xl leading-none p-1"
@@ -102,7 +101,7 @@ const NewsletterBlockEditModal: FC<NewsletterBlockEditModalProps> = ({
           </div>
 
           <div className="p-6 overflow-auto max-h-[70vh]">
-            {error && <p className="mb-4 text-red-600 text-sm">{error}</p>}
+            {error ? <p className="mb-4 text-red-600 text-sm">{error}</p> : null}
 
             {preview ? (
               <div className="mb-4">
@@ -114,26 +113,22 @@ const NewsletterBlockEditModal: FC<NewsletterBlockEditModalProps> = ({
               </div>
             ) : null}
 
-            {block.type === "header" && (
+            {block.type === "header" ? (
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={String(localData.title ?? "")}
-                    onChange={(e) => setLocalData((p) => ({ ...p, title: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Subtitle</label>
-                  <input
-                    type="text"
-                    value={String(localData.subtitle ?? "")}
-                    onChange={(e) => setLocalData((p) => ({ ...p, subtitle: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
+                <NewsletterRichTextField
+                  label="Title"
+                  labelClassName="block text-sm font-medium text-gray-700 mb-1"
+                  value={String(localData.title ?? "")}
+                  onChange={(value) => setLocalData((prev) => ({ ...prev, title: value }))}
+                  minHeight="80px"
+                />
+                <NewsletterRichTextField
+                  label="Subtitle"
+                  labelClassName="block text-sm font-medium text-gray-700 mb-1"
+                  value={String(localData.subtitle ?? "")}
+                  onChange={(value) => setLocalData((prev) => ({ ...prev, subtitle: value }))}
+                  minHeight="100px"
+                />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Logo image</label>
                   <div className="flex gap-2">
@@ -153,9 +148,9 @@ const NewsletterBlockEditModal: FC<NewsletterBlockEditModalProps> = ({
                   </div>
                 </div>
               </div>
-            )}
+            ) : null}
 
-            {block.type === "banner" && (
+            {block.type === "banner" ? (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Banner image</label>
@@ -180,7 +175,9 @@ const NewsletterBlockEditModal: FC<NewsletterBlockEditModalProps> = ({
                   <input
                     type="text"
                     value={String(localData.redirectUrl ?? "")}
-                    onChange={(e) => setLocalData((p) => ({ ...p, redirectUrl: e.target.value }))}
+                    onChange={(event) =>
+                      setLocalData((prev) => ({ ...prev, redirectUrl: event.target.value }))
+                    }
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   />
                 </div>
@@ -189,14 +186,14 @@ const NewsletterBlockEditModal: FC<NewsletterBlockEditModalProps> = ({
                   <input
                     type="text"
                     value={String(localData.alt ?? "")}
-                    onChange={(e) => setLocalData((p) => ({ ...p, alt: e.target.value }))}
+                    onChange={(event) => setLocalData((prev) => ({ ...prev, alt: event.target.value }))}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   />
                 </div>
               </div>
-            )}
+            ) : null}
 
-            {block.type === "portal_article_preview" && (
+            {block.type === "portal_article_preview" ? (
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Preview image</label>
@@ -216,69 +213,61 @@ const NewsletterBlockEditModal: FC<NewsletterBlockEditModalProps> = ({
                     </button>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={String(localData.title ?? "")}
-                    onChange={(e) => setLocalData((p) => ({ ...p, title: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Briefing</label>
-                  <textarea
-                    value={String(localData.briefing ?? "")}
-                    onChange={(e) => setLocalData((p) => ({ ...p, briefing: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                    rows={3}
-                  />
-                </div>
+                <NewsletterRichTextField
+                  label="Title"
+                  labelClassName="block text-sm font-medium text-gray-700 mb-1"
+                  value={String(localData.title ?? "")}
+                  onChange={(value) => setLocalData((prev) => ({ ...prev, title: value }))}
+                  minHeight="80px"
+                />
+                <NewsletterRichTextField
+                  label="Briefing"
+                  labelClassName="block text-sm font-medium text-gray-700 mb-1"
+                  value={String(localData.briefing ?? "")}
+                  onChange={(value) => setLocalData((prev) => ({ ...prev, briefing: value }))}
+                  minHeight="140px"
+                />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Redirect URL</label>
                   <input
                     type="text"
                     value={String(localData.link ?? "")}
-                    onChange={(e) => setLocalData((p) => ({ ...p, link: e.target.value }))}
+                    onChange={(event) => setLocalData((prev) => ({ ...prev, link: event.target.value }))}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   />
                 </div>
               </div>
-            )}
+            ) : null}
 
-            {block.type === "footer" && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Text</label>
-                  <textarea
-                    value={String(localData.text ?? "")}
-                    onChange={(e) => setLocalData((p) => ({ ...p, text: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                    rows={4}
-                  />
-                </div>
-              </div>
-            )}
+            {block.type === "footer" ? (
+              <NewsletterRichTextField
+                label="Text"
+                labelClassName="block text-sm font-medium text-gray-700 mb-1"
+                value={String(localData.text ?? "")}
+                onChange={(value) => setLocalData((prev) => ({ ...prev, text: value }))}
+                minHeight="160px"
+              />
+            ) : null}
 
-            {block.type === "custom_content" && (
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">HTML</label>
-                  <textarea
-                    value={String(localData.html ?? "")}
-                    onChange={(e) => setLocalData((p) => ({ ...p, html: e.target.value }))}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
-                    rows={8}
-                  />
-                </div>
-              </div>
-            )}
+            {block.type === "custom_content" ? (
+              <NewsletterRichTextField
+                label="HTML"
+                labelClassName="block text-sm font-medium text-gray-700 mb-1"
+                value={String(localData.html ?? "")}
+                onChange={(value) => setLocalData((prev) => ({ ...prev, html: value }))}
+                minHeight="220px"
+              />
+            ) : null}
 
-            {!(block.type === "header" || block.type === "banner" || block.type === "portal_article_preview" || block.type === "footer" || block.type === "custom_content") && (
-              <p className="text-sm text-gray-600">
-                Editing UI not implemented for this block type.
-              </p>
-            )}
+            {!(
+              block.type === "header" ||
+              block.type === "banner" ||
+              block.type === "portal_article_preview" ||
+              block.type === "footer" ||
+              block.type === "custom_content"
+            ) ? (
+              <p className="text-sm text-gray-600">Editing UI not implemented for this block type.</p>
+            ) : null}
           </div>
 
           <div className="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
@@ -317,4 +306,3 @@ const NewsletterBlockEditModal: FC<NewsletterBlockEditModalProps> = ({
 };
 
 export default NewsletterBlockEditModal;
-

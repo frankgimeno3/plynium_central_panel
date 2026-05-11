@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import type { NewsletterContentBlock } from "@/app/contents/interfaces";
 import { NewsletterService } from "@/app/service/NewsletterService";
 import { mapBlocksToContentItems } from "../../../utils/newsletterLayoutModel";
+import { RichTextContent } from "@/app/logged/logged_components/RichTextEditor";
 import { AddContentsModal } from "./AddContentsModal";
 import type { AddContentSelection } from "./addContentTypes";
 
@@ -185,8 +186,16 @@ export function SpecificContentsTab({ newsletterId, blocks, onBlocksChange }: Sp
                 <p className="text-xs uppercase text-gray-500">
                   Position {item.position} · {contentKindLabel(item.kind)}
                 </p>
-                <p className="text-sm font-semibold text-gray-900">{item.title || "Untitled content"}</p>
-                <p className="text-sm text-gray-600">{item.subtitle || "No subtitle"}</p>
+                <RichTextContent
+                  htmlOrPlain={item.title || "Untitled content"}
+                  className="text-sm font-semibold text-gray-900"
+                  as="p"
+                />
+                <RichTextContent
+                  htmlOrPlain={item.subtitle || "No subtitle"}
+                  className="text-sm text-gray-600"
+                  as="p"
+                />
                 {item.projectId ? (
                   <p className="text-xs text-gray-500">
                     Project: {item.projectTitle || item.projectId}

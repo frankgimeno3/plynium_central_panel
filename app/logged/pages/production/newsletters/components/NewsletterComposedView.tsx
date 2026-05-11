@@ -2,6 +2,7 @@
 
 import React from "react";
 import type { NewsletterCampaignLayoutConfig } from "@/app/contents/newsletterCampaignLayout";
+import { RichTextContent } from "@/app/logged/logged_components/RichTextEditor";
 import type { NewsletterContentItem } from "../utils/newsletterLayoutModel";
 
 const LOREM_SUMMARY_ITEMS = [
@@ -72,7 +73,11 @@ export function NewsletterComposedView({
             <span className="text-sm font-semibold">{config.headerLogoLabel}</span>
             <span className="text-xs font-semibold uppercase tracking-wide">{config.headerTextRight}</span>
           </div>
-          <p className="mt-2 border-t border-white/20 pt-2 text-[11px]">{config.headerSubtitle}</p>
+          <RichTextContent
+            htmlOrPlain={config.headerSubtitle}
+            className="mt-2 border-t border-white/20 pt-2 text-[11px]"
+            as="p"
+          />
         </div>
       ) : null}
 
@@ -149,18 +154,20 @@ export function NewsletterComposedView({
                     <div className="h-20 w-20 shrink-0 rounded bg-gray-200" />
                   )}
                   <div className="min-w-0 flex-1">
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ fontFamily: config.titleFont, color: config.titleTextColor }}
-                    >
-                      {item.title || "Untitled article"}
-                    </p>
-                    <p
-                      className="mt-1 text-xs leading-relaxed"
-                      style={{ fontFamily: config.subtitleFont, color: config.subtitleTextColor }}
-                    >
-                      {item.subtitle || "No subtitle"}
-                    </p>
+                    <div style={{ fontFamily: config.titleFont, color: config.titleTextColor }}>
+                      <RichTextContent
+                        htmlOrPlain={item.title || "Untitled article"}
+                        className="text-sm font-semibold"
+                        as="p"
+                      />
+                    </div>
+                    <div style={{ fontFamily: config.subtitleFont, color: config.subtitleTextColor }}>
+                      <RichTextContent
+                        htmlOrPlain={item.subtitle || "No subtitle"}
+                        className="mt-1 text-xs leading-relaxed"
+                        as="p"
+                      />
+                    </div>
                     <a
                       href={item.redirection || "#"}
                       className="mt-2 inline-block rounded px-2 py-1 text-[10px] font-semibold uppercase"

@@ -31,8 +31,8 @@ const querySchema = Joi.object({
  *   - have `article_published_at` strictly after the previous published
  *     publication's `real_publication_month_date` (no lower bound when there
  *     is no prior publication),
- *   - and are NOT already selected through `publication_articles` for this
- *     publication.
+ *   - include every `publication_articles` link for each article so the UI
+ *     can show whether it is already assigned to a magazine publication.
  *
  * Optional filters (query string):
  *   - q          : ILIKE on id_article OR article_title.

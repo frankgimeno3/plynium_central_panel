@@ -4,6 +4,7 @@ import React, { FC, use, useCallback, useEffect, useMemo, useState } from "react
 import Link from "next/link";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
+import { publicationArticleSubpageHref } from "@/app/logged/pages/production/publications/subpage/ArticleSubpagePage/subpage_page_components/types";
 
 type ArticleMeta = {
   id_article: string;
@@ -199,14 +200,8 @@ const ArticleBuilderPage: FC<{
   }, [publicationArticle, pageSlotContentMap, chunks]);
 
   const subpageHref = useCallback(
-    (slotId: number, slotContentId: number | null) => {
-      const safeContentId = slotContentId ?? 0;
-      return `/logged/pages/production/publications/${encodeURIComponent(
-        id_publication
-      )}/manager/article_builder/${encodeURIComponent(
-        publicationArticleId
-      )}/subpage/${slotId}-${safeContentId}`;
-    },
+    (slotId: number, slotContentId: number | null) =>
+      publicationArticleSubpageHref(id_publication, publicationArticleId, slotId, slotContentId),
     [id_publication, publicationArticleId]
   );
 
@@ -230,7 +225,7 @@ const ArticleBuilderPage: FC<{
         const txt = await res.text().catch(() => "");
         throw new Error(txt || "Failed to sync pages");
       }
-      setActionMessage(`Pages synchronised to ${target}.`);
+      setActionMessage(`Pages synchronized to ${target}.`);
       await load();
     } catch (e: any) {
       setActionError(e?.message ?? "Failed to sync pages");
@@ -248,7 +243,12 @@ const ArticleBuilderPage: FC<{
         `/api/v1/publication-articles/${encodeURIComponent(
           publicationArticleId
         )}/initialize-chunks-from-source`,
-        { method: "POST", credentials: "include" }
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({}),
+        }
       );
       if (!res.ok) {
         const txt = await res.text().catch(() => "");
@@ -473,7 +473,7 @@ const ArticleBuilderPage: FC<{
           </header>
           {chunks.length === 0 ? (
             <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center text-sm text-gray-500">
-              No chunks yet. Use “Import chunks from source article” to bring in
+              No chunks yet. Use "Import chunks from source article" to bring in
               the portal article paragraphs, or add a blank chunk to start
               writing from scratch.
             </div>

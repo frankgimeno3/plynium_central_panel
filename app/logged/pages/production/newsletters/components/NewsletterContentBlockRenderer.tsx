@@ -2,6 +2,7 @@
 
 import React, { FC } from "react";
 import type { NewsletterContentBlock } from "@/app/contents/interfaces";
+import { RichTextContent } from "@/app/logged/logged_components/RichTextEditor";
 
 interface NewsletterContentBlockRendererProps {
   block: NewsletterContentBlock;
@@ -18,8 +19,10 @@ const NewsletterContentBlockRenderer: FC<NewsletterContentBlockRendererProps> = 
       return (
         <header className="border-b border-gray-200 pb-4 mb-4">
           {logoUrl && <img src={logoUrl} alt="" className="h-10 mb-2" />}
-          <h1 className="text-xl font-semibold text-gray-900">{title}</h1>
-          {subtitle && <p className="text-sm text-gray-600">{subtitle}</p>}
+          <RichTextContent htmlOrPlain={title} className="text-xl font-semibold text-gray-900" />
+          {subtitle ? (
+            <RichTextContent htmlOrPlain={subtitle} className="text-sm text-gray-600" as="p" />
+          ) : null}
         </header>
       );
     }
@@ -28,7 +31,7 @@ const NewsletterContentBlockRenderer: FC<NewsletterContentBlockRendererProps> = 
       const links = (d.links as Array<{ label: string; url: string }>) ?? [];
       return (
         <footer className="border-t border-gray-200 pt-4 mt-4 text-sm text-gray-500">
-          <p>{text}</p>
+          <RichTextContent htmlOrPlain={text} as="p" />
           {links.length > 0 && (
             <div className="flex gap-4 mt-2">
               {links.map((l, i) => (
@@ -64,8 +67,12 @@ const NewsletterContentBlockRenderer: FC<NewsletterContentBlockRendererProps> = 
             {imageSrc && (
               <img src={imageSrc} alt="" className="w-full aspect-video object-cover rounded mb-3" />
             )}
-            <h3 className="font-medium text-gray-900">{title}</h3>
-            <p className="text-sm text-gray-600 mt-1 line-clamp-2">{briefing}</p>
+            <RichTextContent htmlOrPlain={title} className="font-medium text-gray-900" />
+            <RichTextContent
+              htmlOrPlain={briefing}
+              className="text-sm text-gray-600 mt-1 line-clamp-2"
+              as="p"
+            />
           </a>
         </article>
       );

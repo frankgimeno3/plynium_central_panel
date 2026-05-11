@@ -222,6 +222,29 @@ export function isNumericSlotKey(k: string): boolean {
   return Number.isFinite(n) && Number.isInteger(n) && n >= 1;
 }
 
+/** Slot key for auto-generated editorial pages attached to a publication article. */
+export const ARTICLE_PAGE_SLOT_KEY = "regular_page";
+
+const ARTICLE_PAGE_SLOT_ENTRY_PREFIX = "article_page:";
+
+export function isArticlePageSlotRow(slot: Pick<SlotRow, "slot_key">): boolean {
+  return String(slot.slot_key ?? "").trim().toLowerCase() === ARTICLE_PAGE_SLOT_KEY;
+}
+
+export function articlePageSlotEntryKey(slotId: number): string {
+  return `${ARTICLE_PAGE_SLOT_ENTRY_PREFIX}${slotId}`;
+}
+
+export function isArticlePageSlotEntryKey(key: string): boolean {
+  return String(key ?? "").startsWith(ARTICLE_PAGE_SLOT_ENTRY_PREFIX);
+}
+
+export function articlePageSlotEntryId(key: string): number | null {
+  if (!isArticlePageSlotEntryKey(key)) return null;
+  const n = Number(key.slice(ARTICLE_PAGE_SLOT_ENTRY_PREFIX.length));
+  return Number.isFinite(n) ? n : null;
+}
+
 /** Human spread index: 0 cover, 1 inside, 2… for numeric keys, end follows last interior. */
 export function spreadIndexLabel(slotKey: string, maxNumericKey: number): string {
   const k = String(slotKey || "");
@@ -272,6 +295,8 @@ export function flatplanPreviewColClass(previewExpanded: boolean): string {
 
 export function flatplanSlotSortKey(slotKey: string): number {
   const k = String(slotKey || "");
+  const articleSlotId = articlePageSlotEntryId(k);
+  if (articleSlotId != null) return 9500 + articleSlotId;
   if (k === "cover") return 0;
   if (k === "inside_cover") return 1;
   if (k === "end") return 10000;
@@ -572,7 +597,16 @@ export function FlatplanPreviewCell({
     );
   }
   const rawTopLeft = flatplanWorkingLabel(workingIndex);
-  const topLeft = rawTopLeft === "-1" || rawTopLeft === "0" || entryKey === "end" ? "" : rawTopLeft;
+  const topLeft =
+    isArticlePageSlotEntryKey(entryKey) ||
+    rawTopLeft === "-1" ||
+    rawTopLeft === "0" ||
+    entryKey === "end"
+      ? ""
+      : rawTopLeft;
+  const topRightLabel = isArticlePageSlotEntryKey(entryKey)
+    ? `Art. #${articlePageSlotEntryId(entryKey) ?? ""}`
+    : entryKey;
   const padding = isPaddingSlot(slot);
   const highlighted =
     highlightedSlotId != null &&
@@ -584,7 +618,9 @@ export function FlatplanPreviewCell({
       ? "Summary"
       : slotContentType === "index"
         ? "Index"
-        : null;
+        : isArticlePageSlotEntryKey(entryKey) || (slot && isArticlePageSlotRow(slot))
+          ? "Article"
+          : null;
   const tileBoxClass = padding
     ? "border border-red-300 bg-red-50 shadow-sm hover:shadow-md hover:border-red-400"
     : "border border-gray-200 bg-white shadow-sm hover:shadow-md";
@@ -611,7 +647,7 @@ export function FlatplanPreviewCell({
           <span
             className={`${topRightClass} ${previewExpanded ? "text-sm leading-tight" : "text-[10px]"} ${tileTransition}`}
           >
-            {entryKey}
+            {topRightLabel}
           </span>
         </div>
         {/* Reserved overlay for summary / index slots. */}
@@ -661,6 +697,21 @@ export function SlotContentCard({ publicationId, slot, variant }: SlotContentCar
         <p className="text-sm font-semibold text-amber-900">{label}</p>
         {variant === "expanded" ? (
           <p className="text-xs text-amber-800 mt-1">{description}</p>
+        ) : null}
+      </Link>
+    );
+  }
+
+  if (isArticlePageSlotRow(slot) && slotContentType === "article" && !hasProject) {
+    return (
+      <Link
+        href={slotHref}
+        className="block rounded-lg border border-emerald-200 bg-emerald-50 p-3 shadow-sm hover:border-emerald-400 hover:shadow transition"
+      >
+        <p className="text-xs uppercase tracking-wide text-emerald-700">Article page</p>
+        <p className="text-sm font-semibold text-emerald-950">Slot #{slot.publication_slot_id}</p>
+        {variant === "expanded" && slot.slot_article_id ? (
+          <p className="text-xs font-mono text-emerald-800 mt-1 break-all">{slot.slot_article_id}</p>
         ) : null}
       </Link>
     );

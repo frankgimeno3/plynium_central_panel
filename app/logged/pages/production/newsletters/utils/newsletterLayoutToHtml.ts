@@ -1,5 +1,6 @@
 import type { NewsletterCampaignLayoutConfig } from "@/app/contents/newsletterCampaignLayout";
 import type { NewsletterContentItem } from "./newsletterLayoutModel";
+import { newsletterRichTextToHtml } from "./newsletterRichText";
 
 function escapeHtml(value: string): string {
   return value
@@ -28,7 +29,7 @@ export function newsletterLayoutToHtml(
 
   if (showNormalHeader) {
     sections.push(
-      `<header style="padding:16px;background:${escapeHtml(config.headerBackground)};color:${escapeHtml(config.headerTextColor)};"><div style="display:flex;justify-content:space-between;gap:12px;"><strong>${escapeHtml(config.headerLogoLabel)}</strong><span style="font-size:12px;text-transform:uppercase;">${escapeHtml(config.headerTextRight)}</span></div><p style="margin:8px 0 0;font-size:11px;">${escapeHtml(config.headerSubtitle)}</p></header>`
+      `<header style="padding:16px;background:${escapeHtml(config.headerBackground)};color:${escapeHtml(config.headerTextColor)};"><div style="display:flex;justify-content:space-between;gap:12px;"><strong>${escapeHtml(config.headerLogoLabel)}</strong><span style="font-size:12px;text-transform:uppercase;">${escapeHtml(config.headerTextRight)}</span></div><p style="margin:8px 0 0;font-size:11px;">${newsletterRichTextToHtml(config.headerSubtitle)}</p></header>`
     );
   }
 
@@ -49,7 +50,7 @@ export function newsletterLayoutToHtml(
           item.kind === "sponsored"
             ? "border:2px solid #f59e0b;box-shadow:0 8px 20px rgba(0,0,0,0.12);"
             : "border:1px solid #e5e7eb;";
-        return `<article style="display:flex;gap:12px;padding:12px;${borderStyle}border-radius:8px;background:#fff;margin-bottom:12px;">${image}<div><h3 style="margin:0;font-family:${escapeHtml(config.titleFont)};color:${escapeHtml(config.titleTextColor)};">${escapeHtml(item.title || "Untitled article")}</h3><p style="margin:8px 0 0;font-size:12px;font-family:${escapeHtml(config.subtitleFont)};color:${escapeHtml(config.subtitleTextColor)};">${escapeHtml(item.subtitle || "")}</p><a href="${escapeHtml(item.redirection || "#")}" style="display:inline-block;margin-top:8px;padding:4px 8px;font-size:10px;text-transform:uppercase;text-decoration:none;background:${escapeHtml(config.buttonColor)};color:${escapeHtml(config.buttonTextColor)};">Read more</a></div></article>`;
+        return `<article style="display:flex;gap:12px;padding:12px;${borderStyle}border-radius:8px;background:#fff;margin-bottom:12px;">${image}<div><h3 style="margin:0;font-family:${escapeHtml(config.titleFont)};color:${escapeHtml(config.titleTextColor)};">${newsletterRichTextToHtml(item.title || "Untitled article")}</h3><p style="margin:8px 0 0;font-size:12px;font-family:${escapeHtml(config.subtitleFont)};color:${escapeHtml(config.subtitleTextColor)};">${newsletterRichTextToHtml(item.subtitle || "")}</p><a href="${escapeHtml(item.redirection || "#")}" style="display:inline-block;margin-top:8px;padding:4px 8px;font-size:10px;text-transform:uppercase;text-decoration:none;background:${escapeHtml(config.buttonColor)};color:${escapeHtml(config.buttonTextColor)};">Read more</a></div></article>`;
       })
       .join("");
     sections.push(
