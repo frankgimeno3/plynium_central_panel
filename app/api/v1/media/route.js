@@ -7,14 +7,16 @@ export const runtime = "nodejs";
 
 const getSchema = Joi.object({
     folderPath: Joi.string().optional().allow(""),
+    folderId: Joi.string().uuid().optional(),
     search: Joi.string().optional().allow(""),
 });
 
 export const GET = createEndpoint(
     async (request, body) => {
         const folderPath = body?.folderPath ?? "";
+        const folderId = body?.folderId ?? "";
         const search = body?.search ?? "";
-        const items = await getMedia({ folderPath, search });
+        const items = await getMedia({ folderPath, folderId, search });
         return NextResponse.json(items);
     },
     getSchema,
@@ -28,6 +30,8 @@ const postSchema = Joi.object({
     s3Key: Joi.string().required(),
     folderPath: Joi.string().optional().allow(""),
     folderId: Joi.string().uuid().optional(),
+    publicationId: Joi.string().optional(),
+    slotId: Joi.number().integer().positive().optional(),
     cdnUrl: Joi.string().optional().allow(""),
     contentType: Joi.string().optional().allow(""),
     type: Joi.string().valid("pdf", "image").optional(),

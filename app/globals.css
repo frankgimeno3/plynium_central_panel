@@ -29,6 +29,9 @@
 }
 
 @theme inline {
+  /* Flatplan structural slots gradient (`to-mist-400`); not part of default Tailwind palette */
+  --color-mist-400: #8da4b5;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-ubuntu), ui-sans-serif, system-ui, sans-serif;
@@ -115,6 +118,53 @@ body {
   list-style-type: lower-alpha;
 }
 
+/* Auto-embedded image inside a rich text editor: rendered as a non-editable
+ * "image row" — a full-width block that visually separates paragraphs and
+ * cannot have text placed beside it. `contenteditable="false"` on the figure
+ * keeps the caret out of the block; `clear: both` and `display: block` make
+ * sure no inline content shares the line. In the read-only preview, none of
+ * these editor-only styles apply, so the figure renders at full width. */
+.rich-text-editor-body figure[data-pmc-auto-img="1"] {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  clear: both;
+  float: none;
+  margin: 0.75rem 0;
+  padding: 0.5rem;
+  box-sizing: border-box;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+  user-select: none;
+  cursor: default;
+  text-align: center;
+}
+.rich-text-editor-body figure[data-pmc-auto-img="1"] img {
+  display: block;
+  max-height: 8rem;
+  max-width: 100%;
+  width: auto;
+  margin: 0 auto;
+  border-radius: 0.25rem;
+  object-fit: cover;
+}
+.rich-text-editor-body figure[data-pmc-auto-img="1"]::after {
+  content: "Imagen — " attr(data-pmc-src);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  margin-top: 0.35rem;
+  font-size: 10px;
+  color: #6b7280;
+  text-align: center;
+  line-height: 1.25;
+  word-break: break-all;
+  overflow: hidden;
+  max-width: 100%;
+}
+
 /* Rendered article content (title, subtitle, contents) – HTML interpretado como lo vería el usuario */
 /* Default: texto justificado; el HTML puede sobreescribir con style="text-align: ..." */
 .article-content-display {
@@ -157,3 +207,13 @@ body {
 .content-main a {
   cursor: pointer;
 }
+
+/* Flatplan: lateral "+" gutters stay interactive while dragging an article block */
+body.flatplan-article-drag-active .flatplan-insert-btn,
+body.flatplan-article-drag-active .flatplan-insert-btn--drag-active {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 50;
+}
+

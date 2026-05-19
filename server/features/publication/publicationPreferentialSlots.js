@@ -3,11 +3,13 @@ import PublicationPreferentialSlotDbModel from "../publication_workflow/Publicat
 import "../../database/models.js";
 
 /** `service_groups.service_group_id` — Magazine Cover Page (RDS seed). */
-export const SERVICE_GROUP_MAGAZINE_COVER_PAGE = "ca229970-2a1d-4787-8d07-051e4ce43a78";
+export const SERVICE_GROUP_MAGAZINE_COVER_PAGE = "a2e21f90-c216-487f-87dc-907dece4be7a";
 /** Magazine Inside Cover */
 export const SERVICE_GROUP_MAGAZINE_INSIDE_COVER = "71d8f1bf-4c7f-486b-8ebb-acef6aa6b5b8";
+/** Magazine End Page */
+export const SERVICE_GROUP_MAGAZINE_END_PAGE = "ff45b327-2073-4354-83a5-b5a0ca6b648e";
 /** Magazine Premium Page (preferential pages 1–9) */
-export const SERVICE_GROUP_MAGAZINE_PREMIUM_PAGE = "ce71b075-d775-487a-9ca7-001e30ee896e";
+export const SERVICE_GROUP_MAGAZINE_PREMIUM_PAGE = "cd71b675-d775-407a-9cd7-051c50cb00b8";
 
 /**
  * Maps `position_in_magazine` labels to the standard magazine tariff service groups.
@@ -18,6 +20,7 @@ export function serviceGroupIdForMagazinePreferentialPosition(position_in_magazi
     const p = String(position_in_magazine ?? "");
     if (p === "Cover page") return SERVICE_GROUP_MAGAZINE_COVER_PAGE;
     if (p === "Inside Cover") return SERVICE_GROUP_MAGAZINE_INSIDE_COVER;
+    if (p === "End page") return SERVICE_GROUP_MAGAZINE_END_PAGE;
     return SERVICE_GROUP_MAGAZINE_PREMIUM_PAGE;
 }
 
@@ -71,6 +74,47 @@ export function defaultSlotContentTypeForMagazinePreferentialPosition(position_i
  * @param {{ publicationId: string, magazineId: string }} params
  * @param {{ transaction?: import("sequelize").Transaction }} options
  */
+export function slotPlacementForMagazinePosition(position_in_magazine) {
+    const p = String(position_in_magazine ?? "").trim();
+    if (p === "Cover page") return { slot_key: "cover", publication_page: -1 };
+    if (p === "Inside Cover") return { slot_key: "inside_cover", publication_page: 0 };
+    if (p === "End page") return { slot_key: "end", publication_page: 10 };
+    const m = /^Preferential page (\d+)$/i.exec(p);
+    if (m) {
+        const n = Number(m[1]);
+        if (Number.isInteger(n) && n >= 1 && n <= 9) {
+            return { slot_key: "preferential_page", publication_page: n };
+        }
+    }
+    throw new Error(`Unknown magazine position_in_magazine: ${position_in_magazine}`);
+}
+
+async function findExistingPublicationSlotForPosition(publicationId, position_in_magazine, options = {}) {
+    const { transaction } = options;
+    const { slot_key, publication_page } = slotPlacementForMagazinePosition(position_in_magazine);
+    if (String(position_in_magazine ?? "").trim() === "End page") {
+        return PublicationSlotDbModel.findOne({
+            where: {
+                publication_id: publicationId,
+                slot_key,
+            },
+            order: [
+                ["slot_ordinal", "DESC"],
+                ["publication_slot_id", "DESC"],
+            ],
+            transaction,
+        });
+    }
+    return PublicationSlotDbModel.findOne({
+        where: {
+            publication_id: publicationId,
+            slot_key,
+            publication_page,
+        },
+        transaction,
+    });
+}
+
 async function createPreferentialSlotAtPosition(
     publicationId,
     magazineId,
@@ -80,16 +124,26 @@ async function createPreferentialSlotAtPosition(
     const { transaction } = options;
     const service_group_id = serviceGroupIdForMagazinePreferentialPosition(position_in_magazine);
     const slot_content_type = defaultSlotContentTypeForMagazinePreferentialPosition(position_in_magazine);
-    const slot = await PublicationSlotDbModel.create(
-        {
-            publication_id: publicationId,
-            publication_format: "flipbook",
-            slot_key: "preferential_page",
-            slot_content_type,
-            slot_state: "pending",
-        },
-        { transaction }
+    const { slot_key, publication_page } = slotPlacementForMagazinePosition(position_in_magazine);
+    const existingSlot = await findExistingPublicationSlotForPosition(
+        publicationId,
+        position_in_magazine,
+        options
     );
+    const slot =
+        existingSlot ??
+        (await PublicationSlotDbModel.create(
+            {
+                publication_id: publicationId,
+                publication_format: "flipbook",
+                slot_key,
+                publication_page,
+                slot_ordinal: publication_page + 1,
+                slot_content_type,
+                slot_state: "pending",
+            },
+            { transaction }
+        ));
     const publication_slot_id = slot.get("publication_slot_id");
     await PublicationPreferentialSlotDbModel.create(
         {

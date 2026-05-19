@@ -8,6 +8,12 @@ import {
     PublicationSlotDbModel,
 } from "../../../../../../../server/database/models.js";
 import { ensurePreferentialSlotsForMagazinePublication } from "../../../../../../../server/features/publication/publicationPreferentialSlots.js";
+import {
+    applyReservedMoveWithoutOccupancySwap,
+    slotHasOccupyingContent,
+    swapSlotOccupancyForReservedMove,
+} from "../../../../../../../server/features/publication/preferentialSlotOccupancy.js";
+import { triggerRegeneratePublicationIndexAndSummary } from "../../../../../../../server/features/publication/PublicationIndexSummaryService.js";
 import "../../../../../../../server/database/models.js";
 
 export const runtime = "nodejs";
@@ -290,28 +296,32 @@ export const POST = createEndpoint(
                       .toLowerCase()
                 : null;
 
-            // Demote the source: take whatever the target had before. Adverts
-            // and articles fall back to "advert".
-            if (sourceSlot) {
-                const demotedType = RESERVED_CONTENT_TYPES.has(targetType)
-                    ? targetType
-                    : "advert";
-                await sourceSlot.update(
-                    { slot_content_type: demotedType },
-                    { transaction }
-                );
-            }
+            const targetHasContent = slotHasOccupyingContent(targetSlot);
 
-            await targetSlot.update(
-                { slot_content_type: body.content_type },
-                { transaction }
-            );
+            if (sourceSlot && targetHasContent) {
+                await swapSlotOccupancyForReservedMove({
+                    sourceSlot,
+                    targetSlot,
+                    publicationId,
+                    targetContentType: body.content_type,
+                    transaction,
+                });
+            } else {
+                await applyReservedMoveWithoutOccupancySwap({
+                    sourceSlot,
+                    targetSlot,
+                    targetContentType: body.content_type,
+                    targetPreviousType: targetType,
+                    transaction,
+                });
+            }
 
             return {
                 status: 200,
                 payload: {
                     ok: true,
                     swapped: true,
+                    occupancy_swapped: Boolean(sourceSlot && targetHasContent),
                     moved_content_type: body.content_type,
                     target_position: body.target_position,
                     target_publication_slot_id: Number(
@@ -330,6 +340,10 @@ export const POST = createEndpoint(
                 },
             };
         });
+
+        if (result.status === 200) {
+            triggerRegeneratePublicationIndexAndSummary(publicationId);
+        }
 
         return NextResponse.json(result.payload, { status: result.status });
     },

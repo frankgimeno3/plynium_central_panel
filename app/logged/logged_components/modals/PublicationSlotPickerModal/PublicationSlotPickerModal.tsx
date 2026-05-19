@@ -34,16 +34,34 @@ const PublicationSlotPickerModal: FC<PublicationSlotPickerModalProps> = ({
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [filterText, setFilterText] = useState("");
 
+  const initialSelectedKey = useMemo(
+    () =>
+      JSON.stringify(
+        (initialSelectedSlotIds ?? [])
+          .map((id) => Number(id))
+          .filter((n) => Number.isFinite(n))
+          .sort((a, b) => a - b)
+      ),
+    [initialSelectedSlotIds]
+  );
+
   useEffect(() => {
     if (!open) return;
     const next = new Set<number>();
-    (initialSelectedSlotIds ?? []).forEach((id) => {
-      if (Number.isFinite(Number(id))) next.add(Number(id));
+    let parsed: unknown[] = [];
+    try {
+      parsed = JSON.parse(initialSelectedKey) as unknown[];
+    } catch {
+      parsed = [];
+    }
+    parsed.forEach((id) => {
+      const n = Number(id);
+      if (Number.isFinite(n)) next.add(n);
     });
     setSelectedIds(next);
     setFilterText("");
     setSubmitError(null);
-  }, [open, initialSelectedSlotIds]);
+  }, [open, initialSelectedKey]);
 
   const loadSlots = useCallback(async () => {
     if (!publicationId) return;
@@ -61,7 +79,7 @@ const PublicationSlotPickerModal: FC<PublicationSlotPickerModalProps> = ({
       const json = (await res.json()) as PublicationSlotPickerRow[];
       const list: SortedSlot[] = (Array.isArray(json) ? json : []).map((s) => ({
         ...s,
-        flatplanOrder: flatplanSortKey(String(s.slot_key ?? "")),
+        flatplanOrder: flatplanSortKey(String(s.slot_key ?? ""), s.slot_ordinal),
       }));
       list.sort((a, b) => a.flatplanOrder - b.flatplanOrder);
       setSlots(list);
@@ -94,7 +112,7 @@ const PublicationSlotPickerModal: FC<PublicationSlotPickerModalProps> = ({
       const haystack = [
         String(s.publication_slot_id),
         s.slot_key,
-        slotDisplayName(s.slot_key),
+        slotDisplayName(s.slot_key, s.publication_page),
         s.slot_content_type,
         s.slot_state,
         s.customer_id ?? "",
@@ -106,6 +124,34 @@ const PublicationSlotPickerModal: FC<PublicationSlotPickerModalProps> = ({
       return haystack.includes(q);
     });
   }, [slots, filterText]);
+
+  /** Slots the user may pick: text filter + optional `isSlotSelectable` (non-matching rows are omitted, not greyed out). */
+  const visibleSlots = useMemo(() => {
+    if (!isSlotSelectable) return filteredSlots;
+    return filteredSlots.filter((s) => isSlotSelectable(s));
+  }, [filteredSlots, isSlotSelectable]);
+
+  useEffect(() => {
+    if (!open || loading || !isSlotSelectable) return;
+    setSelectedIds((prev) => {
+      const allowed = new Set(visibleSlots.map((s) => s.publication_slot_id));
+      const next = new Set<number>();
+      prev.forEach((id) => {
+        if (allowed.has(id)) next.add(id);
+      });
+      if (prev.size === next.size) {
+        let same = true;
+        for (const id of prev) {
+          if (!next.has(id)) {
+            same = false;
+            break;
+          }
+        }
+        if (same) return prev;
+      }
+      return next;
+    });
+  }, [open, loading, isSlotSelectable, visibleSlots]);
 
   const toggleSlot = useCallback(
     (slot: SortedSlot) => {
@@ -191,10 +237,20 @@ const PublicationSlotPickerModal: FC<PublicationSlotPickerModalProps> = ({
           ) : null}
           {loading ? (
             <div className="py-10 text-center text-sm text-gray-500">Loading slots…</div>
+          ) : visibleSlots.length === 0 ? (
+            <div className="py-10 text-center text-sm text-gray-500">
+              {slots.length === 0
+                ? "No slots loaded for this publication."
+                : filterText.trim()
+                  ? "No slots match the filter."
+                  : isSlotSelectable
+                    ? "No slots are available for this action."
+                    : "No slots match the filter."}
+            </div>
           ) : (
             <PublicationSlotPickerTable
               mode={mode}
-              filteredSlots={filteredSlots}
+              filteredSlots={visibleSlots}
               selectedIds={selectedIds}
               isSlotSelectable={isSlotSelectable}
               onToggle={toggleSlot}

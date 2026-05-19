@@ -1,6 +1,7 @@
 import { Op, Sequelize } from "sequelize";
 import { createPresignedUpload, deleteObjectFromS3 } from "./S3Service.js";
 import { getFolderIdByPath, getFolderIdsByPath, getFolderPathById } from "../folder/FolderService.js";
+import { ensurePublicationSlotMediatecaFolderByIds } from "../publication/PublicationMediatecaFolderService.js";
 import MediaModel from "./MediaModel.js";
 import "../../database/models.js";
 
@@ -11,10 +12,16 @@ import "../../database/models.js";
  */
 export async function getMedia(params = {}) {
     const folderPath = typeof params.folderPath === "string" ? params.folderPath : "";
+    const folderIdParam = params?.folderId ? String(params.folderId).trim() : "";
     const search = typeof params.search === "string" ? params.search.trim() : "";
     try {
         if (!MediaModel.sequelize) return [];
-        const folderIds = await getFolderIdsByPath(folderPath);
+        let folderIds = [];
+        if (folderIdParam) {
+            folderIds = [folderIdParam];
+        } else {
+            folderIds = await getFolderIdsByPath(folderPath);
+        }
         if (folderIds.length === 0) return [];
         const nonNullIds = folderIds.filter((x) => x != null);
         const where = nonNullIds.length === 0 ? { folder_id: null } : { folder_id: { [Op.in]: nonNullIds } };
@@ -25,7 +32,7 @@ export async function getMedia(params = {}) {
             where,
             // Use real DB column name; `createdAt` ends up quoted as a column ("createdAt") with our model setup.
             order: [[Sequelize.literal('"media_content"."mediateca_content_created_at"'), "DESC"]],
-            attributes: ["id", "content_name", "s3_key", "content_src", "folder_id"],
+            attributes: ["id", "content_name", "s3_key", "content_src", "folder_id", "type", "mime_type"],
         });
         const result = [];
         for (const row of rows) {
@@ -36,6 +43,8 @@ export async function getMedia(params = {}) {
                 s3Key: row.s3_key,
                 url: row.content_src || undefined,
                 folderPath: path,
+                type: row.type === "pdf" ? "pdf" : "image",
+                mimeType: row.mime_type || undefined,
             });
         }
         return result;
@@ -79,6 +88,19 @@ export async function createMedia(data) {
     if (!folderId && data?.folderPath != null) {
         // If duplicates exist for the same folderPath, pick a stable canonical one.
         folderId = await getFolderIdByPath(String(data.folderPath));
+    }
+    if (!folderId && data?.publicationId && data?.slotId != null) {
+        const ensured = await ensurePublicationSlotMediatecaFolderByIds(
+            String(data.publicationId),
+            Number(data.slotId)
+        );
+        folderId = ensured.folderId ?? null;
+    }
+    const folderPathForCreate = data?.folderPath != null ? String(data.folderPath).trim() : "";
+    if (folderPathForCreate && !folderId) {
+        throw new Error(
+            "Destination folder not found. Save the slot or reopen the media library before uploading."
+        );
     }
     await MediaModel.create({
         id: mediaId,

@@ -6,6 +6,8 @@ import type { ProjectSelectFilter } from "./types";
 type ProjectSelectModalFiltersProps = {
   filter: ProjectSelectFilter;
   onFilterChange: (next: ProjectSelectFilter) => void;
+  /** Step scoped to a contract — hide contract search (all rows share the same contract). */
+  omitContractField?: boolean;
 };
 
 type FilterFieldProps = {
@@ -31,8 +33,9 @@ const FilterField: FC<FilterFieldProps> = ({ label, value, placeholder, onChange
 const ProjectSelectModalFilters: FC<ProjectSelectModalFiltersProps> = ({
   filter,
   onFilterChange,
+  omitContractField = false,
 }) => (
-  <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+  <div className={`grid grid-cols-2 gap-3 ${omitContractField ? "md:grid-cols-4" : "md:grid-cols-5"}`}>
     <FilterField
       label="ID"
       value={filter.id}
@@ -57,12 +60,14 @@ const ProjectSelectModalFilters: FC<ProjectSelectModalFiltersProps> = ({
       placeholder="Search by service"
       onChange={(service) => onFilterChange({ ...filter, service })}
     />
-    <FilterField
-      label="Contract"
-      value={filter.contract}
-      placeholder="Search by contract"
-      onChange={(contract) => onFilterChange({ ...filter, contract })}
-    />
+    {omitContractField ? null : (
+      <FilterField
+        label="Contract"
+        value={filter.contract}
+        placeholder="Search by contract"
+        onChange={(contract) => onFilterChange({ ...filter, contract })}
+      />
+    )}
   </div>
 );
 

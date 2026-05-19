@@ -1,3 +1,3 @@
 "use client";
 
-export { default } from "./IssuesPage/IssuesPage";
+export { default } from "./issues_page_components/IssuesPage";

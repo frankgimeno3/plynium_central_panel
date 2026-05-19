@@ -156,12 +156,6 @@ export async function deleteMagazineWithCascade(idMagazine) {
     );
 
     await sequelize.query(
-      `DELETE FROM public.publication_slot_content
-       WHERE publication_id IN (SELECT publication_id FROM public.publications_db WHERE magazine_id = :mid)`,
-      { replacements, transaction }
-    );
-
-    await sequelize.query(
       `DELETE FROM public.publication_slots_db
        WHERE publication_id IN (SELECT publication_id FROM public.publications_db WHERE magazine_id = :mid)`,
       { replacements, transaction }

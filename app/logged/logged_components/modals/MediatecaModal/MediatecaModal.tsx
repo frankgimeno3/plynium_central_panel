@@ -1,7 +1,11 @@
 "use client";
 
 import React, { FC, useState, useMemo, useEffect, useCallback } from "react";
-import { getFolders, getMedia } from "@/app/service/mediatecaService";
+import {
+  ensurePublicationSlotMediatecaFolder,
+  getFolders,
+  getMedia,
+} from "@/app/service/mediatecaService";
 import CreateFolderModal from "@/app/logged/pages/mediateca/CreateFolderModal";
 import AddFileModal from "@/app/logged/pages/mediateca/AddFileModal";
 import RenameMediaModal from "@/app/logged/pages/mediateca/RenameMediaModal";
@@ -21,10 +25,21 @@ export type MediatecaContent = {
   src: string;
 };
 
-type ApiMediaItem = { id: string; name: string; s3Key: string; url?: string; folderPath: string };
+type ApiMediaItem = {
+  id: string;
+  name: string;
+  s3Key: string;
+  url?: string;
+  folderPath: string;
+  type?: "pdf" | "image";
+  mimeType?: string;
+};
 
 function mapMediaToContent(item: ApiMediaItem): MediatecaContent {
-  const isPdf = item.name.toLowerCase().endsWith(".pdf");
+  const isPdf =
+    item.type === "pdf" ||
+    (item.mimeType && item.mimeType.startsWith("application/pdf")) ||
+    item.name.toLowerCase().endsWith(".pdf");
   const type = isPdf ? "pdf" : "image";
   const content_type = isPdf ? "json" : "image";
   const cloudFront = process.env.NEXT_PUBLIC_CLOUDFRONT_URL;
@@ -54,11 +69,19 @@ function formatFolderLabel(segment: string): string {
   return segment.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+function isPdfContent(c: MediatecaContent): boolean {
+  return c.type === "pdf" || c.content_type === "json";
+}
+
 interface MediatecaModalProps {
   open: boolean;
   onClose: () => void;
   onSelectImage: (imageUrl: string, content?: Pick<MediatecaContent, "id" | "name">) => void;
   initialPath?: string;
+  /** When set, ensures the slot mediateca folder exists before listing/uploading. */
+  ensureSlotMediatecaFolder?: { publicationId: string; slotId: number };
+  /** Allow confirming a PDF selection (e.g. advert slot media). Default: images only. */
+  allowPdfSelection?: boolean;
 }
 
 const MediatecaModal: FC<MediatecaModalProps> = ({
@@ -66,6 +89,8 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
   onClose,
   onSelectImage,
   initialPath = "",
+  ensureSlotMediatecaFolder,
+  allowPdfSelection = false,
 }) => {
   const [pathSegments, setPathSegments] = useState<string[]>([]);
   const [hasInitializedPath, setHasInitializedPath] = useState(false);
@@ -83,6 +108,8 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
   const [contentTypeFilter, setContentTypeFilter] = useState("");
   const [renameTarget, setRenameTarget] = useState<MediatecaContent | null>(null);
   const [folderTarget, setFolderTarget] = useState<MediatecaContent | null>(null);
+  const [slotFolderId, setSlotFolderId] = useState<string | null>(null);
+  const [slotFolderPath, setSlotFolderPath] = useState<string | null>(null);
 
   const currentPath = pathSegments.join("/");
   const folderName = useMemo(
@@ -97,16 +124,27 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
   const filterInputClass =
     "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-950/20";
   const filterLabelClass = "mb-1 block text-xs font-medium uppercase tracking-wide text-gray-500";
-  const canUseImage =
-    selectedContent != null && selectedContent.content_type === "image";
+  const canUseSelection =
+    selectedContent != null &&
+    (selectedContent.content_type === "image" ||
+      (allowPdfSelection && isPdfContent(selectedContent)));
 
-  const loadData = useCallback(async (path: string) => {
+  const confirmButtonLabel =
+    selectedContent != null && isPdfContent(selectedContent)
+      ? "Use PDF"
+      : "Use Image";
+
+  const loadData = useCallback(async (path: string, folderId?: string | null) => {
     setLoading(true);
     setError(null);
     try {
+      const mediaParams =
+        folderId && path === slotFolderPath
+          ? { folderId }
+          : { folderPath: path };
       const [foldersRes, mediaRes] = await Promise.all([
         getFolders(path),
-        getMedia({ folderPath: path }),
+        getMedia(mediaParams),
       ]);
       setSubfolders(Array.isArray(foldersRes) ? foldersRes : []);
       setFolderContents(
@@ -122,13 +160,15 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [slotFolderPath]);
 
   useEffect(() => {
     if (!open) {
       setPathSegments([]);
       setHasInitializedPath(false);
       setSelectedContentId(null);
+      setSlotFolderId(null);
+      setSlotFolderPath(null);
       return;
     }
     setPathSegments(initialPath ? initialPath.split("/").filter(Boolean) : []);
@@ -137,9 +177,35 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
   }, [open, initialPath]);
 
   useEffect(() => {
+    if (!open || !ensureSlotMediatecaFolder) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await ensurePublicationSlotMediatecaFolder(
+          ensureSlotMediatecaFolder.publicationId,
+          ensureSlotMediatecaFolder.slotId
+        );
+        if (cancelled) return;
+        setSlotFolderId(res.folderId ?? null);
+        setSlotFolderPath(res.folderPath ?? null);
+      } catch {
+        if (!cancelled) {
+          setSlotFolderId(null);
+          setSlotFolderPath(null);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, ensureSlotMediatecaFolder?.publicationId, ensureSlotMediatecaFolder?.slotId]);
+
+  useEffect(() => {
     if (!open || !hasInitializedPath) return;
-    loadData(currentPath);
-  }, [open, currentPath, hasInitializedPath, loadData]);
+    const folderIdForLoad =
+      slotFolderId && currentPath === slotFolderPath ? slotFolderId : null;
+    loadData(currentPath, folderIdForLoad);
+  }, [open, currentPath, hasInitializedPath, loadData, slotFolderId, slotFolderPath]);
 
   useEffect(() => {
     setSubfolderNameFilter("");
@@ -214,8 +280,8 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
     return () => window.removeEventListener("keydown", onKeyDown, true);
   }, [open, onClose, folderTarget, renameTarget, addFileOpen, createFolderOpen]);
 
-  const handleUseImage = () => {
-    if (!selectedContent || selectedContent.content_type !== "image") return;
+  const handleUseSelection = () => {
+    if (!selectedContent || !canUseSelection) return;
     onSelectImage(selectedContent.src, {
       id: selectedContent.id,
       name: selectedContent.name,
@@ -225,13 +291,20 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
 
   const handleCreateFolderSuccess = () => {
     setCreateFolderOpen(false);
-    loadData(currentPath);
+    const folderIdForLoad =
+      slotFolderId && currentPath === slotFolderPath ? slotFolderId : null;
+    loadData(currentPath, folderIdForLoad);
   };
 
   const handleAddFileSuccess = () => {
     setAddFileOpen(false);
-    loadData(currentPath);
+    const folderIdForLoad =
+      slotFolderId && currentPath === slotFolderPath ? slotFolderId : null;
+    loadData(currentPath, folderIdForLoad);
   };
+
+  const uploadFolderId =
+    slotFolderId && currentPath === slotFolderPath ? slotFolderId : null;
 
   if (!open) return null;
 
@@ -525,9 +598,12 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
                   ) : (
                     filteredContents.map((c) => {
                       const isImage = c.content_type === "image";
+                      const isPdf = isPdfContent(c);
+                      const isSelectable =
+                        isImage || (allowPdfSelection && isPdf);
                       const isSelected = selectedContentId === c.id;
                       const isDisabled =
-                        isImage && selectedContentId != null && !isSelected;
+                        isSelectable && selectedContentId != null && !isSelected;
                       return (
                         <tr
                           key={c.id}
@@ -538,7 +614,7 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
                           }
                         >
                           <td className="px-4 py-3 align-middle">
-                            {isImage ? (
+                            {isSelectable ? (
                               <span className="inline-flex items-center gap-1">
                                 <input
                                   type="checkbox"
@@ -637,7 +713,7 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
             {selectedContentId != null && (
               <p className="mt-2 text-xs text-gray-500" role="status">
                 Only one item can be selected at the same time. Clear selection
-                by unchecking to choose another image.
+                by unchecking to choose another file.
               </p>
             )}
           </div>
@@ -653,11 +729,11 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
             </button>
             <button
               type="button"
-              onClick={handleUseImage}
-              disabled={!canUseImage}
+              onClick={handleUseSelection}
+              disabled={!canUseSelection}
               className="px-4 py-2 text-sm font-medium text-white bg-blue-950 rounded-lg hover:bg-blue-950/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Use Image
+              {confirmButtonLabel}
             </button>
           </div>
         </div>
@@ -673,6 +749,9 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
         open={addFileOpen}
         onClose={() => setAddFileOpen(false)}
         folderPath={currentPath}
+        folderId={uploadFolderId}
+        publicationId={ensureSlotMediatecaFolder?.publicationId}
+        slotId={ensureSlotMediatecaFolder?.slotId}
         onSuccess={handleAddFileSuccess}
       />
       <RenameMediaModal

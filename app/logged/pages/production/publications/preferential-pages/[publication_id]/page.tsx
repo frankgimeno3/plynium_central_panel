@@ -1,7 +1,7 @@
 "use client";
 
 import { FC, use } from "react";
-import { PreferentialPublicationDetailPage } from "./PreferentialPublicationDetailPage/PreferentialPublicationDetailPage";
+import { PreferentialPublicationDetailPage } from "./preferential_publication_detail_components/PreferentialPublicationDetailPage";
 
 const PreferentialPublicationRoutePage: FC<{ params: Promise<{ publication_id: string }> }> = ({
   params,

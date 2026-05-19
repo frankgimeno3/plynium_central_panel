@@ -34,9 +34,9 @@ import NotificationCommentDbModel from "../features/notification_db/Notification
 import NotificationCompanyContentDbModel from "../features/notification_db/NotificationCompanyContentDbModel.js";
 import NotificationAdvertisementDbModel from "../features/notification_db/NotificationAdvertisementDbModel.js";
 import PublicationSlotDbModel from "../features/publication_workflow/PublicationSlotDbModel.js";
-import PublicationSlotContentDbModel from "../features/publication_workflow/PublicationSlotContentDbModel.js";
 import PublicationPreferentialSlotDbModel from "../features/publication_workflow/PublicationPreferentialSlotDbModel.js";
 import PublicationArticleDbModel from "../features/publication_workflow/PublicationArticleDbModel.js";
+import { PUBLICATION_ARTICLE_STATE_VALUES } from "../features/publication_workflow/publicationArticleState.js";
 import PublicationArticleChunkDbModel from "../features/publication_workflow/PublicationArticleChunkDbModel.js";
 import OfferedPreferentialPageDbModel from "../features/publication_workflow/OfferedPreferentialPageDbModel.js";
 import {defineAssociations} from "./associations.js";
@@ -168,6 +168,12 @@ PublicationModel.init({
     real_publication_month_date: { type: DataTypes.DATEONLY, allowNull: true },
     publication_materials_deadline: { type: DataTypes.DATEONLY, allowNull: true },
     publication_main_image_url: { type: DataTypes.STRING(512), allowNull: true },
+    /** Full cover layout PNG for flatplan (…/adverts media/cover/final/). */
+    publication_cover_flatplan_image_url: { type: DataTypes.STRING(512), allowNull: true },
+    /** Auto-generated PDF listing every advert and its page (…/index/). Updated on slot changes. */
+    publication_index_pdf_url: { type: DataTypes.STRING(512), allowNull: true },
+    /** Auto-generated PDF listing every publication article and its first page (…/summary/). Updated on slot/article changes. */
+    publication_summary_pdf_url: { type: DataTypes.STRING(512), allowNull: true },
     publication_edition_name: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "" },
     is_special_edition: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     // Optional tagline shown under the magazine subtitle on the cover preview
@@ -1241,7 +1247,16 @@ PublicationSlotDbModel.init({
     customer_id: { type: DataTypes.STRING(64), allowNull: true },
     project_id: { type: DataTypes.STRING(64), allowNull: true },
     slot_media_url: { type: DataTypes.STRING(512), allowNull: true },
-    slot_article_id: { type: DataTypes.STRING(64), allowNull: true }
+    slot_article_id: { type: DataTypes.STRING(64), allowNull: true },
+    magazine_page_layout: {
+        type: DataTypes.STRING(32),
+        allowNull: false,
+        defaultValue: "2_col_article",
+    },
+    /** Logical magazine page index (cover=-1, inside=0, preferential 1–9, end default 10; regular_page > 9). */
+    publication_page: { type: DataTypes.FLOAT, allowNull: false },
+    /** Total ordering key within an issue (`publication_page + 1` by convention). */
+    slot_ordinal: { type: DataTypes.FLOAT, allowNull: false },
 }, {
     sequelize,
     modelName: "publication_slot",
@@ -1252,29 +1267,8 @@ PublicationSlotDbModel.init({
     updatedAt: "slot_updated_at",
     indexes: [
         { fields: ["publication_id"] },
-        { fields: ["customer_id"] }
-    ]
-});
-
-PublicationSlotContentDbModel.init({
-    publication_slot_content_id: { type: DataTypes.INTEGER, primaryKey: true, autoIncrement: true },
-    publication_id: { type: DataTypes.STRING(255), allowNull: false },
-    publication_slot_id: { type: DataTypes.INTEGER, allowNull: false },
-    publication_slot_position: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
-    slot_content_format: { type: DataTypes.STRING(64), allowNull: false, defaultValue: "" },
-    slot_content_object_array: { type: DataTypes.JSONB, allowNull: false, defaultValue: [] },
-    article_id: { type: DataTypes.STRING, allowNull: true }
-}, {
-    sequelize,
-    modelName: "publication_slot_content",
-    underscored: true,
-    tableName: "publication_slot_content",
-    timestamps: false,
-    indexes: [
-        { fields: ["publication_id"] },
-        { fields: ["publication_slot_id"] },
-        { fields: ["publication_id", "publication_slot_id", "publication_slot_position"] },
-        { fields: ["article_id"] }
+        { fields: ["customer_id"] },
+        { fields: ["publication_id", "slot_ordinal"] },
     ]
 });
 
@@ -1296,7 +1290,17 @@ PublicationArticleDbModel.init({
         allowNull: false,
         defaultValue: 1,
         validate: { min: 1 }
-    }
+    },
+    publication_article_state: {
+        type: DataTypes.STRING(64),
+        allowNull: false,
+        defaultValue: "unfinished",
+        validate: { isIn: [Array.from(PUBLICATION_ARTICLE_STATE_VALUES)] },
+    },
+    publication_art_name: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+    },
 }, {
     sequelize,
     modelName: "publication_article",
@@ -1320,7 +1324,7 @@ PublicationArticleChunkDbModel.init({
     },
     publication_article_id: { type: DataTypes.UUID, allowNull: false },
     publication_id: { type: DataTypes.STRING(255), allowNull: false },
-    publication_slot_content_id: { type: DataTypes.INTEGER, allowNull: true },
+    publication_slot_id: { type: DataTypes.INTEGER, allowNull: true },
     publication_article_chunk_format: {
         type: DataTypes.STRING(64),
         allowNull: false,
@@ -1331,6 +1335,12 @@ PublicationArticleChunkDbModel.init({
     },
     chunk_html: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
     chunk_position: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
+    chunk_page_weight: {
+        type: DataTypes.SMALLINT,
+        allowNull: false,
+        defaultValue: 15,
+        validate: { min: 1, max: 100 },
+    },
     original_article_content_id: { type: DataTypes.STRING(255), allowNull: true }
 }, {
     sequelize,
@@ -1343,8 +1353,8 @@ PublicationArticleChunkDbModel.init({
     indexes: [
         { fields: ["publication_article_id"] },
         { fields: ["publication_id"] },
-        { fields: ["publication_slot_content_id"] },
-        { fields: ["publication_slot_content_id", "chunk_position"] }
+        { fields: ["publication_slot_id"] },
+        { fields: ["publication_slot_id", "chunk_position"] }
     ]
 });
 
@@ -1423,12 +1433,8 @@ PublicationPreferentialSlotDbModel.init({
 
 OfferedPreferentialPageDbModel.belongsTo(PublicationSlotDbModel, { foreignKey: "publication_slot_id", as: "slot" });
 
-PublicationSlotDbModel.hasMany(PublicationSlotContentDbModel, { foreignKey: "publication_slot_id", as: "slot_contents", onDelete: "CASCADE" });
-PublicationSlotContentDbModel.belongsTo(PublicationSlotDbModel, { foreignKey: "publication_slot_id", as: "slot" });
-PublicationSlotContentDbModel.belongsTo(PublicationModel, { foreignKey: "publication_id", targetKey: "publication_id", as: "publication" });
-
 defineAssociations();
 }
 
-export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ProposalServiceLineDbModel, ProposalPaymentDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceGroupDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, NotificationAdvertisementDbModel, PublicationSlotDbModel, PublicationSlotContentDbModel, PublicationPreferentialSlotDbModel, PublicationArticleDbModel, PublicationArticleChunkDbModel, OfferedPreferentialPageDbModel };
+export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ProposalServiceLineDbModel, ProposalPaymentDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceGroupDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, NotificationAdvertisementDbModel, PublicationSlotDbModel, PublicationPreferentialSlotDbModel, PublicationArticleDbModel, PublicationArticleChunkDbModel, OfferedPreferentialPageDbModel };
 

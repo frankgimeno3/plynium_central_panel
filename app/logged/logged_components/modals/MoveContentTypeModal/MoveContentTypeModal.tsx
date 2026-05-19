@@ -5,6 +5,10 @@ import { ALLOWED_TARGET_POSITIONS } from "./modal_move_content_type_components/c
 import { readableLabel } from "./modal_move_content_type_components/helpers";
 import MoveContentTypeFooter from "./modal_move_content_type_components/MoveContentTypeFooter";
 import MoveContentTypeForm from "./modal_move_content_type_components/MoveContentTypeForm";
+import {
+  preferentialSlotHasOccupyingContent,
+  preferentialSlotHasUploadedMedia,
+} from "./modal_move_content_type_components/slotContentConflict";
 import type {
   ConflictMessage,
   MoveContentTypeModalProps,
@@ -103,6 +107,11 @@ const MoveContentTypeModal: FC<MoveContentTypeModalProps> = ({
         text: `${readableLabel(contentType)} is already at ${target}. Nothing to change.`,
       };
     }
+    const targetSlot = slotsByPosition.get(target);
+    const targetHasOccupyingContent =
+      !reservedConflict && preferentialSlotHasOccupyingContent(targetSlot);
+    const targetHasPdf = preferentialSlotHasUploadedMedia(targetSlot);
+
     if (reservedConflict) {
       if (manualRepositionEnabled) {
         if (!displacedTarget) {
@@ -133,6 +142,28 @@ const MoveContentTypeModal: FC<MoveContentTypeModalProps> = ({
         )} (the ${reservedConflict.otherLabel} will be cleared and become an advert).`,
       };
     }
+    if (targetHasOccupyingContent && currentPosition) {
+      const mediaNote = targetHasPdf
+        ? " An advert PDF (or other media) is already uploaded on that page."
+        : " That page already has slot content assigned.";
+      return {
+        tone: "warning",
+        text: `Conflict:${mediaNote} Confirming will swap slots: ${readableLabel(
+          contentType
+        )} moves to ${target} and the existing content moves to ${currentPosition}.`,
+      };
+    }
+    if (targetHasOccupyingContent) {
+      const mediaNote = targetHasPdf
+        ? " An advert PDF is already uploaded on that page."
+        : " That page already has content.";
+      return {
+        tone: "warning",
+        text: `Conflict:${mediaNote} Confirming will place ${readableLabel(
+          contentType
+        )} on ${target}; review whether the existing advert should be cleared first.`,
+      };
+    }
     if (currentPosition) {
       return {
         tone: "success",
@@ -152,6 +183,7 @@ const MoveContentTypeModal: FC<MoveContentTypeModalProps> = ({
     reservedConflict,
     manualRepositionEnabled,
     displacedTarget,
+    slotsByPosition,
   ]);
 
   const canConfirm =

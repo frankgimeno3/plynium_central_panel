@@ -744,6 +744,7 @@ source article twice for the same publication.
 | article_id | text | NO |  |
 | publication_slots_id_array | ARRAY (integer) | NO | `'{}'::integer[]` |
 | desired_page_count | integer | NO | `1` (CHECK >= 1) |
+| publication_article_state | character varying | NO | `'unfinished'` (CHECK: unfinished / awaiting materials / finished unapproved / finished approved) |
 | publication_article_created_at | timestamp with time zone | NO | `now()` |
 | publication_article_updated_at | timestamp with time zone | NO | `now()` |
 

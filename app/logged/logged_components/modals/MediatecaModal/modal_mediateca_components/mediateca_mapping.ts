@@ -1,7 +1,10 @@
 import type { ApiMediaItem, MediatecaContent } from "./types";
 
 export function mapMediaToContent(item: ApiMediaItem): MediatecaContent {
-  const isPdf = item.name.toLowerCase().endsWith(".pdf");
+  const isPdf =
+    item.type === "pdf" ||
+    (item.mimeType && item.mimeType.startsWith("application/pdf")) ||
+    item.name.toLowerCase().endsWith(".pdf");
   const type = isPdf ? "pdf" : "image";
   const content_type = isPdf ? "json" : "image";
   const cloudFront = process.env.NEXT_PUBLIC_CLOUDFRONT_URL;

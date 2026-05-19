@@ -18,6 +18,8 @@ export type ApiMediaItem = {
   s3Key: string;
   url?: string;
   folderPath: string;
+  type?: "pdf" | "image";
+  mimeType?: string;
 };
 
 export interface MediatecaModalProps {
@@ -25,4 +27,6 @@ export interface MediatecaModalProps {
   onClose: () => void;
   onSelectImage: (imageUrl: string, content?: Pick<MediatecaContent, "id" | "name">) => void;
   initialPath?: string;
+  allowPdfSelection?: boolean;
+  ensureSlotMediatecaFolder?: { publicationId: string; slotId: number };
 }

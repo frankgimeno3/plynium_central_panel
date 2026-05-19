@@ -50,6 +50,36 @@ export async function createPresignedUpload({ filename, contentType }) {
  * Delete an object from S3 by key.
  * @param {string} s3Key - Full S3 key (e.g. mediateca/xxx-filename.pdf)
  */
+/**
+ * Upload a buffer directly to S3 (server-side; used for generated cover composites).
+ * @param {{ buffer: Buffer, contentType: string, filename: string }} opts
+ * @returns {Promise<{ mediaId: string, s3Key: string, cdnUrl?: string }>}
+ */
+export async function uploadBufferToS3({ buffer, contentType, filename }) {
+    if (!bucket) {
+        throw new Error("S3 bucket is not configured (set AWS_S3_BUCKET or S3_BUCKET in .env)");
+    }
+    if (!buffer || !Buffer.isBuffer(buffer)) {
+        throw new Error("buffer is required");
+    }
+    const safeName = String(filename ?? "file.bin").trim() || "file.bin";
+    const mediaId = randomUUID();
+    const s3Key = `media/${mediaId}/${safeName}`;
+    const client = getS3Client();
+    await client.send(
+        new PutObjectCommand({
+            Bucket: bucket,
+            Key: s3Key,
+            Body: buffer,
+            ContentType: contentType || "application/octet-stream",
+        })
+    );
+    const cdnUrl = cloudFrontUrl
+        ? `https://${cloudFrontUrl.replace(/^https?:\/\//, "")}/${s3Key}`
+        : undefined;
+    return { mediaId, s3Key, cdnUrl };
+}
+
 export async function deleteObjectFromS3(s3Key) {
     if (!bucket) {
         throw new Error("S3 bucket is not configured (set AWS_S3_BUCKET or S3_BUCKET in .env)");

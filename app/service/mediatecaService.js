@@ -24,8 +24,23 @@ export function createFolder(data) {
 export function getMedia(params = {}) {
     const query = {};
     if (params.folderPath != null) query.folderPath = params.folderPath;
+    if (params.folderId != null) query.folderId = params.folderId;
     if (params.search != null) query.search = params.search;
     return apiClient.get("/api/v1/media", { params: query }).then((r) => r.data);
+}
+
+/**
+ * Ensure mediateca folder exists for a publication slot (advert or article materials).
+ * @param {string} publicationId
+ * @param {number} slotId
+ * @returns {Promise<{ folderId: string, folderPath: string }>}
+ */
+export function ensurePublicationSlotMediatecaFolder(publicationId, slotId) {
+    return apiClient
+        .post(
+            `/api/v1/publications-db/${encodeURIComponent(publicationId)}/slots/${encodeURIComponent(String(slotId))}/mediateca-folder`
+        )
+        .then((r) => r.data);
 }
 
 /**
@@ -37,7 +52,7 @@ export function createPresign(data) {
 }
 
 /**
- * @param {{ mediaId: string, name?: string, contentName?: string, s3Key: string, folderPath?: string, folderId?: string, cdnUrl?: string, contentType?: string, type?: 'pdf' | 'image' }} data
+ * @param {{ mediaId: string, name?: string, contentName?: string, s3Key: string, folderPath?: string, folderId?: string, publicationId?: string, slotId?: number, cdnUrl?: string, contentType?: string, type?: 'pdf' | 'image' }} data
  * @returns {Promise<{ id: string, name: string, s3Key: string, folderPath: string }>}
  */
 export function createMedia(data) {

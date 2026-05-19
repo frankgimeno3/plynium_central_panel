@@ -39,7 +39,7 @@ export async function listProjectsForPublication(publicationId) {
                 s.service_full_name    AS service_full_name,
                 s.service_format       AS service_format,
                 s.service_unit_price   AS service_unit_price,
-                ps.slot_key            AS slot_key,
+                ps.publication_page    AS publication_page,
                 ps.slot_content_type   AS slot_content_type,
                 ps.slot_content_format AS slot_content_format_legacy,
                 ps.slot_state          AS slot_state,
@@ -91,6 +91,10 @@ export async function listProjectsForPublication(publicationId) {
         publication_slot_id:
             r.publication_slot_id != null ? Number(r.publication_slot_id) : null,
         slot_key: r.slot_key ?? null,
+        publication_page:
+            r.publication_page != null && Number.isFinite(Number(r.publication_page))
+                ? Number(r.publication_page)
+                : null,
         slot_state: r.slot_state ?? null,
         slot_media_url: r.slot_media_url ?? null,
         customer: r.contract_customer_id

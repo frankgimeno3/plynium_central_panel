@@ -1,22 +1,9 @@
 /**
- * Slot contents endpoint.
+ * Slot contents endpoint (slot-native after migration 045).
  *
- * GET    → list every `publication_slot_content` row for the slot.
- * PUT    → upsert a single advert/preview entry for the slot:
- *            - `slot_content_format` defaults to "advert".
- *            - `publication_slot_position` defaults to -1 for the cover slot
- *              (per spec) and 0 for any other slot, so a regular advert page
- *              has at most one canonical content row.
- *            - advert rows use the new shape
- *              `slot_content_object_array = [{ position: 1, publication_article_chunk_id: null,
- *                                               advert_media_src: <image_url>, url: <image_url> }]`.
- *              The legacy `url` key is kept alongside `advert_media_src` so older
- *              consumers (cover thumbnail, etc.) keep reading the same field.
- *            - article rows use `article_id` and mirror it to publication_slots_db.slot_article_id.
- *          The publication_main_image_url mirror is updated only for the cover
- *          slot, so the existing thumbnail UI keeps working.
- * DELETE → remove that same canonical entry. Mirrors the cover slot URL clear
- *          back to publications_db when applicable.
+ * GET    → synthetic view of slot advert/article fields for this slot.
+ * PUT    → upsert advert (`slot_media_url`) or article (`slot_article_id`) on the slot.
+ * DELETE → clear advert media or article assignment on the slot.
  */
 
 import { createEndpoint } from "../../../../../../../../server/createEndpoint.js";
@@ -24,10 +11,21 @@ import { NextResponse } from "next/server";
 import Joi from "joi";
 import {
   PublicationSlotDbModel,
-  PublicationSlotContentDbModel,
   PublicationModel,
   ArticleModel,
+  PublicationArticleDbModel,
+  PublicationArticleChunkDbModel,
 } from "../../../../../../../../server/database/models.js";
+import {
+  ensureMagazineSlotTitleSubtitleChunks,
+  ensureSlotInPublicationArticleSpread,
+  isFirstSlotInPublicationArticleSlotsArray,
+} from "../../../../../../../../server/features/publication_workflow/PublicationArticleService.js";
+import { normalizeMagazinePageLayout } from "../../../../../../../../server/features/publication_workflow/magazinePageLayout.js";
+import {
+  ensureAdvertSlotMaterialsFolderHierarchy,
+  ensureArticleSlotMaterialsFolderHierarchy,
+} from "../../../../../../../../server/features/publication/PublicationMediatecaFolderService.js";
 import "../../../../../../../../server/database/models.js";
 
 export const runtime = "nodejs";
@@ -36,47 +34,50 @@ const COVER_SLOT_KEY = "cover";
 const COVER_SLOT_POSITION = -1;
 const REGULAR_SLOT_POSITION = 0;
 const DEFAULT_FORMAT = "advert";
-const SLOT_CONTENT_ATTRIBUTES = [
-  "publication_slot_content_id",
-  "publication_id",
-  "publication_slot_id",
-  "publication_slot_position",
-  "slot_content_format",
-  "slot_content_object_array",
-  "article_id",
-];
-const SLOT_CONTENT_ATTRIBUTES_WITHOUT_ARTICLE = SLOT_CONTENT_ATTRIBUTES.filter(
-  (attr) => attr !== "article_id"
-);
-
-function isMissingArticleIdColumn(error) {
-  const msg = `${error?.message ?? ""} ${error?.original?.message ?? ""}`;
-  return msg.includes("article_id") && msg.includes("does not exist");
-}
 
 function toPlain(row) {
   return row && typeof row.get === "function" ? row.get({ plain: true }) : row;
 }
 
-function toApiSlotContent(row) {
-  const c = toPlain(row);
-  if (!c) return null;
-  return {
-    publication_slot_content_id: c.publication_slot_content_id,
-    publication_id: c.publication_id,
-    publication_slot_id: c.publication_slot_id,
-    publication_slot_position: c.publication_slot_position ?? 0,
-    slot_content_format: c.slot_content_format ?? "",
-    slot_content_object_array: c.slot_content_object_array ?? [],
-    article_id: c.article_id ?? null,
-  };
+function advertObjectsFromMediaUrl(imageUrl) {
+  const url = String(imageUrl ?? "").trim();
+  if (!url) return [];
+  return [
+    {
+      position: 1,
+      publication_article_chunk_id: null,
+      advert_media_src: url,
+      url,
+    },
+  ];
 }
 
-function defaultPositionForSlot(slot) {
-  if (!slot) return REGULAR_SLOT_POSITION;
-  return String(slot.get("slot_key")) === COVER_SLOT_KEY
-    ? COVER_SLOT_POSITION
-    : REGULAR_SLOT_POSITION;
+function toApiSlotContentFromSlot(slot) {
+  const s = toPlain(slot);
+  if (!s) return null;
+  const sid = Number(s.publication_slot_id);
+  const format = String(s.slot_content_type ?? "").trim().toLowerCase() || DEFAULT_FORMAT;
+  const mediaUrl = s.slot_media_url != null ? String(s.slot_media_url).trim() : "";
+  const articleId = s.slot_article_id != null ? String(s.slot_article_id).trim() : "";
+  const isAdvert = format === "advert" || (!articleId && mediaUrl);
+  const isArticle = format === "article" || Boolean(articleId);
+
+  if (!isAdvert && !isArticle) {
+    return null;
+  }
+
+  return {
+    publication_slot_content_id: sid,
+    publication_slot_id: sid,
+    publication_id: s.publication_id,
+    publication_slot_position:
+      String(s.slot_key) === COVER_SLOT_KEY ? COVER_SLOT_POSITION : REGULAR_SLOT_POSITION,
+    slot_content_format: isArticle ? "article" : "advert",
+    slot_content_object_array: isAdvert ? advertObjectsFromMediaUrl(mediaUrl) : [],
+    article_id: isArticle ? articleId || null : null,
+    magazine_page_layout: normalizeMagazinePageLayout(s.magazine_page_layout),
+    slot_media_url: mediaUrl || null,
+  };
 }
 
 export const GET = createEndpoint(
@@ -86,31 +87,74 @@ export const GET = createEndpoint(
     if (!publicationId) return NextResponse.json({ message: "Missing publication id" }, { status: 400 });
     if (!slotId) return NextResponse.json({ message: "Missing slot id" }, { status: 400 });
 
-    if (!PublicationSlotContentDbModel?.sequelize) return NextResponse.json([]);
+    if (!PublicationSlotDbModel?.sequelize) return NextResponse.json([]);
 
-    let rows;
+    const slot = await PublicationSlotDbModel.findOne({
+      where: {
+        publication_id: String(publicationId),
+        publication_slot_id: Number(slotId),
+      },
+    });
+    if (!slot) return NextResponse.json([]);
+
     try {
-      rows = await PublicationSlotContentDbModel.findAll({
-        attributes: SLOT_CONTENT_ATTRIBUTES,
-        where: {
-          publication_id: String(publicationId),
-          publication_slot_id: Number(slotId),
-        },
-        order: [["publication_slot_position", "ASC"]],
-      });
-    } catch (error) {
-      if (!isMissingArticleIdColumn(error)) throw error;
-      rows = await PublicationSlotContentDbModel.findAll({
-        attributes: SLOT_CONTENT_ATTRIBUTES_WITHOUT_ARTICLE,
-        where: {
-          publication_id: String(publicationId),
-          publication_slot_id: Number(slotId),
-        },
-        order: [["publication_slot_position", "ASC"]],
-      });
+      const publication = await PublicationModel.findByPk(String(publicationId));
+      if (publication) {
+        const slotType = String(slot.get("slot_content_type") ?? "").trim().toLowerCase();
+        const articleId = slot.get("slot_article_id");
+        if (slotType === "article" && articleId) {
+          await ensureArticleSlotMaterialsFolderHierarchy(
+            publication,
+            String(articleId),
+            Number(slotId)
+          );
+        } else {
+          await ensureAdvertSlotMaterialsFolderHierarchy(publication, Number(slotId));
+        }
+      }
+    } catch (folderErr) {
+      console.warn(
+        "[publications-db/slots/contents GET] mediateca folder ensure failed:",
+        folderErr?.message ?? folderErr
+      );
     }
 
-    return NextResponse.json(rows.map(toApiSlotContent).filter(Boolean));
+    const entry = toApiSlotContentFromSlot(slot);
+    if (!entry) return NextResponse.json([]);
+
+    if (entry.slot_content_format === "article" && entry.article_id) {
+      try {
+        const pa = await PublicationArticleDbModel.findOne({
+          where: {
+            publication_id: String(publicationId),
+            article_id: String(entry.article_id),
+          },
+        });
+        if (pa) {
+          const paIdStr = String(pa.get("publication_article_id"));
+          const slotIdNum = Number(slotId);
+          await ensureSlotInPublicationArticleSpread(paIdStr, slotIdNum);
+          await pa.reload();
+          const chunkCount = await PublicationArticleChunkDbModel.count({
+            where: { publication_slot_id: slotIdNum },
+          });
+          const arr = pa.get("publication_slots_id_array");
+          const includeTs = isFirstSlotInPublicationArticleSlotsArray(arr, slotIdNum);
+          if (chunkCount === 0) {
+            await ensureMagazineSlotTitleSubtitleChunks(paIdStr, slotIdNum, {
+              includeTitleSubtitle: includeTs,
+            });
+          }
+        }
+      } catch (hydrateErr) {
+        console.warn(
+          "[publications-db/slots/contents GET] article slot hydrate failed:",
+          hydrateErr?.message ?? hydrateErr
+        );
+      }
+    }
+
+    return NextResponse.json([entry]);
   },
   null,
   true
@@ -149,10 +193,6 @@ export const PUT = createEndpoint(
       : articleId
         ? "article"
         : DEFAULT_FORMAT;
-    const position =
-      body.publication_slot_position != null
-        ? Number(body.publication_slot_position)
-        : defaultPositionForSlot(slot);
 
     if (articleId) {
       const article = await ArticleModel.findByPk(articleId);
@@ -166,76 +206,71 @@ export const PUT = createEndpoint(
 
     const sequelize = PublicationSlotDbModel.sequelize;
     const result = await sequelize.transaction(async (transaction) => {
-      // New canonical shape requested by the Contents Manager:
-      //   [{ position, publication_article_chunk_id, advert_media_src }]
-      // For adverts there is a single position-1 entry whose
-      // `advert_media_src` carries the image URL. We also keep the legacy
-      // `url` key so older consumers that still read it (e.g. cover
-      // thumbnail in the Data tab) keep working without an extra migration.
-      const objects = imageUrl
-        ? [
-            {
-              position: 1,
-              publication_article_chunk_id: null,
-              advert_media_src: imageUrl,
-              url: imageUrl,
-            },
-          ]
-        : [];
-      const existing = await PublicationSlotContentDbModel.findOne({
-        attributes: articleId ? SLOT_CONTENT_ATTRIBUTES : SLOT_CONTENT_ATTRIBUTES_WITHOUT_ARTICLE,
-        where: {
-          publication_id: String(publicationId),
-          publication_slot_id: Number(slotId),
-          publication_slot_position: position,
-        },
-        transaction,
-      });
+      const publication = await PublicationModel.findByPk(String(publicationId), { transaction });
 
-      let row;
-      const contentPayload = {
-        slot_content_format: format,
-        slot_content_object_array: objects,
+      const slotUpdates = {
+        slot_content_type: format,
       };
       if (articleId) {
-        contentPayload.article_id = articleId;
-      }
-      if (existing) {
-        await existing.update(contentPayload, { transaction });
-        row = existing;
-      } else {
-        row = await PublicationSlotContentDbModel.create(
-          {
-            publication_id: String(publicationId),
-            publication_slot_id: Number(slotId),
-            publication_slot_position: position,
-            ...contentPayload,
-          },
-          { transaction }
-        );
+        slotUpdates.slot_article_id = articleId;
+        slotUpdates.slot_media_url = null;
+      } else if (imageUrl) {
+        slotUpdates.slot_media_url = imageUrl;
+        slotUpdates.slot_article_id = null;
       }
 
-      // Cover slot: keep publications_db.publication_main_image_url in sync
-      // so the existing thumbnail UI on the issues list keeps working without
-      // an extra join.
-      if (String(slot.get("slot_key")) === COVER_SLOT_KEY) {
-        const publication = await PublicationModel.findByPk(String(publicationId), { transaction });
-        if (publication) {
-          await publication.update(
-            { publication_main_image_url: imageUrl },
+      await slot.update(slotUpdates, { transaction });
+
+      if (String(slot.get("slot_key")) === COVER_SLOT_KEY && publication && imageUrl) {
+        await publication.update({ publication_main_image_url: imageUrl }, { transaction });
+      }
+
+      if (publication) {
+        if (articleId) {
+          await ensureArticleSlotMaterialsFolderHierarchy(
+            publication,
+            articleId,
+            Number(slotId),
             { transaction }
           );
+        } else if (imageUrl) {
+          await ensureAdvertSlotMaterialsFolderHierarchy(publication, Number(slotId), {
+            transaction,
+          });
         }
       }
 
-      if (articleId) {
-        await slot.update({ slot_article_id: articleId }, { transaction });
-      }
-
-      return row;
+      return slot;
     });
 
-    return NextResponse.json(toApiSlotContent(result));
+    await result.reload();
+    let out = toApiSlotContentFromSlot(result);
+    if (out && out.slot_content_format === "article" && out.article_id) {
+      try {
+        const pa = await PublicationArticleDbModel.findOne({
+          where: {
+            publication_id: String(publicationId),
+            article_id: String(out.article_id),
+          },
+        });
+        if (pa) {
+          const paIdStr = String(pa.get("publication_article_id"));
+          await ensureSlotInPublicationArticleSpread(paIdStr, Number(slotId));
+          await pa.reload();
+          const arr = pa.get("publication_slots_id_array");
+          const includeTs = isFirstSlotInPublicationArticleSlotsArray(arr, Number(slotId));
+          await ensureMagazineSlotTitleSubtitleChunks(paIdStr, Number(slotId), {
+            includeTitleSubtitle: includeTs,
+          });
+          const refreshed = await PublicationSlotDbModel.findByPk(Number(slotId));
+          if (refreshed) out = toApiSlotContentFromSlot(refreshed) ?? out;
+        }
+      } catch (e) {
+        console.warn("[publications-db/slots/contents PUT] article hydrate:", e?.message ?? e);
+      }
+    }
+
+    return NextResponse.json(out);
   },
   putSchema,
   true
@@ -260,23 +295,14 @@ export const DELETE = createEndpoint(
       );
     }
 
-    const url = new URL(request.url);
-    const positionParam = url.searchParams.get("publication_slot_position");
-    const position =
-      positionParam != null && positionParam !== ""
-        ? Number(positionParam)
-        : defaultPositionForSlot(slot);
-
     const sequelize = PublicationSlotDbModel.sequelize;
     await sequelize.transaction(async (transaction) => {
-      await PublicationSlotContentDbModel.destroy({
-        where: {
-          publication_id: String(publicationId),
-          publication_slot_id: Number(slotId),
-          publication_slot_position: position,
-        },
-        transaction,
-      });
+      const ctype = String(slot.get("slot_content_type") ?? "").trim().toLowerCase();
+      if (ctype === "article") {
+        await slot.update({ slot_article_id: null }, { transaction });
+      } else {
+        await slot.update({ slot_media_url: null }, { transaction });
+      }
       if (String(slot.get("slot_key")) === COVER_SLOT_KEY) {
         const publication = await PublicationModel.findByPk(String(publicationId), { transaction });
         if (publication) {

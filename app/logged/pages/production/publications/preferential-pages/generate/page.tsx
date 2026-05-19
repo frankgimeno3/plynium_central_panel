@@ -1,3 +1,3 @@
 "use client";
 
-export { default } from "./PreferentialGeneratePage/PreferentialGeneratePage";
+export { default } from "./preferential_generate_page_components/PreferentialGeneratePage";

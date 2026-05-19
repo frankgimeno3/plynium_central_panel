@@ -10,6 +10,8 @@ type ProjectSelectModalTableProps = {
   selectedProject: ProjectRow | null;
   currentProjectId: string | null;
   onSelectProject: (project: ProjectRow) => void;
+  /** When true, contract is fixed by context — hide the Contract column. */
+  hideContractColumn?: boolean;
 };
 
 const ProjectSelectModalTable: FC<ProjectSelectModalTableProps> = ({
@@ -19,6 +21,7 @@ const ProjectSelectModalTable: FC<ProjectSelectModalTableProps> = ({
   selectedProject,
   currentProjectId,
   onSelectProject,
+  hideContractColumn = false,
 }) => (
   <div className="border border-gray-200 rounded-lg overflow-auto flex-1 min-h-[200px]">
     <table className="min-w-full divide-y divide-gray-200">
@@ -36,9 +39,11 @@ const ProjectSelectModalTable: FC<ProjectSelectModalTableProps> = ({
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
             Service
           </th>
-          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-            Contract
-          </th>
+          {hideContractColumn ? null : (
+            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Contract
+            </th>
+          )}
           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
             Publication
           </th>
@@ -47,20 +52,20 @@ const ProjectSelectModalTable: FC<ProjectSelectModalTableProps> = ({
       <tbody className="bg-white divide-y divide-gray-200">
         {loading ? (
           <tr>
-            <td colSpan={6} className="px-4 py-5 text-center text-gray-500">
+            <td colSpan={hideContractColumn ? 5 : 6} className="px-4 py-5 text-center text-gray-500">
               Loading projects…
             </td>
           </tr>
         ) : loadError ? (
           <tr>
-            <td colSpan={6} className="px-4 py-5 text-center">
+            <td colSpan={hideContractColumn ? 5 : 6} className="px-4 py-5 text-center">
               <p className="text-amber-700 font-medium">Could not load projects</p>
               <p className="text-sm text-gray-600 mt-1">{loadError}</p>
             </td>
           </tr>
         ) : projects.length === 0 ? (
           <tr>
-            <td colSpan={6} className="px-4 py-5 text-center text-gray-500">
+            <td colSpan={hideContractColumn ? 5 : 6} className="px-4 py-5 text-center text-gray-500">
               No projects found.
             </td>
           </tr>
@@ -90,9 +95,11 @@ const ProjectSelectModalTable: FC<ProjectSelectModalTableProps> = ({
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 font-mono">
                   {project.service || "—"}
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 font-mono">
-                  {project.id_contract || "—"}
-                </td>
+                {hideContractColumn ? null : (
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600 font-mono">
+                    {project.id_contract || "—"}
+                  </td>
+                )}
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 font-mono">
                   {project.publication_id || "—"}
                 </td>

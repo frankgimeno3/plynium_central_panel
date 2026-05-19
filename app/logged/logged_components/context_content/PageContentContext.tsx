@@ -4,6 +4,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -33,6 +34,32 @@ const defaultMeta: PageMeta = {
   buttons: [],
 };
 
+function breadcrumbsEqual(a: BreadcrumbItem[], b: BreadcrumbItem[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] === b[i]) continue;
+    if (String(a[i]?.label) !== String(b[i]?.label)) return false;
+    if (String(a[i]?.href ?? "") !== String(b[i]?.href ?? "")) return false;
+  }
+  return true;
+}
+
+function buttonsEqual(a: PageButton[] | undefined, b: PageButton[] | undefined): boolean {
+  const aa = a ?? [];
+  const bb = b ?? [];
+  if (aa === bb) return true;
+  if (aa.length !== bb.length) return false;
+  for (let i = 0; i < aa.length; i++) {
+    if (aa[i] === bb[i]) continue;
+    if (String(aa[i]?.label) !== String(bb[i]?.label)) return false;
+    if (String(aa[i]?.href ?? "") !== String(bb[i]?.href ?? "")) return false;
+    if (aa[i]?.variant !== bb[i]?.variant) return false;
+    if (aa[i]?.onClick !== bb[i]?.onClick) return false;
+  }
+  return true;
+}
+
 const PageContentContext = createContext<PageContentContextValue | null>(null);
 
 export function PageContentProvider({ children }: { children: ReactNode }) {
@@ -44,11 +71,11 @@ export function PageContentProvider({ children }: { children: ReactNode }) {
       const nextBreadcrumbs = next.breadcrumbs ?? prev.breadcrumbs;
       const nextButtons =
         next.buttons !== undefined ? next.buttons : prev.buttons;
-      // Only update if content changed (avoids loops when deps are new refs every render)
+      // Shallow compare only (no JSON.stringify): deep/circular structures can overflow the stack.
       if (
         nextTitle === prev.pageTitle &&
-        JSON.stringify(nextBreadcrumbs) === JSON.stringify(prev.breadcrumbs) &&
-        JSON.stringify(nextButtons) === JSON.stringify(prev.buttons)
+        breadcrumbsEqual(nextBreadcrumbs, prev.breadcrumbs) &&
+        buttonsEqual(nextButtons, prev.buttons)
       ) {
         return prev;
       }
@@ -60,8 +87,13 @@ export function PageContentProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const contextValue = useMemo(
+    () => ({ meta, setPageMeta }),
+    [meta, setPageMeta]
+  );
+
   return (
-    <PageContentContext.Provider value={{ meta, setPageMeta }}>
+    <PageContentContext.Provider value={contextValue}>
       {children}
     </PageContentContext.Provider>
   );

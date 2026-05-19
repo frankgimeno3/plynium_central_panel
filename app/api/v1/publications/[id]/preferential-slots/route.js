@@ -21,7 +21,12 @@ export const GET = createEndpoint(
     async (request) => {
         const publication_id = getPublicationIdFromRequest(request);
         const url = new URL(request.url);
-        const ensureMissing = url.searchParams.get("ensure") !== "false";
+        /**
+         * Side-effectful “lazy migration” is opt-in only. A plain GET must not
+         * create `publication_slots_db` / preferential rows (e.g. issue detail
+         * pages load this on every refresh).
+         */
+        const ensureMissing = url.searchParams.get("ensure") === "true";
         const data = await listPreferentialSlotsForPublication(publication_id, { ensureMissing });
         return NextResponse.json(data);
     },

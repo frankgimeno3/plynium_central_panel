@@ -36,6 +36,7 @@ const COVER_HEADER_COLUMN_NAMES = [
   "red_box_header",
   "red_box_body",
   "special_edition_subtitle",
+  "publication_cover_flatplan_image_url",
 ];
 
 function isMissingCoverHeaderColumn(error) {
@@ -69,6 +70,7 @@ function toApiPublication(row) {
     publication_status: p.publication_status ?? "draft",
     publication_format: p.publication_format ?? "flipbook",
     publication_main_image_url: p.publication_main_image_url ?? "",
+    publication_cover_flatplan_image_url: p.publication_cover_flatplan_image_url ?? "",
     mediateca_folder_id: p.mediateca_folder_id ?? null,
     publication_header_domain: p.publication_header_domain ?? "",
     red_box_header: p.red_box_header ?? "",

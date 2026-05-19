@@ -1,25 +1,14 @@
 /**
  * Publication "Cover Page" image endpoint.
  *
- * Persists the chosen cover image in two places so existing UI keeps working:
- *   1. `publication_slot_content` row keyed by the publication's `slot_key='cover'`
- *      slot, with `slot_content_format='advert'` and `publication_slot_position=-1`
- *      (per the spec: this is what canonically represents the cover asset).
- *   2. `publications_db.publication_main_image_url` so existing read paths
- *      and thumbnail listings keep showing the same image without a join.
- *
- * The cover slot is auto-created on first use to handle legacy publications
- * that never opened the Flatplan tab.
+ * Persists the cover image on the cover slot's `slot_media_url` and mirrors it to
+ * `publications_db.publication_main_image_url` for existing thumbnail UI.
  */
 
 import { createEndpoint } from "../../../../../../server/createEndpoint.js";
 import { NextResponse } from "next/server";
 import Joi from "joi";
-import {
-  PublicationModel,
-  PublicationSlotDbModel,
-  PublicationSlotContentDbModel,
-} from "../../../../../../server/database/models.js";
+import { PublicationModel, PublicationSlotDbModel } from "../../../../../../server/database/models.js";
 import "../../../../../../server/database/models.js";
 
 export const runtime = "nodejs";
@@ -27,33 +16,28 @@ export const runtime = "nodejs";
 const COVER_SLOT_KEY = "cover";
 const COVER_SLOT_POSITION = -1;
 const COVER_SLOT_CONTENT_FORMAT = "advert";
-const SLOT_CONTENT_ATTRIBUTES_WITHOUT_ARTICLE = [
-  "publication_slot_content_id",
-  "publication_id",
-  "publication_slot_id",
-  "publication_slot_position",
-  "slot_content_format",
-  "slot_content_object_array",
-];
 
 const putSchema = Joi.object({
   image_url: Joi.string().trim().min(1).required(),
 });
 
-function toApi(publication, slot, content) {
+function toApi(publication, slot) {
   const p = publication?.get ? publication.get({ plain: true }) : publication;
   const s = slot?.get ? slot.get({ plain: true }) : slot;
-  const c = content?.get ? content.get({ plain: true }) : content;
-  const objects = Array.isArray(c?.slot_content_object_array)
-    ? c.slot_content_object_array
-    : [];
-  // Honour both the new Contents Manager shape (`advert_media_src`) and the
-  // legacy `url` field so existing rows keep rendering without a backfill.
-  const head = objects[0] && typeof objects[0] === "object" ? objects[0] : null;
   const url =
-    (head && typeof head.advert_media_src === "string" && head.advert_media_src) ||
-    (head && typeof head.url === "string" && head.url) ||
-    (p?.publication_main_image_url || "");
+    (s?.slot_media_url && String(s.slot_media_url).trim()) ||
+    (p?.publication_main_image_url && String(p.publication_main_image_url).trim()) ||
+    "";
+  const objects = url
+    ? [
+        {
+          position: 1,
+          publication_article_chunk_id: null,
+          advert_media_src: url,
+          url,
+        },
+      ]
+    : [];
   return {
     publication_id: p?.publication_id ?? null,
     publication_slot_id: s?.publication_slot_id ?? null,
@@ -79,18 +63,8 @@ export const GET = createEndpoint(
     const slot = await PublicationSlotDbModel.findOne({
       where: { publication_id: String(id), slot_key: COVER_SLOT_KEY },
     });
-    const content = slot
-      ? await PublicationSlotContentDbModel.findOne({
-          attributes: SLOT_CONTENT_ATTRIBUTES_WITHOUT_ARTICLE,
-          where: {
-            publication_id: String(id),
-            publication_slot_id: slot.get("publication_slot_id"),
-            publication_slot_position: COVER_SLOT_POSITION,
-          },
-        })
-      : null;
 
-    return NextResponse.json(toApi(publication, slot, content));
+    return NextResponse.json(toApi(publication, slot));
   },
   null,
   true
@@ -121,6 +95,8 @@ export const PUT = createEndpoint(
             publication_id: String(id),
             publication_format: "flipbook",
             slot_key: COVER_SLOT_KEY,
+            publication_page: -1,
+            slot_ordinal: 0,
             slot_content_type: "advert",
             slot_state: "pending",
           },
@@ -128,57 +104,22 @@ export const PUT = createEndpoint(
         );
       }
 
-      const slotId = slot.get("publication_slot_id");
-      // New canonical Contents Manager shape with the legacy `url` key kept
-      // alongside `advert_media_src` for backward compatibility with older
-      // readers (cover thumbnail, etc.).
-      const objects = [
+      await slot.update(
         {
-          position: 1,
-          publication_article_chunk_id: null,
-          advert_media_src: imageUrl,
-          url: imageUrl,
+          slot_content_type: "advert",
+          slot_media_url: imageUrl,
+          slot_article_id: null,
         },
-      ];
-
-      const existingContent = await PublicationSlotContentDbModel.findOne({
-        attributes: SLOT_CONTENT_ATTRIBUTES_WITHOUT_ARTICLE,
-        where: {
-          publication_id: String(id),
-          publication_slot_id: slotId,
-          publication_slot_position: COVER_SLOT_POSITION,
-        },
-        transaction,
-      });
-      let content;
-      if (existingContent) {
-        await existingContent.update(
-          {
-            slot_content_format: COVER_SLOT_CONTENT_FORMAT,
-            slot_content_object_array: objects,
-          },
-          { transaction }
-        );
-        content = existingContent;
-      } else {
-        content = await PublicationSlotContentDbModel.create(
-          {
-            publication_id: String(id),
-            publication_slot_id: slotId,
-            publication_slot_position: COVER_SLOT_POSITION,
-            slot_content_format: COVER_SLOT_CONTENT_FORMAT,
-            slot_content_object_array: objects,
-          },
-          { transaction }
-        );
-      }
+        { transaction }
+      );
 
       await publication.update({ publication_main_image_url: imageUrl }, { transaction });
 
-      return { slot, content };
+      return slot;
     });
 
-    return NextResponse.json(toApi(publication, result.slot, result.content));
+    await result.reload();
+    return NextResponse.json(toApi(publication, result));
   },
   putSchema,
   true
@@ -202,15 +143,7 @@ export const DELETE = createEndpoint(
         transaction,
       });
       if (slot) {
-        const slotId = slot.get("publication_slot_id");
-        await PublicationSlotContentDbModel.destroy({
-          where: {
-            publication_id: String(id),
-            publication_slot_id: slotId,
-            publication_slot_position: COVER_SLOT_POSITION,
-          },
-          transaction,
-        });
+        await slot.update({ slot_media_url: null }, { transaction });
       }
       await publication.update({ publication_main_image_url: "" }, { transaction });
     });

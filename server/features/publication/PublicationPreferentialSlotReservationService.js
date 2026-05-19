@@ -11,6 +11,7 @@ import {
     displayTitleForPreferentialPosition,
     defaultSlotContentTypeForMagazinePreferentialPosition,
     ensurePreferentialSlotsForMagazinePublication,
+    slotPlacementForMagazinePosition,
 } from "./publicationPreferentialSlots.js";
 import PublicationModel from "../publication/PublicationModel.js";
 import "../../database/models.js";
@@ -162,16 +163,75 @@ export async function listPreferentialSlotsForPublication(publication_id, opts =
         .map((id) => Number(id))
         .filter((id) => Number.isFinite(id));
     const slotContentTypeById = new Map();
+    const slotContentPresenceById = new Map();
+    const publicationSlotByPosition = new Map();
     if (publicationSlotIds.length) {
         const slotRows = await PublicationSlotDbModel.findAll({
             where: { publication_slot_id: { [Op.in]: publicationSlotIds } },
-            attributes: ["publication_slot_id", "slot_content_type"],
+            attributes: [
+                "publication_slot_id",
+                "slot_content_type",
+                "slot_media_url",
+                "customer_id",
+                "project_id",
+                "slot_article_id",
+            ],
         });
         for (const slot of slotRows) {
             const plain = slot.get({ plain: true });
             const id = Number(plain.publication_slot_id);
             if (Number.isFinite(id)) {
                 slotContentTypeById.set(id, plain.slot_content_type != null ? String(plain.slot_content_type) : null);
+                slotContentPresenceById.set(id, {
+                    slot_media_url: plain.slot_media_url != null ? String(plain.slot_media_url) : null,
+                    customer_id: plain.customer_id != null ? String(plain.customer_id) : null,
+                    project_id: plain.project_id != null ? String(plain.project_id) : null,
+                    slot_article_id: plain.slot_article_id != null ? String(plain.slot_article_id) : null,
+                });
+            }
+        }
+    }
+
+    const issueSlotRows = await PublicationSlotDbModel.findAll({
+        where: { publication_id: pid },
+        attributes: [
+            "publication_slot_id",
+            "slot_key",
+            "publication_page",
+            "slot_content_type",
+            "slot_media_url",
+            "customer_id",
+            "project_id",
+            "slot_article_id",
+        ],
+    });
+    for (const slot of issueSlotRows) {
+        const plain = slot.get({ plain: true });
+        const slotKey = String(plain.slot_key ?? "").trim().toLowerCase();
+        const page = Number(plain.publication_page);
+        if (!Number.isFinite(page)) continue;
+        for (const position of MAGAZINE_PREFERENTIAL_POSITIONS) {
+            const placement = slotPlacementForMagazinePosition(position);
+            const matchesPosition =
+                position === "End page"
+                    ? String(placement.slot_key).toLowerCase() === slotKey
+                    : String(placement.slot_key).toLowerCase() === slotKey &&
+                      Number(placement.publication_page) === Number(page);
+            if (matchesPosition) {
+                publicationSlotByPosition.set(position, plain);
+                const sid = Number(plain.publication_slot_id);
+                if (Number.isFinite(sid) && !slotContentTypeById.has(sid)) {
+                    slotContentTypeById.set(
+                        sid,
+                        plain.slot_content_type != null ? String(plain.slot_content_type) : null
+                    );
+                    slotContentPresenceById.set(sid, {
+                        slot_media_url: plain.slot_media_url != null ? String(plain.slot_media_url) : null,
+                        customer_id: plain.customer_id != null ? String(plain.customer_id) : null,
+                        project_id: plain.project_id != null ? String(plain.project_id) : null,
+                        slot_article_id: plain.slot_article_id != null ? String(plain.slot_article_id) : null,
+                    });
+                }
             }
         }
     }
@@ -327,19 +387,30 @@ export async function listPreferentialSlotsForPublication(publication_id, opts =
 
         if (!row) {
             const fallbackType = defaultSlotContentTypeForMagazinePreferentialPosition(posKey);
+            const backingSlot = publicationSlotByPosition.get(posKey);
+            const backingSlotId =
+                backingSlot?.publication_slot_id != null ? Number(backingSlot.publication_slot_id) : null;
+            const backingSlotType =
+                backingSlot?.slot_content_type != null ? String(backingSlot.slot_content_type) : null;
+            const backingPresence = backingSlotId != null ? slotContentPresenceById.get(backingSlotId) : null;
             return {
                 position_in_magazine: posKey,
                 section_title,
-                missing: true,
+                missing: backingSlotId == null,
                 preferential_slot_id: null,
-                publication_slot_id: null,
-                state: null,
+                publication_slot_id: backingSlotId,
+                state: backingSlotId == null ? null : "available",
                 contract_id: null,
                 assigned_customer_id: null,
                 assigned_kind: null,
                 assigned_customer_name: null,
                 slot_content_type:
-                    fallbackType === "summary" || fallbackType === "index" ? fallbackType : null,
+                    backingSlotType ??
+                    (fallbackType === "summary" || fallbackType === "index" ? fallbackType : null),
+                slot_media_url: backingPresence?.slot_media_url ?? null,
+                slot_customer_id: backingPresence?.customer_id ?? null,
+                slot_project_id: backingPresence?.project_id ?? null,
+                slot_article_id: backingPresence?.slot_article_id ?? null,
                 proposal_summaries: [],
             };
         }
@@ -415,6 +486,22 @@ export async function listPreferentialSlotsForPublication(publication_id, opts =
             slot_content_type:
                 row.publication_slot_id != null
                     ? slotContentTypeById.get(Number(row.publication_slot_id)) ?? null
+                    : null,
+            slot_media_url:
+                row.publication_slot_id != null
+                    ? slotContentPresenceById.get(Number(row.publication_slot_id))?.slot_media_url ?? null
+                    : null,
+            slot_customer_id:
+                row.publication_slot_id != null
+                    ? slotContentPresenceById.get(Number(row.publication_slot_id))?.customer_id ?? null
+                    : null,
+            slot_project_id:
+                row.publication_slot_id != null
+                    ? slotContentPresenceById.get(Number(row.publication_slot_id))?.project_id ?? null
+                    : null,
+            slot_article_id:
+                row.publication_slot_id != null
+                    ? slotContentPresenceById.get(Number(row.publication_slot_id))?.slot_article_id ?? null
                     : null,
             proposal_summaries,
         };

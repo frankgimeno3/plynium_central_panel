@@ -2,6 +2,10 @@ export interface MoveContentTypePreferentialRow {
   position_in_magazine: string;
   section_title: string;
   slot_content_type: string | null;
+  slot_media_url?: string | null;
+  slot_customer_id?: string | null;
+  slot_project_id?: string | null;
+  slot_article_id?: string | null;
 }
 
 export type MovableContentType = "summary" | "index";

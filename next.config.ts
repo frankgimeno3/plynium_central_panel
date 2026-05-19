@@ -6,6 +6,73 @@ const nextConfig: NextConfig = {
     outputFileTracingIncludes: {
         '*': ['./certs/**/*']
     },
+    /**
+     * Legacy URLs from before magazine issues lived under `publications/issues/…`.
+     */
+    async redirects() {
+        return [
+            {
+                source: '/logged/pages/production/publications/subpage',
+                destination: '/logged/pages/production/publications/magazines/subpage',
+                permanent: false,
+            },
+            {
+                source: '/logged/pages/production/publications/flatplans/:path*',
+                destination: '/logged/pages/production/publications/magazines/flatplans/:path*',
+                permanent: false,
+            },
+            {
+                source: '/logged/pages/production/publications/published/:path*',
+                destination: '/logged/pages/production/publications/magazines/published/:path*',
+                permanent: false,
+            },
+            {
+                source: '/logged/pages/production/publications/issues/subpage',
+                destination: '/logged/pages/production/publications/magazines/subpage',
+                permanent: false,
+            },
+            {
+                source: '/logged/pages/production/publications/issues/flatplans/:path*',
+                destination: '/logged/pages/production/publications/magazines/flatplans/:path*',
+                permanent: false,
+            },
+            {
+                source: '/logged/pages/production/publications/issues/published/:path*',
+                destination: '/logged/pages/production/publications/magazines/published/:path*',
+                permanent: false,
+            },
+            {
+                source: '/logged/pages/production/publications/issues/:pubId/manager/article_builder/:path*',
+                destination: '/logged/pages/production/publications/issues/:pubId/article_builder/:path*',
+                permanent: false,
+            },
+            {
+                source: '/logged/pages/production/publications/:pubId(publication_[^/]+)/manager/article_builder/:path*',
+                destination: '/logged/pages/production/publications/issues/:pubId/article_builder/:path*',
+                permanent: false,
+            },
+            {
+                source: '/logged/pages/production/publications/issues/:pubId/slots/:slotId/article_editor/:path*',
+                destination: '/logged/pages/production/publications/issues/:pubId/slots/:slotId',
+                permanent: false,
+            },
+            {
+                source: '/logged/pages/production/publications/:pubId(publication_[^/]+)/slots/:slotId/article_editor/:path*',
+                destination: '/logged/pages/production/publications/issues/:pubId/slots/:slotId',
+                permanent: false,
+            },
+            {
+                source: '/logged/pages/production/publications/:pubId(publication_[^/]+)/slots/:path*',
+                destination: '/logged/pages/production/publications/issues/:pubId/slots/:path*',
+                permanent: false,
+            },
+            {
+                source: '/logged/pages/production/publications/:pubId(publication_[^/]+)',
+                destination: '/logged/pages/production/publications/issues/:pubId',
+                permanent: false,
+            },
+        ];
+    },
     // Optimizations for Vercel
     compress: true,
     poweredByHeader: false,

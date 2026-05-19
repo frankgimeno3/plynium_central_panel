@@ -2,6 +2,8 @@ import { createEndpoint } from "../../../../../../server/createEndpoint.js";
 import { NextResponse } from "next/server";
 import Joi from "joi";
 import { syncPublicationArticlePages } from "../../../../../../server/features/publication_workflow/PublicationArticleService.js";
+import { PublicationArticleDbModel } from "../../../../../../server/database/models.js";
+import { triggerRegeneratePublicationIndexAndSummary } from "../../../../../../server/features/publication/PublicationIndexSummaryService.js";
 
 export const runtime = "nodejs";
 
@@ -32,6 +34,15 @@ export const POST = createEndpoint(
                 id,
                 Number(body.desired_page_count)
             );
+            try {
+                if (PublicationArticleDbModel?.sequelize) {
+                    const ap = await PublicationArticleDbModel.findByPk(id);
+                    const pid = String(ap?.get?.("publication_id") ?? "").trim();
+                    if (pid) triggerRegeneratePublicationIndexAndSummary(pid);
+                }
+            } catch {
+                /* best-effort */
+            }
             return NextResponse.json(result);
         } catch (error) {
             const status = Number.isFinite(Number(error?.statusCode))

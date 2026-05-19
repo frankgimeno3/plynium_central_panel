@@ -14,6 +14,9 @@ interface AddFileModalProps {
   open: boolean;
   onClose: () => void;
   folderPath: string;
+  folderId?: string | null;
+  publicationId?: string;
+  slotId?: number;
   onSuccess: () => void;
 }
 
@@ -22,7 +25,15 @@ const ACCEPT_BY_TYPE: Record<FileType, string> = {
   image: "image/*,.jpg,.jpeg,.png,.gif,.webp",
 };
 
-const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSuccess }) => {
+const AddFileModal: FC<AddFileModalProps> = ({
+  open,
+  onClose,
+  folderPath,
+  folderId,
+  publicationId,
+  slotId,
+  onSuccess,
+}) => {
   const [step, setStep] = useState<"type" | "attach" | "success">("type");
   const [fileType, setFileType] = useState<FileType | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -100,6 +111,9 @@ const AddFileModal: FC<AddFileModalProps> = ({ open, onClose, folderPath, onSucc
         contentName: contentName.trim(),
         s3Key,
         folderPath,
+        folderId: folderId ?? undefined,
+        publicationId,
+        slotId,
         cdnUrl: cdnUrl ?? undefined,
         contentType: file.type,
         type: fileType ?? "image",

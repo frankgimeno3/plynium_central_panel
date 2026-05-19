@@ -4,7 +4,9 @@ import Joi from "joi";
 import {
     listPublicationArticles,
     addPublicationArticle,
+    addStandalonePublicationArticle,
 } from "../../../../../../server/features/publication_workflow/PublicationArticleService.js";
+import { triggerRegeneratePublicationIndexAndSummary } from "../../../../../../server/features/publication/PublicationIndexSummaryService.js";
 
 export const runtime = "nodejs";
 
@@ -17,9 +19,15 @@ function getPublicationIdFromRequest(request) {
     throw new Error("publication id not found in URL");
 }
 
-const postSchema = Joi.object({
-    article_id: Joi.string().min(1).required(),
-});
+const postSchema = Joi.alternatives().try(
+    Joi.object({
+        article_id: Joi.string().min(1).required(),
+    }),
+    Joi.object({
+        standalone: Joi.boolean().valid(true).required(),
+        desired_page_count: Joi.number().integer().min(1).required(),
+    })
+);
 
 /** Lists every `publication_articles` row attached to the publication. */
 export const GET = createEndpoint(
@@ -41,10 +49,19 @@ export const POST = createEndpoint(
     async (request, body) => {
         const publicationId = getPublicationIdFromRequest(request);
         try {
+            if (body?.standalone === true) {
+                const created = await addStandalonePublicationArticle({
+                    publicationId,
+                    desiredPageCount: body.desired_page_count,
+                });
+                triggerRegeneratePublicationIndexAndSummary(publicationId);
+                return NextResponse.json(created, { status: 201 });
+            }
             const created = await addPublicationArticle({
                 publicationId,
                 articleId: body.article_id,
             });
+            triggerRegeneratePublicationIndexAndSummary(publicationId);
             return NextResponse.json(created, { status: 201 });
         } catch (error) {
             const status = Number.isFinite(Number(error?.statusCode))
