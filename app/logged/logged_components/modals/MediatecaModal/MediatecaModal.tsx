@@ -69,6 +69,14 @@ function formatFolderLabel(segment: string): string {
   return segment.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
+/** Case/whitespace-insensitive path comparison for folder id resolution. */
+function normalizeMediatecaPathKey(path: string): string {
+  return String(path ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
 function isPdfContent(c: MediatecaContent): boolean {
   return c.type === "pdf" || c.content_type === "json";
 }
@@ -171,10 +179,24 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
       setSlotFolderPath(null);
       return;
     }
+    setSelectedContentId(null);
+    // Slot flows must use the RDS path from ensure (includes edition folder).
+    // Client `initialPath` without edition lands on a non-existent
+    // `magazines media/articles media/…` branch and lists empty folders.
+    if (ensureSlotMediatecaFolder) {
+      setHasInitializedPath(false);
+      setPathSegments([]);
+      return;
+    }
     setPathSegments(initialPath ? initialPath.split("/").filter(Boolean) : []);
     setHasInitializedPath(true);
-    setSelectedContentId(null);
-  }, [open, initialPath]);
+  }, [open, initialPath, ensureSlotMediatecaFolder]);
+
+  /** When `initialPath` resolves after open (non-slot flows only). */
+  useEffect(() => {
+    if (!open || !initialPath?.trim() || ensureSlotMediatecaFolder) return;
+    setPathSegments(initialPath.split("/").filter(Boolean));
+  }, [open, initialPath, ensureSlotMediatecaFolder]);
 
   useEffect(() => {
     if (!open || !ensureSlotMediatecaFolder) return;
@@ -186,12 +208,18 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
           ensureSlotMediatecaFolder.slotId
         );
         if (cancelled) return;
+        const folderPath = res.folderPath ?? null;
         setSlotFolderId(res.folderId ?? null);
-        setSlotFolderPath(res.folderPath ?? null);
+        setSlotFolderPath(folderPath);
+        if (folderPath) {
+          setPathSegments(folderPath.split("/").filter(Boolean));
+        }
+        setHasInitializedPath(true);
       } catch {
         if (!cancelled) {
           setSlotFolderId(null);
           setSlotFolderPath(null);
+          setHasInitializedPath(true);
         }
       }
     })();
@@ -203,7 +231,12 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
   useEffect(() => {
     if (!open || !hasInitializedPath) return;
     const folderIdForLoad =
-      slotFolderId && currentPath === slotFolderPath ? slotFolderId : null;
+      slotFolderId &&
+      slotFolderPath &&
+      normalizeMediatecaPathKey(currentPath) ===
+        normalizeMediatecaPathKey(slotFolderPath)
+        ? slotFolderId
+        : null;
     loadData(currentPath, folderIdForLoad);
   }, [open, currentPath, hasInitializedPath, loadData, slotFolderId, slotFolderPath]);
 
@@ -304,14 +337,19 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
   };
 
   const uploadFolderId =
-    slotFolderId && currentPath === slotFolderPath ? slotFolderId : null;
+    slotFolderId &&
+    slotFolderPath &&
+    normalizeMediatecaPathKey(currentPath) ===
+      normalizeMediatecaPathKey(slotFolderPath)
+      ? slotFolderId
+      : null;
 
   if (!open) return null;
 
   return (
     <>
       <div
-        className="fixed inset-0 z-[80] flex items-center justify-center bg-black/50"
+        className="fixed inset-0 z-[90] flex items-center justify-center bg-black/50"
         onClick={onClose}
         role="dialog"
         aria-modal="true"
@@ -424,7 +462,9 @@ const MediatecaModal: FC<MediatecaModalProps> = ({
             <h3 className="text-sm font-semibold text-gray-700 mb-2">
               {formatFolderLabel(folderName)} — Subfolders
             </h3>
-            {loading ? (
+            {!hasInitializedPath && ensureSlotMediatecaFolder ? (
+              <p className="text-sm text-gray-500 mb-6">Resolving publication folder…</p>
+            ) : loading ? (
               <p className="text-sm text-gray-500 mb-6">Loading…</p>
             ) : (
             <>

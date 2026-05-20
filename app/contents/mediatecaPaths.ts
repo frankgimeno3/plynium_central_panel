@@ -41,6 +41,21 @@ export function magazinePublicationMediaLibraryPath(editionName: string | null |
 }
 
 /**
+ * Materials folder for a magazine article (parent of every slot subfolder).
+ * Use this when the caller wants to land the user at the article's media
+ * library root, with all slot subfolders visible underneath.
+ */
+export function articleMaterialsMediatecaPath(
+  editionName: string | null | undefined,
+  articleId: string | null | undefined
+): string {
+  const base = magazinePublicationMediaLibraryPath(editionName);
+  const aid = String(articleId ?? "").trim();
+  if (!aid) return `${base}/${PUBLICATION_ARTICLES_MEDIA_FOLDER_NAME}`;
+  return `${base}/${PUBLICATION_ARTICLES_MEDIA_FOLDER_NAME}/${aid}`;
+}
+
+/**
  * Materials for one magazine article page slot (network article id + slot id).
  */
 export function articleSlotMaterialsMediatecaPath(

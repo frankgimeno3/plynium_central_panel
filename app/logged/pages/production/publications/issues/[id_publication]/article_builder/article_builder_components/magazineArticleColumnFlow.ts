@@ -47,7 +47,12 @@ export function isFlowBodyChunk(chunk: FlowPublicationArticleChunk): boolean {
   const fmt = normalizeChunkFormat(chunk.publication_article_chunk_format);
   if (isHeadingChunkFormat(fmt)) return false;
   if (!fmt || fmt === "only_text" || fmt === "text_image" || fmt === "image_text") return true;
-  if (fmt === "only_image" && !isOverlayImageChunk(chunk.chunk_html, fmt)) return true;
+  if (
+    fmt === "only_image" &&
+    !isOverlayImageChunk(chunk.chunk_html, fmt, (chunk as { chunk_area_array?: unknown }).chunk_area_array)
+  ) {
+    return true;
+  }
   return false;
 }
 

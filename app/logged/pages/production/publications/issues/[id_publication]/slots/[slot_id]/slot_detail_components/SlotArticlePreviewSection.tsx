@@ -5,7 +5,7 @@ import React, { FC, useEffect, useMemo, useState } from "react";
 import { ArticleBuilderPagePreviewThumbnail } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/article_builder_page/components/ArticleBuilderPagePreviewThumbnail";
 import { dedupeChunksForDisplay } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/article_builder_page/chunkUtils";
 import {
-  publicationArticleEditorPageHref,
+  publicationArticleEditorHref,
 } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/articleBuilderNavigation";
 import { buildArticleFlowPagesFromPublicationSlots } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/magazineArticleColumnFlow";
 import {
@@ -184,11 +184,7 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
   );
 
   const isLeftPage = articlePageIndex > 0 && articlePageIndex % 2 === 0;
-  const editorHref = publicationArticleEditorPageHref(
-    publicationId,
-    publicationArticleId,
-    slotId
-  );
+  const editorHref = publicationArticleEditorHref(publicationId, publicationArticleId);
 
   if (loading) {
     return (

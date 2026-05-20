@@ -1,7 +1,12 @@
 import { extractFirstImgSrc } from "@/app/logged/pages/production/publications/issues/[id_publication]/slots/[slot_id]/article_editor/magazineChunkMediaHtml";
 
-export const IMAGE_AREA_ROWS = 3;
-export const MAX_IMAGE_AREAS_PER_PAGE = 3;
+/**
+ * Number of stacked image-area cells per column. The page-body is divided
+ * into a `columnCount × IMAGE_AREA_ROWS` grid that authors use to draw
+ * floating image overlays on top of the article text.
+ */
+export const IMAGE_AREA_ROWS = 4;
+export const MAX_IMAGE_AREAS_PER_PAGE = 4;
 
 export type GridCell = { col: number; row: number };
 
@@ -16,6 +21,8 @@ export type ImageAreaSelection = {
   id: string;
   cells: GridCell[];
   placement: ImageAreaPlacement;
+  /** Grid labels (a1, b2, …) — canonical footprint for persistence. */
+  areaCodes?: string[];
 };
 
 export function cellKey(c: GridCell): string {
@@ -185,8 +192,14 @@ export function buildOverlayImageHtml(
   return `<figure class="plyn-mag-chunk__figure plyn-mag-overlay-image" data-pmc-overlay="${escAttr(encoded)}"><img src="${escAttr(src.trim())}" alt="${escAttr(alt)}" /></figure>`;
 }
 
-export function isOverlayImageChunk(html: string, format: string): boolean {
-  return String(format).toLowerCase() === "only_image" && parseOverlayPlacement(html) != null;
+export function isOverlayImageChunk(
+  html: string,
+  format: string,
+  chunkAreaArray?: unknown
+): boolean {
+  if (String(format).toLowerCase() !== "only_image") return false;
+  if (Array.isArray(chunkAreaArray) && chunkAreaArray.length > 0) return true;
+  return parseOverlayPlacement(html) != null;
 }
 
 export function overlayImageSrc(html: string): string | null {

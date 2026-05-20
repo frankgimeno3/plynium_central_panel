@@ -3,27 +3,14 @@
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import { isPublicationArticleStateValue } from "../../../../../../publication_components/_shared";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  formatArticleBuilderPageParam,
-  parseArticleBuilderPageParam,
-  publicationArticleEditorPageHref,
-  type ArticleBuilderGeneralSection,
-  type ArticleBuilderTab,
-} from "../../articleBuilderNavigation";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import type { ArticleBuilderTab } from "../../articleBuilderNavigation";
 import { buildArticleFlowPagesFromPublicationSlots } from "../../magazineArticleColumnFlow";
 import {
   DEFAULT_MAGAZINE_PAGE_LAYOUT,
   normalizeMagazinePageLayout,
   type MagazinePageLayout,
 } from "../../magazinePageLayout";
-import {
-  chunkPageOverflowIds,
-  dedupeChunksForDisplay,
-  isTitleOrSubtitleChunkFormat,
-} from "../chunkUtils";
-import { STANDALONE_PUBLICATION_ARTICLE_PREFIX } from "../constants";
-import { chunkPublicationSlotId } from "@/app/logged/pages/production/publications/publication_components/publicationSlotIds";
 import { issuePublicationSelectedContentsHref } from "../issueNavigation";
 import type { ArticleMeta, PublicationArticleChunk, PublicationArticleRow } from "../types";
 
@@ -41,15 +28,16 @@ export function useArticleBuilderPage(idPublication: string, publicationArticleI
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [pageCountInput, setPageCountInput] = useState<number>(1);
-  const [syncing, setSyncing] = useState(false);
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [busyChunkId, setBusyChunkId] = useState<string | null>(null);
-  const [bulkChunkMoveBusy, setBulkChunkMoveBusy] = useState(false);
-  const [deleteChunkModal, setDeleteChunkModal] = useState<PublicationArticleChunk | null>(null);
   const [articleStateSaving, setArticleStateSaving] = useState(false);
   const [flatplanNameSaving, setFlatplanNameSaving] = useState(false);
+  const [addingPage, setAddingPage] = useState(false);
+  const [addPageModalOpen, setAddPageModalOpen] = useState(false);
+  const [addPageError, setAddPageError] = useState<string | null>(null);
+  const [pendingDeleteSlotId, setPendingDeleteSlotId] = useState<number | null>(null);
+  const [deletingPage, setDeletingPage] = useState(false);
+  const [deletePageError, setDeletePageError] = useState<string | null>(null);
   const [magazinePageLayout, setMagazinePageLayout] = useState<MagazinePageLayout>(
     DEFAULT_MAGAZINE_PAGE_LAYOUT
   );
@@ -58,32 +46,19 @@ export function useArticleBuilderPage(idPublication: string, publicationArticleI
 
   const mainTab: ArticleBuilderTab =
     searchParams.get("tab") === "editor" ? "editor" : "general";
-  const generalSection: ArticleBuilderGeneralSection =
-    searchParams.get("section") === "original" ? "original" : "pages-manager";
-  const editorPageParam = searchParams.get("page") ?? "";
 
-  const replaceBuilderQuery = useCallback(
-    (mutate: (params: URLSearchParams) => void) => {
+  const setMainTab = useCallback(
+    (tab: ArticleBuilderTab) => {
       const params = new URLSearchParams(searchParams.toString());
-      mutate(params);
+      if (tab === "general") {
+        params.delete("tab");
+      } else {
+        params.set("tab", "editor");
+      }
       const qs = params.toString();
       router.replace(qs ? `?${qs}` : "?", { scroll: false });
     },
     [router, searchParams]
-  );
-
-  const setMainTab = useCallback(
-    (tab: ArticleBuilderTab) => {
-      replaceBuilderQuery((params) => {
-        if (tab === "general") {
-          params.delete("tab");
-          params.delete("page");
-        } else {
-          params.set("tab", "editor");
-        }
-      });
-    },
-    [replaceBuilderQuery]
   );
 
   const requestPageFormatChange = useCallback(
@@ -132,23 +107,7 @@ export function useArticleBuilderPage(idPublication: string, publicationArticleI
     }
   }, [pageFormatSaving]);
 
-  const setGeneralSection = useCallback(
-    (section: ArticleBuilderGeneralSection) => {
-      replaceBuilderQuery((params) => {
-        if (section === "pages-manager") {
-          params.delete("section");
-        } else {
-          params.set("section", section);
-        }
-      });
-    },
-    [replaceBuilderQuery]
-  );
-
   const load = useCallback(async (options?: { silent?: boolean }) => {
-    // `silent` skips the full-page loading view, which is the behaviour we
-    // want after autosaves (the editor / preview still re-render via the new
-    // chunks state, but no spinner flashes over the article builder).
     if (!options?.silent) {
       setLoading(true);
       setSlotPublicationPageBySlotId({});
@@ -176,7 +135,6 @@ export function useArticleBuilderPage(idPublication: string, publicationArticleI
           ? normalizeMagazinePageLayout(json.magazine_page_layout)
           : DEFAULT_MAGAZINE_PAGE_LAYOUT
       );
-      setPageCountInput(pa?.desired_page_count ?? 1);
 
       if (pa?.article_id) {
         try {
@@ -206,10 +164,10 @@ export function useArticleBuilderPage(idPublication: string, publicationArticleI
             slotIds.map(async (rawSid) => {
               const sid = Number(rawSid);
               if (!Number.isFinite(sid) || sid <= 0) return null;
-              const sr = await fetch(`/api/v1/publication-slots/${encodeURIComponent(String(sid))}`, {
-                cache: "no-store",
-                credentials: "include",
-              });
+              const sr = await fetch(
+                `/api/v1/publication-slots/${encodeURIComponent(String(sid))}`,
+                { cache: "no-store", credentials: "include" }
+              );
               if (!sr.ok) return null;
               try {
                 const row = (await sr.json()) as { publication_page?: number | null };
@@ -242,28 +200,11 @@ export function useArticleBuilderPage(idPublication: string, publicationArticleI
     } finally {
       setLoading(false);
     }
-  }, [publicationArticleId, idPublication]);
+  }, [publicationArticleId]);
 
   useEffect(() => {
     void load();
   }, [load]);
-
-  const prevMainTabRef = useRef(mainTab);
-  useEffect(() => {
-    if (prevMainTabRef.current === "editor" && mainTab === "general") {
-      void load();
-    }
-    prevMainTabRef.current = mainTab;
-  }, [mainTab, load]);
-
-  useEffect(() => {
-    if (!deleteChunkModal) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setDeleteChunkModal(null);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [deleteChunkModal]);
 
   useEffect(() => {
     setPageMeta({
@@ -290,291 +231,20 @@ export function useArticleBuilderPage(idPublication: string, publicationArticleI
     const arr = Array.isArray(publicationArticle?.publication_slots_id_array)
       ? publicationArticle!.publication_slots_id_array
       : [];
-    return arr.map((slotId, index) => {
-      const sid = Number(slotId);
-      const chunkIds = chunks
-        .filter((ch) => chunkPublicationSlotId(ch) === sid)
-        .map((ch) => ch.publication_article_chunk_id);
-      const pubPage = slotPublicationPageBySlotId[sid];
-      const publication_page =
-        pubPage != null && Number.isFinite(pubPage) ? Math.round(Number(pubPage)) : null;
-      return {
-        index: index + 1,
-        publication_slot_id: sid,
-        publication_page,
-        chunkIds,
-      };
-    });
-  }, [publicationArticle, chunks, slotPublicationPageBySlotId]);
+    return arr
+      .map((slotId) => Number(slotId))
+      .filter((sid) => Number.isFinite(sid) && sid > 0)
+      .map((publication_slot_id) => ({ publication_slot_id }));
+  }, [publicationArticle]);
 
-  const editorPageHref = useCallback(
-    (slotId: number) =>
-      publicationArticleEditorPageHref(idPublication, publicationArticleId, slotId),
-    [idPublication, publicationArticleId]
+  const articleFlowPages = useMemo(
+    () =>
+      buildArticleFlowPagesFromPublicationSlots(
+        pages.map((p) => ({ publication_slot_id: p.publication_slot_id })),
+        chunks
+      ),
+    [pages, chunks]
   );
-
-  const editorPageIndex = useMemo(() => {
-    const { slotId } = parseArticleBuilderPageParam(editorPageParam);
-    if (slotId == null) return -1;
-    return pages.findIndex((p) => p.publication_slot_id === slotId);
-  }, [editorPageParam, pages]);
-
-  const navigateEditorPage = useCallback(
-    (pageIndex: number) => {
-      const p = pages[pageIndex];
-      if (!p) return;
-      replaceBuilderQuery((params) => {
-        params.set("tab", "editor");
-        params.set("page", formatArticleBuilderPageParam(p.publication_slot_id));
-      });
-    },
-    [replaceBuilderQuery, pages]
-  );
-
-  useEffect(() => {
-    if (mainTab !== "editor" || pages.length === 0) return;
-    const { slotId } = parseArticleBuilderPageParam(editorPageParam);
-    const hasValidPage = slotId != null && pages.some((p) => p.publication_slot_id === slotId);
-    if (!hasValidPage) {
-      navigateEditorPage(0);
-    }
-  }, [mainTab, editorPageParam, pages, navigateEditorPage]);
-
-  const handleSyncPages = useCallback(async () => {
-    if (!publicationArticle) return;
-    const target = Math.max(1, Math.floor(Number(pageCountInput) || 1));
-    setSyncing(true);
-    setActionMessage(null);
-    setActionError(null);
-    try {
-      const res = await fetch(
-        `/api/v1/publication-articles/${encodeURIComponent(publicationArticleId)}/sync-pages`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ desired_page_count: target }),
-        }
-      );
-      if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(txt || "Failed to sync pages");
-      }
-      setActionMessage(`Pages synchronized to ${target}.`);
-      await load();
-    } catch (e: unknown) {
-      setActionError(e instanceof Error ? e.message : "Failed to sync pages");
-    } finally {
-      setSyncing(false);
-    }
-  }, [publicationArticle, pageCountInput, publicationArticleId, load]);
-
-  const handleInitializeChunks = useCallback(async () => {
-    if (!publicationArticle) return;
-    setActionMessage(null);
-    setActionError(null);
-    try {
-      const res = await fetch(
-        `/api/v1/publication-articles/${encodeURIComponent(
-          publicationArticleId
-        )}/initialize-chunks-from-source`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({}),
-        }
-      );
-      if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(txt || "Failed to initialize chunks from source");
-      }
-      const json = (await res.json()) as {
-        initialized: boolean;
-        created_count?: number;
-        reason?: string;
-      };
-      setActionMessage(
-        json.initialized
-          ? `Imported ${json.created_count ?? 0} chunks from source article.`
-          : `Nothing imported (${json.reason ?? "no source content"}).`
-      );
-      await load();
-    } catch (e: unknown) {
-      setActionError(e instanceof Error ? e.message : "Failed to initialize chunks from source");
-    }
-  }, [publicationArticle, publicationArticleId, load]);
-
-  const handleAssignChunkToPage = useCallback(
-    async (chunkId: string, slotId: number | null) => {
-      setActionMessage(null);
-      setActionError(null);
-      setBusyChunkId(chunkId);
-      try {
-        const res = await fetch(`/api/v1/publication-article-chunks/${encodeURIComponent(chunkId)}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            publication_slot_id: slotId,
-          }),
-        });
-        if (!res.ok) {
-          const txt = await res.text().catch(() => "");
-          throw new Error(txt || "Failed to assign chunk to page");
-        }
-        await load();
-      } catch (e: unknown) {
-        setActionError(e instanceof Error ? e.message : "Failed to assign chunk to page");
-      } finally {
-        setBusyChunkId(null);
-      }
-    },
-    [load]
-  );
-
-  const handleUpdateChunkPageWeight = useCallback(
-    async (chunkId: string, weight: number) => {
-      setActionMessage(null);
-      setActionError(null);
-      setBusyChunkId(chunkId);
-      try {
-        const w = Math.min(100, Math.max(1, Math.round(Number(weight))));
-        const res = await fetch(`/api/v1/publication-article-chunks/${encodeURIComponent(chunkId)}`, {
-          method: "PATCH",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ chunk_page_weight: w }),
-        });
-        if (!res.ok) {
-          const txt = await res.text().catch(() => "");
-          throw new Error(txt || "Failed to update chunk weight");
-        }
-        await load();
-      } catch (e: unknown) {
-        setActionError(e instanceof Error ? e.message : "Failed to update chunk weight");
-      } finally {
-        setBusyChunkId(null);
-      }
-    },
-    [load]
-  );
-
-  const handleMoveRestToNextSlot = useCallback(
-    async (
-      currentSlotId: number | null,
-      nextSlotId: number,
-      fromChunk: PublicationArticleChunk
-    ) => {
-      if (isTitleOrSubtitleChunkFormat(fromChunk.publication_article_chunk_format)) return;
-      if (!Number.isInteger(nextSlotId) || nextSlotId <= 0) return;
-
-      const pageChunksForMove = dedupeChunksForDisplay(
-        chunks.filter((ch) => {
-          if (currentSlotId == null) return chunkPublicationSlotId(ch) == null;
-          return chunkPublicationSlotId(ch) === currentSlotId;
-        })
-      ).sort(
-        (a, b) =>
-          a.chunk_position - b.chunk_position ||
-          a.publication_article_chunk_id.localeCompare(b.publication_article_chunk_id)
-      );
-
-      const startIdx = pageChunksForMove.findIndex(
-        (c) => c.publication_article_chunk_id === fromChunk.publication_article_chunk_id
-      );
-      if (startIdx < 0) return;
-
-      const toMove = pageChunksForMove
-        .slice(startIdx)
-        .filter((c) => !isTitleOrSubtitleChunkFormat(c.publication_article_chunk_format));
-      if (toMove.length === 0) return;
-
-      setActionMessage(null);
-      setActionError(null);
-      setBulkChunkMoveBusy(true);
-      try {
-        for (const ch of toMove) {
-          const res = await fetch(
-            `/api/v1/publication-article-chunks/${encodeURIComponent(ch.publication_article_chunk_id)}`,
-            {
-              method: "PATCH",
-              headers: { "content-type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ publication_slot_id: nextSlotId }),
-            }
-          );
-          if (!res.ok) {
-            const txt = await res.text().catch(() => "");
-            throw new Error(txt || "Failed to move chunk");
-          }
-        }
-        setActionMessage(
-          `Moved ${toMove.length} chunk${toMove.length === 1 ? "" : "s"} to the next page.`
-        );
-        await load();
-      } catch (e: unknown) {
-        setActionError(e instanceof Error ? e.message : "Failed to move chunks");
-      } finally {
-        setBulkChunkMoveBusy(false);
-      }
-    },
-    [chunks, load]
-  );
-
-  const handleConfirmDeleteChunk = useCallback(async () => {
-    const ch = deleteChunkModal;
-    if (!ch) return;
-    if (isTitleOrSubtitleChunkFormat(ch.publication_article_chunk_format)) return;
-    setActionMessage(null);
-    setActionError(null);
-    setBusyChunkId(ch.publication_article_chunk_id);
-    try {
-      const res = await fetch(
-        `/api/v1/publication-article-chunks/${encodeURIComponent(ch.publication_article_chunk_id)}`,
-        { method: "DELETE", credentials: "include" }
-      );
-      if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(txt || "Failed to delete chunk");
-      }
-      setActionMessage("Chunk deleted.");
-      setDeleteChunkModal(null);
-      await load();
-    } catch (e: unknown) {
-      setActionError(e instanceof Error ? e.message : "Failed to delete chunk");
-    } finally {
-      setBusyChunkId(null);
-    }
-  }, [deleteChunkModal, load]);
-
-  const handleAddBlankChunk = useCallback(async () => {
-    if (!publicationArticle) return;
-    setActionMessage(null);
-    setActionError(null);
-    try {
-      const res = await fetch(
-        `/api/v1/publication-articles/${encodeURIComponent(publicationArticleId)}/chunks`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({
-            publication_article_chunk_format: "only_text",
-            chunk_html: "",
-            chunk_position: chunks.length,
-          }),
-        }
-      );
-      if (!res.ok) {
-        const txt = await res.text().catch(() => "");
-        throw new Error(txt || "Failed to add chunk");
-      }
-      await load();
-    } catch (e: unknown) {
-      setActionError(e instanceof Error ? e.message : "Failed to add chunk");
-    }
-  }, [publicationArticle, publicationArticleId, chunks.length, load]);
 
   const handlePublicationArticleStateChange = useCallback(
     async (nextRaw: string) => {
@@ -613,6 +283,119 @@ export function useArticleBuilderPage(idPublication: string, publicationArticleI
     },
     [publicationArticle, publicationArticleId]
   );
+
+  const requestAddArticlePage = useCallback(() => {
+    if (addingPage) return;
+    setAddPageError(null);
+    setAddPageModalOpen(true);
+  }, [addingPage]);
+
+  const cancelAddArticlePage = useCallback(() => {
+    if (addingPage) return;
+    setAddPageModalOpen(false);
+    setAddPageError(null);
+  }, [addingPage]);
+
+  const confirmAddArticlePage = useCallback(async () => {
+    if (!publicationArticle) return;
+    const currentCount = Array.isArray(publicationArticle.publication_slots_id_array)
+      ? publicationArticle.publication_slots_id_array.length
+      : 0;
+    const target = Math.max(1, currentCount + 1);
+    setActionMessage(null);
+    setActionError(null);
+    setAddPageError(null);
+    setAddingPage(true);
+    try {
+      const res = await fetch(
+        `/api/v1/publication-articles/${encodeURIComponent(publicationArticleId)}/sync-pages`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ desired_page_count: target }),
+        }
+      );
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || "Failed to add article page");
+      }
+      setActionMessage(`Article page ${target} added.`);
+      setAddPageModalOpen(false);
+      await load({ silent: true });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to add article page";
+      setAddPageError(msg);
+      setActionError(msg);
+    } finally {
+      setAddingPage(false);
+    }
+  }, [publicationArticle, publicationArticleId, load]);
+
+  const requestDeleteArticlePage = useCallback(
+    (slotId: number) => {
+      if (deletingPage) return;
+      const sid = Number(slotId);
+      if (!Number.isFinite(sid) || sid <= 0) return;
+      setDeletePageError(null);
+      setPendingDeleteSlotId(sid);
+    },
+    [deletingPage]
+  );
+
+  const cancelDeleteArticlePage = useCallback(() => {
+    if (deletingPage) return;
+    setPendingDeleteSlotId(null);
+    setDeletePageError(null);
+  }, [deletingPage]);
+
+  const confirmDeleteArticlePage = useCallback(async () => {
+    if (pendingDeleteSlotId == null) return;
+    const slotId = pendingDeleteSlotId;
+    setActionMessage(null);
+    setActionError(null);
+    setDeletePageError(null);
+    setDeletingPage(true);
+    try {
+      const res = await fetch(
+        `/api/v1/publication-articles/${encodeURIComponent(
+          publicationArticleId
+        )}/pages/${encodeURIComponent(String(slotId))}?delete_chunks=1`,
+        {
+          method: "DELETE",
+          credentials: "include",
+        }
+      );
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || "Failed to delete article page");
+      }
+      let deletedChunkCount = 0;
+      try {
+        const json = (await res.json()) as { deleted_chunk_count?: number };
+        if (json && typeof json.deleted_chunk_count === "number") {
+          deletedChunkCount = json.deleted_chunk_count;
+        }
+      } catch {
+        /* ignore */
+      }
+      setActionMessage(
+        deletedChunkCount > 0
+          ? `Page deleted (${deletedChunkCount} chunk${
+              deletedChunkCount === 1 ? "" : "s"
+            } removed).`
+          : "Page deleted."
+      );
+      setPendingDeleteSlotId(null);
+      await load({ silent: true });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to delete article page";
+      setDeletePageError(msg);
+      setActionError(msg);
+    } finally {
+      setDeletingPage(false);
+    }
+  }, [pendingDeleteSlotId, publicationArticleId, load]);
 
   const handlePublicationArtNameSave = useCallback(
     async (nextRaw: string) => {
@@ -656,94 +439,45 @@ export function useArticleBuilderPage(idPublication: string, publicationArticleI
     [publicationArticle, publicationArticleId]
   );
 
-  const portalArticleIdForOriginalTab = useMemo(() => {
-    const aid = String(publicationArticle?.article_id ?? "").trim();
-    if (!aid || aid.startsWith(STANDALONE_PUBLICATION_ARTICLE_PREFIX)) return null;
-    return aid;
-  }, [publicationArticle?.article_id]);
-
-  const pageOptions = useMemo(() => {
-    return pages.map((p) => ({
-      index: p.index,
-      publication_slot_id: p.publication_slot_id,
-      publication_page: p.publication_page,
-    }));
-  }, [pages]);
-
-  const articleFlowPages = useMemo(
-    () =>
-      buildArticleFlowPagesFromPublicationSlots(
-        pages.map((p) => ({ publication_slot_id: p.publication_slot_id })),
-        chunks
-      ),
-    [pages, chunks]
-  );
-
-  const chunksUnassigned = useMemo(
-    () => dedupeChunksForDisplay(chunks.filter((ch) => chunkPublicationSlotId(ch) == null)),
-    [chunks]
-  );
-
-  const unassignedWeightOverflowIds = useMemo(
-    () => chunkPageOverflowIds(chunksUnassigned),
-    [chunksUnassigned]
-  );
-
-  const canEditorPrev = useMemo(() => editorPageIndex > 0, [editorPageIndex]);
-  const canEditorNext = useMemo(
-    () => editorPageIndex >= 0 && editorPageIndex < pages.length - 1,
-    [editorPageIndex, pages.length]
-  );
-
   return {
     loading,
     error,
     publicationArticle,
     articleMeta,
     chunks,
+    setChunks,
     pages,
-    pageOptions,
     articleFlowPages,
-    chunksUnassigned,
-    unassignedWeightOverflowIds,
+    slotPublicationPageBySlotId,
     mainTab,
-    generalSection,
-    editorPageParam,
-    editorPageIndex,
-    canEditorPrev,
-    canEditorNext,
     magazinePageLayout,
-    pageCountInput,
-    syncing,
     actionMessage,
     actionError,
-    busyChunkId,
-    bulkChunkMoveBusy,
-    deleteChunkModal,
-    setDeleteChunkModal,
+    setActionMessage,
+    setActionError,
     articleStateSaving,
     pageFormatSaving,
     pendingPageFormat,
-    portalArticleIdForOriginalTab,
+    addingPage,
+    addPageModalOpen,
+    addPageError,
+    pendingDeleteSlotId,
+    deletingPage,
+    deletePageError,
     setMainTab,
-    setGeneralSection,
-    navigateEditorPage,
-    editorPageHref,
     load,
     requestPageFormatChange,
     confirmPageFormatChange,
     cancelPageFormatChange,
-    handleSyncPages,
-    handleInitializeChunks,
-    handleAssignChunkToPage,
-    handleUpdateChunkPageWeight,
-    handleMoveRestToNextSlot,
-    handleConfirmDeleteChunk,
-    handleAddBlankChunk,
     handlePublicationArticleStateChange,
     handlePublicationArtNameSave,
+    requestAddArticlePage,
+    confirmAddArticlePage,
+    cancelAddArticlePage,
+    requestDeleteArticlePage,
+    confirmDeleteArticlePage,
+    cancelDeleteArticlePage,
     flatplanNameSaving,
-    setPageCountInput,
     idPublication,
   };
 }

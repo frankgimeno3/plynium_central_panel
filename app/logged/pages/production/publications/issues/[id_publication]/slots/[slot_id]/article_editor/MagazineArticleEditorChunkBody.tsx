@@ -65,7 +65,7 @@ export const MagazineChunkEditorPreview: FC<{
   const parsed = parseMagazineChunkHtml(chunkHtml, format);
   if (format === "only_image") {
     if (!parsed.imageSrc) {
-      return <p className="text-sm text-gray-400">No image selected.</p>;
+      return <p className="text-2xl text-gray-400">No image selected.</p>;
     }
     return (
       <div className="flex justify-center">
@@ -98,7 +98,7 @@ export const MagazineChunkEditorPreview: FC<{
             className="w-full rounded-md border border-gray-200 object-cover"
           />
         ) : (
-          <p className="text-xs text-gray-400">No image</p>
+          <p className="text-xl text-gray-400">No image</p>
         )}
       </div>
     </div>

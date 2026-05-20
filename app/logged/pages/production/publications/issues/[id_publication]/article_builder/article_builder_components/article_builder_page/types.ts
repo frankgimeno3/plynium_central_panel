@@ -1,4 +1,3 @@
-import type { MagazinePageLayout } from "../magazinePageLayout";
 import type { PublicationArticleStateValue } from "@/app/logged/pages/production/publications/publication_components/_shared";
 
 export type ArticleMeta = {
@@ -31,43 +30,6 @@ export type PublicationArticleChunk = {
   chunk_position: number;
   chunk_page_weight?: number;
   original_article_content_id: string | null;
-};
-
-export type ArticleBuilderPageSummary = {
-  index: number;
-  publication_slot_id: number;
-  publication_page: number | null;
-  chunkIds: string[];
-};
-
-export type ChunkPageOption = {
-  index: number;
-  publication_slot_id: number;
-  publication_page: number | null;
-};
-
-export type ArticleBuilderPageState = {
-  idPublication: string;
-  publicationArticleId: string;
-  publicationArticle: PublicationArticleRow;
-  articleMeta: ArticleMeta | null;
-  chunks: PublicationArticleChunk[];
-  pages: ArticleBuilderPageSummary[];
-  pageOptions: ChunkPageOption[];
-  magazinePageLayout: MagazinePageLayout;
-  pageCountInput: number;
-  actionMessage: string | null;
-  actionError: string | null;
-  syncing: boolean;
-  articleStateSaving: boolean;
-  pageFormatSaving: boolean;
-  pendingPageFormat: MagazinePageLayout | null;
-  busyChunkId: string | null;
-  bulkChunkMoveBusy: boolean;
-  deleteChunkModal: PublicationArticleChunk | null;
-  portalArticleIdForOriginalTab: string | null;
-  editorPageParam: string;
-  editorPageIndex: number;
-  canEditorPrev: boolean;
-  canEditorNext: boolean;
+  /** Grid cells on the page body, e.g. ["a1", "b2"]. */
+  chunk_area_array?: string[];
 };

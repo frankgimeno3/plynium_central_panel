@@ -1341,7 +1341,12 @@ PublicationArticleChunkDbModel.init({
         defaultValue: 15,
         validate: { min: 1, max: 100 },
     },
-    original_article_content_id: { type: DataTypes.STRING(255), allowNull: true }
+    original_article_content_id: { type: DataTypes.STRING(255), allowNull: true },
+    chunk_area_array: {
+        type: DataTypes.JSONB,
+        allowNull: false,
+        defaultValue: [],
+    },
 }, {
     sequelize,
     modelName: "publication_article_chunk",

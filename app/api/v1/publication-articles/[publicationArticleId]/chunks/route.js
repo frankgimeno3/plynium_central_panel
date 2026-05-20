@@ -32,6 +32,7 @@ const postSchema = Joi.object({
         .try(Joi.number().integer(), Joi.valid(null))
         .optional(),
     original_article_content_id: Joi.string().allow("").optional(),
+    chunk_area_array: Joi.array().items(Joi.string()).optional(),
 });
 
 /** Lists every chunk attached to the publication_article. */

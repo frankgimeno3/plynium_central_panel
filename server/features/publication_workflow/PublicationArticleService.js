@@ -20,6 +20,57 @@ import {
     normalizeMagazinePageLayout,
 } from "./magazinePageLayout.js";
 import { portalArticleContentToHtml } from "../../../lib/publication_workflow/portalArticleChunkHtml.ts";
+import MediaModel from "../media/MediaModel.js";
+import { deleteMedia } from "../media/MediaService.js";
+import { normalizeChunkAreaArray } from "./chunkAreaCodes.js";
+import {
+    collapseTextChunksAfterImageRemoval,
+    displaceTextChunksForImageAreas,
+} from "./chunkAreaDisplacement.js";
+
+/**
+ * Extract every `<img src="…">` URL embedded in chunk HTML.
+ * Used by `deleteChunk` to cascade-delete mediateca records that were
+ * referenced solely by the chunk being removed (best-effort).
+ */
+function extractAllImgSrcs(html) {
+    const out = [];
+    const regex = /<img[^>]+src=["']([^"']+)["']/gi;
+    let m;
+    while ((m = regex.exec(String(html ?? "")))) {
+        const url = m[1] ? m[1].trim() : "";
+        if (url) out.push(url);
+    }
+    return out;
+}
+
+/**
+ * Try to delete every mediateca media row whose `content_src` matches a URL
+ * embedded in `chunkHtml`. Returns the ids of the rows that were deleted.
+ * All failures are swallowed and logged so chunk deletion isn't blocked.
+ */
+async function tryDeleteChunkMediaByHtml(chunkHtml) {
+    const urls = extractAllImgSrcs(chunkHtml);
+    if (urls.length === 0) return [];
+    const deletedIds = [];
+    for (const url of urls) {
+        try {
+            if (!MediaModel.sequelize) continue;
+            const row = await MediaModel.findOne({ where: { content_src: url } });
+            if (!row) continue;
+            const mediaId = String(row.id);
+            await deleteMedia(mediaId);
+            deletedIds.push(mediaId);
+        } catch (error) {
+            console.warn(
+                "[PublicationArticleService.deleteChunk] Failed to delete media for url",
+                url,
+                error?.message ?? error
+            );
+        }
+    }
+    return deletedIds;
+}
 
 /** Slot key used for the auto-generated magazine pages of an article. */
 export const ARTICLE_PAGE_SLOT_KEY = "regular_page";
@@ -252,6 +303,7 @@ function toApiChunk(row) {
             p.original_article_content_id != null
                 ? String(p.original_article_content_id)
                 : null,
+        chunk_area_array: normalizeChunkAreaArray(p.chunk_area_array),
         publication_article_chunk_created_at:
             p.publication_article_chunk_created_at ?? null,
         publication_article_chunk_updated_at:
@@ -1406,6 +1458,7 @@ export async function createChunk(publicationArticleId, payload) {
         payload?.chunk_page_weight !== undefined
             ? clampChunkPageWeight(payload.chunk_page_weight, format)
             : defaultChunkPageWeightForFormat(format);
+    const areaArray = normalizeChunkAreaArray(payload?.chunk_area_array);
     const chunk = await PublicationArticleChunkDbModel.create({
         publication_article_id: ap.publication_article_id,
         publication_id: ap.publication_id,
@@ -1419,11 +1472,27 @@ export async function createChunk(publicationArticleId, payload) {
         chunk_position: Number.isFinite(Number(payload?.chunk_position))
             ? Number(payload.chunk_position)
             : 0,
+        chunk_area_array: areaArray,
         original_article_content_id:
             payload?.original_article_content_id != null
                 ? String(payload.original_article_content_id)
                 : null,
     });
+
+    if (
+        format === "only_image" &&
+        areaArray.length > 0 &&
+        slotIdForCreate != null &&
+        Number.isFinite(Number(slotIdForCreate))
+    ) {
+        await displaceTextChunksForImageAreas({
+            publicationArticleId: ap.publication_article_id,
+            slotId: Number(slotIdForCreate),
+            imageAreas: areaArray,
+            excludeChunkId: chunk.get("publication_article_chunk_id"),
+        });
+    }
+
     return toApiChunk(chunk);
 }
 
@@ -1594,6 +1663,9 @@ export async function updateChunk(chunkId, payload) {
         if (!Number.isFinite(n)) throw httpError(400, "chunk_position must be a number");
         updates.chunk_position = n;
     }
+    if (payload?.chunk_area_array !== undefined) {
+        updates.chunk_area_array = normalizeChunkAreaArray(payload.chunk_area_array);
+    }
     if (payloadSlotRaw !== undefined) {
         if (payloadSlotRaw === null) {
             updates.publication_slot_id = null;
@@ -1609,6 +1681,32 @@ export async function updateChunk(chunkId, payload) {
         await row.update(updates);
     }
     await row.reload();
+
+    const reloaded = plain(row);
+    const fmtAfter = String(
+        reloaded.publication_article_chunk_format ?? currentFormat
+    );
+    const areasAfter = normalizeChunkAreaArray(reloaded.chunk_area_array);
+    const slotAfter =
+        reloaded.publication_slot_id != null
+            ? Number(reloaded.publication_slot_id)
+            : null;
+    if (
+        fmtAfter === "only_image" &&
+        areasAfter.length > 0 &&
+        slotAfter != null &&
+        Number.isFinite(slotAfter) &&
+        (payload?.chunk_area_array !== undefined || payload?.chunk_html !== undefined)
+    ) {
+        await displaceTextChunksForImageAreas({
+            publicationArticleId: String(reloaded.publication_article_id),
+            slotId: slotAfter,
+            imageAreas: areasAfter,
+            excludeChunkId: id,
+        });
+        await row.reload();
+    }
+
     return toApiChunk(row);
 }
 
@@ -1848,13 +1946,18 @@ export async function syncPublicationArticlePages(publicationArticleId, desiredP
  *   - the slot still has any `publication_article_chunks` rows attached,
  *   - removing it would leave the article with zero pages.
  */
-export async function removeEmptyPublicationArticlePage(publicationArticleId, slotId) {
+export async function removeEmptyPublicationArticlePage(
+    publicationArticleId,
+    slotId,
+    options = {}
+) {
     const id = String(publicationArticleId ?? "").trim();
     if (!id) throw httpError(400, "publication_article_id is required");
     const sid = Number(slotId);
     if (!Number.isInteger(sid) || sid <= 0) {
         throw httpError(400, "publication_slot_id must be a positive integer");
     }
+    const deleteChunks = Boolean(options?.deleteChunks);
 
     const sequelize = PublicationArticleDbModel.sequelize;
     if (!sequelize) throw new Error("PublicationArticleDbModel not initialized");
@@ -1896,11 +1999,21 @@ export async function removeEmptyPublicationArticlePage(publicationArticleId, sl
                 },
                 transaction,
             });
+            let deletedChunkCount = 0;
             if (chunkCount > 0) {
-                throw httpError(
-                    409,
-                    `Cannot delete page: it still has ${chunkCount} content chunk(s). Move or delete the content first.`
-                );
+                if (!deleteChunks) {
+                    throw httpError(
+                        409,
+                        `Cannot delete page: it still has ${chunkCount} content chunk(s). Move or delete the content first.`
+                    );
+                }
+                deletedChunkCount = await PublicationArticleChunkDbModel.destroy({
+                    where: {
+                        publication_article_id: id,
+                        publication_slot_id: sid,
+                    },
+                    transaction,
+                });
             }
 
             const slot = await PublicationSlotDbModel.findByPk(sid, { transaction });
@@ -1945,6 +2058,7 @@ export async function removeEmptyPublicationArticlePage(publicationArticleId, sl
                 publication_slots_id_array: nextArray,
                 slot_destroyed: safeToDestroySlot,
                 removed_slot_id: sid,
+                deleted_chunk_count: deletedChunkCount,
             };
         });
     } catch (error) {
@@ -1966,7 +2080,7 @@ export async function removeEmptyPublicationArticlePage(publicationArticleId, sl
             payload.mediateca_folder_deleted = Boolean(result?.deleted);
         } catch (e) {
             console.warn(
-                "[PublicationArticleService] mediateca cleanup after empty page delete:",
+                "[PublicationArticleService] mediateca cleanup after page delete:",
                 e?.message ?? e
             );
             payload.mediateca_folder_deleted = false;
@@ -2436,7 +2550,12 @@ export async function provisionPublicationArticleConsecutiveSlots(
     return payload;
 }
 
-export async function deleteChunk(chunkId) {
+/**
+ * @param {string} chunkId
+ * @param {{ deleteMediatecaMedia?: boolean }} [options]
+ *   When `deleteMediatecaMedia` is true, referenced mediateca files are removed.
+ */
+export async function deleteChunk(chunkId, options = {}) {
     const id = String(chunkId ?? "").trim();
     if (!id) throw httpError(400, "publication_article_chunk_id is required");
     let row;
@@ -2452,10 +2571,21 @@ export async function deleteChunk(chunkId) {
         throw error;
     }
     if (!row) throw httpError(404, "publication_article_chunk not found");
-    const fmt = String(row.get("publication_article_chunk_format") ?? "");
+    const plainBefore = plain(row);
+    const fmt = String(plainBefore.publication_article_chunk_format ?? "");
     if (LOCKED_MAGAZINE_CHUNK_FORMATS.has(fmt)) {
         throw httpError(400, "Title and subtitle chunks cannot be deleted.");
     }
+    const chunkHtml = String(plainBefore.chunk_html ?? "");
+    const slotId =
+        plainBefore.publication_slot_id != null
+            ? Number(plainBefore.publication_slot_id)
+            : null;
+    const isGridOverlayImage =
+        fmt === "only_image" &&
+        (normalizeChunkAreaArray(plainBefore.chunk_area_array).length > 0 ||
+            /data-pmc-overlay=/i.test(chunkHtml));
+    const publicationArticleId = String(plainBefore.publication_article_id ?? "");
     try {
         const deleted = await PublicationArticleChunkDbModel.destroy({
             where: { publication_article_chunk_id: id },
@@ -2471,5 +2601,26 @@ export async function deleteChunk(chunkId) {
         }
         throw error;
     }
-    return { ok: true, publication_article_chunk_id: id };
+    const deleteMediateca = options?.deleteMediatecaMedia === true;
+    const deletedMediaIds = deleteMediateca
+        ? await tryDeleteChunkMediaByHtml(chunkHtml)
+        : [];
+
+    if (
+        isGridOverlayImage &&
+        publicationArticleId &&
+        slotId != null &&
+        Number.isFinite(slotId)
+    ) {
+        await collapseTextChunksAfterImageRemoval({
+            publicationArticleId,
+            slotId,
+        });
+    }
+
+    return {
+        ok: true,
+        publication_article_chunk_id: id,
+        deleted_media_ids: deletedMediaIds,
+    };
 }

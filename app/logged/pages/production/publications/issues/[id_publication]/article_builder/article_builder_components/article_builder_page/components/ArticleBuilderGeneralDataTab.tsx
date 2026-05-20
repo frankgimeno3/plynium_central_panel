@@ -3,45 +3,44 @@
 import React, { FC } from "react";
 import { ArticleBuilderFlatplanNameField } from "../../ArticleBuilderFlatplanNameField";
 import { ArticleBuilderWorkflowStateSection } from "../../ArticleBuilderWorkflowStateSection";
-import { PortalOriginalArticlePanel } from "../../PortalOriginalArticlePanel";
+import { ArticleBuilderTitleSubtitleEditor } from "../../ArticleBuilderTitleSubtitleEditor";
 import { ArticleSubpagePageFormatSection } from "@/app/logged/pages/production/publications/magazines/subpage/subpage_page_components/ArticleSubpagePageFormatSection";
 import type { MagazinePageLayout } from "../../magazinePageLayout";
-import type { ArticleBuilderGeneralSection } from "../../articleBuilderNavigation";
-import type { ArticleMeta, PublicationArticleRow } from "../types";
-import { ArticleBuilderPagesManagerTab, type ArticleBuilderPagesManagerTabProps } from "./ArticleBuilderPagesManagerTab";
+import type { MagazineArticleFlowPageInput } from "../../magazineArticleColumnFlow";
+import type { ArticleMeta, PublicationArticleChunk, PublicationArticleRow } from "../types";
 
 type ArticleBuilderGeneralDataTabProps = {
   publicationArticle: PublicationArticleRow;
   articleMeta: ArticleMeta | null;
-  generalSection: ArticleBuilderGeneralSection;
   magazinePageLayout: MagazinePageLayout;
   pageFormatSaving: boolean;
-  portalArticleIdForOriginalTab: string | null;
   onStateChange: (next: string) => void;
   onPageFormatChange: (formatId: string) => void;
-  onSelectPagesManager: () => void;
-  onSelectOriginal: () => void;
-  pagesManagerProps: ArticleBuilderPagesManagerTabProps;
   articleStateSaving: boolean;
   flatplanNameSaving: boolean;
   onFlatplanNameSave: (next: string) => void | Promise<void>;
+  chunks: PublicationArticleChunk[];
+  setChunks: React.Dispatch<React.SetStateAction<PublicationArticleChunk[]>>;
+  articleFlowPages: MagazineArticleFlowPageInput[];
+  onSaveMessage?: (message: string | null) => void;
+  onSaveError?: (message: string | null) => void;
 };
 
 export const ArticleBuilderGeneralDataTab: FC<ArticleBuilderGeneralDataTabProps> = ({
   publicationArticle,
   articleMeta,
-  generalSection,
   magazinePageLayout,
   pageFormatSaving,
-  portalArticleIdForOriginalTab,
   onStateChange,
   onPageFormatChange,
-  onSelectPagesManager,
-  onSelectOriginal,
-  pagesManagerProps,
   articleStateSaving,
   flatplanNameSaving,
   onFlatplanNameSave,
+  chunks,
+  setChunks,
+  articleFlowPages,
+  onSaveMessage,
+  onSaveError,
 }) => (
   <>
     <header className="flex items-start gap-4">
@@ -83,40 +82,13 @@ export const ArticleBuilderGeneralDataTab: FC<ArticleBuilderGeneralDataTabProps>
       <p className="text-[10px] text-blue-600">Saving article page format…</p>
     ) : null}
 
-    <div className="flex border-b border-gray-200">
-      <button
-        type="button"
-        onClick={onSelectPagesManager}
-        className={`px-5 py-3 text-sm font-medium transition-colors ${
-          generalSection === "pages-manager"
-            ? "border-b-2 border-blue-700 text-blue-950"
-            : "text-gray-500 hover:text-gray-800"
-        }`}
-      >
-        Article Pages Manager
-      </button>
-      <button
-        type="button"
-        onClick={onSelectOriginal}
-        className={`px-5 py-3 text-sm font-medium transition-colors ${
-          generalSection === "original"
-            ? "border-b-2 border-blue-700 text-blue-950"
-            : "text-gray-500 hover:text-gray-800"
-        }`}
-      >
-        Original Article
-      </button>
-    </div>
-
-    {generalSection === "original" ? (
-      <PortalOriginalArticlePanel
-        active={generalSection === "original"}
-        portalArticleId={portalArticleIdForOriginalTab}
-      />
-    ) : null}
-
-    {generalSection === "pages-manager" ? (
-      <ArticleBuilderPagesManagerTab {...pagesManagerProps} />
-    ) : null}
+    <ArticleBuilderTitleSubtitleEditor
+      publicationArticleId={publicationArticle.publication_article_id}
+      chunks={chunks}
+      setChunks={setChunks}
+      articleFlowPages={articleFlowPages}
+      onSaveMessage={onSaveMessage}
+      onSaveError={onSaveError}
+    />
   </>
 );

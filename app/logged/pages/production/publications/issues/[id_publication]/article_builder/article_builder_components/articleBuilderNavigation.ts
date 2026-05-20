@@ -20,75 +20,29 @@ export function findPublicationArticleForSlot(
   return publicationArticles.find((item) => item.article_id === aid) ?? null;
 }
 
-export function parseArticleBuilderPageParam(raw: string): {
-  slotId: number | null;
-  /** @deprecated Same as slotId; legacy URLs used `slotId-slotContentId`. */
-  slotContentId: number | null;
-} {
-  const parts = String(raw ?? "").split("-");
-  const primary = Number(parts[0]);
-  const legacy = Number(parts[1]);
-  const slotId =
-    Number.isFinite(primary) && primary > 0
-      ? primary
-      : Number.isFinite(legacy) && legacy > 0
-        ? legacy
-        : null;
-  return { slotId, slotContentId: slotId };
-}
-
-export function formatArticleBuilderPageParam(slotId: number, _legacySlotContentId?: number | null): string {
-  return String(slotId);
-}
-
 export type ArticleBuilderTab = "general" | "editor";
-export type ArticleBuilderGeneralSection = "pages-manager" | "original";
 
 export function articleBuilderHref(
   publicationId: string,
   publicationArticleId: string,
   options?: {
     tab?: ArticleBuilderTab;
-    page?: string;
-    section?: ArticleBuilderGeneralSection;
   }
 ): string {
   const base = `/logged/pages/production/publications/issues/${encodeURIComponent(
     publicationId
   )}/article_builder/${encodeURIComponent(publicationArticleId)}`;
-  if (!options?.tab && !options?.page && !options?.section) return base;
+  if (!options?.tab) return base;
   const params = new URLSearchParams();
-  if (options.tab) params.set("tab", options.tab);
-  if (options.page) params.set("page", options.page);
-  if (options.section) params.set("section", options.section);
+  params.set("tab", options.tab);
   const qs = params.toString();
   return qs ? `${base}?${qs}` : base;
 }
 
-/** Opens the per-page chunk editor inside Article Builder (replaces legacy magazine subpage). */
-export function publicationArticleEditorPageHref(
+/** Opens the Article editor tab (read-only multi-page view) for this article. */
+export function publicationArticleEditorHref(
   publicationId: string,
-  publicationArticleId: string,
-  slotId: number,
-  _legacySlotContentId?: number | null
+  publicationArticleId: string
 ): string {
-  return articleBuilderHref(publicationId, publicationArticleId, {
-    tab: "editor",
-    page: formatArticleBuilderPageParam(slotId),
-  });
-}
-
-/** @deprecated Use publicationArticleEditorPageHref */
-export function publicationArticleSubpageHref(
-  publicationId: string,
-  publicationArticleId: string,
-  slotId: number,
-  slotContentId: number | null
-): string {
-  return publicationArticleEditorPageHref(
-    publicationId,
-    publicationArticleId,
-    slotId,
-    slotContentId
-  );
+  return articleBuilderHref(publicationId, publicationArticleId, { tab: "editor" });
 }

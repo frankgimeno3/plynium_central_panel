@@ -31,6 +31,7 @@ const patchSchema = Joi.object({
     publication_slot_content_id: Joi.alternatives()
         .try(Joi.number().integer(), Joi.valid(null))
         .optional(),
+    chunk_area_array: Joi.array().items(Joi.string()).optional(),
 });
 
 export const PATCH = createEndpoint(
@@ -56,8 +57,14 @@ export const PATCH = createEndpoint(
 export const DELETE = createEndpoint(
     async (request) => {
         const id = getChunkIdFromRequest(request);
+        const url = new URL(request.url);
+        const deleteMediateca =
+            url.searchParams.get("delete_mediateca") === "true" ||
+            url.searchParams.get("delete_mediateca") === "1";
         try {
-            const result = await deleteChunk(id);
+            const result = await deleteChunk(id, {
+                deleteMediatecaMedia: deleteMediateca,
+            });
             return NextResponse.json(result);
         } catch (error) {
             const status = Number.isFinite(Number(error?.statusCode))

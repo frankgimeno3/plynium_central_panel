@@ -24,12 +24,5 @@ export type PublicationArticleChunk = {
   chunk_position: number;
   chunk_page_weight?: number;
   original_article_content_id: string | null;
+  chunk_area_array?: string[];
 };
-
-export {
-  articleBuilderHref,
-  publicationArticleSubpageHref,
-  publicationArticleEditorPageHref,
-  parseArticleBuilderPageParam as parseSubpageId,
-  formatArticleBuilderPageParam,
-} from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/articleBuilderNavigation";
