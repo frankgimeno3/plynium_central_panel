@@ -75,6 +75,7 @@ const ArticleBuilderPageContent: FC<{
             articleMeta={builder.articleMeta}
             chunks={builder.chunks}
             setChunks={builder.setChunks}
+            onPublicationArticleUpdate={builder.setPublicationArticle}
             articleFlowPages={builder.articleFlowPages}
             magazinePageLayout={builder.magazinePageLayout}
             slotPublicationPageBySlotId={builder.slotPublicationPageBySlotId}

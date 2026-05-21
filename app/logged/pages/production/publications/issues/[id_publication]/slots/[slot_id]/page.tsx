@@ -1001,6 +1001,7 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
                     publicationId={id_publication}
                     publicationArticleId={linkedPublicationArticleId}
                     slotId={slotIdNum}
+                    flatplanImageUrl={slot.slot_flatplan_image_url}
                     currentMagazinePage={
                       slot.publication_page != null &&
                       Number.isFinite(Number(slot.publication_page))

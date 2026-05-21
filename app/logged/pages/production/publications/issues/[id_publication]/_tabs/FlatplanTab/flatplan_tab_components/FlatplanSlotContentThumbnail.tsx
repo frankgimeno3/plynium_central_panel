@@ -3,6 +3,7 @@
 import React, { FC } from "react";
 import { ArticleSubpagePagePreview } from "@/app/logged/pages/production/publications/magazines/subpage/subpage_page_components/ArticleSubpagePagePreview";
 import type { PublicationArticleChunk as PreviewPublicationArticleChunk } from "@/app/logged/pages/production/publications/magazines/subpage/subpage_page_components/types";
+import { ArticleSlotFlatplanThumbnail } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/article_builder_page/components/ArticleSlotFlatplanThumbnail";
 import {
   buildArticleFlowPagesFromPublicationSlots,
   type FlowPublicationArticleChunk,
@@ -14,7 +15,6 @@ type FlatplanPreviewChunkPayload = {
   publication_article_chunk_format: string;
   chunk_html: string;
   chunk_position: number;
-  chunk_page_weight?: number;
 };
 
 export type FlatplanSlotContentThumbnailProps = {
@@ -23,6 +23,8 @@ export type FlatplanSlotContentThumbnailProps = {
   articlePageIndex: number;
   magazinePageLayout?: string | null;
   chunks: FlatplanPreviewChunkPayload[];
+  /** Mediateca capture from Article Builder editor reload. */
+  flatplanImageUrl?: string | null;
   previewExpanded: boolean;
   className?: string;
 };
@@ -34,9 +36,22 @@ export const FlatplanSlotContentThumbnail: FC<FlatplanSlotContentThumbnailProps>
   articlePageIndex,
   magazinePageLayout,
   chunks,
+  flatplanImageUrl,
   previewExpanded,
   className = "absolute inset-1 overflow-hidden rounded-md",
 }) => {
+  const storedUrl = String(flatplanImageUrl ?? "").trim();
+  if (storedUrl) {
+    return (
+      <div className={className} aria-hidden>
+        <ArticleSlotFlatplanThumbnail
+          imageUrl={storedUrl}
+          previewExpanded={previewExpanded}
+        />
+      </div>
+    );
+  }
+
   if (chunks.length === 0) return null;
 
   const pageFormat = normalizeMagazinePageLayout(magazinePageLayout);

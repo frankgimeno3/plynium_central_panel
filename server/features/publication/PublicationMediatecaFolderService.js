@@ -185,12 +185,47 @@ export function publicationMediatecaPath(editionName) {
  * @param {number} slotId
  * @returns {string}
  */
-export function articleSlotMaterialsMediatecaPath(editionName, articleId, slotId) {
+/** Auto-captured article page previews (Article Builder editor reload). */
+export const PUBLICATION_ARTICLE_SCREENSHOTS_FOLDER_NAME = "Screenshots";
+
+/**
+ * Materials folder for a magazine article (parent of slot + Screenshots folders).
+ * @param {string} editionName
+ * @param {string} articleId
+ * @returns {string}
+ */
+export function articleMaterialsMediatecaPath(editionName, articleId) {
     const base = publicationMediatecaPath(editionName);
     const aid = String(articleId ?? "").trim();
+    if (!aid) return `${base}/${PUBLICATION_ARTICLES_MEDIA_FOLDER_NAME}`;
+    return `${base}/${PUBLICATION_ARTICLES_MEDIA_FOLDER_NAME}/${aid}`;
+}
+
+export function articleSlotMaterialsMediatecaPath(editionName, articleId, slotId) {
+    const base = articleMaterialsMediatecaPath(editionName, articleId);
     const sid = Number(slotId);
-    if (!aid || !Number.isInteger(sid) || sid <= 0) return base;
-    return `${base}/${PUBLICATION_ARTICLES_MEDIA_FOLDER_NAME}/${aid}/slot_${sid}`;
+    if (!Number.isInteger(sid) || sid <= 0) return base;
+    return `${base}/slot_${sid}`;
+}
+
+/**
+ * Folder for auto-generated per-page PNG screenshots (`Screenshot-p1.png`, …).
+ * @param {string} editionName
+ * @param {string} articleId
+ * @returns {string}
+ */
+export function articleScreenshotsMediatecaPath(editionName, articleId) {
+    return `${articleMaterialsMediatecaPath(editionName, articleId)}/${PUBLICATION_ARTICLE_SCREENSHOTS_FOLDER_NAME}`;
+}
+
+/**
+ * Stable mediateca content name for one article page (1-based index).
+ * @param {number} pageIndex
+ * @returns {string}
+ */
+export function articleScreenshotContentName(pageIndex) {
+    const n = Math.max(1, Math.round(Number(pageIndex)));
+    return `Screenshot-p${n}.png`;
 }
 
 /**
@@ -281,17 +316,50 @@ export async function ensurePublicationSummaryFolderHierarchy(publication, optio
  * @param {{ transaction?: import("sequelize").Transaction }} [options]
  * @returns {Promise<string | null>} Deepest folder id, or null.
  */
+/**
+ * Ensure `…/{edition}/articles media/{articleId}/` exists.
+ * @returns {Promise<string | null>} Article folder id.
+ */
+export async function ensureArticleMaterialsFolderHierarchy(publication, articleId, options = {}) {
+    if (!publication || !FolderModel.sequelize) return null;
+    const aid = String(articleId ?? "").trim();
+    if (!aid) return null;
+    const { transaction } = options;
+    const rootId = await ensurePublicationMediatecaFolder(publication, options);
+    if (!rootId) return null;
+    const articlesRoot = await ensureFolder(rootId, PUBLICATION_ARTICLES_MEDIA_FOLDER_NAME, { transaction });
+    const articleFolder = await ensureFolder(articlesRoot.get("id"), aid, { transaction });
+    return String(articleFolder.get("id"));
+}
+
+/**
+ * Ensure `…/{edition}/articles media/{articleId}/Screenshots/` exists.
+ * @returns {Promise<string | null>} Screenshots folder id.
+ */
+export async function ensureArticleScreenshotsFolderHierarchy(publication, articleId, options = {}) {
+    if (!publication || !FolderModel.sequelize) return null;
+    const aid = String(articleId ?? "").trim();
+    if (!aid) return null;
+    const { transaction } = options;
+    const articleFolderId = await ensureArticleMaterialsFolderHierarchy(publication, articleId, options);
+    if (!articleFolderId) return null;
+    const screenshotsFolder = await ensureFolder(
+        articleFolderId,
+        PUBLICATION_ARTICLE_SCREENSHOTS_FOLDER_NAME,
+        { transaction }
+    );
+    return String(screenshotsFolder.get("id"));
+}
+
 export async function ensureArticleSlotMaterialsFolderHierarchy(publication, articleId, slotId, options = {}) {
     if (!publication || !FolderModel.sequelize) return null;
     const aid = String(articleId ?? "").trim();
     const sid = Number(slotId);
     if (!aid || !Number.isInteger(sid) || sid <= 0) return null;
     const { transaction } = options;
-    const rootId = await ensurePublicationMediatecaFolder(publication, options);
-    if (!rootId) return null;
-    const articlesRoot = await ensureFolder(rootId, PUBLICATION_ARTICLES_MEDIA_FOLDER_NAME, { transaction });
-    const articleFolder = await ensureFolder(articlesRoot.get("id"), aid, { transaction });
-    const slotFolder = await ensureFolder(articleFolder.get("id"), `slot_${sid}`, { transaction });
+    const articleFolderId = await ensureArticleMaterialsFolderHierarchy(publication, articleId, options);
+    if (!articleFolderId) return null;
+    const slotFolder = await ensureFolder(articleFolderId, `slot_${sid}`, { transaction });
     return String(slotFolder.get("id"));
 }
 

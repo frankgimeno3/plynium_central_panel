@@ -3,9 +3,11 @@ import { NextResponse } from "next/server";
 import Joi from "joi";
 import {
   PublicationSlotDbModel,
+  PublicationModel,
   ProjectDbModel,
   ContractDbModel,
 } from "../../../../../server/database/models.js";
+import { resolveArticleSlotScreenshotUrl } from "../../../../../server/features/publication/ArticleScreenshotService.js";
 import { normalizeMagazinePageLayout } from "../../../../../server/features/publication_workflow/magazinePageLayout.js";
 import "../../../../../server/database/models.js";
 import { compactPublicationSlotsAfterDelete } from "../../../../../server/features/publication/compactPublicationSlotsAfterDelete.js";
@@ -38,6 +40,7 @@ function toApiSlot(row) {
     customer_id: s.customer_id ?? null,
     project_id: s.project_id ?? null,
     slot_media_url: s.slot_media_url ?? null,
+    slot_flatplan_image_url: s.slot_flatplan_image_url ?? null,
     slot_article_id: s.slot_article_id ?? null,
     magazine_page_layout: normalizeMagazinePageLayout(s.magazine_page_layout),
     slot_created_at: s.slot_created_at ?? null,
@@ -123,7 +126,23 @@ export const GET = createEndpoint(
     if (!slotId) return NextResponse.json({ message: "Missing slot id" }, { status: 400 });
     const row = await PublicationSlotDbModel.findByPk(Number(slotId));
     if (!row) return NextResponse.json({ message: "Slot not found" }, { status: 404 });
-    return NextResponse.json(toApiSlot(row));
+    const api = toApiSlot(row);
+    if (!String(api.slot_flatplan_image_url ?? "").trim()) {
+      const plain = row.get({ plain: true });
+      const pubId = String(plain.publication_id ?? "").trim();
+      let editionName = "";
+      if (pubId) {
+        const pub = await PublicationModel.findByPk(pubId, {
+          attributes: ["publication_edition_name"],
+        });
+        editionName = pub?.get("publication_edition_name") ?? "";
+      }
+      const fromScreenshots = await resolveArticleSlotScreenshotUrl(plain, editionName);
+      if (fromScreenshots) {
+        api.slot_flatplan_image_url = fromScreenshots;
+      }
+    }
+    return NextResponse.json(api);
   },
   null,
   true

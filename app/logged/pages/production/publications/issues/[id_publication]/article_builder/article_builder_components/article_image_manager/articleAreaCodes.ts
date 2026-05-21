@@ -106,13 +106,90 @@ export function defaultColumnAreaCode(columnIndex: number): string | null {
  * Placement for a body text chunk in the area grid (preview + displacement).
  * Uses `chunk_area_array` when set; otherwise matches CSS column-fill order.
  */
+function gridBodyChunkCellScore(chunk: {
+  chunk_html?: string;
+  chunk_area_array?: unknown;
+}): number {
+  const hasArea = normalizeAreaCodes(chunk.chunk_area_array).length > 0;
+  const hasHtml = String(chunk.chunk_html ?? "").trim().length > 0;
+  return (hasArea ? 4 : 0) + (hasHtml ? 2 : 0);
+}
+
+/**
+ * When legacy and grid chunks share a cell, keep the one with content / explicit area.
+ */
+export function dedupeGridBodyChunksByCell<
+  T extends {
+    publication_article_chunk_id: string;
+    chunk_html: string;
+    chunk_position: number;
+    chunk_area_array?: unknown;
+  },
+>(chunks: T[], columnCount: number): T[] {
+  const sorted = [...chunks].sort(
+    (a, b) =>
+      a.chunk_position - b.chunk_position ||
+      a.publication_article_chunk_id.localeCompare(b.publication_article_chunk_id)
+  );
+  const keepIds = new Set<string>();
+  const bestByCell = new Map<string, { chunk: T; score: number }>();
+
+  sorted.forEach((chunk, textChunkIndex) => {
+    const placement = textChunkPlacementForPreview(
+      chunk,
+      textChunkIndex,
+      columnCount
+    );
+    if (!placement) {
+      keepIds.add(chunk.publication_article_chunk_id);
+      return;
+    }
+    const key = `${placement.colStart}-${placement.rowStart}`;
+    const score = gridBodyChunkCellScore(chunk);
+    const prev = bestByCell.get(key);
+    if (!prev) {
+      bestByCell.set(key, { chunk, score });
+      return;
+    }
+    if (score > prev.score) {
+      bestByCell.set(key, { chunk, score });
+      return;
+    }
+    if (score === prev.score) {
+      const lenA = String(chunk.chunk_html ?? "").trim().length;
+      const lenB = String(prev.chunk.chunk_html ?? "").trim().length;
+      if (lenA > lenB || (lenA === lenB && chunk.chunk_position > prev.chunk.chunk_position)) {
+        bestByCell.set(key, { chunk, score });
+      }
+    }
+  });
+
+  for (const { chunk } of bestByCell.values()) {
+    keepIds.add(chunk.publication_article_chunk_id);
+  }
+
+  return sorted.filter((c) => keepIds.has(c.publication_article_chunk_id));
+}
+
 export function textChunkPlacementForPreview(
   chunk: { chunk_area_array?: unknown },
   textChunkIndex: number,
   columnCount: number
 ): ImageAreaPlacement | null {
   const codes = normalizeAreaCodes(chunk.chunk_area_array);
-  if (codes.length) return areaCodesToPlacement(codes, columnCount);
+  if (codes.length) {
+    const placement = areaCodesToPlacement(codes, columnCount);
+    if (placement) return placement;
+    const cell = areaCodeToCell(codes[0]);
+    if (cell) {
+      return {
+        colStart: cell.col,
+        colEnd: cell.col,
+        rowStart: cell.row,
+        rowEnd: cell.row,
+      };
+    }
+  }
   const col = textChunkIndex % columnCount;
   const row = Math.floor(textChunkIndex / columnCount);
   if (row >= AREA_ROWS) return null;

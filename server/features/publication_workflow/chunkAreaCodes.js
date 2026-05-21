@@ -107,6 +107,100 @@ export function areaCodesToPlacement(codes, columnCount = 3) {
  * @param {number} columnCount
  * @returns {string[]}
  */
+/**
+ * All grid cells for the article body (full page text block on new pages).
+ * @param {number} columnCount 2 or 3
+ * @returns {string[]}
+ */
+export function fullPageBodyAreaCodes(columnCount = 3) {
+    const maxCol = columnCount === 3 ? 2 : 1;
+    const codes = [];
+    for (let col = 0; col <= maxCol; col++) {
+        for (let row = 0; row < AREA_ROWS; row++) {
+            const code = cellToAreaCode(col, row);
+            if (code) codes.push(code);
+        }
+    }
+    return codes;
+}
+
+/**
+ * @param {{ colStart: number, colEnd: number, rowStart: number, rowEnd: number }|null} placement
+ * @param {number} columnCount
+ */
+export function isFullPageBodyPlacement(placement, columnCount = 3) {
+    if (!placement) return false;
+    const maxCol = columnCount === 3 ? 2 : 1;
+    return (
+        placement.colStart === 0 &&
+        placement.colEnd === maxCol &&
+        placement.rowStart === 0 &&
+        placement.rowEnd === AREA_ROWS - 1
+    );
+}
+
+/** @param {number} columnCount 2 or 3 */
+export function perCellBodyGridExpectedCount(columnCount = 3) {
+    const cols = columnCount === 3 ? 3 : 2;
+    return cols * AREA_ROWS;
+}
+
+/**
+ * Ordered list of single-cell area codes (row-major: a1–a4, b1–b4, c1–c4).
+ * @param {number} columnCount
+ * @returns {string[]}
+ */
+export function perCellBodyGridAreaCodes(columnCount = 3) {
+    const maxCol = columnCount === 3 ? 2 : 1;
+    const codes = [];
+    for (let row = 0; row < AREA_ROWS; row++) {
+        for (let col = 0; col <= maxCol; col++) {
+            const code = cellToAreaCode(col, row);
+            if (code) codes.push(code);
+        }
+    }
+    return codes;
+}
+
+/** Column-major cell order (matches article builder grid overflow / preview). */
+export function gridCellOverflowOrder(columnCount = 3) {
+    const cols = columnCount === 3 ? 3 : 2;
+    const codes = [];
+    for (let c = 0; c < cols; c++) {
+        for (let row = 0; row < AREA_ROWS; row++) {
+            const code = cellToAreaCode(c, row);
+            if (code) codes.push(code);
+        }
+    }
+    return codes;
+}
+
+/**
+ * @param {string[]} codes
+ */
+export function isSingleCellAreaCodes(codes) {
+    const normalized = normalizeChunkAreaArray(codes);
+    return normalized.length === 1 && areaCodeToCell(normalized[0]) != null;
+}
+
+/**
+ * True when every grid cell has exactly one body text chunk on this slot.
+ * @param {Array<{ get: (k: string) => unknown }>} bodyChunks
+ * @param {number} columnCount
+ */
+export function hasCompletePerCellBodyGrid(bodyChunks, columnCount = 3) {
+    const expected = perCellBodyGridExpectedCount(columnCount);
+    const seen = new Set();
+    for (const c of bodyChunks) {
+        const areas = normalizeChunkAreaArray(c.get("chunk_area_array"));
+        if (!isSingleCellAreaCodes(areas)) return false;
+        const cell = areaCodeToCell(areas[0]);
+        if (!cell) return false;
+        seen.add(areas[0]);
+    }
+    return seen.size === expected;
+}
+
 export function columnAreaCodes(col, columnCount = 3) {
     const maxCol = columnCount === 3 ? 2 : 1;
     if (col < 0 || col > maxCol) return [];

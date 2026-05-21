@@ -9,7 +9,6 @@ export type FlowPublicationArticleChunk = {
   publication_article_chunk_format: string;
   chunk_html: string;
   chunk_position: number;
-  chunk_page_weight?: number;
 };
 
 export type MagazineArticleFlowPageInput = {
@@ -27,8 +26,6 @@ function defaultChunkPageWeight(format: string): number {
 }
 
 export function effectiveChunkPageWeight(chunk: FlowPublicationArticleChunk): number {
-  const n = Number(chunk.chunk_page_weight);
-  if (Number.isFinite(n)) return Math.min(100, Math.max(1, Math.round(n)));
   return defaultChunkPageWeight(chunk.publication_article_chunk_format);
 }
 

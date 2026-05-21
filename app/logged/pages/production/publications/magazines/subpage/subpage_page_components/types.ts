@@ -22,7 +22,7 @@ export type PublicationArticleChunk = {
   publication_article_chunk_format: ChunkFormat;
   chunk_html: string;
   chunk_position: number;
-  chunk_page_weight?: number;
   original_article_content_id: string | null;
   chunk_area_array?: string[];
+  chunk_image_caption?: string;
 };

@@ -7,7 +7,6 @@ import React, {
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 import {
   MagazineChunkEditorPreview,
@@ -20,6 +19,7 @@ import {
 import {
   areaCodesToPlacement,
   normalizeAreaCodes,
+  dedupeGridBodyChunksByCell,
   textChunkPlacementForPreview,
 } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/article_image_manager/articleAreaCodes";
 import {
@@ -38,18 +38,33 @@ import {
   normalizeChunkFormat,
   previewBodyChunksForPage,
 } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/magazineArticleColumnFlow";
-import { htmlToPlainText } from "@/app/logged/logged_components/RichTextEditor";
+import {
+  isRichTextEmpty,
+  RichTextContent,
+} from "@/app/logged/logged_components/RichTextEditor";
 import { normalizedBodyChunkHtml } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/articleContentModel";
 import {
+  chunkFormatIncludesImage,
   chunkHasImage,
   chunkSupportsTextEditing,
-  readChunkEditableText,
-  writeChunkEditableText,
+  readChunkEditableHtml,
+  readChunkImageCaption,
+  writeChunkEditableHtml,
 } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/articleChunkPlainTextEditing";
+import { useArticleBuilderRichTextToolbar } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/article_builder_page/components/ArticleBuilderFloatingRichTextToolbar";
 import type { PublicationArticleChunk } from "./types";
 
 /** 228 × 297 mm portrait (magazine page proportion). */
 const PAGE_ASPECT = "228 / 297";
+
+/** Title/subtitle band — extra horizontal and vertical breathing room. */
+const MAGAZINE_HEADER_PAD_CLASS = "px-10 py-5";
+
+/**
+ * Body content inset: matches chunk text `px-4 py-2`, with `pt-12` below the
+ * black header. Grid overlays and add/delete-image cells share this box.
+ */
+const MAGAZINE_BODY_INSET_CLASS = "px-4 pt-12 pb-2";
 
 function previewFormatForChunk(chunk: {
   publication_article_chunk_format: string;
@@ -75,14 +90,29 @@ type ArticleSubpagePagePreviewProps = {
   /** Which page's body slice to show when `articleFlowPages` is set. */
   currentSlotContentId?: number | null;
   /**
+   * Title/subtitle HTML from page 1 (passed when this preview's `chunks` omit
+   * heading chunks, e.g. page 2+ in the article builder).
+   */
+  articleTitleHtml?: string | null;
+  articleSubtitleHtml?: string | null;
+  /**
    * When true, body text chunks render as autosizing textareas (real-time
    * editing) and image chunks expose an "Update image" overlay button.
    */
   editable?: boolean;
-  /** Called with the next plain-text value while the user types. */
-  onChunkTextChange?: (chunkId: string, nextPlainText: string) => void;
+  /** Called while the user types (debounced save on the parent). */
+  onChunkTextChange?: (chunkId: string, nextChunkHtml: string) => void;
+  /** Called on blur to persist immediately (before navigation / refresh). */
+  onChunkHtmlCommit?: (chunkId: string, nextChunkHtml: string) => void;
+  /**
+   * Grid layout only: when body text exceeds the cell height, redistribute overflow
+   * into the next chunk (column-major order). Parent updates chunk HTML.
+   */
+  onGridTextOverflowCheck?: (chunkId: string, editorEl: HTMLDivElement) => void;
   /** Called when the user requests to replace the image of a chunk. */
   onChunkImageUpdate?: (chunkId: string) => void;
+  /** Opens the caption editor for an image chunk. */
+  onChunkCaptionUpdate?: (chunkId: string) => void;
   /** Chunk ids whose save request is in flight (renders a small indicator). */
   savingChunkIds?: ReadonlySet<string>;
   /**
@@ -91,16 +121,6 @@ type ArticleSubpagePagePreviewProps = {
    * preview occupies the entire box.
    */
   fillContainer?: boolean;
-  /**
-   * Called when the user clicks a "+" insertion slot between body chunks (or
-   * before the first / after the last). `afterChunkId` is the id of the chunk
-   * immediately above the clicked slot, or `null` when the slot sits above
-   * every chunk on the page.
-   */
-  onAddChunkRequest?: (params: {
-    afterChunkId: string | null;
-    beforeChunkId: string | null;
-  }) => void;
   /**
    * Chunk-selection mode for bulk deletion. When `true`, every body chunk
    * renders a small checkbox in its top-right corner. Selecting one calls
@@ -126,110 +146,206 @@ type ArticleSubpagePagePreviewProps = {
 };
 
 /**
- * Autosizing plain `<textarea>` used inside the magazine preview body. Holds
- * its own draft so the cursor doesn't reset / trailing whitespace isn't trimmed
- * by the HTML round-trip while the user is typing. External chunk updates
- * (e.g. a reload) push back into the textarea by comparing against the last
- * locally-emitted value.
+ * Rich-text body field (`contentEditable`) for the magazine preview. Formatting
+ * is applied via the floating {@link RichTextToolbar}; HTML is stored on the chunk.
  */
-const EditableChunkTextarea: FC<{
+const EditableChunkRichBody: FC<{
   chunkId: string;
   chunkHtml: string;
   format: string;
+  isLeftPage: boolean;
   saving?: boolean;
   className?: string;
+  fillContainer?: boolean;
   placeholder?: string;
   ariaLabel?: string;
   onChunkHtmlChange: (chunkId: string, nextChunkHtml: string) => void;
-  readText: (chunkHtml: string, format: string) => string;
-  buildHtml: (chunkHtml: string, format: string, nextText: string) => string;
+  onChunkHtmlCommit?: (chunkId: string, nextChunkHtml: string) => void;
+  onGridTextOverflowCheck?: (chunkId: string, editorEl: HTMLDivElement) => void;
 }> = ({
   chunkId,
   chunkHtml,
   format,
+  isLeftPage,
   saving = false,
   className,
+  fillContainer = false,
   placeholder,
   ariaLabel,
   onChunkHtmlChange,
-  readText,
-  buildHtml,
+  onChunkHtmlCommit,
+  onGridTextOverflowCheck,
 }) => {
-  const ref = useRef<HTMLTextAreaElement | null>(null);
-  const [draft, setDraft] = useState(() => readText(chunkHtml, format));
-  const lastEmittedRef = useRef(draft);
+  const editorRef = useRef<HTMLDivElement | null>(null);
+  const chunkHtmlRef = useRef(chunkHtml);
+  const isInternalChange = useRef(false);
+  const syncingFromProps = useRef(false);
+  const lastEmittedHtmlRef = useRef(readChunkEditableHtml(chunkHtml, format));
+  const { registerActiveChunkEditor, clearActiveChunkEditor } =
+    useArticleBuilderRichTextToolbar();
+
+  chunkHtmlRef.current = chunkHtml;
+
+  const emitChange = useCallback(() => {
+    const el = editorRef.current;
+    if (!el || syncingFromProps.current) return;
+    const nextHtml = el.innerHTML;
+    lastEmittedHtmlRef.current = nextHtml;
+    isInternalChange.current = true;
+    onChunkHtmlChange(
+      chunkId,
+      writeChunkEditableHtml(chunkHtmlRef.current, format, nextHtml)
+    );
+  }, [chunkId, format, onChunkHtmlChange]);
 
   useEffect(() => {
-    const incoming = readText(chunkHtml, format);
-    if (incoming !== lastEmittedRef.current) {
-      setDraft(incoming);
-      lastEmittedRef.current = incoming;
+    const el = editorRef.current;
+    if (!el) return;
+    if (isInternalChange.current) {
+      isInternalChange.current = false;
+      return;
     }
-  }, [chunkHtml, format, readText]);
+    const incoming = readChunkEditableHtml(chunkHtml, format);
+    if (incoming !== lastEmittedHtmlRef.current && el.innerHTML !== incoming) {
+      syncingFromProps.current = true;
+      el.innerHTML = incoming || "";
+      lastEmittedHtmlRef.current = incoming;
+      requestAnimationFrame(() => {
+        syncingFromProps.current = false;
+      });
+    }
+  }, [chunkHtml, format]);
 
   const resize = useCallback(() => {
-    const el = ref.current;
-    if (!el) return;
+    const el = editorRef.current;
+    if (!el || fillContainer) return;
     el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
-  }, []);
+    el.style.minHeight = "1.5em";
+    el.style.height = `${Math.max(el.scrollHeight, 24)}px`;
+  }, [fillContainer]);
 
   useEffect(() => {
     resize();
-  }, [draft, resize]);
+  }, [chunkHtml, resize]);
+
+  const handleFocus = useCallback(() => {
+    registerActiveChunkEditor({
+      chunkId,
+      editorRef,
+      isLeftPage,
+      onAfterCommand: emitChange,
+    });
+  }, [chunkId, emitChange, isLeftPage, registerActiveChunkEditor]);
+
+  useEffect(() => {
+    const el = editorRef.current;
+    if (!el) return;
+    const focused =
+      document.activeElement === el || el.contains(document.activeElement);
+    if (!focused) return;
+    registerActiveChunkEditor({
+      chunkId,
+      editorRef,
+      isLeftPage,
+      onAfterCommand: emitChange,
+    });
+  }, [
+    chunkId,
+    emitChange,
+    isLeftPage,
+    registerActiveChunkEditor,
+    chunkHtml,
+  ]);
+
+  const commitEditorHtml = useCallback(() => {
+    const el = editorRef.current;
+    if (!el || syncingFromProps.current) return;
+    const nextInner = el.innerHTML;
+    const fullHtml = writeChunkEditableHtml(
+      chunkHtmlRef.current,
+      format,
+      nextInner
+    );
+    lastEmittedHtmlRef.current = nextInner;
+    isInternalChange.current = true;
+    onChunkHtmlChange(chunkId, fullHtml);
+    onChunkHtmlCommit?.(chunkId, fullHtml);
+  }, [chunkId, format, onChunkHtmlChange, onChunkHtmlCommit]);
+
+  const handleBlur = useCallback(() => {
+    window.setTimeout(() => {
+      const active = document.activeElement;
+      const toolbar = document.querySelector("[data-pmc-floating-rich-toolbar]");
+      if (toolbar?.contains(active)) return;
+      if (editorRef.current?.contains(active)) return;
+      commitEditorHtml();
+      clearActiveChunkEditor(chunkId);
+    }, 0);
+  }, [chunkId, clearActiveChunkEditor, commitEditorHtml]);
+
+  const overflowRafRef = useRef<number | null>(null);
+  const scheduleGridOverflowCheck = useCallback(() => {
+    if (!fillContainer || !onGridTextOverflowCheck) return;
+    if (overflowRafRef.current != null) {
+      cancelAnimationFrame(overflowRafRef.current);
+    }
+    overflowRafRef.current = requestAnimationFrame(() => {
+      overflowRafRef.current = null;
+      const el = editorRef.current;
+      if (!el || syncingFromProps.current) return;
+      if (el.scrollHeight <= el.clientHeight + 1) return;
+      onGridTextOverflowCheck(chunkId, el);
+    });
+  }, [chunkId, fillContainer, onGridTextOverflowCheck]);
+
+  useEffect(
+    () => () => {
+      if (overflowRafRef.current != null) {
+        cancelAnimationFrame(overflowRafRef.current);
+      }
+    },
+    []
+  );
+
+  const handlePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const plain = e.clipboardData.getData("text/plain");
+    const escaped = plain
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+    const insertHtml = escaped.replace(/\r\n?|\n/g, "<br>");
+    document.execCommand("insertHTML", false, insertHtml);
+    emitChange();
+    resize();
+    scheduleGridOverflowCheck();
+  };
 
   return (
-    <textarea
-      ref={ref}
-      value={draft}
-      onChange={(e) => {
-        const next = e.target.value;
-        setDraft(next);
-        lastEmittedRef.current = next;
-        onChunkHtmlChange(chunkId, buildHtml(chunkHtml, format, next));
-      }}
-      onInput={resize}
-      placeholder={placeholder}
+    <div
+      ref={editorRef}
+      contentEditable
+      suppressContentEditableWarning
+      role="textbox"
+      aria-multiline
       aria-label={ariaLabel}
-      rows={1}
-      style={{ resize: "none", overflow: "hidden" }}
-      className={`${className ?? ""}${saving ? " opacity-80" : ""}`}
+      data-placeholder={placeholder}
+      data-pmc-chunk-rich-editor={chunkId}
+      onFocus={handleFocus}
+      onBlur={handleBlur}
+      onInput={() => {
+        emitChange();
+        resize();
+        scheduleGridOverflowCheck();
+      }}
+      onPaste={handlePaste}
+      className={`rich-text-editor-body outline-none ${className ?? ""}${
+        saving ? " opacity-80" : ""
+      }${fillContainer ? " h-full min-h-0 overflow-hidden" : " min-h-[1.5em]"}`}
+      style={fillContainer ? { height: "100%" } : undefined}
     />
   );
 };
-
-/**
- * Hover-only "+" button rendered in the gap above/below each body chunk to
- * insert a new editable text chunk. One slot sits between any two consecutive
- * chunks (shared by both), one above the first chunk, and one below the last.
- */
-const InsertionSlot: FC<{
-  onClick: () => void;
-  ariaLabel?: string;
-}> = ({ onClick, ariaLabel = "Add new text chunk here" }) => (
-  <div
-    className="group relative my-1 flex h-6 w-full items-center justify-center break-inside-avoid"
-    data-pmc-insertion-slot=""
-  >
-    <span
-      aria-hidden
-      className="pointer-events-none absolute left-2 right-2 top-1/2 -translate-y-1/2 border-t border-dashed border-blue-300 opacity-0 transition group-hover:opacity-100"
-    />
-    <button
-      type="button"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        onClick();
-      }}
-      aria-label={ariaLabel}
-      title={ariaLabel}
-      className="relative z-10 inline-flex h-7 w-7 items-center justify-center rounded-full border-2 border-dashed border-blue-400 bg-white text-blue-500 opacity-0 shadow-sm transition hover:border-blue-500 hover:bg-blue-50 hover:text-blue-700 group-hover:opacity-100"
-    >
-      <span className="text-xl leading-none">+</span>
-    </button>
-  </div>
-);
 
 /**
  * Floating checkbox rendered at the top-right of every body chunk while the
@@ -277,11 +393,15 @@ const ChunkSelectionCheckbox: FC<{
   </button>
 );
 
+const imageChunkOverlayButtonClass =
+  "inline-flex w-full items-center justify-center gap-2 rounded-md border border-white/70 bg-black/60 px-3 py-1.5 text-lg font-semibold uppercase tracking-wide text-white shadow-md backdrop-blur-sm transition hover:bg-black/80";
+
 const UpdateImageButton: FC<{
   onClick: () => void;
   className?: string;
   label?: string;
-}> = ({ onClick, className = "", label = "Update image" }) => (
+  stacked?: boolean;
+}> = ({ onClick, className = "", label = "Update image", stacked = false }) => (
   <button
     type="button"
     onClick={(e) => {
@@ -289,18 +409,97 @@ const UpdateImageButton: FC<{
       e.stopPropagation();
       onClick();
     }}
-    className={`pointer-events-auto absolute right-2 top-2 z-30 inline-flex items-center gap-2 rounded-md border border-white/70 bg-black/60 px-3 py-1.5 text-lg font-semibold uppercase tracking-wide text-white shadow-md backdrop-blur-sm transition hover:bg-black/80 ${className}`}
+    className={`pointer-events-auto z-30 ${imageChunkOverlayButtonClass} ${
+      stacked ? "" : "absolute right-2 top-2"
+    } ${className}`}
   >
     <svg
       viewBox="0 0 20 20"
       fill="currentColor"
       aria-hidden
-      className="h-5 w-5"
+      className="h-5 w-5 shrink-0"
     >
       <path d="M4 5a2 2 0 012-2h2.586a1 1 0 01.707.293l1.414 1.414A1 1 0 0011.414 5H14a2 2 0 012 2v7a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm6 3a3 3 0 100 6 3 3 0 000-6z" />
     </svg>
     {label}
   </button>
+);
+
+const UpdateCaptionButton: FC<{ onClick: () => void }> = ({ onClick }) => (
+  <button
+    type="button"
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onClick();
+    }}
+    className={`pointer-events-auto z-30 ${imageChunkOverlayButtonClass}`}
+  >
+    Update caption
+  </button>
+);
+
+const ImageCaptionOverlay: FC<{ caption: string }> = ({ caption }) => {
+  const text = caption.trim();
+  if (!text) return null;
+  return (
+    <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-black/80 px-2 py-1.5">
+      <p className="text-left text-sm italic text-white">{text}</p>
+    </div>
+  );
+};
+
+const ImageChunkActionButtons: FC<{
+  onUpdateImage: () => void;
+  onUpdateCaption: () => void;
+  imageLabel?: string;
+}> = ({ onUpdateImage, onUpdateCaption, imageLabel }) => (
+  <div className="pointer-events-auto absolute right-2 top-2 z-30 flex w-[min(100%,12rem)] flex-col items-stretch gap-1">
+    <UpdateImageButton stacked onClick={onUpdateImage} label={imageLabel} />
+    <UpdateCaptionButton onClick={onUpdateCaption} />
+  </div>
+);
+
+const EditableImageChunkFrame: FC<{
+  imgSrc: string | null;
+  imgAlt: string;
+  caption: string;
+  showImageActions: boolean;
+  onUpdateImage: () => void;
+  onUpdateCaption: () => void;
+  imageButtonLabel?: string;
+  objectFitClass?: string;
+  children?: React.ReactNode;
+}> = ({
+  imgSrc,
+  imgAlt,
+  caption,
+  showImageActions,
+  onUpdateImage,
+  onUpdateCaption,
+  imageButtonLabel,
+  objectFitClass = "object-contain",
+  children,
+}) => (
+  <div className="relative w-full overflow-hidden rounded-sm border border-gray-200 bg-gray-50">
+    {imgSrc ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={imgSrc} alt={imgAlt || ""} className={`block h-auto w-full ${objectFitClass}`} />
+    ) : (
+      <div className="flex h-32 w-full items-center justify-center text-2xl text-gray-400">
+        No image selected.
+      </div>
+    )}
+    <ImageCaptionOverlay caption={caption} />
+    {showImageActions ? (
+      <ImageChunkActionButtons
+        onUpdateImage={onUpdateImage}
+        onUpdateCaption={onUpdateCaption}
+        imageLabel={imageButtonLabel}
+      />
+    ) : null}
+    {children}
+  </div>
 );
 
 /**
@@ -425,12 +624,16 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
   hideHeading = false,
   articleFlowPages,
   currentSlotContentId,
+  articleTitleHtml: articleTitleHtmlProp,
+  articleSubtitleHtml: articleSubtitleHtmlProp,
   editable = false,
   onChunkTextChange,
+  onChunkHtmlCommit,
+  onGridTextOverflowCheck,
   onChunkImageUpdate,
+  onChunkCaptionUpdate,
   savingChunkIds,
   fillContainer = false,
-  onAddChunkRequest,
   chunkSelectionMode = false,
   selectedChunkIds,
   onToggleChunkSelection,
@@ -457,7 +660,7 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
       height: "100%",
       columnCount,
       columnFill: "auto",
-      columnGap: "1.5rem",
+      columnGap: 0,
       columnRuleWidth: "2px",
       columnRuleStyle: "solid",
       columnRuleColor: "rgb(229 231 235)",
@@ -499,15 +702,50 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
     return keys;
   }, [overlayChunks, columnCount]);
 
-  const useGridBodyLayout = overlayChunks.length > 0;
+  const useGridBodyLayout = useMemo(() => {
+    if (overlayChunks.length > 0) return true;
+    return sorted.some((c) => {
+      if (!isFlowBodyChunk(c)) return false;
+      const codes = normalizeAreaCodes(
+        (c as { chunk_area_array?: unknown }).chunk_area_array
+      );
+      if (!codes.length) return false;
+      return areaCodesToPlacement(codes, columnCount) != null;
+    });
+  }, [sorted, overlayChunks, columnCount]);
 
-  const { headline, subtitle, bodyFlowChunks } = useMemo(() => {
-    const titleChunk = sorted.find((c) => normalizeChunkFormat(c.publication_article_chunk_format) === "title");
+  /** Lateral margin between chunk edge and text — applied inside the textarea only. */
+  const chunkTextareaXPad = "px-4";
+  const chunkBottomBorderClass = "border-b border-dashed border-gray-200";
+  const gridTextShellClass = `relative flex min-h-0 flex-1 flex-col bg-white [overflow-wrap:anywhere] ${chunkBottomBorderClass}`;
+  const gridTextareaClass = `block h-full min-h-0 w-full flex-1 border-0 bg-white ${chunkTextareaXPad} py-2 text-2xl leading-snug text-gray-500 outline-none ring-0 transition placeholder:text-gray-400 focus:bg-white focus:outline-2 focus:outline-blue-300`;
+  const gridTextPreviewClass = `min-h-0 flex-1 overflow-hidden bg-white ${chunkTextareaXPad} py-2 text-2xl leading-snug text-gray-500 [&_.prose]:text-gray-500 [&_.prose_*]:text-gray-500`;
+  const flowTextareaClass = `block w-full border-0 bg-white ${chunkTextareaXPad} py-2 text-2xl leading-snug text-gray-800 outline-none ring-0 transition focus:bg-blue-50/40 focus:outline-2 focus:outline-blue-300`;
+  const flowTextShellClass = `relative max-w-full break-inside-avoid bg-white [overflow-wrap:anywhere] ${chunkBottomBorderClass}`;
+  const flowMediaShellClass = `relative flex max-w-full break-inside-avoid flex-col [overflow-wrap:anywhere] ${chunkBottomBorderClass}`;
+  const flowTextPreviewPadClass = `${chunkTextareaXPad} py-2`;
+
+  /** 40% larger than `text-4xl` (2.25rem → 3.15rem). */
+  const headerTitleClass =
+    "text-[3.15rem] leading-tight tracking-tight text-white [&_*]:max-w-full [&_b]:font-bold [&_strong]:font-bold [&_em]:italic [&_i]:italic [&_p]:my-0 [&_p+p]:mt-1 [&_p]:text-[3.15rem]";
+  const headerSubtitleClass =
+    "mt-1 text-2xl leading-snug text-white/95 [&_*]:max-w-full [&_b]:font-bold [&_strong]:font-bold [&_em]:italic [&_i]:italic [&_p]:my-0 [&_p+p]:mt-1";
+
+  const { headlineHtml, subtitleHtml, bodyFlowChunks } = useMemo(() => {
+    const titleChunk = sorted.find(
+      (c) => normalizeChunkFormat(c.publication_article_chunk_format) === "title"
+    );
     const subtitleChunk = sorted.find(
       (c) => normalizeChunkFormat(c.publication_article_chunk_format) === "subtitle"
     );
-    const headlineText = titleChunk ? htmlToPlainText(titleChunk.chunk_html) : "";
-    const subtitleText = subtitleChunk ? htmlToPlainText(subtitleChunk.chunk_html) : "";
+    const titleHtml =
+      (articleTitleHtmlProp != null && String(articleTitleHtmlProp).trim() !== ""
+        ? String(articleTitleHtmlProp)
+        : titleChunk?.chunk_html) ?? "";
+    const subHtml =
+      (articleSubtitleHtmlProp != null && String(articleSubtitleHtmlProp).trim() !== ""
+        ? String(articleSubtitleHtmlProp)
+        : subtitleChunk?.chunk_html) ?? "";
 
     // In editable mode we keep every body chunk (including empty ones) so the
     // user can see and continue editing the empty textareas they just created.
@@ -522,12 +760,26 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
           sorted
         );
 
+    const bodyFlowChunks =
+      editable && useGridBodyLayout
+        ? dedupeGridBodyChunksByCell(bodyChunks, columnCount)
+        : bodyChunks;
+
     return {
-      headline: headlineText || "Feature headline",
-      subtitle: subtitleText || "Subtitle",
-      bodyFlowChunks: bodyChunks,
+      headlineHtml: titleHtml,
+      subtitleHtml: subHtml,
+      bodyFlowChunks,
     };
-  }, [sorted, columnCount, articleFlowPages, currentSlotContentId, editable]);
+  }, [
+    sorted,
+    columnCount,
+    articleFlowPages,
+    currentSlotContentId,
+    editable,
+    useGridBodyLayout,
+    articleTitleHtmlProp,
+    articleSubtitleHtmlProp,
+  ]);
 
   const footerNumber =
     publicationPage != null && Number.isFinite(publicationPage)
@@ -557,17 +809,36 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
 
   const pageCard = (
     <div
+      data-article-preview-page-card=""
       className={`flex w-full flex-col overflow-hidden rounded-sm border border-gray-300 bg-white shadow-md ${
         fillContainer ? "" : "max-w-[min(100%,28rem)]"
       }`}
       style={{ aspectRatio: PAGE_ASPECT }}
     >
-      <header className="flex h-[13%] shrink-0 flex-col justify-center bg-black px-6 py-2 text-white">
+      <header
+        className={`flex h-[13%] shrink-0 flex-col justify-center bg-black text-white ${MAGAZINE_HEADER_PAD_CLASS}`}
+      >
         {showHeadline ? (
-          <h3 className="text-4xl font-bold leading-tight tracking-tight">{headline}</h3>
+          isRichTextEmpty(headlineHtml) ? (
+            <div className={headerTitleClass}>Feature headline</div>
+          ) : (
+            <RichTextContent
+              htmlOrPlain={headlineHtml}
+              className={headerTitleClass}
+              as="div"
+            />
+          )
         ) : null}
         {showSubtitle ? (
-          <p className="mt-1 text-2xl font-semibold leading-snug text-white/95">{subtitle}</p>
+          isRichTextEmpty(subtitleHtml) ? (
+            <div className={headerSubtitleClass}>Subtitle</div>
+          ) : (
+            <RichTextContent
+              htmlOrPlain={subtitleHtml}
+              className={headerSubtitleClass}
+              as="div"
+            />
+          )
         ) : null}
       </header>
 
@@ -579,11 +850,13 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
           </div>
         ) : (
           <>
-            <div className="relative min-h-0 flex-1 overflow-hidden border-t border-gray-200">
+            <div
+              className={`relative min-h-0 flex-1 overflow-hidden border-t border-gray-200 ${MAGAZINE_BODY_INSET_CLASS}`}
+            >
               {columnCount >= 2 ? (
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute inset-x-3 inset-y-2 z-10"
+                  className="pointer-events-none absolute inset-0 z-10"
                 >
                   {Array.from({ length: columnCount - 1 }).map((_, i) => (
                     <div
@@ -597,25 +870,13 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
               <div
                 className={
                   useGridBodyLayout
-                    ? "absolute inset-0 px-3 py-2"
-                    : "h-full overflow-hidden px-3 py-2 text-2xl leading-snug text-gray-800 [overflow-wrap:anywhere] [&_.prose]:max-w-none [&_.prose]:break-words [&_.prose]:text-2xl [&_.prose]:leading-snug [&_.prose_*]:max-w-full [&_.prose_*]:break-words [&_.prose_*]:[overflow-wrap:anywhere] [&_.prose_p]:my-0 [&_.prose_p+p]:mt-1.5"
+                    ? "absolute inset-0"
+                    : "h-full overflow-hidden text-2xl leading-snug text-gray-800 [overflow-wrap:anywhere] [&_.prose]:max-w-none [&_.prose]:break-words [&_.prose]:text-2xl [&_.prose]:leading-snug [&_.prose_*]:max-w-full [&_.prose_*]:break-words [&_.prose_*]:[overflow-wrap:anywhere] [&_.prose_p]:my-0 [&_.prose_p+p]:mt-1.5"
                 }
                 style={useGridBodyLayout ? undefined : bodyColumnStyle}
                 data-magazine-preview-body=""
                 data-magazine-preview-columns={columnCount}
               >
-              {editable && onAddChunkRequest ? (
-                <InsertionSlot
-                  key="__slot-top__"
-                  onClick={() =>
-                    onAddChunkRequest({
-                      afterChunkId: null,
-                      beforeChunkId:
-                        bodyFlowChunks[0]?.publication_article_chunk_id ?? null,
-                    })
-                  }
-                />
-              ) : null}
               {bodyFlowChunks.length === 0 ? (
                 editable ? null : <p className="text-2xl text-gray-400 italic">—</p>
               ) : (
@@ -630,32 +891,6 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
                   const rawFormat = chunk.publication_article_chunk_format;
                   const canEditText = chunkSupportsTextEditing(rawFormat);
                   const hasImg = chunkHasImage(chunk.chunk_html, rawFormat);
-
-                  // The sharing rule ("two consecutive chunks share one
-                  // insertion button") only applies when chunks stack
-                  // vertically in the same column. When the next chunk
-                  // starts a new column (it sits side-by-side, not below),
-                  // we render both this chunk's trailing slot *and* the
-                  // next chunk's leading slot so each one keeps its own
-                  // vertical breathing room. Always render the trailing
-                  // slot in editable mode.
-                  const trailingSlot =
-                    editable && onAddChunkRequest ? (
-                      <InsertionSlot
-                        key={`${chunkId}__slot-after`}
-                        onClick={() =>
-                          onAddChunkRequest({
-                            afterChunkId: chunkId,
-                            beforeChunkId:
-                              bodyFlowChunks[chunkIdx + 1]?.publication_article_chunk_id ??
-                              null,
-                          })
-                        }
-                      />
-                    ) : null;
-
-                  const textareaClass =
-                    "block w-full rounded-sm border border-gray-200 bg-white px-3 py-2 text-2xl leading-snug text-gray-800 outline-none ring-0 transition focus:border-blue-300 focus:bg-blue-50/40 focus:outline-2 focus:outline-blue-300";
 
                   const isChunkSelected =
                     chunkSelectionMode &&
@@ -676,20 +911,30 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
                   if (editable && canEditText && !isMediaBlock && onChunkTextChange) {
                     chunkNode = (
                       <div
-                        className={`relative mb-1.5 max-w-full break-inside-avoid rounded-sm [overflow-wrap:anywhere] ${selectionRingClass}`}
+                        className={
+                          useGridBodyLayout
+                            ? `${gridTextShellClass} ${selectionRingClass}`
+                            : `${flowTextShellClass} ${selectionRingClass}`
+                        }
                         data-pmc-editable-text-chunk={chunkId}
                       >
-                        <EditableChunkTextarea
+                        <EditableChunkRichBody
                           chunkId={chunkId}
                           chunkHtml={chunk.chunk_html}
                           format={rawFormat}
+                          isLeftPage={isLeftPage}
                           saving={isSaving}
+                          fillContainer={useGridBodyLayout}
                           onChunkHtmlChange={onChunkTextChange}
-                          readText={readChunkEditableText}
-                          buildHtml={writeChunkEditableText}
+                          onChunkHtmlCommit={onChunkHtmlCommit}
+                          onGridTextOverflowCheck={
+                            useGridBodyLayout ? onGridTextOverflowCheck : undefined
+                          }
                           placeholder="Body text…"
                           ariaLabel={`Chunk ${chunkId} text`}
-                          className={textareaClass}
+                          className={
+                            useGridBodyLayout ? gridTextareaClass : flowTextareaClass
+                          }
                         />
                         {selectionOverlay}
                       </div>
@@ -697,59 +942,64 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
                   } else if (isMediaBlock && editable) {
                     const imgSrc = extractFirstImgSrc(chunk.chunk_html);
                     const imgAlt = extractFirstImgAlt(chunk.chunk_html);
+                    const caption = readChunkImageCaption(chunk);
+                    const showImageActions =
+                      !chunkSelectionMode &&
+                      chunkFormatIncludesImage(rawFormat) &&
+                      !!onChunkImageUpdate &&
+                      !!onChunkCaptionUpdate;
                     const showTextarea =
                       canEditText &&
                       !!onChunkTextChange &&
                       (fmt === "text_image" || fmt === "image_text");
                     chunkNode = (
                       <div
-                        className={`relative mb-3 flex max-w-full break-inside-avoid flex-col gap-2 rounded-sm [overflow-wrap:anywhere] ${selectionRingClass}`}
+                        className={`${flowMediaShellClass} ${selectionRingClass}`}
                       >
-                        <div className="relative w-full overflow-hidden rounded-sm border border-gray-200 bg-gray-50">
-                          {imgSrc ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={imgSrc}
-                              alt={imgAlt || ""}
-                              className="block h-auto w-full object-contain"
-                            />
-                          ) : (
-                            <div className="flex h-32 w-full items-center justify-center text-2xl text-gray-400">
-                              No image selected.
-                            </div>
-                          )}
-                          {onChunkImageUpdate && !chunkSelectionMode ? (
-                            <UpdateImageButton
-                              onClick={() => onChunkImageUpdate(chunkId)}
-                              label={imgSrc ? "Update image" : "Add image"}
-                            />
-                          ) : null}
-                        </div>
+                        <EditableImageChunkFrame
+                          imgSrc={imgSrc}
+                          imgAlt={imgAlt || ""}
+                          caption={caption}
+                          showImageActions={showImageActions}
+                          onUpdateImage={() => onChunkImageUpdate!(chunkId)}
+                          onUpdateCaption={() => onChunkCaptionUpdate!(chunkId)}
+                          imageButtonLabel={imgSrc ? "Update image" : "Add image"}
+                        />
                         {showTextarea ? (
-                          <EditableChunkTextarea
+                          <EditableChunkRichBody
                             chunkId={chunkId}
                             chunkHtml={chunk.chunk_html}
                             format={rawFormat}
+                            isLeftPage={isLeftPage}
                             saving={isSaving}
                             onChunkHtmlChange={onChunkTextChange}
-                            readText={readChunkEditableText}
-                            buildHtml={writeChunkEditableText}
+                            onChunkHtmlCommit={onChunkHtmlCommit}
                             placeholder="Body text…"
                             ariaLabel={`Chunk ${chunkId} text`}
-                            className={textareaClass}
+                            className={flowTextareaClass}
                           />
                         ) : null}
                         {selectionOverlay}
                       </div>
                     );
                   } else if (isMediaBlock) {
+                    const mediaCaption = readChunkImageCaption(chunk);
                     chunkNode = (
                       <div
-                        className={`relative mb-3 max-w-full break-inside-avoid rounded-sm px-3 py-2 [overflow-wrap:anywhere] ${selectionRingClass}`}
+                        className={`${flowMediaShellClass} ${selectionRingClass} relative`}
                       >
                         <MagazineChunkEditorPreview format={fmt} chunkHtml={chunkHtml} />
-                        {editable && hasImg && onChunkImageUpdate && !chunkSelectionMode ? (
-                          <UpdateImageButton onClick={() => onChunkImageUpdate(chunkId)} />
+                        <ImageCaptionOverlay caption={mediaCaption} />
+                        {editable &&
+                        hasImg &&
+                        chunkFormatIncludesImage(rawFormat) &&
+                        onChunkImageUpdate &&
+                        onChunkCaptionUpdate &&
+                        !chunkSelectionMode ? (
+                          <ImageChunkActionButtons
+                            onUpdateImage={() => onChunkImageUpdate(chunkId)}
+                            onUpdateCaption={() => onChunkCaptionUpdate(chunkId)}
+                          />
                         ) : null}
                         {selectionOverlay}
                       </div>
@@ -757,35 +1007,32 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
                   } else {
                     chunkNode = (
                       <div
-                        className={`relative mb-1.5 block max-w-full break-inside-avoid rounded-sm px-3 py-2 [overflow-wrap:anywhere] ${selectionRingClass}`}
+                        className={
+                          useGridBodyLayout
+                            ? `${gridTextShellClass} ${selectionRingClass}`
+                            : `${flowTextShellClass} ${selectionRingClass}`
+                        }
                       >
-                        <MagazineChunkEditorPreview format={fmt} chunkHtml={chunkHtml} />
+                        {useGridBodyLayout ? (
+                          <div className={gridTextPreviewClass}>
+                            <MagazineChunkEditorPreview format={fmt} chunkHtml={chunkHtml} />
+                          </div>
+                        ) : (
+                          <div className={flowTextPreviewPadClass}>
+                            <MagazineChunkEditorPreview format={fmt} chunkHtml={chunkHtml} />
+                          </div>
+                        )}
                         {selectionOverlay}
                       </div>
                     );
                   }
 
                   const breakBeforeColumn = chunkIdx >= 1 && chunkIdx < columnCount;
-                  const leadingSlot =
-                    breakBeforeColumn && editable && onAddChunkRequest ? (
-                      <InsertionSlot
-                        key={`${chunkId}__slot-before`}
-                        onClick={() =>
-                          onAddChunkRequest({
-                            afterChunkId:
-                              bodyFlowChunks[chunkIdx - 1]
-                                ?.publication_article_chunk_id ?? null,
-                            beforeChunkId: chunkId,
-                          })
-                        }
-                      />
-                    ) : null;
                   const wrappedChunkNode = breakBeforeColumn ? (
                     <div
                       className="break-inside-avoid"
                       style={{ breakBefore: "column" } as CSSProperties}
                     >
-                      {leadingSlot}
                       {chunkNode}
                     </div>
                   ) : (
@@ -803,31 +1050,23 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
                     return (
                       <div
                         key={chunkId}
-                        className="pointer-events-auto absolute flex min-h-0 flex-col overflow-visible text-2xl leading-snug text-gray-800"
+                        className="pointer-events-auto absolute flex min-h-0 flex-col overflow-hidden text-2xl leading-snug"
                         style={box}
                       >
-                        {leadingSlot}
-                        <div className="min-h-0 flex-1 overflow-hidden">{chunkNode}</div>
-                        {trailingSlot}
+                        {chunkNode}
                       </div>
                     );
                   }
 
-                  return (
-                    <React.Fragment key={chunkId}>
-                      {wrappedChunkNode}
-                      {trailingSlot}
-                    </React.Fragment>
-                  );
+                  return <React.Fragment key={chunkId}>{wrappedChunkNode}</React.Fragment>;
                 })
               )}
               
               </div>
-            </div>
 
             {overlayChunks.length > 0 ? (
               <div
-                className={`absolute inset-0 pointer-events-none ${
+                className={`pointer-events-none absolute inset-0 ${
                   imageAreaSelectionMode ? "z-40" : "z-20"
                 }`}
               >
@@ -843,6 +1082,12 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
                   if (!placement || !src) return null;
                   const box = placementPercentStyle(placement, columnCount);
                   const chunkId = chunk.publication_article_chunk_id;
+                  const overlayCaption = readChunkImageCaption(chunk);
+                  const showOverlayImageActions =
+                    editable &&
+                    onChunkImageUpdate &&
+                    onChunkCaptionUpdate &&
+                    !chunkSelectionMode;
                   return (
                     <div
                       key={chunkId}
@@ -853,6 +1098,7 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={src} alt="" className="h-full w-full object-cover" />
+                      <ImageCaptionOverlay caption={overlayCaption} />
                       {imageAreaSelectionMode && onOverlayImageDelete ? (
                         <button
                           type="button"
@@ -878,8 +1124,11 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
                             />
                           </svg>
                         </button>
-                      ) : editable && onChunkImageUpdate && !chunkSelectionMode ? (
-                        <UpdateImageButton onClick={() => onChunkImageUpdate(chunkId)} />
+                      ) : showOverlayImageActions ? (
+                        <ImageChunkActionButtons
+                          onUpdateImage={() => onChunkImageUpdate!(chunkId)}
+                          onUpdateCaption={() => onChunkCaptionUpdate!(chunkId)}
+                        />
                       ) : null}
                     </div>
                   );
@@ -887,15 +1136,16 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
               </div>
             ) : null}
 
-            {imageAreaSelectionMode ? (
-              <ImageAreaSelectionLayer
-                columnCount={columnCount}
-                imageAreas={imageAreas ?? []}
-                overlayBlockedCellKeys={overlayBlockedCellKeys}
-                onCellClick={onImageAreaCellClick}
-                onRemoveArea={onImageAreaRemove}
-              />
-            ) : null}
+              {imageAreaSelectionMode ? (
+                <ImageAreaSelectionLayer
+                  columnCount={columnCount}
+                  imageAreas={imageAreas ?? []}
+                  overlayBlockedCellKeys={overlayBlockedCellKeys}
+                  onCellClick={onImageAreaCellClick}
+                  onRemoveArea={onImageAreaRemove}
+                />
+              ) : null}
+            </div>
           </>
         )}
       </div>

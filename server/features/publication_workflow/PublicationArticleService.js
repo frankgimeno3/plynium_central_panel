@@ -5,8 +5,13 @@ import PublicationSlotDbModel from "./PublicationSlotDbModel.js";
 import PublicationModel from "../publication/PublicationModel.js";
 import {
     deletePublicationSlotMediatecaFolder,
+    ensureArticleScreenshotsFolderHierarchy,
     ensureArticleSlotMaterialsFolderHierarchy,
 } from "../publication/PublicationMediatecaFolderService.js";
+import {
+    deleteArticlePageScreenshot,
+    pruneArticleScreenshotsBeyondPageCount,
+} from "../publication/ArticleScreenshotService.js";
 import { computeNextRegularPublicationPage } from "../publication/computeNextRegularPublicationPage.js";
 import { shiftPublicationSlotsForRegularInsert } from "../publication/shiftPublicationSlotsForRegularInsert.js";
 import "../../database/models.js";
@@ -22,7 +27,13 @@ import {
 import { portalArticleContentToHtml } from "../../../lib/publication_workflow/portalArticleChunkHtml.ts";
 import MediaModel from "../media/MediaModel.js";
 import { deleteMedia } from "../media/MediaService.js";
-import { normalizeChunkAreaArray } from "./chunkAreaCodes.js";
+import {
+    areaCodeToCell,
+    hasCompletePerCellBodyGrid,
+    normalizeChunkAreaArray,
+    perCellBodyGridAreaCodes,
+    gridCellOverflowOrder,
+} from "./chunkAreaCodes.js";
 import {
     collapseTextChunksAfterImageRemoval,
     displaceTextChunksForImageAreas,
@@ -213,21 +224,6 @@ export const PUBLICATION_ARTICLE_CHUNK_FORMATS = [
     "image_text",
 ];
 
-/** Default layout weight (1–100) for a chunk format when none is stored. */
-export function defaultChunkPageWeightForFormat(format) {
-    const f = String(format ?? "only_text").trim().toLowerCase();
-    if (f === "title" || f === "subtitle" || f === "only_text") return 15;
-    if (f === "only_image") return 25;
-    if (f === "text_image" || f === "image_text") return 20;
-    return 15;
-}
-
-export function clampChunkPageWeight(value, formatFallback = "only_text") {
-    const n = Math.floor(Number(value));
-    if (!Number.isFinite(n)) return defaultChunkPageWeightForFormat(formatFallback);
-    return Math.min(100, Math.max(1, n));
-}
-
 /** Magazine page chunks that must always exist once per `publication_slot_id`. */
 const LOCKED_MAGAZINE_CHUNK_FORMATS = new Set(["title", "subtitle"]);
 
@@ -295,20 +291,285 @@ function toApiChunk(row) {
                 : "only_text",
         chunk_html: p.chunk_html != null ? String(p.chunk_html) : "",
         chunk_position: p.chunk_position != null ? Number(p.chunk_position) : 0,
-        chunk_page_weight: clampChunkPageWeight(
-            p.chunk_page_weight != null ? Number(p.chunk_page_weight) : defaultChunkPageWeightForFormat(p.publication_article_chunk_format),
-            String(p.publication_article_chunk_format ?? "only_text")
-        ),
         original_article_content_id:
             p.original_article_content_id != null
                 ? String(p.original_article_content_id)
                 : null,
         chunk_area_array: normalizeChunkAreaArray(p.chunk_area_array),
+        chunk_image_caption: chunkFormatIncludesImage(p.publication_article_chunk_format)
+            ? p.chunk_image_caption != null
+                ? String(p.chunk_image_caption)
+                : ""
+            : "",
         publication_article_chunk_created_at:
             p.publication_article_chunk_created_at ?? null,
         publication_article_chunk_updated_at:
             p.publication_article_chunk_updated_at ?? null,
     };
+}
+
+function chunkFormatIncludesImage(format) {
+    const f = String(format ?? "").toLowerCase();
+    return f === "only_image" || f === "text_image" || f === "image_text";
+}
+
+function primaryGridAreaCode(areaArray) {
+    const areas = normalizeChunkAreaArray(areaArray);
+    const code = areas[0] != null ? String(areas[0]).trim().toLowerCase() : "";
+    return code || null;
+}
+
+async function findOnlyTextChunkInGridArea(
+    publicationArticleId,
+    slotId,
+    areaCode,
+    excludeChunkId = null
+) {
+    const rows = await PublicationArticleChunkDbModel.findAll({
+        where: {
+            publication_article_id: String(publicationArticleId),
+            publication_slot_id: Number(slotId),
+            publication_article_chunk_format: "only_text",
+        },
+    });
+    const want = String(areaCode).trim().toLowerCase();
+    for (const row of rows) {
+        const cid = String(row.get("publication_article_chunk_id") ?? "");
+        if (excludeChunkId && cid === String(excludeChunkId)) continue;
+        if (primaryGridAreaCode(row.get("chunk_area_array")) === want) return row;
+    }
+    return null;
+}
+
+function chunkFormatSaveRank(format) {
+    const f = String(format ?? "").trim().toLowerCase();
+    if (f === "title") return 0;
+    if (f === "subtitle") return 1;
+    if (f === "only_image") return 2;
+    if (f === "only_text") return 3;
+    return 4;
+}
+
+function gridAreaSortIndex(areaCode, gridOrder) {
+    if (!areaCode) return 9999;
+    const idx = gridOrder.indexOf(areaCode);
+    return idx >= 0 ? idx : 9999;
+}
+
+function sortChunksForSlotSaveOrder(rows, gridOrder) {
+    return [...rows].sort((a, b) => {
+        const pa = plain(a);
+        const pb = plain(b);
+        const ra = chunkFormatSaveRank(pa.publication_article_chunk_format);
+        const rb = chunkFormatSaveRank(pb.publication_article_chunk_format);
+        if (ra !== rb) return ra - rb;
+        const ia = gridAreaSortIndex(primaryGridAreaCode(pa.chunk_area_array), gridOrder);
+        const ib = gridAreaSortIndex(primaryGridAreaCode(pb.chunk_area_array), gridOrder);
+        if (ia !== ib) return ia - ib;
+        const posDiff = Number(pa.chunk_position) - Number(pb.chunk_position);
+        if (posDiff !== 0) return posDiff;
+        return String(pa.publication_article_chunk_id ?? "").localeCompare(
+            String(pb.publication_article_chunk_id ?? "")
+        );
+    });
+}
+
+async function assignOrphanOnlyTextAreasOnSlot(rows, columnCount, transaction) {
+    const gridOrder = gridCellOverflowOrder(columnCount);
+    const onlyText = rows.filter(
+        (r) => String(r.get("publication_article_chunk_format") ?? "").toLowerCase() === "only_text"
+    );
+    const occupied = new Set();
+    const orphans = [];
+    for (const row of onlyText) {
+        const area = primaryGridAreaCode(row.get("chunk_area_array"));
+        if (area) occupied.add(area);
+        else orphans.push(row);
+    }
+    let orphanIdx = 0;
+    for (const code of gridOrder) {
+        if (occupied.has(code)) continue;
+        const orphan = orphans[orphanIdx++];
+        if (!orphan) break;
+        await orphan.update({ chunk_area_array: [code] }, { transaction: transaction ?? undefined });
+        occupied.add(code);
+    }
+    for (let i = orphanIdx; i < orphans.length; i++) {
+        await orphans[i].destroy({ transaction: transaction ?? undefined });
+    }
+}
+
+/**
+ * Removes duplicate `only_text` chunks that share the same slot + primary grid area.
+ * Keeps the row with the latest `publication_article_chunk_updated_at`.
+ */
+export async function dedupeOverlappingGridTextChunks(
+    publicationArticleId,
+    transaction = null,
+    options = {}
+) {
+    const id = String(publicationArticleId ?? "").trim();
+    if (!id) return { deleted: 0 };
+    const preferKeep = new Set(
+        (Array.isArray(options.preferKeepChunkIds) ? options.preferKeepChunkIds : [])
+            .map((cid) => String(cid ?? "").trim())
+            .filter(Boolean)
+    );
+
+    let rows;
+    try {
+        rows = await PublicationArticleChunkDbModel.findAll({
+            where: {
+                publication_article_id: id,
+                publication_article_chunk_format: "only_text",
+                publication_slot_id: { [Op.ne]: null },
+            },
+            transaction: transaction ?? undefined,
+        });
+    } catch (error) {
+        if (isMissingContentsManagerTable(error)) return { deleted: 0 };
+        throw error;
+    }
+
+    const groups = new Map();
+    for (const row of rows) {
+        const p = plain(row);
+        const sid = Number(p.publication_slot_id);
+        const area = primaryGridAreaCode(p.chunk_area_array);
+        if (!Number.isInteger(sid) || sid <= 0 || !area) continue;
+        const key = `${sid}|${area}`;
+        const list = groups.get(key) ?? [];
+        list.push(row);
+        groups.set(key, list);
+    }
+
+    let deleted = 0;
+    for (const list of groups.values()) {
+        if (list.length < 2) continue;
+        const ranked = [...list].sort((a, b) => {
+            const pa = plain(a);
+            const pb = plain(b);
+            const aPref = preferKeep.has(String(pa.publication_article_chunk_id ?? "")) ? 1 : 0;
+            const bPref = preferKeep.has(String(pb.publication_article_chunk_id ?? "")) ? 1 : 0;
+            if (bPref !== aPref) return bPref - aPref;
+            const ua = pa.publication_article_chunk_updated_at
+                ? new Date(pa.publication_article_chunk_updated_at).getTime()
+                : 0;
+            const ub = pb.publication_article_chunk_updated_at
+                ? new Date(pb.publication_article_chunk_updated_at).getTime()
+                : 0;
+            if (ub !== ua) return ub - ua;
+            const lenA = String(pa.chunk_html ?? "").trim().length;
+            const lenB = String(pb.chunk_html ?? "").trim().length;
+            if (lenB !== lenA) return lenB - lenA;
+            return Number(pb.chunk_position) - Number(pa.chunk_position);
+        });
+        for (let i = 1; i < ranked.length; i++) {
+            await ranked[i].destroy({ transaction: transaction ?? undefined });
+            deleted += 1;
+        }
+    }
+    return { deleted };
+}
+
+/**
+ * On explicit save: dedupe grid `only_text` by slot+area (newest `updated_at` wins),
+ * assign areas to legacy orphans, then renumber `chunk_position` per slot to match
+ * title → subtitle → images → body cells in grid order.
+ */
+export async function reconcilePublicationArticleChunks(publicationArticleId, options = {}) {
+    const id = String(publicationArticleId ?? "").trim();
+    if (!id) throw httpError(400, "publication_article_id is required");
+    const dedupeOptions = {
+        preferKeepChunkIds: Array.isArray(options.preferKeepChunkIds)
+            ? options.preferKeepChunkIds
+            : [],
+    };
+
+    const article = await PublicationArticleDbModel.findByPk(id);
+    if (!article) throw httpError(404, "publication_article not found");
+
+    const layout = await getPublicationArticleMagazinePageLayout(id);
+    const columnCount = String(layout ?? "").includes("3_col") ? 3 : 2;
+    const gridOrder = gridCellOverflowOrder(columnCount);
+
+    const ap = article.get({ plain: true });
+    const orderedFromArticle = Array.isArray(ap.publication_slots_id_array)
+        ? ap.publication_slots_id_array
+              .map((n) => Number(n))
+              .filter((n) => Number.isInteger(n) && n > 0)
+        : [];
+
+    const sequelize = PublicationArticleDbModel.sequelize;
+    if (!sequelize) throw new Error("PublicationArticleDbModel not initialized");
+
+    let deleted = 0;
+    let positionsUpdated = 0;
+
+    await sequelize.transaction(async (transaction) => {
+        const dedupe1 = await dedupeOverlappingGridTextChunks(id, transaction, dedupeOptions);
+        deleted += dedupe1.deleted;
+
+        let slotRows = [];
+        try {
+            slotRows = await PublicationArticleChunkDbModel.findAll({
+                attributes: ["publication_slot_id"],
+                where: {
+                    publication_article_id: id,
+                    publication_slot_id: { [Op.ne]: null },
+                },
+                transaction,
+            });
+        } catch (error) {
+            if (isMissingContentsManagerTable(error)) return;
+            throw error;
+        }
+
+        const slotIdSet = new Set(orderedFromArticle);
+        for (const row of slotRows) {
+            const sid = Number(row.get("publication_slot_id"));
+            if (Number.isInteger(sid) && sid > 0) slotIdSet.add(sid);
+        }
+
+        const slotIds = [
+            ...orderedFromArticle.filter((sid) => slotIdSet.has(sid)),
+            ...[...slotIdSet].filter((sid) => !orderedFromArticle.includes(sid)).sort((a, b) => a - b),
+        ];
+
+        for (const slotId of slotIds) {
+            const rows = await PublicationArticleChunkDbModel.findAll({
+                where: {
+                    publication_article_id: id,
+                    publication_slot_id: slotId,
+                },
+                transaction,
+            });
+            await assignOrphanOnlyTextAreasOnSlot(rows, columnCount, transaction);
+        }
+
+        const dedupe2 = await dedupeOverlappingGridTextChunks(id, transaction, dedupeOptions);
+        deleted += dedupe2.deleted;
+
+        for (const slotId of slotIds) {
+            const rows = await PublicationArticleChunkDbModel.findAll({
+                where: {
+                    publication_article_id: id,
+                    publication_slot_id: slotId,
+                },
+                transaction,
+            });
+
+            const ordered = sortChunksForSlotSaveOrder(rows, gridOrder);
+            for (let pos = 0; pos < ordered.length; pos++) {
+                const current = Number(plain(ordered[pos]).chunk_position);
+                if (current === pos) continue;
+                await ordered[pos].update({ chunk_position: pos }, { transaction });
+                positionsUpdated += 1;
+            }
+        }
+    });
+
+    return { deleted, positions_updated: positionsUpdated };
 }
 
 /**
@@ -443,6 +704,17 @@ export async function addPublicationArticle({ publicationId, articleId }) {
         }
         throw error;
     }
+    try {
+        const pubRow = await PublicationModel.findByPk(pid);
+        if (pubRow) {
+            await ensureArticleScreenshotsFolderHierarchy(pubRow, aid);
+        }
+    } catch (e) {
+        console.warn(
+            "[PublicationArticleService] ensure article Screenshots folder:",
+            e?.message ?? e
+        );
+    }
     return toApiPublicationArticle(row);
 }
 
@@ -474,6 +746,17 @@ export async function addStandalonePublicationArticle({ publicationId, desiredPa
             );
         }
         throw error;
+    }
+    try {
+        const pubRow = await PublicationModel.findByPk(pid);
+        if (pubRow) {
+            await ensureArticleScreenshotsFolderHierarchy(pubRow, articleId);
+        }
+    } catch (e) {
+        console.warn(
+            "[PublicationArticleService] ensure article Screenshots folder (standalone):",
+            e?.message ?? e
+        );
     }
     return toApiPublicationArticle(row);
 }
@@ -685,7 +968,6 @@ export async function ensureMagazineSlotTitleSubtitleChunks(
                         publication_article_chunk_format: "title",
                         chunk_html: defaultTitleHtml,
                         chunk_position: 0,
-                        chunk_page_weight: defaultChunkPageWeightForFormat("title"),
                         original_article_content_id: null,
                     },
                     { transaction }
@@ -701,7 +983,6 @@ export async function ensureMagazineSlotTitleSubtitleChunks(
                         publication_article_chunk_format: "subtitle",
                         chunk_html: defaultSubtitleHtml,
                         chunk_position: 1,
-                        chunk_page_weight: defaultChunkPageWeightForFormat("subtitle"),
                         original_article_content_id: null,
                     },
                     { transaction }
@@ -709,7 +990,18 @@ export async function ensureMagazineSlotTitleSubtitleChunks(
             }
         }
 
-        await ensureArticleBodyChunksFromSourceForMagazinePage(ap, paId, slotId, transaction);
+        const spreadSlotIds = Array.isArray(ap.publication_slots_id_array)
+            ? ap.publication_slots_id_array
+                  .map((n) => Number(n))
+                  .filter((n) => Number.isInteger(n) && n > 0)
+            : [];
+        const primarySlotId = spreadSlotIds.length > 0 ? spreadSlotIds[0] : slotId;
+        const isPrimaryContentSlot = Number(slotId) === Number(primarySlotId);
+
+        if (isPrimaryContentSlot) {
+            await ensureArticleBodyChunksFromSourceForMagazinePage(ap, paId, slotId, transaction);
+        }
+        await ensureDefaultColumnBodyChunksForMagazinePage(ap, paId, slotId, transaction);
 
         return { ok: true };
     };
@@ -861,6 +1153,12 @@ export async function getPublicationArticleWithChunks(publicationArticleId, opti
         } else {
             throw error;
         }
+    }
+
+    try {
+        await dedupeOverlappingGridTextChunks(id, null);
+    } catch (error) {
+        if (!isMissingContentsManagerTable(error)) throw error;
     }
 
     let chunks = [];
@@ -1187,6 +1485,104 @@ function articleContentToHtml(type, content) {
     return portalArticleContentToHtml(type, content);
 }
 
+const MAGAZINE_BODY_TEXT_FORMATS = new Set(["only_text", "text_image", "image_text"]);
+
+/**
+ * For pages without floating overlay images, ensures one body text chunk per
+ * grid cell (a1, a2, … c4). Skips slots with portal-imported body or overlays.
+ */
+async function ensureDefaultColumnBodyChunksForMagazinePage(ap, paId, slotId, transaction) {
+    const layout = await getPublicationArticleMagazinePageLayout(paId);
+    const columnCount = layout === "3_col_article" ? 3 : 2;
+
+    const existing = await PublicationArticleChunkDbModel.findAll({
+        where: {
+            publication_article_id: paId,
+            publication_slot_id: slotId,
+        },
+        order: [["chunk_position", "ASC"]],
+        transaction,
+    });
+
+    const isOverlayChunk = (c) => {
+        const fmt = String(c.get("publication_article_chunk_format") ?? "").toLowerCase();
+        if (fmt !== "only_image") return false;
+        return normalizeChunkAreaArray(c.get("chunk_area_array")).length > 0;
+    };
+
+    if (existing.some(isOverlayChunk)) {
+        return;
+    }
+
+    const bodyChunks = existing.filter((c) =>
+        MAGAZINE_BODY_TEXT_FORMATS.has(
+            String(c.get("publication_article_chunk_format") ?? "").toLowerCase()
+        )
+    );
+
+    const hasPortalBackedBody = bodyChunks.some((c) => {
+        const o = c.get("original_article_content_id");
+        return o != null && String(o).trim() !== "";
+    });
+    if (hasPortalBackedBody) return;
+
+    if (hasCompletePerCellBodyGrid(bodyChunks, columnCount)) {
+        return;
+    }
+
+    const chunkHtmlHasMeaningfulBody = (html) => {
+        const t = String(html ?? "").trim();
+        if (!t) return false;
+        const plain = t
+            .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, " ")
+            .replace(/<[^>]+>/g, " ")
+            .replace(/&nbsp;/gi, " ")
+            .replace(/\s+/g, " ")
+            .trim();
+        return plain.length > 0;
+    };
+
+    if (bodyChunks.some((c) => chunkHtmlHasMeaningfulBody(c.get("chunk_html")))) {
+        return;
+    }
+
+    if (bodyChunks.length > 0) {
+        await PublicationArticleChunkDbModel.destroy({
+            where: {
+                publication_article_chunk_id: {
+                    [Op.in]: bodyChunks.map((c) => c.get("publication_article_chunk_id")),
+                },
+            },
+            transaction,
+        });
+    }
+
+    let maxPos = -1;
+    for (const c of existing) {
+        const pos = Number(plain(c).chunk_position);
+        if (Number.isFinite(pos)) maxPos = Math.max(maxPos, pos);
+    }
+
+    for (const code of perCellBodyGridAreaCodes(columnCount)) {
+        const occupied = await findOnlyTextChunkInGridArea(paId, slotId, code, null);
+        if (occupied) continue;
+        maxPos += 1;
+        await PublicationArticleChunkDbModel.create(
+            {
+                publication_article_id: paId,
+                publication_id: ap.publication_id,
+                publication_slot_id: slotId,
+                publication_article_chunk_format: "only_text",
+                chunk_html: "<p></p>",
+                chunk_position: maxPos,
+                chunk_area_array: [code],
+                original_article_content_id: null,
+            },
+            { transaction }
+        );
+    }
+}
+
 /**
  * Ensures every portal `article_contents` block (except title/subtitle, which
  * are represented by the fixed magazine title/subtitle chunks) has a matching
@@ -1283,7 +1679,6 @@ async function ensureArticleBodyChunksFromSourceForMagazinePage(ap, paId, slotId
                 publication_id: ap.publication_id,
                 publication_slot_id: slotId,
                 publication_article_chunk_format: format,
-                chunk_page_weight: defaultChunkPageWeightForFormat(format),
                 chunk_html: articleContentToHtml(
                     sc.article_content_type,
                     sc.article_content_content
@@ -1355,7 +1750,6 @@ export async function initializePublicationArticleChunksFromSource(publicationAr
                     publication_id: articlePlain.publication_id,
                     publication_slot_id: null,
                     publication_article_chunk_format: fmt,
-                    chunk_page_weight: defaultChunkPageWeightForFormat(fmt),
                     chunk_html: articleContentToHtml(
                         sc.article_content_type,
                         sc.article_content_content
@@ -1394,6 +1788,15 @@ export async function listChunks(publicationArticleId) {
     } catch (error) {
         if (isMissingContentsManagerTable(error)) return [];
         throw error;
+    }
+    try {
+        await dedupeOverlappingGridTextChunks(id, null);
+        chunks = await PublicationArticleChunkDbModel.findAll({
+            where: { publication_article_id: id },
+            order: [["chunk_position", "ASC"]],
+        });
+    } catch (error) {
+        if (!isMissingContentsManagerTable(error)) throw error;
     }
     return chunks.map(toApiChunk).filter(Boolean);
 }
@@ -1454,11 +1857,33 @@ export async function createChunk(publicationArticleId, payload) {
             );
         }
     }
-    const weightForCreate =
-        payload?.chunk_page_weight !== undefined
-            ? clampChunkPageWeight(payload.chunk_page_weight, format)
-            : defaultChunkPageWeightForFormat(format);
     const areaArray = normalizeChunkAreaArray(payload?.chunk_area_array);
+    if (
+        format === "only_text" &&
+        areaArray.length > 0 &&
+        Number.isInteger(slotIdForCreate) &&
+        slotIdForCreate > 0
+    ) {
+        const existing = await findOnlyTextChunkInGridArea(
+            ap.publication_article_id,
+            slotIdForCreate,
+            areaArray[0]
+        );
+        if (existing) {
+            const reuseUpdates = {};
+            if (payload?.chunk_html !== undefined) {
+                reuseUpdates.chunk_html = String(payload.chunk_html ?? "");
+            }
+            if (payload?.chunk_position !== undefined) {
+                const n = Number(payload.chunk_position);
+                if (Number.isFinite(n)) reuseUpdates.chunk_position = n;
+            }
+            if (Object.keys(reuseUpdates).length > 0) {
+                await existing.update(reuseUpdates);
+            }
+            return toApiChunk(existing);
+        }
+    }
     const chunk = await PublicationArticleChunkDbModel.create({
         publication_article_id: ap.publication_article_id,
         publication_id: ap.publication_id,
@@ -1467,7 +1892,6 @@ export async function createChunk(publicationArticleId, payload) {
                 ? Number(slotIdForCreate)
                 : null,
         publication_article_chunk_format: format,
-        chunk_page_weight: weightForCreate,
         chunk_html: String(payload?.chunk_html ?? ""),
         chunk_position: Number.isFinite(Number(payload?.chunk_position))
             ? Number(payload.chunk_position)
@@ -1477,6 +1901,11 @@ export async function createChunk(publicationArticleId, payload) {
             payload?.original_article_content_id != null
                 ? String(payload.original_article_content_id)
                 : null,
+        chunk_image_caption:
+            chunkFormatIncludesImage(format) &&
+            payload?.chunk_image_caption !== undefined
+                ? String(payload.chunk_image_caption ?? "")
+                : "",
     });
 
     if (
@@ -1644,16 +2073,6 @@ export async function updateChunk(chunkId, payload) {
             throw httpError(400, "Invalid publication_article_chunk_format");
         }
         updates.publication_article_chunk_format = f;
-        if (payload?.chunk_page_weight === undefined) {
-            updates.chunk_page_weight = defaultChunkPageWeightForFormat(f);
-        }
-    }
-    if (payload?.chunk_page_weight !== undefined) {
-        const fmtForClamp =
-            updates.publication_article_chunk_format != null
-                ? String(updates.publication_article_chunk_format)
-                : currentFormat;
-        updates.chunk_page_weight = clampChunkPageWeight(payload.chunk_page_weight, fmtForClamp);
     }
     if (payload?.chunk_html !== undefined) {
         updates.chunk_html = String(payload.chunk_html ?? "");
@@ -1665,6 +2084,16 @@ export async function updateChunk(chunkId, payload) {
     }
     if (payload?.chunk_area_array !== undefined) {
         updates.chunk_area_array = normalizeChunkAreaArray(payload.chunk_area_array);
+    }
+    if (payload?.chunk_image_caption !== undefined) {
+        const fmtForCaption =
+            updates.publication_article_chunk_format != null
+                ? String(updates.publication_article_chunk_format)
+                : currentFormat;
+        if (!chunkFormatIncludesImage(fmtForCaption)) {
+            throw httpError(400, "chunk_image_caption applies only to image chunks");
+        }
+        updates.chunk_image_caption = String(payload.chunk_image_caption ?? "");
     }
     if (payloadSlotRaw !== undefined) {
         if (payloadSlotRaw === null) {
@@ -2059,6 +2488,7 @@ export async function removeEmptyPublicationArticlePage(
                 slot_destroyed: safeToDestroySlot,
                 removed_slot_id: sid,
                 deleted_chunk_count: deletedChunkCount,
+                deleted_page_index: idxInArray + 1,
             };
         });
     } catch (error) {
@@ -2087,6 +2517,42 @@ export async function removeEmptyPublicationArticlePage(
         }
     } else {
         payload.mediateca_folder_deleted = false;
+    }
+
+    try {
+        const apRow = payload?.publication_article;
+        const publicationId = String(apRow?.publication_id ?? "").trim();
+        const networkArticleId = String(apRow?.article_id ?? "").trim();
+        const nextPageCount = Array.isArray(payload?.publication_slots_id_array)
+            ? payload.publication_slots_id_array.length
+            : 0;
+        if (publicationId && networkArticleId && nextPageCount >= 0) {
+            const pubRow = await PublicationModel.findByPk(publicationId);
+            if (pubRow) {
+                const deletedPageIndex = Number(payload.deleted_page_index) || 0;
+                if (deletedPageIndex > 0) {
+                    payload.deleted_screenshot =
+                        await deleteArticlePageScreenshot(
+                            pubRow,
+                            networkArticleId,
+                            deletedPageIndex
+                        );
+                }
+                payload.pruned_screenshot_count =
+                    await pruneArticleScreenshotsBeyondPageCount(
+                        pubRow,
+                        networkArticleId,
+                        nextPageCount
+                    );
+            }
+        }
+    } catch (e) {
+        console.warn(
+            "[PublicationArticleService] screenshot cleanup after page delete:",
+            e?.message ?? e
+        );
+        payload.deleted_screenshot = false;
+        payload.pruned_screenshot_count = 0;
     }
 
     if (

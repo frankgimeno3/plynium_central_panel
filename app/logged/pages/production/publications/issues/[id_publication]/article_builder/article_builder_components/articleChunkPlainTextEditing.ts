@@ -126,6 +126,38 @@ export function plainTextToChunkHtml(text: string): string {
     .join("");
 }
 
+/** Pull the editable HTML text portion (preserves inline formatting). */
+export function readChunkEditableHtml(chunkHtml: string, format: string): string {
+  const fmt = String(format ?? "").toLowerCase();
+  if (fmt === "only_image") return "";
+  if (fmt === "text_image" || fmt === "image_text") {
+    const parsed = parseMagazineChunkHtml(chunkHtml, fmt);
+    return parsed.textHtml || "";
+  }
+  return chunkHtml || "";
+}
+
+/** Build `chunk_html` after rich-text edits (HTML in the text portion). */
+export function writeChunkEditableHtml(
+  previousChunkHtml: string,
+  format: string,
+  nextHtml: string
+): string {
+  const fmt = String(format ?? "").toLowerCase();
+  const nextTextHtml = String(nextHtml ?? "");
+  if (fmt === "only_image") return previousChunkHtml;
+  if (fmt === "text_image" || fmt === "image_text") {
+    const parsed = parseMagazineChunkHtml(previousChunkHtml, fmt);
+    return buildSplitChunkHtml(
+      fmt as MagazineSplitLayout,
+      nextTextHtml,
+      parsed.imageSrc,
+      parsed.imageAlt
+    );
+  }
+  return nextTextHtml;
+}
+
 /** Pull the editable text portion out of a chunk regardless of its format. */
 export function readChunkEditableText(
   chunkHtml: string,
@@ -189,6 +221,18 @@ export function writeChunkImageSrc(
     );
   }
   return previousChunkHtml;
+}
+
+export function chunkFormatIncludesImage(format: string): boolean {
+  const fmt = String(format ?? "").toLowerCase();
+  return fmt === "only_image" || fmt === "text_image" || fmt === "image_text";
+}
+
+export function readChunkImageCaption(
+  chunk: { chunk_image_caption?: string | null; publication_article_chunk_format?: string }
+): string {
+  if (!chunkFormatIncludesImage(chunk.publication_article_chunk_format ?? "")) return "";
+  return chunk.chunk_image_caption != null ? String(chunk.chunk_image_caption) : "";
 }
 
 export function chunkHasImage(chunkHtml: string, format: string): boolean {

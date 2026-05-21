@@ -1247,6 +1247,7 @@ PublicationSlotDbModel.init({
     customer_id: { type: DataTypes.STRING(64), allowNull: true },
     project_id: { type: DataTypes.STRING(64), allowNull: true },
     slot_media_url: { type: DataTypes.STRING(512), allowNull: true },
+    slot_flatplan_image_url: { type: DataTypes.STRING(512), allowNull: true },
     slot_article_id: { type: DataTypes.STRING(64), allowNull: true },
     magazine_page_layout: {
         type: DataTypes.STRING(32),
@@ -1335,17 +1336,16 @@ PublicationArticleChunkDbModel.init({
     },
     chunk_html: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
     chunk_position: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 0 },
-    chunk_page_weight: {
-        type: DataTypes.SMALLINT,
-        allowNull: false,
-        defaultValue: 15,
-        validate: { min: 1, max: 100 },
-    },
     original_article_content_id: { type: DataTypes.STRING(255), allowNull: true },
     chunk_area_array: {
         type: DataTypes.JSONB,
         allowNull: false,
         defaultValue: [],
+    },
+    chunk_image_caption: {
+        type: DataTypes.TEXT,
+        allowNull: false,
+        defaultValue: "",
     },
 }, {
     sequelize,

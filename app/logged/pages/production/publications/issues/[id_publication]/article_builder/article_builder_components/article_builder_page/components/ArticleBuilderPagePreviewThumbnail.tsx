@@ -20,6 +20,8 @@ type ArticleBuilderPagePreviewThumbnailProps = {
   pageFormat: MagazinePageLayout;
   articleFlowPages: ReturnType<typeof buildArticleFlowPagesFromPublicationSlots>;
   currentSlotContentId: number | null;
+  articleTitleHtml?: string | null;
+  articleSubtitleHtml?: string | null;
   /**
    * When `true`, the underlying preview becomes interactive: body text chunks
    * render as autosizing textareas and image chunks expose an "Update image"
@@ -27,12 +29,11 @@ type ArticleBuilderPagePreviewThumbnailProps = {
    */
   editable?: boolean;
   onChunkTextChange?: (chunkId: string, nextChunkHtml: string) => void;
+  onChunkHtmlCommit?: (chunkId: string, nextChunkHtml: string) => void;
+  onGridTextOverflowCheck?: (chunkId: string, editorEl: HTMLDivElement) => void;
   onChunkImageUpdate?: (chunkId: string) => void;
+  onChunkCaptionUpdate?: (chunkId: string) => void;
   savingChunkIds?: ReadonlySet<string>;
-  onAddChunkRequest?: (params: {
-    afterChunkId: string | null;
-    beforeChunkId: string | null;
-  }) => void;
   /** Bulk-delete chunk-selection mode forwarded to the preview. */
   chunkSelectionMode?: boolean;
   selectedChunkIds?: ReadonlySet<string>;
@@ -53,11 +54,15 @@ export const ArticleBuilderPagePreviewThumbnail: FC<ArticleBuilderPagePreviewThu
   pageFormat,
   articleFlowPages,
   currentSlotContentId,
+  articleTitleHtml,
+  articleSubtitleHtml,
   editable = false,
   onChunkTextChange,
+  onChunkHtmlCommit,
+  onGridTextOverflowCheck,
   onChunkImageUpdate,
+  onChunkCaptionUpdate,
   savingChunkIds,
-  onAddChunkRequest,
   chunkSelectionMode = false,
   selectedChunkIds,
   onToggleChunkSelection,
@@ -68,6 +73,7 @@ export const ArticleBuilderPagePreviewThumbnail: FC<ArticleBuilderPagePreviewThu
   onOverlayImageDelete,
 }) => (
   <div
+    data-article-editor-preview={String(currentSlotContentId ?? "")}
     className="relative w-full overflow-hidden border border-gray-200 bg-gray-50 shadow-inner"
     style={{ aspectRatio: PAGE_THUMB_ASPECT }}
   >
@@ -86,11 +92,15 @@ export const ArticleBuilderPagePreviewThumbnail: FC<ArticleBuilderPagePreviewThu
         pageFormat={pageFormat}
         articleFlowPages={articleFlowPages}
         currentSlotContentId={currentSlotContentId}
+        articleTitleHtml={articleTitleHtml}
+        articleSubtitleHtml={articleSubtitleHtml}
         editable={editable}
         onChunkTextChange={onChunkTextChange}
+        onChunkHtmlCommit={onChunkHtmlCommit}
+        onGridTextOverflowCheck={onGridTextOverflowCheck}
         onChunkImageUpdate={onChunkImageUpdate}
+        onChunkCaptionUpdate={onChunkCaptionUpdate}
         savingChunkIds={savingChunkIds}
-        onAddChunkRequest={onAddChunkRequest}
         chunkSelectionMode={chunkSelectionMode}
         selectedChunkIds={selectedChunkIds}
         onToggleChunkSelection={onToggleChunkSelection}

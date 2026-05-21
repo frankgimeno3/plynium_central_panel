@@ -80,6 +80,38 @@ export async function uploadBufferToS3({ buffer, contentType, filename }) {
     return { mediaId, s3Key, cdnUrl };
 }
 
+function cdnUrlForS3Key(s3Key) {
+    return cloudFrontUrl
+        ? `https://${cloudFrontUrl.replace(/^https?:\/\//, "")}/${s3Key}`
+        : undefined;
+}
+
+/**
+ * Overwrite an existing S3 object (same key) — used when refreshing screenshots.
+ * @param {{ s3Key: string, buffer: Buffer, contentType?: string }} opts
+ * @returns {Promise<{ cdnUrl?: string }>}
+ */
+export async function replaceBufferInS3({ s3Key, buffer, contentType }) {
+    if (!bucket) {
+        throw new Error("S3 bucket is not configured (set AWS_S3_BUCKET or S3_BUCKET in .env)");
+    }
+    const key = String(s3Key ?? "").trim();
+    if (!key) throw new Error("s3Key is required");
+    if (!buffer || !Buffer.isBuffer(buffer)) {
+        throw new Error("buffer is required");
+    }
+    const client = getS3Client();
+    await client.send(
+        new PutObjectCommand({
+            Bucket: bucket,
+            Key: key,
+            Body: buffer,
+            ContentType: contentType || "application/octet-stream",
+        })
+    );
+    return { cdnUrl: cdnUrlForS3Key(key) };
+}
+
 export async function deleteObjectFromS3(s3Key) {
     if (!bucket) {
         throw new Error("S3 bucket is not configured (set AWS_S3_BUCKET or S3_BUCKET in .env)");

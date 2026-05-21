@@ -24,7 +24,6 @@ const postSchema = Joi.object({
         .optional(),
     chunk_html: Joi.string().allow("").optional(),
     chunk_position: Joi.number().integer().optional(),
-    chunk_page_weight: Joi.number().integer().min(1).max(100).optional(),
     publication_slot_id: Joi.alternatives()
         .try(Joi.number().integer(), Joi.valid(null))
         .optional(),
@@ -33,6 +32,7 @@ const postSchema = Joi.object({
         .optional(),
     original_article_content_id: Joi.string().allow("").optional(),
     chunk_area_array: Joi.array().items(Joi.string()).optional(),
+    chunk_image_caption: Joi.string().allow("").optional(),
 });
 
 /** Lists every chunk attached to the publication_article. */

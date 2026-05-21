@@ -1,5 +1,5 @@
 import { Op, Sequelize } from "sequelize";
-import { createPresignedUpload, deleteObjectFromS3 } from "./S3Service.js";
+import { createPresignedUpload, deleteObjectFromS3, replaceBufferInS3, uploadBufferToS3 } from "./S3Service.js";
 import { getFolderIdByPath, getFolderIdsByPath, getFolderPathById } from "../folder/FolderService.js";
 import { ensurePublicationSlotMediatecaFolderByIds } from "../publication/PublicationMediatecaFolderService.js";
 import MediaModel from "./MediaModel.js";
@@ -117,6 +117,85 @@ export async function createMedia(data) {
         name,
         s3Key,
         folderPath,
+    };
+}
+
+/**
+ * Create or replace a single image in a folder by `content_name` (case-insensitive).
+ * When a row exists, overwrites the same S3 key and updates `content_src`.
+ *
+ * @returns {Promise<{ mediaId: string, cdnUrl: string, s3Key: string, created: boolean }>}
+ */
+export async function upsertImageInFolder({
+    folderId,
+    folderPath,
+    filename,
+    buffer,
+    contentType = "image/png",
+}) {
+    const name = String(filename ?? "").trim();
+    const fid = folderId ? String(folderId).trim() : "";
+    if (!name || !fid) {
+        throw new Error("folderId and filename are required");
+    }
+    if (!MediaModel.sequelize) {
+        throw new Error("Database not configured");
+    }
+
+    const existing = await MediaModel.findOne({
+        where: {
+            folder_id: fid,
+            content_name: { [Op.iLike]: name },
+        },
+    });
+
+    if (existing) {
+        const s3Key = String(existing.get("s3_key") ?? "").trim();
+        if (!s3Key) throw new Error("Existing media row has no s3_key");
+        const { cdnUrl } = await replaceBufferInS3({
+            s3Key,
+            buffer,
+            contentType,
+        });
+        const imageUrl = cdnUrl || "";
+        if (imageUrl) {
+            await existing.update({
+                content_src: imageUrl,
+                mime_type: contentType,
+            });
+        }
+        const path = folderPath != null ? String(folderPath).trim() : await getFolderPathById(fid);
+        return {
+            mediaId: String(existing.get("id")),
+            cdnUrl: imageUrl,
+            s3Key,
+            created: false,
+            folderPath: path,
+        };
+    }
+
+    const { mediaId, s3Key, cdnUrl } = await uploadBufferToS3({
+        buffer,
+        contentType,
+        filename: name,
+    });
+    await createMedia({
+        mediaId,
+        name,
+        contentName: name,
+        s3Key,
+        folderId: fid,
+        folderPath: folderPath != null ? String(folderPath).trim() : undefined,
+        cdnUrl,
+        contentType,
+        type: "image",
+    });
+    return {
+        mediaId,
+        cdnUrl: cdnUrl || "",
+        s3Key,
+        created: true,
+        folderPath: folderPath != null ? String(folderPath).trim() : "",
     };
 }
 

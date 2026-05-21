@@ -24,7 +24,6 @@ const patchSchema = Joi.object({
         .optional(),
     chunk_html: Joi.string().allow("").optional(),
     chunk_position: Joi.number().integer().optional(),
-    chunk_page_weight: Joi.number().integer().min(1).max(100).optional(),
     publication_slot_id: Joi.alternatives()
         .try(Joi.number().integer(), Joi.valid(null))
         .optional(),
@@ -32,6 +31,7 @@ const patchSchema = Joi.object({
         .try(Joi.number().integer(), Joi.valid(null))
         .optional(),
     chunk_area_array: Joi.array().items(Joi.string()).optional(),
+    chunk_image_caption: Joi.string().allow("").optional(),
 });
 
 export const PATCH = createEndpoint(

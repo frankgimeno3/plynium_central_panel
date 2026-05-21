@@ -5,7 +5,8 @@ import type { PublicationArticleChunk } from "./article_builder_page/types";
 
 async function patchChunkHtml(
   chunkId: string,
-  chunkHtml: string
+  chunkHtml: string,
+  options?: { keepalive?: boolean }
 ): Promise<PublicationArticleChunk> {
   const res = await fetch(
     `/api/v1/publication-article-chunks/${encodeURIComponent(chunkId)}`,
@@ -13,6 +14,7 @@ async function patchChunkHtml(
       method: "PATCH",
       headers: { "content-type": "application/json" },
       credentials: "include",
+      keepalive: Boolean(options?.keepalive),
       body: JSON.stringify({ chunk_html: chunkHtml }),
     }
   );
@@ -27,9 +29,8 @@ async function patchChunkHtml(
  * Per-chunk autosave for `publication_article_chunks.chunk_html`.
  *
  * - `scheduleChunkHtmlChange`: optimistic local update + debounced PATCH.
- *   Use this from text-input changes for real-time editing.
- * - `saveChunkHtmlNow`: optimistic update + immediate PATCH (no debounce).
- *   Use this for discrete confirmations like a mediateca image pick.
+ * - `commitChunkHtmlNow`: immediate PATCH (blur, overflow spill, page hide).
+ * - `flushAllPendingChunkHtml`: persists every debounced edit still in the queue.
  */
 export function useArticleChunkAutosave(options: {
   setChunks: React.Dispatch<React.SetStateAction<PublicationArticleChunk[]>>;
@@ -37,37 +38,34 @@ export function useArticleChunkAutosave(options: {
   onSaveError?: (message: string | null) => void;
   debounceMs?: number;
 }) {
-  const { setChunks, onSaveMessage, onSaveError, debounceMs = 600 } = options;
+  const { setChunks, onSaveMessage, onSaveError, debounceMs = 250 } = options;
   const [savingChunkIds, setSavingChunkIds] = useState<Set<string>>(new Set());
   const timersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map()
   );
-
-  useEffect(
-    () => () => {
-      for (const t of timersRef.current.values()) clearTimeout(t);
-      timersRef.current.clear();
-    },
-    []
-  );
+  const pendingHtmlRef = useRef<Map<string, string>>(new Map());
 
   const persistChunkHtml = useCallback(
-    async (chunkId: string, html: string) => {
+    async (chunkId: string, html: string, opts?: { keepalive?: boolean }) => {
       setSavingChunkIds((prev) => {
         const next = new Set(prev);
         next.add(chunkId);
         return next;
       });
       try {
-        const updated = await patchChunkHtml(chunkId, html);
+        const updated = await patchChunkHtml(chunkId, html, opts);
         setChunks((prev) =>
           prev.map((c) =>
-            c.publication_article_chunk_id === chunkId ? { ...c, ...updated } : c
+            c.publication_article_chunk_id === chunkId
+              ? { ...c, chunk_html: updated.chunk_html ?? html }
+              : c
           )
         );
+        pendingHtmlRef.current.delete(chunkId);
         onSaveMessage?.("Chunk saved.");
       } catch (e: unknown) {
         onSaveError?.(e instanceof Error ? e.message : "Failed to save chunk");
+        throw e;
       } finally {
         setSavingChunkIds((prev) => {
           const next = new Set(prev);
@@ -79,42 +77,173 @@ export function useArticleChunkAutosave(options: {
     [setChunks, onSaveMessage, onSaveError]
   );
 
+  const cancelPendingTimer = useCallback((chunkId: string) => {
+    const existing = timersRef.current.get(chunkId);
+    if (existing) {
+      clearTimeout(existing);
+      timersRef.current.delete(chunkId);
+    }
+  }, []);
+
   const scheduleChunkHtmlChange = useCallback(
     (chunkId: string, html: string) => {
+      pendingHtmlRef.current.set(chunkId, html);
       setChunks((prev) =>
         prev.map((c) =>
           c.publication_article_chunk_id === chunkId ? { ...c, chunk_html: html } : c
         )
       );
-      const timers = timersRef.current;
-      const existing = timers.get(chunkId);
-      if (existing) clearTimeout(existing);
+      cancelPendingTimer(chunkId);
       const handle = setTimeout(() => {
-        timers.delete(chunkId);
-        void persistChunkHtml(chunkId, html);
+        timersRef.current.delete(chunkId);
+        const latest = pendingHtmlRef.current.get(chunkId);
+        if (latest == null) return;
+        void persistChunkHtml(chunkId, latest);
       }, debounceMs);
-      timers.set(chunkId, handle);
+      timersRef.current.set(chunkId, handle);
     },
-    [persistChunkHtml, setChunks, debounceMs]
+    [cancelPendingTimer, persistChunkHtml, setChunks, debounceMs]
   );
 
-  const saveChunkHtmlNow = useCallback(
-    async (chunkId: string, html: string) => {
+  const commitChunkHtmlNow = useCallback(
+    async (chunkId: string, html: string, opts?: { keepalive?: boolean }) => {
+      pendingHtmlRef.current.set(chunkId, html);
       setChunks((prev) =>
         prev.map((c) =>
           c.publication_article_chunk_id === chunkId ? { ...c, chunk_html: html } : c
         )
       );
-      const timers = timersRef.current;
-      const existing = timers.get(chunkId);
-      if (existing) {
-        clearTimeout(existing);
-        timers.delete(chunkId);
-      }
-      await persistChunkHtml(chunkId, html);
+      cancelPendingTimer(chunkId);
+      await persistChunkHtml(chunkId, html, opts);
     },
-    [persistChunkHtml, setChunks]
+    [cancelPendingTimer, persistChunkHtml, setChunks]
   );
 
-  return { scheduleChunkHtmlChange, saveChunkHtmlNow, savingChunkIds };
+  const flushAllPendingChunkHtml = useCallback(
+    async (opts?: { keepalive?: boolean }) => {
+      for (const t of timersRef.current.values()) clearTimeout(t);
+      timersRef.current.clear();
+
+      const entries = [...pendingHtmlRef.current.entries()];
+      for (const [chunkId, html] of entries) {
+        try {
+          await persistChunkHtml(chunkId, html, opts);
+        } catch {
+          /* keep flushing other chunks */
+        }
+      }
+    },
+    [persistChunkHtml]
+  );
+
+  const applyPendingHtmlToChunks = useCallback(
+    (chunks: PublicationArticleChunk[]): PublicationArticleChunk[] => {
+      const pending = pendingHtmlRef.current;
+      if (!pending.size) return chunks;
+      return chunks.map((c) => {
+        const html = pending.get(c.publication_article_chunk_id);
+        return html != null ? { ...c, chunk_html: html } : c;
+      });
+    },
+    []
+  );
+
+  useEffect(() => {
+    const flushOnHide = () => {
+      void flushAllPendingChunkHtml({ keepalive: true });
+    };
+    window.addEventListener("pagehide", flushOnHide);
+    window.addEventListener("beforeunload", flushOnHide);
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        void flushAllPendingChunkHtml({ keepalive: true });
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", flushOnHide);
+      window.removeEventListener("beforeunload", flushOnHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [flushAllPendingChunkHtml]);
+
+  useEffect(
+    () => () => {
+      for (const t of timersRef.current.values()) clearTimeout(t);
+      timersRef.current.clear();
+
+      const entries = [...pendingHtmlRef.current.entries()];
+      for (const [chunkId, html] of entries) {
+        void patchChunkHtml(chunkId, html, { keepalive: true }).catch(() => {
+          /* best-effort on unmount */
+        });
+      }
+      pendingHtmlRef.current.clear();
+    },
+    []
+  );
+
+  const persistChunkHtmlBatch = useCallback(
+    async (entries: Map<string, string>) => {
+      if (!entries.size) return { saved: 0, failures: [] as string[] };
+
+      const failures: string[] = [];
+      const results = await Promise.all(
+        [...entries.entries()].map(async ([chunkId, html]) => {
+          try {
+            const updated = await patchChunkHtml(chunkId, html);
+            return { chunkId, updated, error: null as string | null };
+          } catch (e: unknown) {
+            const msg = e instanceof Error ? e.message : "Failed to update chunk";
+            failures.push(`${chunkId}: ${msg}`);
+            return { chunkId, updated: null, error: msg };
+          }
+        })
+      );
+
+      const okById = new Map<string, PublicationArticleChunk>();
+      for (const row of results) {
+        if (row.updated) okById.set(row.chunkId, row.updated);
+      }
+
+      if (okById.size) {
+        setChunks((prev) =>
+          prev.map((c) => {
+            const updated = okById.get(c.publication_article_chunk_id);
+            if (!updated) return c;
+            return {
+              ...c,
+              chunk_html: updated.chunk_html ?? c.chunk_html,
+            };
+          })
+        );
+        for (const id of okById.keys()) {
+          pendingHtmlRef.current.delete(id);
+        }
+      }
+
+      if (failures.length) {
+        onSaveError?.(
+          failures.length === entries.size
+            ? "Failed to save article chunks"
+            : `Some chunks failed to save (${failures.length}/${entries.size})`
+        );
+      } else if (okById.size) {
+        onSaveMessage?.(`${okById.size} chunk(s) saved.`);
+      }
+
+      return { saved: okById.size, failures };
+    },
+    [onSaveError, onSaveMessage, setChunks]
+  );
+
+  return {
+    scheduleChunkHtmlChange,
+    commitChunkHtmlNow,
+    saveChunkHtmlNow: commitChunkHtmlNow,
+    flushAllPendingChunkHtml,
+    applyPendingHtmlToChunks,
+    persistChunkHtmlBatch,
+    savingChunkIds,
+  };
 }

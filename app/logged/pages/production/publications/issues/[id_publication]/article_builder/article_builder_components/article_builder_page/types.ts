@@ -28,8 +28,9 @@ export type PublicationArticleChunk = {
   publication_article_chunk_format: string;
   chunk_html: string;
   chunk_position: number;
-  chunk_page_weight?: number;
   original_article_content_id: string | null;
   /** Grid cells on the page body, e.g. ["a1", "b2"]. */
   chunk_area_array?: string[];
+  /** Plain-text caption for image chunks (`only_image`, `text_image`, `image_text`). */
+  chunk_image_caption?: string;
 };

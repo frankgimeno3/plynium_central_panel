@@ -4,6 +4,7 @@ import React, { FC } from "react";
 import { ArticleSubpagePagePreview } from "@/app/logged/pages/production/publications/magazines/subpage/subpage_page_components/ArticleSubpagePagePreview";
 import type { PublicationArticleChunk as PreviewPublicationArticleChunk } from "@/app/logged/pages/production/publications/magazines/subpage/subpage_page_components/types";
 import { FlatplanAdvertMediaThumbnail } from "@/app/logged/pages/production/publications/issues/[id_publication]/_tabs/FlatplanTab/flatplan_tab_components/FlatplanAdvertMediaThumbnail";
+import { ArticleSlotFlatplanThumbnail } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/article_builder_page/components/ArticleSlotFlatplanThumbnail";
 import {
     buildArticleFlowPagesFromPublicationSlots,
     type FlowPublicationArticleChunk,
@@ -75,10 +76,27 @@ export const MagazinePreviewPageCard: FC<MagazinePreviewPageCardProps> = ({
 
     const contentType = normalizeSlotContentType(slot.slot_content_type);
     const mediaUrl = previewMediaUrl(slot);
+    const articleFlatplanUrl = String(slot.slot_flatplan_image_url ?? "").trim();
     const articleChunks =
         contentType === "article" && Array.isArray(slot.flatplan_preview_chunks)
             ? (slot.flatplan_preview_chunks as FlowPublicationArticleChunk[])
             : [];
+
+    if (articleFlatplanUrl) {
+        return (
+            <div className={cardClass} style={cardStyle}>
+                <ArticleSlotFlatplanThumbnail
+                    imageUrl={articleFlatplanUrl}
+                    className="absolute inset-0 h-full w-full object-contain"
+                />
+                {pageLabel ? (
+                    <div className="pointer-events-none absolute bottom-2 right-2 z-10 rounded bg-black/70 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
+                        {pageLabel}
+                    </div>
+                ) : null}
+            </div>
+        );
+    }
 
     if (articleChunks.length > 0) {
         const pageIndex = slot.flatplan_article_page_index ?? 1;

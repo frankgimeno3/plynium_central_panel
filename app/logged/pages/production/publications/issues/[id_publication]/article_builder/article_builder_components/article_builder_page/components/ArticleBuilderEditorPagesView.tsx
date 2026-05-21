@@ -38,14 +38,36 @@ import {
   ArticleBuilderDeleteOverlayImageModal,
   ArticleBuilderImageAreaMergeModal,
   ArticleBuilderImageAreaPickerModal,
+  ArticleBuilderUpdateImageCaptionModal,
   type AreaImageDraft,
 } from "../../ArticleBuilderImageAreaModals";
+import {
+  chunkFormatIncludesImage,
+  readChunkImageCaption,
+} from "../../articleChunkPlainTextEditing";
+import { assignGridAreaCodesToOrphanTextChunks } from "../../articleChunkGridOverflow";
+import { runArticleGridOverflowFlow } from "../../articleBuilderGridOverflowFlow";
 import { isOverlayImageChunk } from "../../article_image_manager/articleImagePlacement";
-import { buildArticleFlowPagesFromPublicationSlots } from "../../magazineArticleColumnFlow";
+import {
+  buildArticleFlowPagesFromPublicationSlots,
+  normalizeChunkFormat,
+} from "../../magazineArticleColumnFlow";
 import type { MagazinePageLayout } from "../../magazinePageLayout";
 import { PAGE_THUMB_ASPECT } from "../constants";
 import type { ArticleMeta, PublicationArticleChunk, PublicationArticleRow } from "../types";
 import { ArticleBuilderPagePreviewThumbnail } from "./ArticleBuilderPagePreviewThumbnail";
+import { ArticleBuilderFloatingRichTextToolbarProvider } from "./ArticleBuilderFloatingRichTextToolbar";
+import {
+  ArticleSlotFlatplanCaptureStage,
+  buildFlatplanCaptureSlotSpecs,
+} from "./ArticleSlotFlatplanCaptureStage";
+import { dedupeChunksForDisplay } from "../chunkUtils";
+import {
+  buildChunkHtmlSavePlan,
+  collectVisibleEditorHtmlOverrides,
+  reconcilePublicationArticleChunksOnSave,
+} from "../../articleBuilderSaveFromDom";
+import { runArticleSlotFlatplanScreenshots } from "../../articleSlotFlatplanCapture";
 
 /** Generates a stable-enough id without needing `crypto.randomUUID` polyfills. */
 function newAreaId(): string {
@@ -221,6 +243,7 @@ type ArticleBuilderEditorPagesViewProps = {
   articleMeta: ArticleMeta | null;
   chunks: PublicationArticleChunk[];
   setChunks: React.Dispatch<React.SetStateAction<PublicationArticleChunk[]>>;
+  onPublicationArticleUpdate: (article: PublicationArticleRow) => void;
   articleFlowPages: ReturnType<typeof buildArticleFlowPagesFromPublicationSlots>;
   magazinePageLayout: MagazinePageLayout;
   slotPublicationPageBySlotId: Record<number, number>;
@@ -237,6 +260,7 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
   articleMeta,
   chunks,
   setChunks,
+  onPublicationArticleUpdate,
   articleFlowPages,
   magazinePageLayout,
   slotPublicationPageBySlotId,
@@ -247,11 +271,166 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
   onSaveMessage,
   onSaveError,
 }) => {
-  const { scheduleChunkHtmlChange, saveChunkHtmlNow, savingChunkIds } =
-    useArticleChunkAutosave({ setChunks, onSaveMessage, onSaveError });
+  const {
+    scheduleChunkHtmlChange,
+    commitChunkHtmlNow,
+    saveChunkHtmlNow,
+    flushAllPendingChunkHtml,
+    applyPendingHtmlToChunks,
+    persistChunkHtmlBatch,
+    savingChunkIds,
+  } = useArticleChunkAutosave({ setChunks, onSaveMessage, onSaveError, debounceMs: 150 });
+
+  const columnCount = magazinePageLayout === "3_col_article" ? 3 : 2;
+  const chunksRef = useRef(chunks);
+  chunksRef.current = chunks;
+  const gridOverflowHandlingRef = useRef(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [savingAllChanges, setSavingAllChanges] = useState(false);
+
+  const markUnsavedChanges = useCallback(() => {
+    setHasUnsavedChanges(true);
+  }, []);
+
+  const handleEditorChunkTextChange = useCallback(
+    (chunkId: string, html: string) => {
+      markUnsavedChanges();
+      scheduleChunkHtmlChange(chunkId, html);
+    },
+    [markUnsavedChanges, scheduleChunkHtmlChange]
+  );
+
+  const handleChunkHtmlCommit = useCallback(
+    (chunkId: string, html: string) => {
+      void commitChunkHtmlNow(chunkId, html);
+    },
+    [commitChunkHtmlNow]
+  );
 
   const publicationArticleId = publicationArticle.publication_article_id;
   const slotsIdArray = publicationArticle.publication_slots_id_array;
+
+  const slotIdsOrdered = useMemo(
+    () =>
+      (Array.isArray(slotsIdArray) ? slotsIdArray : [])
+        .map(Number)
+        .filter((sid) => Number.isFinite(sid) && sid > 0),
+    [slotsIdArray]
+  );
+
+  const makeGridTextOverflowCheck = useCallback(
+    (slotId: number) => (chunkId: string, editorEl: HTMLDivElement) => {
+      if (gridOverflowHandlingRef.current) return;
+      gridOverflowHandlingRef.current = true;
+
+      void runArticleGridOverflowFlow({
+        sourceSlotId: slotId,
+        sourceChunkId: chunkId,
+        editorEl,
+        getSlotIdsOrdered: () => {
+          const raw = publicationArticle.publication_slots_id_array;
+          return (Array.isArray(raw) ? raw : [])
+            .map(Number)
+            .filter((sid) => Number.isFinite(sid) && sid > 0);
+        },
+        readChunks: () => chunksRef.current,
+        columnCount,
+        publicationArticleId,
+        flushPendingChunkHtml: flushAllPendingChunkHtml,
+        persistUpdates: async (updates) => {
+          markUnsavedChanges();
+          for (const [id, html] of updates) {
+            await commitChunkHtmlNow(id, html);
+          }
+        },
+        onArticleReload: async (data) => {
+          await flushAllPendingChunkHtml();
+          const merged = applyPendingHtmlToChunks(data.chunks);
+          onPublicationArticleUpdate(data.publicationArticle);
+          setChunks(merged);
+          chunksRef.current = merged;
+        },
+      })
+        .catch((e: unknown) => {
+          onSaveError?.(
+            e instanceof Error ? e.message : "Grid text overflow failed"
+          );
+        })
+        .finally(() => {
+          requestAnimationFrame(() => {
+            gridOverflowHandlingRef.current = false;
+          });
+        });
+    },
+    [
+      columnCount,
+      onPublicationArticleUpdate,
+      onSaveError,
+      publicationArticle,
+      publicationArticleId,
+      applyPendingHtmlToChunks,
+      commitChunkHtmlNow,
+      flushAllPendingChunkHtml,
+      markUnsavedChanges,
+      setChunks,
+    ]
+  );
+
+  useEffect(
+    () => () => {
+      void flushAllPendingChunkHtml({ keepalive: true });
+    },
+    [flushAllPendingChunkHtml]
+  );
+
+  const gridAreaMigrationRef = useRef<string | null>(null);
+  const [flatplanCaptureReady, setFlatplanCaptureReady] = useState(false);
+
+  useEffect(() => {
+    gridAreaMigrationRef.current = null;
+    setFlatplanCaptureReady(false);
+  }, [publicationArticleId]);
+
+  useEffect(() => {
+    if (gridAreaMigrationRef.current === publicationArticleId) {
+      setFlatplanCaptureReady(true);
+      return;
+    }
+    const slotIds = (Array.isArray(slotsIdArray) ? slotsIdArray : [])
+      .map(Number)
+      .filter((sid) => Number.isFinite(sid) && sid > 0);
+    if (slotIds.length === 0 || chunks.length === 0) {
+      setFlatplanCaptureReady(true);
+      return;
+    }
+
+    gridAreaMigrationRef.current = publicationArticleId;
+    const articleIdAtStart = publicationArticleId;
+    (async () => {
+      let current = chunksRef.current;
+      for (const slotId of slotIds) {
+        if (gridAreaMigrationRef.current !== articleIdAtStart) return;
+        current = await assignGridAreaCodesToOrphanTextChunks({
+          slotId,
+          columnCount,
+          chunks: current,
+        });
+      }
+      if (gridAreaMigrationRef.current !== articleIdAtStart) return;
+      setChunks(current);
+      chunksRef.current = current;
+      setFlatplanCaptureReady(true);
+    })().catch(() => {
+      gridAreaMigrationRef.current = null;
+      setFlatplanCaptureReady(true);
+    });
+  }, [
+    chunks.length,
+    columnCount,
+    publicationArticleId,
+    setChunks,
+    slotsIdArray,
+  ]);
 
   // Make sure every article page has at least `columnCount` body text chunks
   // (only_text + text_image + image_text count as text-bearing). Any missing
@@ -427,6 +606,72 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
     [chunks]
   );
 
+  const [captionModalChunkId, setCaptionModalChunkId] = useState<string | null>(
+    null
+  );
+  const [savingCaption, setSavingCaption] = useState(false);
+
+  const captionModalChunk = useMemo(
+    () =>
+      captionModalChunkId
+        ? chunks.find((c) => c.publication_article_chunk_id === captionModalChunkId) ??
+          null
+        : null,
+    [captionModalChunkId, chunks]
+  );
+
+  const captionModalCurrentCaption = captionModalChunk
+    ? readChunkImageCaption(captionModalChunk)
+    : "";
+
+  const handleChunkCaptionUpdate = useCallback(
+    (chunkId: string) => {
+      const chunk = chunks.find((c) => c.publication_article_chunk_id === chunkId);
+      if (!chunk || !chunkFormatIncludesImage(chunk.publication_article_chunk_format)) {
+        return;
+      }
+      setCaptionModalChunkId(chunkId);
+    },
+    [chunks]
+  );
+
+  const handleApplyImageCaption = useCallback(
+    async (nextCaption: string) => {
+      if (!captionModalChunkId) return;
+      setSavingCaption(true);
+      try {
+        const res = await fetch(
+          `/api/v1/publication-article-chunks/${encodeURIComponent(captionModalChunkId)}`,
+          {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ chunk_image_caption: nextCaption }),
+          }
+        );
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error(txt || "Failed to update caption");
+        }
+        const updated = (await res.json()) as PublicationArticleChunk;
+        setChunks((prev) =>
+          prev.map((c) =>
+            c.publication_article_chunk_id === captionModalChunkId
+              ? { ...c, ...updated }
+              : c
+          )
+        );
+        setCaptionModalChunkId(null);
+        onSaveMessage?.("Caption saved.");
+      } catch (e: unknown) {
+        onSaveError?.(e instanceof Error ? e.message : "Failed to update caption");
+      } finally {
+        setSavingCaption(false);
+      }
+    },
+    [captionModalChunkId, onSaveError, onSaveMessage, setChunks]
+  );
+
   const mediatecaArticleId =
     slotArticleIdForMediateca ?? publicationArticle.article_id;
 
@@ -444,8 +689,6 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
     },
     [editionName, mediatecaArticleId]
   );
-
-  const [addingChunk, setAddingChunk] = useState(false);
 
   /* -----------------------------------------------------------------------
    * "Add images" flow — per-page floating-image area picker.
@@ -988,100 +1231,6 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
     onSaveError,
   ]);
 
-  const handleAddChunkRequest = useCallback(
-    async (params: {
-      slotId: number;
-      afterChunkId: string | null;
-      beforeChunkId: string | null;
-    }) => {
-      if (addingChunk) return;
-      const { slotId, afterChunkId } = params;
-      setAddingChunk(true);
-      try {
-        const pageChunks = chunks
-          .filter((c) => chunkPublicationSlotId(c) === slotId)
-          .sort((a, b) => a.chunk_position - b.chunk_position);
-
-        let insertPosition: number;
-        if (afterChunkId) {
-          const anchor = pageChunks.find(
-            (c) => c.publication_article_chunk_id === afterChunkId
-          );
-          if (!anchor) throw new Error("Anchor chunk not found on this page.");
-          insertPosition = anchor.chunk_position + 1;
-        } else if (pageChunks.length === 0) {
-          insertPosition = 0;
-        } else {
-          insertPosition = pageChunks[0]!.chunk_position;
-        }
-
-        const toShift = pageChunks.filter((c) => c.chunk_position >= insertPosition);
-        for (const c of toShift) {
-          const res = await fetch(
-            `/api/v1/publication-article-chunks/${encodeURIComponent(
-              c.publication_article_chunk_id
-            )}`,
-            {
-              method: "PATCH",
-              headers: { "content-type": "application/json" },
-              credentials: "include",
-              body: JSON.stringify({ chunk_position: c.chunk_position + 1 }),
-            }
-          );
-          if (!res.ok) {
-            const txt = await res.text().catch(() => "");
-            throw new Error(txt || "Failed to shift chunk positions before insertion.");
-          }
-        }
-
-        const res = await fetch(
-          `/api/v1/publication-articles/${encodeURIComponent(
-            publicationArticleId
-          )}/chunks`,
-          {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            credentials: "include",
-            body: JSON.stringify({
-              publication_article_chunk_format: "only_text",
-              chunk_html: "",
-              chunk_position: insertPosition,
-              publication_slot_id: slotId,
-            }),
-          }
-        );
-        if (!res.ok) {
-          const txt = await res.text().catch(() => "");
-          throw new Error(txt || "Failed to create chunk.");
-        }
-        const created = (await res.json()) as PublicationArticleChunk;
-
-        setChunks((prev) => {
-          const shifted = prev.map((c) =>
-            chunkPublicationSlotId(c) === slotId && c.chunk_position >= insertPosition
-              ? { ...c, chunk_position: c.chunk_position + 1 }
-              : c
-          );
-          return [...shifted, created];
-        });
-        onSaveMessage?.("New text chunk added.");
-      } catch (e: unknown) {
-        const msg = e instanceof Error ? e.message : "Failed to add chunk";
-        onSaveError?.(msg);
-      } finally {
-        setAddingChunk(false);
-      }
-    },
-    [
-      addingChunk,
-      chunks,
-      publicationArticleId,
-      setChunks,
-      onSaveMessage,
-      onSaveError,
-    ]
-  );
-
   const slotIds = useMemo(
     () =>
       (Array.isArray(publicationArticle.publication_slots_id_array)
@@ -1101,11 +1250,107 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
   const total = slotIds.length;
   const articleTitle = articleMeta?.article_title?.trim() || publicationArticle.article_id;
 
+  const articleHeadingHtml = useMemo(() => {
+    const firstSlotId = slotIds[0];
+    if (!firstSlotId) return { title: null as string | null, subtitle: null as string | null };
+    const firstPageChunks = chunks.filter(
+      (c) => chunkPublicationSlotId(c) === firstSlotId
+    );
+    const titleChunk = firstPageChunks.find(
+      (c) => normalizeChunkFormat(c.publication_article_chunk_format) === "title"
+    );
+    const subtitleChunk = firstPageChunks.find(
+      (c) => normalizeChunkFormat(c.publication_article_chunk_format) === "subtitle"
+    );
+    return {
+      title: titleChunk?.chunk_html ?? null,
+      subtitle: subtitleChunk?.chunk_html ?? null,
+    };
+  }, [chunks, slotIds]);
+
+  const flatplanCaptureSlotSpecs = useMemo(
+    () => buildFlatplanCaptureSlotSpecs(slotIds, slotPublicationPageBySlotId),
+    [slotIds, slotPublicationPageBySlotId]
+  );
+
+  const handleSaveChangesAndReload = useCallback(async () => {
+    if (savingAllChanges) return;
+    setSavingAllChanges(true);
+    onSaveMessage?.(null);
+    onSaveError?.(null);
+    try {
+      await flushAllPendingChunkHtml();
+
+      const domInner = collectVisibleEditorHtmlOverrides();
+      const savePlan = buildChunkHtmlSavePlan(chunksRef.current, domInner);
+
+      if (savePlan.size > 0) {
+        const { saved, failures } = await persistChunkHtmlBatch(savePlan);
+        if (saved === 0) {
+          throw new Error(
+            failures[0] ?? "No chunk content could be saved. Try again."
+          );
+        }
+      }
+
+      const preferKeepChunkIds = [
+        ...new Set([...savePlan.keys(), ...domInner.keys()]),
+      ];
+      const reconcileResult = await reconcilePublicationArticleChunksOnSave(
+        publicationArticle.publication_article_id,
+        { preferKeepChunkIds }
+      );
+
+      try {
+        if (flatplanCaptureSlotSpecs.length > 0) {
+          const { failures: screenshotFailures } =
+            await runArticleSlotFlatplanScreenshots({
+              publicationArticleId: publicationArticle.publication_article_id,
+              slotSpecs: flatplanCaptureSlotSpecs.map((s) => ({
+                slotId: s.slotId,
+                articlePageIndex: s.articlePageIndex,
+              })),
+              settleMs: 800,
+            });
+          if (screenshotFailures.length > 0) {
+            onSaveError?.(
+              screenshotFailures.length === flatplanCaptureSlotSpecs.length
+                ? "Chunks saved, but flatplan screenshots failed."
+                : `Chunks saved; ${screenshotFailures.length} screenshot(s) failed.`
+            );
+          }
+        }
+      } catch {
+        onSaveError?.("Chunks reconciled, but flatplan screenshots failed.");
+      }
+
+      const dedupeNote =
+        reconcileResult.deleted > 0
+          ? ` (${reconcileResult.deleted} duplicado(s) eliminado(s))`
+          : "";
+      onSaveMessage?.(`Cambios guardados${dedupeNote}. Recargando…`);
+      window.location.reload();
+    } catch (e: unknown) {
+      onSaveError?.(
+        e instanceof Error ? e.message : "Failed to save article changes"
+      );
+      setSavingAllChanges(false);
+    }
+  }, [
+    flatplanCaptureSlotSpecs,
+    flushAllPendingChunkHtml,
+    onSaveError,
+    onSaveMessage,
+    persistChunkHtmlBatch,
+    publicationArticle.publication_article_id,
+    savingAllChanges,
+  ]);
+
   const renderCell = (cell: PageCell, rowIdx: number, colIdx: number) => {
     const key = `${rowIdx}-${colIdx}`;
     if (cell.kind === "page") {
-      const pageChunks = chunks.filter(
-        (ch) => chunkPublicationSlotId(ch) === cell.slotId
+      const pageChunks = dedupeChunksForDisplay(
+        chunks.filter((ch) => chunkPublicationSlotId(ch) === cell.slotId)
       );
       const canDeletePage = total > 1;
       const selectedCount = chunkSelectionActive ? selectedChunkIds.size : 0;
@@ -1267,17 +1512,15 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
             pageFormat={magazinePageLayout}
             articleFlowPages={articleFlowPages}
             currentSlotContentId={cell.slotId}
+            articleTitleHtml={articleHeadingHtml.title}
+            articleSubtitleHtml={articleHeadingHtml.subtitle}
             editable
-            onChunkTextChange={scheduleChunkHtmlChange}
+            onChunkTextChange={handleEditorChunkTextChange}
+            onChunkHtmlCommit={handleChunkHtmlCommit}
+            onGridTextOverflowCheck={makeGridTextOverflowCheck(cell.slotId)}
             onChunkImageUpdate={handleChunkImageUpdate}
+            onChunkCaptionUpdate={handleChunkCaptionUpdate}
             savingChunkIds={savingChunkIds}
-            onAddChunkRequest={({ afterChunkId, beforeChunkId }) => {
-              void handleAddChunkRequest({
-                slotId: cell.slotId,
-                afterChunkId,
-                beforeChunkId,
-              });
-            }}
             chunkSelectionMode={chunkSelectionActive}
             selectedChunkIds={
               chunkSelectionActive ? selectedChunkIds : undefined
@@ -1338,57 +1581,80 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-2xl font-semibold text-gray-900">{articleTitle}</h1>
+    <ArticleBuilderFloatingRichTextToolbarProvider
+      hasUnsavedChanges={hasUnsavedChanges}
+      savingChanges={savingAllChanges}
+      onSaveChanges={handleSaveChangesAndReload}
+    >
+      <div className="space-y-4">
+        <h1 className="text-2xl font-semibold text-gray-900">{articleTitle}</h1>
 
-      <div className="flex flex-col gap-6">
-        {rows.map((row, rowIdx) => (
-          <div key={rowIdx} className="flex w-full items-start gap-[2%]">
-            {row.map((cell, colIdx) => (
-              <div key={`${rowIdx}-${colIdx}-wrap`} className="w-[49%]">
-                {renderCell(cell, rowIdx, colIdx)}
-              </div>
-            ))}
-          </div>
-        ))}
+        <div className="flex flex-col gap-6">
+          {rows.map((row, rowIdx) => (
+            <div key={rowIdx} className="flex w-full items-start gap-[2%]">
+              {row.map((cell, colIdx) => (
+                <div key={`${rowIdx}-${colIdx}-wrap`} className="w-[49%]">
+                  {renderCell(cell, rowIdx, colIdx)}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+
+        <MediatecaModal
+          open={mediatecaTarget != null}
+          onClose={() => setMediatecaTarget(null)}
+          onSelectImage={(url, content) => void handleMediatecaSelect(url, content)}
+          initialPath={mediatecaInitialPath}
+          ensureSlotMediatecaFolder={ensureSlotMediatecaFolder}
+        />
+
+        <ArticleBuilderImageAreaMergeModal
+          open={pendingMergePair != null}
+          areas={pendingMergePair?.areas ?? null}
+          columnCount={columnCountForCurrentPage}
+          onMerge={handleConfirmMerge}
+          onKeepSeparate={handleDeclineMerge}
+        />
+
+        <ArticleBuilderImageAreaPickerModal
+          open={pickerDrafts != null}
+          drafts={pickerDrafts ?? []}
+          columnCount={columnCountForCurrentPage}
+          saving={savingOverlays}
+          error={pickerError}
+          onOpenMediateca={handlePickerOpenMediateca}
+          onClearAreaImage={handlePickerClearAreaImage}
+          onClose={handlePickerClose}
+          onApply={() => void handleApplyImageOverlays()}
+        />
+
+        <ArticleBuilderDeleteOverlayImageModal
+          open={pendingDeleteOverlayChunkId != null}
+          saving={deletingOverlayImage}
+          onCancel={handleCancelDeleteOverlayImage}
+          onConfirm={(alsoDeleteFromMediateca) =>
+            void handleConfirmDeleteOverlayImage(alsoDeleteFromMediateca)
+          }
+        />
+
+        <ArticleBuilderUpdateImageCaptionModal
+          open={captionModalChunkId != null}
+          currentCaption={captionModalCurrentCaption}
+          saving={savingCaption}
+          onCancel={() => setCaptionModalChunkId(null)}
+          onApply={(next) => void handleApplyImageCaption(next)}
+        />
+
+        <ArticleSlotFlatplanCaptureStage
+          slotSpecs={flatplanCaptureSlotSpecs}
+          chunks={chunks}
+          slotIdsOrdered={slotIds}
+          magazinePageLayout={magazinePageLayout}
+          articleTitleHtml={articleHeadingHtml.title}
+          articleSubtitleHtml={articleHeadingHtml.subtitle}
+        />
       </div>
-
-      <MediatecaModal
-        open={mediatecaTarget != null}
-        onClose={() => setMediatecaTarget(null)}
-        onSelectImage={(url, content) => void handleMediatecaSelect(url, content)}
-        initialPath={mediatecaInitialPath}
-        ensureSlotMediatecaFolder={ensureSlotMediatecaFolder}
-      />
-
-      <ArticleBuilderImageAreaMergeModal
-        open={pendingMergePair != null}
-        areas={pendingMergePair?.areas ?? null}
-        columnCount={columnCountForCurrentPage}
-        onMerge={handleConfirmMerge}
-        onKeepSeparate={handleDeclineMerge}
-      />
-
-      <ArticleBuilderImageAreaPickerModal
-        open={pickerDrafts != null}
-        drafts={pickerDrafts ?? []}
-        columnCount={columnCountForCurrentPage}
-        saving={savingOverlays}
-        error={pickerError}
-        onOpenMediateca={handlePickerOpenMediateca}
-        onClearAreaImage={handlePickerClearAreaImage}
-        onClose={handlePickerClose}
-        onApply={() => void handleApplyImageOverlays()}
-      />
-
-      <ArticleBuilderDeleteOverlayImageModal
-        open={pendingDeleteOverlayChunkId != null}
-        saving={deletingOverlayImage}
-        onCancel={handleCancelDeleteOverlayImage}
-        onConfirm={(alsoDeleteFromMediateca) =>
-          void handleConfirmDeleteOverlayImage(alsoDeleteFromMediateca)
-        }
-      />
-    </div>
+    </ArticleBuilderFloatingRichTextToolbarProvider>
   );
 };

@@ -386,3 +386,101 @@ export const ArticleBuilderImageAreaPickerModal: FC<
     </div>
   );
 };
+
+/* -------------------------------------------------------------------------- */
+/* Image caption editor modal                                                 */
+/* -------------------------------------------------------------------------- */
+
+type ArticleBuilderUpdateImageCaptionModalProps = {
+  open: boolean;
+  currentCaption: string;
+  saving?: boolean;
+  onCancel: () => void;
+  onApply: (nextCaption: string) => void;
+};
+
+export const ArticleBuilderUpdateImageCaptionModal: FC<
+  ArticleBuilderUpdateImageCaptionModalProps
+> = ({ open, currentCaption, saving = false, onCancel, onApply }) => {
+  const [draftCaption, setDraftCaption] = useState(currentCaption);
+  const isDirty = draftCaption !== currentCaption;
+
+  useEffect(() => {
+    if (open) setDraftCaption(currentCaption);
+  }, [open, currentCaption]);
+
+  useEffect(() => {
+    if (!open || saving) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCancel();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open, onCancel, saving]);
+
+  if (!open) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-[85] flex items-center justify-center p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="article-builder-update-image-caption-title"
+    >
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/50"
+        aria-label="Close dialog"
+        onClick={saving ? undefined : onCancel}
+        disabled={saving}
+      />
+      <div className="relative w-full max-w-lg rounded-xl border border-gray-200 bg-white p-5 shadow-xl">
+        <h3
+          id="article-builder-update-image-caption-title"
+          className="text-base font-semibold text-gray-900"
+        >
+          Update caption
+        </h3>
+        <div className="mt-4 space-y-4">
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">Current caption</span>
+            <textarea
+              readOnly
+              value={currentCaption}
+              rows={3}
+              className="mt-1 w-full resize-y rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700"
+            />
+          </label>
+          <label className="block">
+            <span className="text-sm font-medium text-gray-700">New caption</span>
+            <textarea
+              value={draftCaption}
+              disabled={saving}
+              onChange={(e) => setDraftCaption(e.target.value)}
+              rows={3}
+              className="mt-1 w-full resize-y rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            />
+          </label>
+        </div>
+        <div className="mt-5 flex justify-end gap-2">
+          <button
+            type="button"
+            onClick={onCancel}
+            disabled={saving}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => onApply(draftCaption)}
+            disabled={saving || !isDirty}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? "Applying…" : "Apply changes"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

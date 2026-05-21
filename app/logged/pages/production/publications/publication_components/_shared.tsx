@@ -55,6 +55,8 @@ export type SlotRow = {
   customer_id: string | null;
   project_id: string | null;
   slot_media_url: string | null;
+  /** Low-res Article Builder page capture (mediateca PNG). */
+  slot_flatplan_image_url?: string | null;
   slot_article_id: string | null;
   slot_created_at: string | null;
   slot_updated_at: string | null;
@@ -72,6 +74,8 @@ export type SlotRow = {
   magazine_page_layout?: string | null;
   /** Article chunks for flatplan tile thumbnail (GET …/slots enrich). */
   flatplan_preview_chunks?: FlatplanPreviewChunk[] | null;
+  /** Low-res page capture (GET …/slots); preferred over live DOM thumbnail. */
+  slot_flatplan_image_url?: string | null;
   /** Cover slot only: composite from Data tab (GET …/slots enrich). */
   flatplan_cover_composite_url?: string | null;
   /** summary-typed slots: publication-level summary PDF (GET …/slots enrich). */
@@ -85,7 +89,6 @@ export type FlatplanPreviewChunk = {
   publication_article_chunk_format: string;
   chunk_html: string;
   chunk_position: number;
-  chunk_page_weight?: number;
 };
 
 /** Stored in `publication_articles.publication_article_state` (migration 042). */
@@ -1552,8 +1555,14 @@ export function FlatplanPreviewCell({
     primaryFlatplanType === "article" && Array.isArray(slot?.flatplan_preview_chunks)
       ? slot.flatplan_preview_chunks
       : [];
+  const articleFlatplanImageUrl =
+    primaryFlatplanType === "article"
+      ? String(slot?.slot_flatplan_image_url ?? "").trim()
+      : "";
   const hasFlatplanVisualPreview =
-    advertPreviewUrl.length > 0 || articlePreviewChunks.length > 0;
+    advertPreviewUrl.length > 0 ||
+    articlePreviewChunks.length > 0 ||
+    articleFlatplanImageUrl.length > 0;
   const flatplanThumbTagPad = previewExpanded ? "px-1.5 py-0.5" : "px-1 py-px";
   const flatplanThumbTagText = previewExpanded ? "text-[10px]" : "text-[8px]";
   const flatplanThumbDarkTagBgClass = "bg-gradient-to-r from-zinc-950 to-indigo-950";
@@ -1650,13 +1659,15 @@ export function FlatplanPreviewCell({
         {advertPreviewUrl ? (
           <FlatplanAdvertMediaThumbnail url={advertPreviewUrl} />
         ) : null}
-        {articlePreviewChunks.length > 0 && slot ? (
+        {slot &&
+        (articlePreviewChunks.length > 0 || articleFlatplanImageUrl.length > 0) ? (
           <FlatplanSlotContentThumbnail
             publicationSlotId={slot.publication_slot_id}
             publicationPage={slot.publication_page}
             articlePageIndex={slot.flatplan_article_page_index ?? 1}
             magazinePageLayout={slot.magazine_page_layout}
             chunks={articlePreviewChunks}
+            flatplanImageUrl={slot.slot_flatplan_image_url}
             previewExpanded={previewExpanded}
             className="absolute inset-1 overflow-hidden rounded-md opacity-50 transition-opacity duration-150 group-hover/flatplan-tile:opacity-65"
           />

@@ -70,6 +70,26 @@ export function articleSlotMaterialsMediatecaPath(
   return `${base}/${PUBLICATION_ARTICLES_MEDIA_FOLDER_NAME}/${aid}/slot_${sid}`;
 }
 
+/** Mediateca subfolder for auto-captured article page PNGs. */
+export const PUBLICATION_ARTICLE_SCREENSHOTS_FOLDER_NAME = "Screenshots";
+
+export function articleScreenshotsMediatecaPath(
+  editionName: string | null | undefined,
+  articleId: string | null | undefined
+): string {
+  const base = articleMaterialsMediatecaPath(editionName, articleId);
+  return `${base}/${PUBLICATION_ARTICLE_SCREENSHOTS_FOLDER_NAME}`;
+}
+
+/** `Screenshot-p1.png`, `Screenshot-p2.png`, … (1-based page index). */
+export function articleScreenshotContentName(pageIndex: number): string {
+  const n = Math.max(1, Math.round(Number(pageIndex)));
+  return `Screenshot-p${n}.png`;
+}
+
+/** @deprecated Use {@link articleScreenshotContentName} in Screenshots folder. */
+export const ARTICLE_SLOT_FLATPLAN_PREVIEW_FILENAME = "flatplan-preview.png";
+
 /** Materials for one advert slot (cover or advert page). */
 export function advertSlotMaterialsMediatecaPath(
   editionName: string | null | undefined,

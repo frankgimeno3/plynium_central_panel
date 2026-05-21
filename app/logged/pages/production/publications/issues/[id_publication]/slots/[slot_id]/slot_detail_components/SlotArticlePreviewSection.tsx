@@ -3,11 +3,13 @@
 import Link from "next/link";
 import React, { FC, useEffect, useMemo, useState } from "react";
 import { ArticleBuilderPagePreviewThumbnail } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/article_builder_page/components/ArticleBuilderPagePreviewThumbnail";
-import { dedupeChunksForDisplay } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/article_builder_page/chunkUtils";
 import {
   publicationArticleEditorHref,
 } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/articleBuilderNavigation";
-import { buildArticleFlowPagesFromPublicationSlots } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/magazineArticleColumnFlow";
+import {
+  buildArticleFlowPagesFromPublicationSlots,
+  normalizeChunkFormat,
+} from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/magazineArticleColumnFlow";
 import {
   DEFAULT_MAGAZINE_PAGE_LAYOUT,
   normalizeMagazinePageLayout,
@@ -26,6 +28,12 @@ type SlotArticlePreviewSectionProps = {
   slotId: number;
   /** `publication_slots_db.publication_page` for the current slot (magazine spread). */
   currentMagazinePage: number | null;
+  /**
+   * Optional URL from the parent page load. Ignored for rendering — we always
+   * refetch chunks and show a live preview so slot detail stays in sync with
+   * the Article Builder after edits.
+   */
+  flatplanImageUrl?: string | null;
 };
 
 /** Format ordered magazine page numbers: `12`, `12–14`, or `12, 15, 18`. */
@@ -169,8 +177,7 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
   );
 
   const pageChunks = useMemo(
-    () =>
-      dedupeChunksForDisplay(chunks.filter((ch) => chunkPublicationSlotId(ch) === slotId)),
+    () => chunks.filter((c) => chunkPublicationSlotId(c) === slotId),
     [chunks, slotId]
   );
 
@@ -183,7 +190,41 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
     [slotIdsOrdered, chunks]
   );
 
-  const isLeftPage = articlePageIndex > 0 && articlePageIndex % 2 === 0;
+  const publicationPageForSlot = useMemo(() => {
+    if (currentMagazinePage != null && Number.isFinite(Number(currentMagazinePage))) {
+      return Math.round(Number(currentMagazinePage));
+    }
+    const mp = magazinePageBySlotId[slotId];
+    return mp != null && Number.isFinite(mp) ? mp : null;
+  }, [currentMagazinePage, magazinePageBySlotId, slotId]);
+
+  const isLeftPage = useMemo(() => {
+    if (publicationPageForSlot != null) {
+      return publicationPageForSlot % 2 === 0;
+    }
+    return articlePageIndex > 0 && articlePageIndex % 2 === 0;
+  }, [publicationPageForSlot, articlePageIndex]);
+
+  const articleHeadingHtml = useMemo(() => {
+    const firstSlotId = slotIdsOrdered[0];
+    if (!firstSlotId) {
+      return { title: null as string | null, subtitle: null as string | null };
+    }
+    const firstPageChunks = chunks.filter(
+      (c) => chunkPublicationSlotId(c) === firstSlotId
+    );
+    const titleChunk = firstPageChunks.find(
+      (c) => normalizeChunkFormat(c.publication_article_chunk_format) === "title"
+    );
+    const subtitleChunk = firstPageChunks.find(
+      (c) => normalizeChunkFormat(c.publication_article_chunk_format) === "subtitle"
+    );
+    return {
+      title: titleChunk?.chunk_html ?? null,
+      subtitle: subtitleChunk?.chunk_html ?? null,
+    };
+  }, [chunks, slotIdsOrdered]);
+
   const editorHref = publicationArticleEditorHref(publicationId, publicationArticleId);
 
   if (loading) {
@@ -210,16 +251,33 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
 
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 flex flex-col items-center gap-4">
-      <div className="w-full max-w-[min(100%,14rem)]">
-        <ArticleBuilderPagePreviewThumbnail
-          chunks={pageChunks}
-          pageIndex={articlePageIndex || 1}
-          isLeftPage={isLeftPage}
-          publicationPage={currentMagazinePage}
-          pageFormat={magazinePageLayout}
-          articleFlowPages={articleFlowPages}
-          currentSlotContentId={slotId}
-        />
+      <div className="w-full max-w-md aspect-[228/297] overflow-hidden rounded-sm border border-gray-200 bg-white shadow-inner">
+        {pageChunks.length > 0 ? (
+          <ArticleBuilderPagePreviewThumbnail
+            chunks={pageChunks}
+            pageIndex={articlePageIndex > 0 ? articlePageIndex : 1}
+            isLeftPage={isLeftPage}
+            publicationPage={publicationPageForSlot}
+            pageFormat={magazinePageLayout}
+            articleFlowPages={articleFlowPages}
+            currentSlotContentId={slotId}
+            articleTitleHtml={articleHeadingHtml.title}
+            articleSubtitleHtml={articleHeadingHtml.subtitle}
+            editable={false}
+          />
+        ) : (
+          <div className="flex h-full flex-col items-center justify-center gap-3 bg-gray-100 p-4 text-center">
+            <p className="text-xs text-gray-600">
+              No content chunks on this page yet. Open the Article Builder to add text and images.
+            </p>
+            <Link
+              href={editorHref}
+              className="rounded-lg bg-blue-950 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-900"
+            >
+              Open Article Builder (editor)
+            </Link>
+          </div>
+        )}
       </div>
 
       <div className="w-full max-w-md space-y-2 text-center text-sm text-gray-700">
@@ -245,6 +303,11 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
                 Article Builder to label this tile on the flatplan.
               </p>
             ) : null}
+            <p className="text-[11px] text-gray-500">
+              Preview is loaded live from saved chunks. In the Article Builder editor, use
+              <span className="font-medium"> Guardar cambios</span> to persist text and refresh
+              flatplan screenshots.
+            </p>
           </>
         ) : totalArticlePages > 0 ? (
           <p className="font-semibold text-amber-900">

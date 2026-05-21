@@ -54,6 +54,7 @@ function toApiSlot(row) {
     customer_id: s.customer_id ?? null,
     project_id: s.project_id ?? null,
     slot_media_url: s.slot_media_url ?? null,
+    slot_flatplan_image_url: s.slot_flatplan_image_url ?? null,
     slot_article_id: s.slot_article_id ?? null,
     magazine_page_layout: normalizeMagazinePageLayout(s.magazine_page_layout),
     slot_created_at: s.slot_created_at ?? null,
@@ -252,7 +253,6 @@ async function enrichSlotsWithFlatplanArticleChunkPreviews(slots, publicationId)
       "publication_article_chunk_format",
       "chunk_html",
       "chunk_position",
-      "chunk_page_weight",
     ],
     order: [
       ["publication_slot_id", "ASC"],
@@ -272,10 +272,6 @@ async function enrichSlotsWithFlatplanArticleChunkPreviews(slots, publicationId)
       publication_article_chunk_format: String(pl.publication_article_chunk_format ?? ""),
       chunk_html: String(pl.chunk_html ?? ""),
       chunk_position: Number(pl.chunk_position) || 0,
-      chunk_page_weight:
-        pl.chunk_page_weight != null && Number.isFinite(Number(pl.chunk_page_weight))
-          ? Number(pl.chunk_page_weight)
-          : undefined,
     });
     bySlotId.set(sid, list);
   }
