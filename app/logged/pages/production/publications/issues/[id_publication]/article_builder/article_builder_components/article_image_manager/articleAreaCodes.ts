@@ -102,6 +102,116 @@ export function defaultColumnAreaCode(columnIndex: number): string | null {
   return cellToAreaCode(columnIndex, 0);
 }
 
+/** All grid area codes in reading order for a 2- or 3-column page body. */
+export function gridAreaCodesInOrder(columnCount: number): string[] {
+  const cols = columnCount === 3 ? 3 : 2;
+  const codes: string[] = [];
+  for (let row = 0; row < AREA_ROWS; row++) {
+    for (let col = 0; col < cols; col++) {
+      const code = cellToAreaCode(col, row);
+      if (code) codes.push(code);
+    }
+  }
+  return codes;
+}
+
+export function resolveAreaPlacement(
+  areaKey: string,
+  columnCount: number
+): ImageAreaPlacement | null {
+  const codes = normalizeAreaCodes([areaKey]);
+  if (!codes.length) return null;
+  const fromSpan = areaCodesToPlacement(codes, columnCount);
+  if (fromSpan) return fromSpan;
+  const cell = areaCodeToCell(codes[0]!);
+  if (!cell) return null;
+  const col = Math.min(cell.col, Math.max(0, columnCount - 1));
+  return {
+    colStart: col,
+    colEnd: col,
+    rowStart: cell.row,
+    rowEnd: cell.row,
+  };
+}
+
+export type GridBodyAreaCell<T> = {
+  areaKey: string;
+  placement: ImageAreaPlacement;
+  chunks: T[];
+};
+
+/**
+ * Groups body chunks by grid area. Multiple chunks in the same area are kept
+ * together so the UI can render them side-by-side in sub-columns.
+ */
+export function groupGridBodyChunksByArea<
+  T extends {
+    publication_article_chunk_id: string;
+    chunk_position: number;
+    chunk_area_array?: unknown;
+  },
+>(chunks: T[], columnCount: number): { cells: GridBodyAreaCell<T>[] } {
+  const sorted = [...chunks].sort(
+    (a, b) =>
+      a.chunk_position - b.chunk_position ||
+      a.publication_article_chunk_id.localeCompare(b.publication_article_chunk_id)
+  );
+  const byArea = new Map<string, T[]>();
+  const orphans: T[] = [];
+
+  for (const chunk of sorted) {
+    const codes = normalizeAreaCodes(chunk.chunk_area_array);
+    if (codes.length) {
+      const areaKey = codes[0]!;
+      const list = byArea.get(areaKey) ?? [];
+      list.push(chunk);
+      byArea.set(areaKey, list);
+    } else {
+      orphans.push(chunk);
+    }
+  }
+
+  const cells: GridBodyAreaCell<T>[] = [];
+
+  for (const areaKey of gridAreaCodesInOrder(columnCount)) {
+    let list = byArea.get(areaKey);
+    if (list?.length) {
+      byArea.delete(areaKey);
+    } else {
+      const orphan = orphans.shift();
+      if (!orphan) continue;
+      list = [orphan];
+    }
+    const placement = resolveAreaPlacement(areaKey, columnCount);
+    if (!placement) continue;
+    cells.push({ areaKey, placement, chunks: list });
+  }
+
+  for (const [areaKey, list] of byArea) {
+    if (!list.length) continue;
+    const placement = resolveAreaPlacement(areaKey, columnCount);
+    if (!placement) continue;
+    cells.push({ areaKey, placement, chunks: list });
+  }
+
+  let orphanIdx = 0;
+  while (orphans.length > 0) {
+    const orphan = orphans.shift()!;
+    const placement = textChunkPlacementForPreview(orphan, orphanIdx, columnCount);
+    orphanIdx += 1;
+    if (!placement) break;
+    const areaKey = `orphan-${placement.colStart}-${placement.rowStart}`;
+    const existing = cells.find((c) => c.areaKey === areaKey);
+    if (existing) {
+      existing.chunks.push(orphan);
+    } else {
+      cells.push({ areaKey, placement, chunks: [orphan] });
+    }
+  }
+
+  return { cells };
+}
+
 /**
  * Placement for a body text chunk in the area grid (preview + displacement).
  * Uses `chunk_area_array` when set; otherwise matches CSS column-fill order.
@@ -110,9 +220,74 @@ function gridBodyChunkCellScore(chunk: {
   chunk_html?: string;
   chunk_area_array?: unknown;
 }): number {
+  const textLen = String(chunk.chunk_html ?? "").trim().length;
   const hasArea = normalizeAreaCodes(chunk.chunk_area_array).length > 0;
-  const hasHtml = String(chunk.chunk_html ?? "").trim().length > 0;
-  return (hasArea ? 4 : 0) + (hasHtml ? 2 : 0);
+  return textLen * 1000 + (hasArea ? 4 : 0);
+}
+
+export function pickBestGridBodyChunksByArea<
+  T extends {
+    publication_article_chunk_id: string;
+    chunk_html: string;
+    chunk_position: number;
+    chunk_area_array?: unknown;
+  },
+>(chunks: T[], columnCount: number): {
+  kept: T[];
+  areaByChunkId: Map<string, string>;
+} {
+  const sorted = [...chunks].sort(
+    (a, b) =>
+      a.chunk_position - b.chunk_position ||
+      a.publication_article_chunk_id.localeCompare(b.publication_article_chunk_id)
+  );
+  const bestByArea = new Map<string, { chunk: T; score: number }>();
+  const orphans: T[] = [];
+
+  for (const chunk of sorted) {
+    const codes = normalizeAreaCodes(chunk.chunk_area_array);
+    if (!codes.length) {
+      orphans.push(chunk);
+      continue;
+    }
+    const areaKey = codes[0]!;
+    const score = gridBodyChunkCellScore(chunk);
+    const prev = bestByArea.get(areaKey);
+    if (!prev || score > prev.score) {
+      bestByArea.set(areaKey, { chunk, score });
+      continue;
+    }
+    if (score === prev.score) {
+      const lenA = String(chunk.chunk_html ?? "").trim().length;
+      const lenB = String(prev.chunk.chunk_html ?? "").trim().length;
+      if (
+        lenA > lenB ||
+        (lenA === lenB && chunk.chunk_position > prev.chunk.chunk_position)
+      ) {
+        bestByArea.set(areaKey, { chunk, score });
+      }
+    }
+  }
+
+  let orphanIdx = 0;
+  for (const areaKey of gridAreaCodesInOrder(columnCount)) {
+    if (bestByArea.has(areaKey)) continue;
+    const orphan = orphans[orphanIdx++];
+    if (!orphan) break;
+    bestByArea.set(areaKey, { chunk: orphan, score: gridBodyChunkCellScore(orphan) });
+  }
+
+  const keepIds = new Set<string>();
+  const areaByChunkId = new Map<string, string>();
+  for (const [areaKey, { chunk }] of bestByArea) {
+    keepIds.add(chunk.publication_article_chunk_id);
+    areaByChunkId.set(chunk.publication_article_chunk_id, areaKey);
+  }
+
+  return {
+    kept: sorted.filter((c) => keepIds.has(c.publication_article_chunk_id)),
+    areaByChunkId,
+  };
 }
 
 /**
@@ -126,69 +301,21 @@ export function dedupeGridBodyChunksByCell<
     chunk_area_array?: unknown;
   },
 >(chunks: T[], columnCount: number): T[] {
-  const sorted = [...chunks].sort(
-    (a, b) =>
-      a.chunk_position - b.chunk_position ||
-      a.publication_article_chunk_id.localeCompare(b.publication_article_chunk_id)
-  );
-  const keepIds = new Set<string>();
-  const bestByCell = new Map<string, { chunk: T; score: number }>();
-
-  sorted.forEach((chunk, textChunkIndex) => {
-    const placement = textChunkPlacementForPreview(
-      chunk,
-      textChunkIndex,
-      columnCount
-    );
-    if (!placement) {
-      keepIds.add(chunk.publication_article_chunk_id);
-      return;
-    }
-    const key = `${placement.colStart}-${placement.rowStart}`;
-    const score = gridBodyChunkCellScore(chunk);
-    const prev = bestByCell.get(key);
-    if (!prev) {
-      bestByCell.set(key, { chunk, score });
-      return;
-    }
-    if (score > prev.score) {
-      bestByCell.set(key, { chunk, score });
-      return;
-    }
-    if (score === prev.score) {
-      const lenA = String(chunk.chunk_html ?? "").trim().length;
-      const lenB = String(prev.chunk.chunk_html ?? "").trim().length;
-      if (lenA > lenB || (lenA === lenB && chunk.chunk_position > prev.chunk.chunk_position)) {
-        bestByCell.set(key, { chunk, score });
-      }
-    }
-  });
-
-  for (const { chunk } of bestByCell.values()) {
-    keepIds.add(chunk.publication_article_chunk_id);
-  }
-
-  return sorted.filter((c) => keepIds.has(c.publication_article_chunk_id));
+  return pickBestGridBodyChunksByArea(chunks, columnCount).kept;
 }
 
 export function textChunkPlacementForPreview(
   chunk: { chunk_area_array?: unknown },
   textChunkIndex: number,
-  columnCount: number
+  columnCount: number,
+  effectiveAreaCode?: string | null
 ): ImageAreaPlacement | null {
-  const codes = normalizeAreaCodes(chunk.chunk_area_array);
+  const codes = effectiveAreaCode
+    ? normalizeAreaCodes([effectiveAreaCode])
+    : normalizeAreaCodes(chunk.chunk_area_array);
   if (codes.length) {
-    const placement = areaCodesToPlacement(codes, columnCount);
+    const placement = resolveAreaPlacement(codes[0]!, columnCount);
     if (placement) return placement;
-    const cell = areaCodeToCell(codes[0]);
-    if (cell) {
-      return {
-        colStart: cell.col,
-        colEnd: cell.col,
-        rowStart: cell.row,
-        rowEnd: cell.row,
-      };
-    }
   }
   const col = textChunkIndex % columnCount;
   const row = Math.floor(textChunkIndex / columnCount);

@@ -2,6 +2,7 @@
 
 import {
   chunkSupportsTextEditing,
+  readChunkEditableHtml,
   writeChunkEditableHtml,
 } from "./articleChunkPlainTextEditing";
 import { normalizeChunkFormat } from "./magazineArticleColumnFlow";
@@ -53,10 +54,18 @@ export function buildChunkHtmlSavePlan(
     const previous = String(chunk.chunk_html ?? "");
     const innerFromDom = domInnerHtmlByChunkId.get(chunkId);
 
-    const html =
-      innerFromDom != null
-        ? writeChunkEditableHtml(previous, format, innerFromDom)
-        : previous;
+    let html = previous;
+    if (innerFromDom != null) {
+      const fromDom = writeChunkEditableHtml(previous, format, innerFromDom);
+      const domEditable = readChunkEditableHtml(fromDom, format);
+      const stateEditable = readChunkEditableHtml(previous, format);
+      const domEmpty =
+        !domEditable.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, " ").trim();
+      const stateHasText = Boolean(
+        stateEditable.replace(/<[^>]+>/g, "").replace(/&nbsp;/gi, " ").trim()
+      );
+      html = domEmpty && stateHasText ? previous : fromDom;
+    }
 
     plan.set(chunkId, html);
   }

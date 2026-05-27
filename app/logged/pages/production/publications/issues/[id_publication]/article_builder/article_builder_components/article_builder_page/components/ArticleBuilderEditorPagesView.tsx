@@ -33,6 +33,7 @@ import {
   buildSimpleImageChunkHtml,
   cellsToAreaCodes,
   defaultColumnAreaCode,
+  normalizeAreaCodes,
 } from "../../article_image_manager/articleAreaCodes";
 import {
   ArticleBuilderDeleteOverlayImageModal,
@@ -47,6 +48,10 @@ import {
 } from "../../articleChunkPlainTextEditing";
 import { assignGridAreaCodesToOrphanTextChunks } from "../../articleChunkGridOverflow";
 import { runArticleGridOverflowFlow } from "../../articleBuilderGridOverflowFlow";
+import {
+  requestChunkEditorDomSync,
+  requestChunkEditorDomSyncForChunks,
+} from "../../chunkEditorDomSync";
 import { isOverlayImageChunk } from "../../article_image_manager/articleImagePlacement";
 import {
   buildArticleFlowPagesFromPublicationSlots,
@@ -61,13 +66,45 @@ import {
   ArticleSlotFlatplanCaptureStage,
   buildFlatplanCaptureSlotSpecs,
 } from "./ArticleSlotFlatplanCaptureStage";
-import { dedupeChunksForDisplay } from "../chunkUtils";
+import {
+  dedupeChunksForDisplay,
+  dedupeGridTextChunksBySlotAndArea,
+} from "../chunkUtils";
 import {
   buildChunkHtmlSavePlan,
   collectVisibleEditorHtmlOverrides,
   reconcilePublicationArticleChunksOnSave,
 } from "../../articleBuilderSaveFromDom";
 import { runArticleSlotFlatplanScreenshots } from "../../articleSlotFlatplanCapture";
+
+function isSlotBodyTextChunk(chunk: PublicationArticleChunk): boolean {
+  const fmt = String(chunk.publication_article_chunk_format ?? "").toLowerCase();
+  if (fmt === "title" || fmt === "subtitle") return false;
+  if (fmt === "only_image") return false;
+  return true;
+}
+
+function primaryGridAreaCode(chunk: { chunk_area_array?: unknown }): string | null {
+  const areas = normalizeAreaCodes(chunk.chunk_area_array);
+  return areas[0] ?? null;
+}
+
+/** Grid column areas (a1, b1, …) that still need an `only_text` chunk on this slot. */
+function missingGridAreaCodesForSlot(
+  textChunks: PublicationArticleChunk[],
+  columnCount: number
+): string[] {
+  const orphans = textChunks.filter((c) => !primaryGridAreaCode(c));
+  const missing: string[] = [];
+  for (let col = 0; col < columnCount; col++) {
+    const code = defaultColumnAreaCode(col);
+    if (!code) continue;
+    if (textChunks.some((c) => primaryGridAreaCode(c) === code)) continue;
+    if (col < orphans.length) continue;
+    missing.push(code);
+  }
+  return missing;
+}
 
 /** Generates a stable-enough id without needing `crypto.randomUUID` polyfills. */
 function newAreaId(): string {
@@ -340,12 +377,18 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
         persistUpdates: async (updates) => {
           markUnsavedChanges();
           for (const [id, html] of updates) {
+            requestChunkEditorDomSync(id);
             await commitChunkHtmlNow(id, html);
           }
         },
         onArticleReload: async (data) => {
           await flushAllPendingChunkHtml();
-          const merged = applyPendingHtmlToChunks(data.chunks);
+          const merged = dedupeGridTextChunksBySlotAndArea(
+            applyPendingHtmlToChunks(data.chunks)
+          );
+          requestChunkEditorDomSyncForChunks(
+            merged.map((c) => c.publication_article_chunk_id)
+          );
           onPublicationArticleUpdate(data.publicationArticle);
           setChunks(merged);
           chunksRef.current = merged;
@@ -453,22 +496,17 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
 
     const tasks: {
       slotId: number;
-      toCreate: number;
+      areaCodes: string[];
       baseLastPos: number;
-      startingTextCount: number;
     }[] = [];
     for (const slotId of slotIds) {
       if (ensuredSlotsRef.current.slots.has(slotId)) continue;
       const slotChunks = chunks.filter(
         (c) => chunkPublicationSlotId(c) === slotId
       );
-      const textChunks = slotChunks.filter((c) => {
-        const fmt = String(c.publication_article_chunk_format ?? "").toLowerCase();
-        if (fmt === "title" || fmt === "subtitle") return false;
-        if (fmt === "only_image") return false;
-        return true;
-      });
-      if (textChunks.length >= columnCount) {
+      const textChunks = slotChunks.filter(isSlotBodyTextChunk);
+      const areaCodes = missingGridAreaCodesForSlot(textChunks, columnCount);
+      if (areaCodes.length === 0) {
         ensuredSlotsRef.current.slots.add(slotId);
         continue;
       }
@@ -476,12 +514,7 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
         (acc, c) => Math.max(acc, c.chunk_position),
         -1
       );
-      tasks.push({
-        slotId,
-        toCreate: columnCount - textChunks.length,
-        baseLastPos,
-        startingTextCount: textChunks.length,
-      });
+      tasks.push({ slotId, areaCodes, baseLastPos });
     }
     if (tasks.length === 0) return;
 
@@ -496,8 +529,10 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
     const articleIdAtStart = publicationArticleId;
     (async () => {
       for (const task of tasks) {
-        for (let i = 1; i <= task.toCreate; i++) {
+        let pos = task.baseLastPos;
+        for (const areaCode of task.areaCodes) {
           if (ensuredSlotsRef.current.articleId !== articleIdAtStart) return;
+          pos += 1;
           try {
             const res = await fetch(
               `/api/v1/publication-articles/${encodeURIComponent(
@@ -510,14 +545,9 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
                 body: JSON.stringify({
                   publication_article_chunk_format: "only_text",
                   chunk_html: "",
-                  chunk_position: task.baseLastPos + i,
+                  chunk_position: pos,
                   publication_slot_id: task.slotId,
-                  chunk_area_array: (() => {
-                    const code = defaultColumnAreaCode(
-                      task.startingTextCount + i - 1
-                    );
-                    return code ? [code] : [];
-                  })(),
+                  chunk_area_array: [areaCode],
                 }),
               }
             );
@@ -1328,8 +1358,32 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
         reconcileResult.deleted > 0
           ? ` (${reconcileResult.deleted} duplicado(s) eliminado(s))`
           : "";
-      onSaveMessage?.(`Cambios guardados${dedupeNote}. Recargando…`);
-      window.location.reload();
+
+      const reloadRes = await fetch(
+        `/api/v1/publication-articles/${encodeURIComponent(
+          publicationArticle.publication_article_id
+        )}?ensure_all_magazine_slots=1`,
+        { cache: "no-store", credentials: "include" }
+      );
+      if (!reloadRes.ok) {
+        const txt = await reloadRes.text().catch(() => "");
+        throw new Error(txt || "Failed to reload article after save");
+      }
+      const reloaded = (await reloadRes.json()) as {
+        publication_article?: PublicationArticleRow;
+        chunks?: PublicationArticleChunk[];
+      };
+      const freshChunks = Array.isArray(reloaded.chunks) ? reloaded.chunks : [];
+      requestChunkEditorDomSyncForChunks(
+        freshChunks.map((c) => c.publication_article_chunk_id)
+      );
+      setChunks(freshChunks);
+      chunksRef.current = freshChunks;
+      if (reloaded.publication_article) {
+        onPublicationArticleUpdate(reloaded.publication_article);
+      }
+      setHasUnsavedChanges(false);
+      onSaveMessage?.(`Cambios guardados${dedupeNote}.`);
     } catch (e: unknown) {
       onSaveError?.(
         e instanceof Error ? e.message : "Failed to save article changes"
@@ -1341,16 +1395,20 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
     flushAllPendingChunkHtml,
     onSaveError,
     onSaveMessage,
+    onPublicationArticleUpdate,
     persistChunkHtmlBatch,
     publicationArticle.publication_article_id,
     savingAllChanges,
+    setChunks,
   ]);
 
   const renderCell = (cell: PageCell, rowIdx: number, colIdx: number) => {
     const key = `${rowIdx}-${colIdx}`;
     if (cell.kind === "page") {
       const pageChunks = dedupeChunksForDisplay(
-        chunks.filter((ch) => chunkPublicationSlotId(ch) === cell.slotId)
+        dedupeGridTextChunksBySlotAndArea(
+          chunks.filter((ch) => chunkPublicationSlotId(ch) === cell.slotId)
+        )
       );
       const canDeletePage = total > 1;
       const selectedCount = chunkSelectionActive ? selectedChunkIds.size : 0;
@@ -1404,6 +1462,9 @@ export const ArticleBuilderEditorPagesView: FC<ArticleBuilderEditorPagesViewProp
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs font-medium text-gray-600">
               page {cell.articleIdx}/{total}
+              <span className="ml-2 font-mono font-normal text-gray-500">
+                slot {cell.slotId}
+              </span>
             </span>
             <button
               type="button"

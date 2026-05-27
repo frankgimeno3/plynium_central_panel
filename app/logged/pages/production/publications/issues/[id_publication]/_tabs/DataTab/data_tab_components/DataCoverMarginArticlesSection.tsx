@@ -1,7 +1,10 @@
 "use client";
 
 import React from "react";
-import type { CoverMarginArticleMiniature } from "@/app/logged/pages/production/publications/publication_components/_shared";
+import {
+  COVER_MARGIN_ARTICLE_COUNT,
+  type CoverMarginArticleMiniature,
+} from "@/app/logged/pages/production/publications/publication_components/_shared";
 
 export type DataCoverMarginArticlesSectionProps = {
   coverMarginMiniatures: CoverMarginArticleMiniature[];
@@ -27,7 +30,8 @@ export function DataCoverMarginArticlesSection({
           Cover margin article miniatures
         </p>
         <p className="text-xs text-gray-500 mt-1">
-          Manage the six ordered article miniatures shown in the cover margin.
+          Manage the {COVER_MARGIN_ARTICLE_COUNT} ordered article miniatures shown in the
+          cover margin.
         </p>
       </div>
       <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">

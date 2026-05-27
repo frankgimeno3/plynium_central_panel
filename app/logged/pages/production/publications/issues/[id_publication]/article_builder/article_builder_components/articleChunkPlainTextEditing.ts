@@ -111,6 +111,24 @@ export function chunkHtmlToPlainText(html: string): string {
     .trim();
 }
 
+/** True when `chunk_html` has no HTML markup (legacy plain-text rows). */
+export function chunkHtmlLooksLikePlainText(html: string): boolean {
+  const raw = String(html ?? "").trim();
+  if (!raw) return false;
+  return !/<[a-z][\s\S]*>/i.test(raw);
+}
+
+/** Normalize plain `chunk_html` to `<p>…</p>` for rich-text editor / preview. */
+export function coerceChunkHtmlForRichText(html: string, format: string): string {
+  const fmt = String(format ?? "").toLowerCase();
+  if (fmt === "only_image") return String(html ?? "");
+  const raw = String(html ?? "");
+  if (!raw.trim()) return "";
+  if (!chunkHtmlLooksLikePlainText(raw)) return raw;
+  const plain = chunkHtmlToPlainText(raw) || raw;
+  return plainTextToChunkHtml(plain);
+}
+
 /** Wrap each line of `text` in `<p>` so the body renderers can style it. */
 export function plainTextToChunkHtml(text: string): string {
   const raw = String(text ?? "");
@@ -132,9 +150,9 @@ export function readChunkEditableHtml(chunkHtml: string, format: string): string
   if (fmt === "only_image") return "";
   if (fmt === "text_image" || fmt === "image_text") {
     const parsed = parseMagazineChunkHtml(chunkHtml, fmt);
-    return parsed.textHtml || "";
+    return coerceChunkHtmlForRichText(parsed.textHtml || "", fmt);
   }
-  return chunkHtml || "";
+  return coerceChunkHtmlForRichText(chunkHtml || "", fmt);
 }
 
 /** Build `chunk_html` after rich-text edits (HTML in the text portion). */
@@ -150,12 +168,12 @@ export function writeChunkEditableHtml(
     const parsed = parseMagazineChunkHtml(previousChunkHtml, fmt);
     return buildSplitChunkHtml(
       fmt as MagazineSplitLayout,
-      nextTextHtml,
+      coerceChunkHtmlForRichText(nextTextHtml, fmt),
       parsed.imageSrc,
       parsed.imageAlt
     );
   }
-  return nextTextHtml;
+  return coerceChunkHtmlForRichText(nextTextHtml, fmt);
 }
 
 /** Pull the editable text portion out of a chunk regardless of its format. */

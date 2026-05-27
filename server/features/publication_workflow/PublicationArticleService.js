@@ -276,20 +276,45 @@ function toApiPublicationArticle(row) {
     };
 }
 
+function coercePlainTextChunkHtmlForApi(html, format) {
+    const fmt = String(format ?? "").toLowerCase();
+    const raw = String(html ?? "");
+    if (!raw.trim() || fmt !== "only_text") return raw;
+    if (/<[a-z][\s\S]*>/i.test(raw)) return raw;
+    const esc = (s) =>
+        String(s ?? "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+    return raw
+        .split(/\r?\n/)
+        .map((line) => {
+            const t = line.replace(/\u00a0/g, " ");
+            if (!t.trim()) return "<p>&nbsp;</p>";
+            return `<p>${esc(t)}</p>`;
+        })
+        .join("");
+}
+
 function toApiChunk(row) {
     const p = plain(row);
     if (!p) return null;
+    const format =
+        p.publication_article_chunk_format != null
+            ? String(p.publication_article_chunk_format)
+            : "only_text";
+    const chunkHtml = coercePlainTextChunkHtmlForApi(
+        p.chunk_html != null ? String(p.chunk_html) : "",
+        format
+    );
     return {
         publication_article_chunk_id: p.publication_article_chunk_id,
         publication_article_id: p.publication_article_id,
         publication_id: p.publication_id,
         publication_slot_id:
             p.publication_slot_id != null ? Number(p.publication_slot_id) : null,
-        publication_article_chunk_format:
-            p.publication_article_chunk_format != null
-                ? String(p.publication_article_chunk_format)
-                : "only_text",
-        chunk_html: p.chunk_html != null ? String(p.chunk_html) : "",
+        publication_article_chunk_format: format,
+        chunk_html: chunkHtml,
         chunk_position: p.chunk_position != null ? Number(p.chunk_position) : 0,
         original_article_content_id:
             p.original_article_content_id != null
@@ -446,12 +471,20 @@ export async function dedupeOverlappingGridTextChunks(
     let deleted = 0;
     for (const list of groups.values()) {
         if (list.length < 2) continue;
+        const withContent = list.filter((row) => {
+            const p = plain(row);
+            return String(p.chunk_html ?? "").trim().length > 0;
+        });
+        if (withContent.length >= 2) continue;
         const ranked = [...list].sort((a, b) => {
             const pa = plain(a);
             const pb = plain(b);
             const aPref = preferKeep.has(String(pa.publication_article_chunk_id ?? "")) ? 1 : 0;
             const bPref = preferKeep.has(String(pb.publication_article_chunk_id ?? "")) ? 1 : 0;
             if (bPref !== aPref) return bPref - aPref;
+            const lenA = String(pa.chunk_html ?? "").trim().length;
+            const lenB = String(pb.chunk_html ?? "").trim().length;
+            if (lenB !== lenA) return lenB - lenA;
             const ua = pa.publication_article_chunk_updated_at
                 ? new Date(pa.publication_article_chunk_updated_at).getTime()
                 : 0;
@@ -459,9 +492,6 @@ export async function dedupeOverlappingGridTextChunks(
                 ? new Date(pb.publication_article_chunk_updated_at).getTime()
                 : 0;
             if (ub !== ua) return ub - ua;
-            const lenA = String(pa.chunk_html ?? "").trim().length;
-            const lenB = String(pb.chunk_html ?? "").trim().length;
-            if (lenB !== lenA) return lenB - lenA;
             return Number(pb.chunk_position) - Number(pa.chunk_position);
         });
         for (let i = 1; i < ranked.length; i++) {
@@ -2075,7 +2105,14 @@ export async function updateChunk(chunkId, payload) {
         updates.publication_article_chunk_format = f;
     }
     if (payload?.chunk_html !== undefined) {
-        updates.chunk_html = String(payload.chunk_html ?? "");
+        const fmtForHtml =
+            updates.publication_article_chunk_format != null
+                ? String(updates.publication_article_chunk_format)
+                : currentFormat;
+        updates.chunk_html = coercePlainTextChunkHtmlForApi(
+            String(payload.chunk_html ?? ""),
+            fmtForHtml
+        );
     }
     if (payload?.chunk_position !== undefined) {
         const n = Number(payload.chunk_position);

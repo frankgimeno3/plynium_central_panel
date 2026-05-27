@@ -11,6 +11,7 @@ import MoveContentTypeModal, {
 import {
   BASE,
   comparePublicationSlotsFlatplanOrder,
+  COVER_MARGIN_ARTICLE_COUNT,
   CoverMarginArticleMiniature,
   expandFlatplanBulkDeleteSlotIds,
   FLATPLAN_BUFFER_KEY,
@@ -125,7 +126,7 @@ export const PublicationIssueDetailPage: FC<{ publicationId: string }> = ({ publ
   const [coverMarginMiniatures, setCoverMarginMiniatures] = useState<
     CoverMarginArticleMiniature[]
   >(() =>
-    Array.from({ length: 6 }, (_, index) => ({
+    Array.from({ length: COVER_MARGIN_ARTICLE_COUNT }, (_, index) => ({
       position: index + 1,
       article: null,
       currentContent: "",

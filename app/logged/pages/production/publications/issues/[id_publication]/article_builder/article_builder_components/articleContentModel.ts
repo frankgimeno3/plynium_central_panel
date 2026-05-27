@@ -1,4 +1,5 @@
 import { chunkPublicationSlotId } from "@/app/logged/pages/production/publications/publication_components/publicationSlotIds";
+import { coerceChunkHtmlForRichText } from "./articleChunkPlainTextEditing";
 import { normalizePortalChunkHtmlForPreview } from "./portalArticleChunkHtml";
 import {
   normalizeChunkFormat,
@@ -12,10 +13,9 @@ export type PublicationArticleChunkLike = FlowPublicationArticleChunk & {
 
 /** Body HTML for editor/preview (converts legacy portal JSON blobs). */
 export function normalizedBodyChunkHtml(chunk: FlowPublicationArticleChunk): string {
-  return normalizePortalChunkHtmlForPreview(
-    chunk.chunk_html,
-    chunk.publication_article_chunk_format
-  );
+  const format = chunk.publication_article_chunk_format;
+  const coerced = coerceChunkHtmlForRichText(chunk.chunk_html, format);
+  return normalizePortalChunkHtmlForPreview(coerced, format);
 }
 
 export function firstArticleSlotContentId(

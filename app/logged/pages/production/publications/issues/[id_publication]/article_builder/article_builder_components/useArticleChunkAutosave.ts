@@ -54,10 +54,16 @@ export function useArticleChunkAutosave(options: {
       });
       try {
         const updated = await patchChunkHtml(chunkId, html, opts);
+        const savedHtml = updated.chunk_html ?? html;
+        const pendingNow = pendingHtmlRef.current.get(chunkId);
+        if (pendingNow != null && pendingNow !== savedHtml) {
+          // User kept typing after this PATCH was sent; do not overwrite React/DOM.
+          return;
+        }
         setChunks((prev) =>
           prev.map((c) =>
             c.publication_article_chunk_id === chunkId
-              ? { ...c, chunk_html: updated.chunk_html ?? html }
+              ? { ...c, chunk_html: savedHtml }
               : c
           )
         );
@@ -211,15 +217,15 @@ export function useArticleChunkAutosave(options: {
           prev.map((c) => {
             const updated = okById.get(c.publication_article_chunk_id);
             if (!updated) return c;
-            return {
-              ...c,
-              chunk_html: updated.chunk_html ?? c.chunk_html,
-            };
+            const savedHtml = updated.chunk_html ?? c.chunk_html;
+            const pendingNow = pendingHtmlRef.current.get(c.publication_article_chunk_id);
+            if (pendingNow != null && pendingNow !== savedHtml) {
+              return c;
+            }
+            pendingHtmlRef.current.delete(c.publication_article_chunk_id);
+            return { ...c, chunk_html: savedHtml };
           })
         );
-        for (const id of okById.keys()) {
-          pendingHtmlRef.current.delete(id);
-        }
       }
 
       if (failures.length) {

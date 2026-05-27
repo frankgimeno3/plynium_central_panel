@@ -5,6 +5,7 @@ import React, {
   FC,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
 } from "react";
@@ -18,9 +19,11 @@ import {
 } from "@/app/logged/pages/production/publications/issues/[id_publication]/slots/[slot_id]/article_editor/magazineChunkMediaHtml";
 import {
   areaCodesToPlacement,
+  gridAreaCodesInOrder,
+  groupGridBodyChunksByArea,
   normalizeAreaCodes,
-  dedupeGridBodyChunksByCell,
-  textChunkPlacementForPreview,
+  resolveAreaPlacement,
+  type GridBodyAreaCell,
 } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/article_image_manager/articleAreaCodes";
 import {
   IMAGE_AREA_ROWS,
@@ -52,6 +55,7 @@ import {
   writeChunkEditableHtml,
 } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/articleChunkPlainTextEditing";
 import { useArticleBuilderRichTextToolbar } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/article_builder_page/components/ArticleBuilderFloatingRichTextToolbar";
+import { consumeChunkEditorDomSync } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/chunkEditorDomSync";
 import type { PublicationArticleChunk } from "./types";
 
 /** 228 × 297 mm portrait (magazine page proportion). */
@@ -145,6 +149,12 @@ type ArticleSubpagePagePreviewProps = {
   onOverlayImageDelete?: (chunkId: string) => void;
 };
 
+function chunkEditorDomMatches(el: HTMLElement, incoming: string): boolean {
+  const normalized = incoming || "";
+  if (el.innerHTML === normalized) return true;
+  return normalized === "" && el.innerHTML.replace(/<br\s*\/?>/gi, "").trim() === "";
+}
+
 /**
  * Rich-text body field (`contentEditable`) for the magazine preview. Formatting
  * is applied via the floating {@link RichTextToolbar}; HTML is stored on the chunk.
@@ -178,43 +188,52 @@ const EditableChunkRichBody: FC<{
 }) => {
   const editorRef = useRef<HTMLDivElement | null>(null);
   const chunkHtmlRef = useRef(chunkHtml);
-  const isInternalChange = useRef(false);
   const syncingFromProps = useRef(false);
-  const lastEmittedHtmlRef = useRef(readChunkEditableHtml(chunkHtml, format));
-  const { registerActiveChunkEditor, clearActiveChunkEditor } =
+  const lastEmittedHtmlRef = useRef("");
+  const { registerActiveChunkEditor, clearActiveChunkEditor, activeChunkId } =
     useArticleBuilderRichTextToolbar();
 
   chunkHtmlRef.current = chunkHtml;
 
+  const isEditingThisChunk = useCallback(
+    (el: HTMLElement | null) => {
+      if (!el) return false;
+      const active = document.activeElement;
+      if (active === el || (active != null && el.contains(active))) return true;
+      if (activeChunkId !== chunkId) return false;
+      const toolbar = document.querySelector("[data-pmc-floating-rich-toolbar]");
+      return Boolean(active && toolbar?.contains(active));
+    },
+    [activeChunkId, chunkId]
+  );
+
+  const applyIncomingHtmlToDom = useCallback(() => {
+    const el = editorRef.current;
+    if (!el || syncingFromProps.current) return;
+    const incoming = readChunkEditableHtml(chunkHtml, format);
+    const forceSync = consumeChunkEditorDomSync(chunkId);
+    if (!forceSync && isEditingThisChunk(el)) return;
+    if (!forceSync && chunkEditorDomMatches(el, incoming)) return;
+    syncingFromProps.current = true;
+    el.innerHTML = incoming || "";
+    lastEmittedHtmlRef.current = incoming;
+    requestAnimationFrame(() => {
+      syncingFromProps.current = false;
+    });
+  }, [chunkHtml, chunkId, format, isEditingThisChunk]);
+
   const emitChange = useCallback(() => {
     const el = editorRef.current;
     if (!el || syncingFromProps.current) return;
-    const nextHtml = el.innerHTML;
-    lastEmittedHtmlRef.current = nextHtml;
-    isInternalChange.current = true;
-    onChunkHtmlChange(
-      chunkId,
-      writeChunkEditableHtml(chunkHtmlRef.current, format, nextHtml)
-    );
+    const nextInner = el.innerHTML;
+    const fullHtml = writeChunkEditableHtml(chunkHtmlRef.current, format, nextInner);
+    lastEmittedHtmlRef.current = readChunkEditableHtml(fullHtml, format);
+    onChunkHtmlChange(chunkId, fullHtml);
   }, [chunkId, format, onChunkHtmlChange]);
 
-  useEffect(() => {
-    const el = editorRef.current;
-    if (!el) return;
-    if (isInternalChange.current) {
-      isInternalChange.current = false;
-      return;
-    }
-    const incoming = readChunkEditableHtml(chunkHtml, format);
-    if (incoming !== lastEmittedHtmlRef.current && el.innerHTML !== incoming) {
-      syncingFromProps.current = true;
-      el.innerHTML = incoming || "";
-      lastEmittedHtmlRef.current = incoming;
-      requestAnimationFrame(() => {
-        syncingFromProps.current = false;
-      });
-    }
-  }, [chunkHtml, format]);
+  useLayoutEffect(() => {
+    applyIncomingHtmlToDom();
+  }, [applyIncomingHtmlToDom]);
 
   const resize = useCallback(() => {
     const el = editorRef.current;
@@ -266,8 +285,7 @@ const EditableChunkRichBody: FC<{
       format,
       nextInner
     );
-    lastEmittedHtmlRef.current = nextInner;
-    isInternalChange.current = true;
+    lastEmittedHtmlRef.current = readChunkEditableHtml(fullHtml, format);
     onChunkHtmlChange(chunkId, fullHtml);
     onChunkHtmlCommit?.(chunkId, fullHtml);
   }, [chunkId, format, onChunkHtmlChange, onChunkHtmlCommit]);
@@ -703,6 +721,7 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
   }, [overlayChunks, columnCount]);
 
   const useGridBodyLayout = useMemo(() => {
+    if (editable && sorted.some((c) => isFlowBodyChunk(c))) return true;
     if (overlayChunks.length > 0) return true;
     return sorted.some((c) => {
       if (!isFlowBodyChunk(c)) return false;
@@ -710,7 +729,10 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
         (c as { chunk_area_array?: unknown }).chunk_area_array
       );
       if (!codes.length) return false;
-      return areaCodesToPlacement(codes, columnCount) != null;
+      return (
+        areaCodesToPlacement(codes, columnCount) != null ||
+        resolveAreaPlacement(codes[0]!, columnCount) != null
+      );
     });
   }, [sorted, overlayChunks, columnCount]);
 
@@ -731,7 +753,7 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
   const headerSubtitleClass =
     "mt-1 text-2xl leading-snug text-white/95 [&_*]:max-w-full [&_b]:font-bold [&_strong]:font-bold [&_em]:italic [&_i]:italic [&_p]:my-0 [&_p+p]:mt-1";
 
-  const { headlineHtml, subtitleHtml, bodyFlowChunks } = useMemo(() => {
+  const pageContent = useMemo(() => {
     const titleChunk = sorted.find(
       (c) => normalizeChunkFormat(c.publication_article_chunk_format) === "title"
     );
@@ -760,15 +782,52 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
           sorted
         );
 
-    const bodyFlowChunks =
-      editable && useGridBodyLayout
-        ? dedupeGridBodyChunksByCell(bodyChunks, columnCount)
-        : bodyChunks;
+    const bodyFlowChunks = bodyChunks;
+    const orphanBodyChunksForDebug = editable
+      ? bodyChunks.filter((c) => {
+          if (!isFlowBodyChunk(c)) return false;
+          return normalizeAreaCodes(
+            (c as { chunk_area_array?: unknown }).chunk_area_array
+          ).length === 0;
+        })
+      : [];
+
+    let gridBodyCells: GridBodyAreaCell<(typeof bodyChunks)[number]>[] | null = null;
+    if (useGridBodyLayout) {
+      if (editable) {
+        gridBodyCells = gridAreaCodesInOrder(columnCount)
+          .map((areaKey) => {
+            const matching = bodyChunks
+              .filter((c) => isFlowBodyChunk(c))
+              .filter((c) => {
+                const codes = normalizeAreaCodes(
+                  (c as { chunk_area_array?: unknown }).chunk_area_array
+                );
+                return codes[0] === areaKey;
+              })
+              .sort(
+                (a, b) =>
+                  a.chunk_position - b.chunk_position ||
+                  a.publication_article_chunk_id.localeCompare(
+                    b.publication_article_chunk_id
+                  )
+              );
+            const placement = resolveAreaPlacement(areaKey, columnCount);
+            if (!placement) return null;
+            return { areaKey, placement, chunks: matching };
+          })
+          .filter((c): c is GridBodyAreaCell<(typeof bodyChunks)[number]> => c != null);
+      } else {
+        gridBodyCells = groupGridBodyChunksByArea(bodyChunks, columnCount).cells;
+      }
+    }
 
     return {
       headlineHtml: titleHtml,
       subtitleHtml: subHtml,
       bodyFlowChunks,
+      gridBodyCells,
+      orphanBodyChunksForDebug,
     };
   }, [
     sorted,
@@ -780,6 +839,14 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
     articleTitleHtmlProp,
     articleSubtitleHtmlProp,
   ]);
+
+  const {
+    headlineHtml,
+    subtitleHtml,
+    bodyFlowChunks,
+    gridBodyCells,
+    orphanBodyChunksForDebug,
+  } = pageContent;
 
   const footerNumber =
     publicationPage != null && Number.isFinite(publicationPage)
@@ -795,6 +862,164 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
   const isFirstArticlePage = pageIndex === 1;
   const showHeadline = isFirstArticlePage || isLeftPage;
   const showSubtitle = isFirstArticlePage;
+
+  const renderBodyChunk = (
+    chunk: (typeof bodyFlowChunks)[number],
+    chunkIdx: number,
+    laneInCell: boolean
+  ): React.ReactNode | null => {
+    const chunkHtml = normalizedBodyChunkHtml(chunk);
+    if (!chunkHtml.trim() && !editable) return null;
+    const fmt = previewFormatForChunk({ ...chunk, chunk_html: chunkHtml });
+    const isMediaBlock =
+      fmt === "only_image" || fmt === "text_image" || fmt === "image_text";
+    const chunkId = chunk.publication_article_chunk_id;
+    const isSaving = savingChunkIds?.has(chunkId) ?? false;
+    const rawFormat = chunk.publication_article_chunk_format;
+    const canEditText = chunkSupportsTextEditing(rawFormat);
+    const hasImg = chunkHasImage(chunk.chunk_html, rawFormat);
+    const inGrid = useGridBodyLayout && laneInCell;
+
+    const isChunkSelected =
+      chunkSelectionMode && !!selectedChunkIds && selectedChunkIds.has(chunkId);
+    const selectionOverlay =
+      chunkSelectionMode && onToggleChunkSelection ? (
+        <ChunkSelectionCheckbox
+          checked={isChunkSelected}
+          onToggle={() => onToggleChunkSelection(chunkId)}
+        />
+      ) : null;
+    const selectionRingClass = isChunkSelected
+      ? "outline outline-2 outline-red-400"
+      : "";
+
+    let chunkNode: React.ReactNode;
+    if (editable && canEditText && !isMediaBlock && onChunkTextChange) {
+      chunkNode = (
+        <div
+          className={
+            inGrid
+              ? `${gridTextShellClass} ${selectionRingClass}`
+              : `${flowTextShellClass} ${selectionRingClass}`
+          }
+          data-pmc-editable-text-chunk={chunkId}
+        >
+          <EditableChunkRichBody
+            chunkId={chunkId}
+            chunkHtml={chunk.chunk_html}
+            format={rawFormat}
+            isLeftPage={isLeftPage}
+            saving={isSaving}
+            fillContainer={inGrid}
+            onChunkHtmlChange={onChunkTextChange}
+            onChunkHtmlCommit={onChunkHtmlCommit}
+            onGridTextOverflowCheck={inGrid ? onGridTextOverflowCheck : undefined}
+            placeholder="Body text…"
+            ariaLabel={`Chunk ${chunkId} text`}
+            className={inGrid ? gridTextareaClass : flowTextareaClass}
+          />
+          {selectionOverlay}
+        </div>
+      );
+    } else if (isMediaBlock && editable) {
+      const imgSrc = extractFirstImgSrc(chunk.chunk_html);
+      const imgAlt = extractFirstImgAlt(chunk.chunk_html);
+      const caption = readChunkImageCaption(chunk);
+      const showImageActions =
+        !chunkSelectionMode &&
+        chunkFormatIncludesImage(rawFormat) &&
+        !!onChunkImageUpdate &&
+        !!onChunkCaptionUpdate;
+      const showTextarea =
+        canEditText &&
+        !!onChunkTextChange &&
+        (fmt === "text_image" || fmt === "image_text");
+      chunkNode = (
+        <div className={`${flowMediaShellClass} ${selectionRingClass}`}>
+          <EditableImageChunkFrame
+            imgSrc={imgSrc}
+            imgAlt={imgAlt || ""}
+            caption={caption}
+            showImageActions={showImageActions}
+            onUpdateImage={() => onChunkImageUpdate!(chunkId)}
+            onUpdateCaption={() => onChunkCaptionUpdate!(chunkId)}
+            imageButtonLabel={imgSrc ? "Update image" : "Add image"}
+          />
+          {showTextarea ? (
+            <EditableChunkRichBody
+              chunkId={chunkId}
+              chunkHtml={chunk.chunk_html}
+              format={rawFormat}
+              isLeftPage={isLeftPage}
+              saving={isSaving}
+              onChunkHtmlChange={onChunkTextChange}
+              onChunkHtmlCommit={onChunkHtmlCommit}
+              placeholder="Body text…"
+              ariaLabel={`Chunk ${chunkId} text`}
+              className={flowTextareaClass}
+            />
+          ) : null}
+          {selectionOverlay}
+        </div>
+      );
+    } else if (isMediaBlock) {
+      const mediaCaption = readChunkImageCaption(chunk);
+      chunkNode = (
+        <div className={`${flowMediaShellClass} ${selectionRingClass} relative`}>
+          <MagazineChunkEditorPreview format={fmt} chunkHtml={chunkHtml} />
+          <ImageCaptionOverlay caption={mediaCaption} />
+          {editable &&
+          hasImg &&
+          chunkFormatIncludesImage(rawFormat) &&
+          onChunkImageUpdate &&
+          onChunkCaptionUpdate &&
+          !chunkSelectionMode ? (
+            <ImageChunkActionButtons
+              onUpdateImage={() => onChunkImageUpdate(chunkId)}
+              onUpdateCaption={() => onChunkCaptionUpdate(chunkId)}
+            />
+          ) : null}
+          {selectionOverlay}
+        </div>
+      );
+    } else {
+      chunkNode = (
+        <div
+          className={
+            inGrid
+              ? `${gridTextShellClass} ${selectionRingClass}`
+              : `${flowTextShellClass} ${selectionRingClass}`
+          }
+        >
+          {inGrid ? (
+            <div className={gridTextPreviewClass}>
+              <MagazineChunkEditorPreview format={fmt} chunkHtml={chunkHtml} />
+            </div>
+          ) : (
+            <div className={flowTextPreviewPadClass}>
+              <MagazineChunkEditorPreview format={fmt} chunkHtml={chunkHtml} />
+            </div>
+          )}
+          {selectionOverlay}
+        </div>
+      );
+    }
+
+    if (laneInCell) return chunkNode;
+
+    const breakBeforeColumn = chunkIdx >= 1 && chunkIdx < columnCount;
+    if (breakBeforeColumn) {
+      return (
+        <div
+          className="break-inside-avoid"
+          style={{ breakBefore: "column" } as CSSProperties}
+        >
+          {chunkNode}
+        </div>
+      );
+    }
+    return chunkNode;
+  };
 
   const links = (
     <div className="flex flex-col text-right text-xl leading-snug text-amber-300">
@@ -877,190 +1102,103 @@ export const ArticleSubpagePagePreview: FC<ArticleSubpagePagePreviewProps> = ({
                 data-magazine-preview-body=""
                 data-magazine-preview-columns={columnCount}
               >
-              {bodyFlowChunks.length === 0 ? (
+              {!(
+                (gridBodyCells?.length ?? 0) > 0 || bodyFlowChunks.length > 0
+              ) ? (
                 editable ? null : <p className="text-2xl text-gray-400 italic">—</p>
-              ) : (
-                bodyFlowChunks.map((chunk, chunkIdx) => {
-                  const chunkHtml = normalizedBodyChunkHtml(chunk);
-                  if (!chunkHtml.trim() && !editable) return null;
-                  const fmt = previewFormatForChunk({ ...chunk, chunk_html: chunkHtml });
-                  const isMediaBlock =
-                    fmt === "only_image" || fmt === "text_image" || fmt === "image_text";
-                  const chunkId = chunk.publication_article_chunk_id;
-                  const isSaving = savingChunkIds?.has(chunkId) ?? false;
-                  const rawFormat = chunk.publication_article_chunk_format;
-                  const canEditText = chunkSupportsTextEditing(rawFormat);
-                  const hasImg = chunkHasImage(chunk.chunk_html, rawFormat);
-
-                  const isChunkSelected =
-                    chunkSelectionMode &&
-                    !!selectedChunkIds &&
-                    selectedChunkIds.has(chunkId);
-                  const selectionOverlay =
-                    chunkSelectionMode && onToggleChunkSelection ? (
-                      <ChunkSelectionCheckbox
-                        checked={isChunkSelected}
-                        onToggle={() => onToggleChunkSelection(chunkId)}
-                      />
-                    ) : null;
-                  const selectionRingClass = isChunkSelected
-                    ? "outline outline-2 outline-red-400"
-                    : "";
-
-                  let chunkNode: React.ReactNode;
-                  if (editable && canEditText && !isMediaBlock && onChunkTextChange) {
-                    chunkNode = (
+              ) : gridBodyCells ? (
+                gridBodyCells.map((cell) => {
+                  const box = placementPercentStyle(cell.placement, columnCount);
+                  const laneCount = cell.chunks.length;
+                  const showAreaDebug = editable;
+                  return (
+                    <div
+                      key={cell.areaKey}
+                      className="pointer-events-auto absolute flex min-h-0 flex-col overflow-hidden text-2xl leading-snug"
+                      style={box}
+                      data-grid-area={cell.areaKey}
+                      data-grid-lanes={laneCount}
+                      data-slot-id={currentSlotContentId ?? ""}
+                    >
+                      {showAreaDebug ? (
+                        <div className="pointer-events-none absolute inset-x-0 top-0 z-50 border-b border-sky-200 bg-sky-50/95 px-1 py-0.5 font-mono text-[11px] leading-tight text-sky-950">
+                          <span className="font-semibold">area: {cell.areaKey}</span>
+                          <span className="mx-1 text-sky-600">·</span>
+                          <span>
+                            buscando chunks con chunk_area_array[0]=&quot;{cell.areaKey}
+                            &quot;
+                          </span>
+                          <span className="mx-1 text-sky-600">·</span>
+                          <span>{laneCount} encontrado{laneCount === 1 ? "" : "s"}</span>
+                        </div>
+                      ) : null}
                       <div
-                        className={
-                          useGridBodyLayout
-                            ? `${gridTextShellClass} ${selectionRingClass}`
-                            : `${flowTextShellClass} ${selectionRingClass}`
-                        }
-                        data-pmc-editable-text-chunk={chunkId}
+                        className={`flex min-h-0 flex-1 flex-row overflow-hidden ${
+                          showAreaDebug ? "pt-5" : ""
+                        }`}
                       >
-                        <EditableChunkRichBody
-                          chunkId={chunkId}
-                          chunkHtml={chunk.chunk_html}
-                          format={rawFormat}
-                          isLeftPage={isLeftPage}
-                          saving={isSaving}
-                          fillContainer={useGridBodyLayout}
-                          onChunkHtmlChange={onChunkTextChange}
-                          onChunkHtmlCommit={onChunkHtmlCommit}
-                          onGridTextOverflowCheck={
-                            useGridBodyLayout ? onGridTextOverflowCheck : undefined
-                          }
-                          placeholder="Body text…"
-                          ariaLabel={`Chunk ${chunkId} text`}
-                          className={
-                            useGridBodyLayout ? gridTextareaClass : flowTextareaClass
-                          }
-                        />
-                        {selectionOverlay}
-                      </div>
-                    );
-                  } else if (isMediaBlock && editable) {
-                    const imgSrc = extractFirstImgSrc(chunk.chunk_html);
-                    const imgAlt = extractFirstImgAlt(chunk.chunk_html);
-                    const caption = readChunkImageCaption(chunk);
-                    const showImageActions =
-                      !chunkSelectionMode &&
-                      chunkFormatIncludesImage(rawFormat) &&
-                      !!onChunkImageUpdate &&
-                      !!onChunkCaptionUpdate;
-                    const showTextarea =
-                      canEditText &&
-                      !!onChunkTextChange &&
-                      (fmt === "text_image" || fmt === "image_text");
-                    chunkNode = (
-                      <div
-                        className={`${flowMediaShellClass} ${selectionRingClass}`}
-                      >
-                        <EditableImageChunkFrame
-                          imgSrc={imgSrc}
-                          imgAlt={imgAlt || ""}
-                          caption={caption}
-                          showImageActions={showImageActions}
-                          onUpdateImage={() => onChunkImageUpdate!(chunkId)}
-                          onUpdateCaption={() => onChunkCaptionUpdate!(chunkId)}
-                          imageButtonLabel={imgSrc ? "Update image" : "Add image"}
-                        />
-                        {showTextarea ? (
-                          <EditableChunkRichBody
-                            chunkId={chunkId}
-                            chunkHtml={chunk.chunk_html}
-                            format={rawFormat}
-                            isLeftPage={isLeftPage}
-                            saving={isSaving}
-                            onChunkHtmlChange={onChunkTextChange}
-                            onChunkHtmlCommit={onChunkHtmlCommit}
-                            placeholder="Body text…"
-                            ariaLabel={`Chunk ${chunkId} text`}
-                            className={flowTextareaClass}
-                          />
-                        ) : null}
-                        {selectionOverlay}
-                      </div>
-                    );
-                  } else if (isMediaBlock) {
-                    const mediaCaption = readChunkImageCaption(chunk);
-                    chunkNode = (
-                      <div
-                        className={`${flowMediaShellClass} ${selectionRingClass} relative`}
-                      >
-                        <MagazineChunkEditorPreview format={fmt} chunkHtml={chunkHtml} />
-                        <ImageCaptionOverlay caption={mediaCaption} />
-                        {editable &&
-                        hasImg &&
-                        chunkFormatIncludesImage(rawFormat) &&
-                        onChunkImageUpdate &&
-                        onChunkCaptionUpdate &&
-                        !chunkSelectionMode ? (
-                          <ImageChunkActionButtons
-                            onUpdateImage={() => onChunkImageUpdate(chunkId)}
-                            onUpdateCaption={() => onChunkCaptionUpdate(chunkId)}
-                          />
-                        ) : null}
-                        {selectionOverlay}
-                      </div>
-                    );
-                  } else {
-                    chunkNode = (
-                      <div
-                        className={
-                          useGridBodyLayout
-                            ? `${gridTextShellClass} ${selectionRingClass}`
-                            : `${flowTextShellClass} ${selectionRingClass}`
-                        }
-                      >
-                        {useGridBodyLayout ? (
-                          <div className={gridTextPreviewClass}>
-                            <MagazineChunkEditorPreview format={fmt} chunkHtml={chunkHtml} />
+                        {laneCount === 0 ? (
+                          <div className="relative flex min-h-0 w-full flex-1 flex-col">
+                            <div
+                              className={`${gridTextareaClass} pointer-events-none text-gray-400`}
+                              aria-hidden
+                            >
+                              Body text…
+                            </div>
+                            {showAreaDebug ? (
+                              <span className="pointer-events-none absolute bottom-1 left-1/2 z-50 -translate-x-1/2 whitespace-nowrap rounded-md bg-amber-300 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-950 shadow-md">
+                                no chunks found
+                              </span>
+                            ) : null}
                           </div>
                         ) : (
-                          <div className={flowTextPreviewPadClass}>
-                            <MagazineChunkEditorPreview format={fmt} chunkHtml={chunkHtml} />
-                          </div>
+                          cell.chunks.map((chunk, laneIdx) => {
+                            const chunkId = chunk.publication_article_chunk_id;
+                            const laneNode = renderBodyChunk(chunk, laneIdx, true);
+                            if (!laneNode) return null;
+                            return (
+                              <div
+                                key={chunkId}
+                                className="relative flex min-h-0 min-w-0 flex-1 flex-col border-r border-dashed border-gray-200 last:border-r-0"
+                                style={
+                                  laneCount > 1
+                                    ? { width: `${100 / laneCount}%`, flex: "none" }
+                                    : undefined
+                                }
+                                data-chunk-id={chunkId}
+                              >
+                                {laneNode}
+                              </div>
+                            );
+                          })
                         )}
-                        {selectionOverlay}
                       </div>
-                    );
-                  }
-
-                  const breakBeforeColumn = chunkIdx >= 1 && chunkIdx < columnCount;
-                  const wrappedChunkNode = breakBeforeColumn ? (
-                    <div
-                      className="break-inside-avoid"
-                      style={{ breakBefore: "column" } as CSSProperties}
-                    >
-                      {chunkNode}
                     </div>
-                  ) : (
-                    chunkNode
                   );
-
-                  if (useGridBodyLayout) {
-                    const placement = textChunkPlacementForPreview(
-                      chunk as { chunk_area_array?: unknown },
-                      chunkIdx,
-                      columnCount
-                    );
-                    if (!placement) return null;
-                    const box = placementPercentStyle(placement, columnCount);
-                    return (
-                      <div
-                        key={chunkId}
-                        className="pointer-events-auto absolute flex min-h-0 flex-col overflow-hidden text-2xl leading-snug"
-                        style={box}
-                      >
-                        {chunkNode}
-                      </div>
-                    );
-                  }
-
-                  return <React.Fragment key={chunkId}>{wrappedChunkNode}</React.Fragment>;
+                })
+              ) : (
+                bodyFlowChunks.map((chunk, chunkIdx) => {
+                  const chunkId = chunk.publication_article_chunk_id;
+                  const node = renderBodyChunk(chunk, chunkIdx, false);
+                  if (!node) return null;
+                  return <React.Fragment key={chunkId}>{node}</React.Fragment>;
                 })
               )}
+              {editable && orphanBodyChunksForDebug.length > 0 ? (
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 z-50 max-h-[28%] overflow-y-auto border-t-2 border-violet-300 bg-violet-50/95 px-2 py-1 font-mono text-[10px] leading-snug text-violet-950">
+                  <p className="font-bold">
+                    Chunks sin chunk_area_array en slot {currentSlotContentId ?? "?"} (
+                    {orphanBodyChunksForDebug.length})
+                  </p>
+                  <ul className="mt-0.5 list-inside list-disc">
+                    {orphanBodyChunksForDebug.map((c) => (
+                      <li key={c.publication_article_chunk_id}>
+                        pos {c.chunk_position} · {c.publication_article_chunk_id.slice(0, 8)}…
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null}
               
               </div>
 

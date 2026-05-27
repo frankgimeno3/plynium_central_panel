@@ -24,6 +24,8 @@ export type ActiveChunkRichEditor = {
 type ArticleBuilderRichTextToolbarContextValue = {
   registerActiveChunkEditor: (editor: ActiveChunkRichEditor) => void;
   clearActiveChunkEditor: (chunkId: string) => void;
+  /** Chunk currently tied to the floating toolbar (may differ from focus while formatting). */
+  activeChunkId: string | null;
 };
 
 const ArticleBuilderRichTextToolbarContext =
@@ -35,6 +37,7 @@ export function useArticleBuilderRichTextToolbar(): ArticleBuilderRichTextToolba
     return {
       registerActiveChunkEditor: () => {},
       clearActiveChunkEditor: () => {},
+      activeChunkId: null,
     };
   }
   return ctx;
@@ -152,6 +155,7 @@ export const ArticleBuilderFloatingRichTextToolbarProvider: FC<{
   const value: ArticleBuilderRichTextToolbarContextValue = {
     registerActiveChunkEditor,
     clearActiveChunkEditor,
+    activeChunkId: active?.chunkId ?? null,
   };
 
   return (

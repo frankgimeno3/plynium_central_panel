@@ -246,6 +246,9 @@ export const PROPOSALS_BASE = "/logged/pages/account-management/proposals";
 /** Hard cap enforced on the editable Red Box body input. */
 export const RED_BOX_BODY_MAX_WORDS = 25;
 
+/** Ordered article miniatures in the cover left margin (preview + data table). */
+export const COVER_MARGIN_ARTICLE_COUNT = 5;
+
 export const COVER_MARGIN_PLACEHOLDER_LOREM =
   "Lorem ipsum dolor sit amet, consectetur adipiscing elit.";
 
@@ -2058,8 +2061,10 @@ export function ArticleMenu({
     .split(/\r?\n/)
     .map((line) => line.trim())
     .filter(Boolean);
+  const visibleMiniatures = miniatures.slice(0, COVER_MARGIN_ARTICLE_COUNT);
+
   return (
-    <div className="h-full w-full flex flex-col bg-white border-r-2 border-black/30 relative">
+    <div className="@container h-full w-full flex flex-col bg-white border-r-2 border-black/30 relative overflow-hidden">
       <div className="absolute left-1 -right-8 -top-7 z-30 pointer-events-none">
         <div className="-rotate-6 border-[3px] border-white bg-[#c5162e] text-white shadow-2xl px-3 py-3 text-center pointer-events-auto mx-auto">
           <p className="text-[14px] font-black tracking-tight leading-tight">
@@ -2075,42 +2080,43 @@ export function ArticleMenu({
           ))}
         </div>
       </div>
-      <div className="h-32 shrink-0" />
-      <div className="flex-1 min-h-0 overflow-y-auto px-3 pt-4 pb-2 flex flex-col justify-start">
-        {miniatures.map((row, idx) => {
+      <div className="flex-[0_0_22%] min-h-12 max-h-28 shrink-0" />
+      <div
+        className="flex-1 min-h-0 overflow-hidden px-3 pt-1 pb-1 grid"
+        style={{
+          gridTemplateRows: `repeat(${visibleMiniatures.length}, minmax(0, 1fr))`,
+        }}
+      >
+        {visibleMiniatures.map((row, idx) => {
           const text = row.currentContent?.trim()
             ? row.currentContent
             : COVER_MARGIN_PLACEHOLDER_LOREM;
-          const isLast = idx === miniatures.length - 1;
+          const isLast = idx === visibleMiniatures.length - 1;
           return (
             <div
               key={row.position}
-              className={`py-4 text-right ${isLast ? "" : "border-b border-black/10"}`}
+              className={`h-full min-h-0 overflow-hidden flex flex-col justify-center text-right ${
+                isLast ? "" : "border-b border-black/10"
+              }`}
+              style={{ containerType: "size" }}
             >
-              <p
-                className="font-bold uppercase tracking-tight text-gray-500"
-                style={{ fontSize: "clamp(11px, 1.2vw, 14px)" }}
-              >
+              <p className="font-bold uppercase tracking-tight text-gray-500 text-[clamp(7px,24cqh,11px)] leading-none">
                 Article {row.position}
               </p>
-              <p
-                className="mt-1 font-sans font-normal uppercase text-black leading-tight line-clamp-3"
-                style={{ fontSize: "clamp(7px, 0.85vw, 10px)" }}
-              >
+              <p className="mt-0.5 font-sans font-normal uppercase text-black leading-[1.15] line-clamp-2 text-[clamp(6px,20cqh,9px)]">
                 {text}
               </p>
             </div>
           );
         })}
       </div>
-      <div className="pl-6 pr-3 pb-7 pt-2 bg-white text-right">
+      <div className="shrink-0 pl-6 pr-3 pb-3 pt-1 bg-white text-right">
         <p
-          className="font-sans font-semibold leading-none text-black tabular-nums"
-          style={{ fontSize: "clamp(18px, 2.6vw, 34px)", letterSpacing: "-0.03em" }}
+          className="font-sans font-semibold leading-none text-black tabular-nums text-[clamp(14px,10cqw,28px)] tracking-tight"
         >
           {issueCode}
         </p>
-        <p className="mt-1 text-[9px] uppercase tracking-wide text-gray-500 leading-tight">
+        <p className="mt-0.5 text-[clamp(7px,2.2cqw,9px)] uppercase tracking-wide text-gray-500 leading-tight">
           {issueLabel}
         </p>
       </div>

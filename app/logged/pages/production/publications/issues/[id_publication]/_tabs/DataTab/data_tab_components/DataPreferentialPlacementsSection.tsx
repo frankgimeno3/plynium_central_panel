@@ -12,6 +12,15 @@ export type DataPreferentialPlacementsSectionProps = {
   >;
 };
 
+function PreferentialPlacementEmptyCard() {
+  return (
+    <div
+      className="min-w-0 min-h-[7.5rem] rounded-lg border border-dashed border-gray-200 bg-white p-3 sm:p-4"
+      aria-hidden
+    />
+  );
+}
+
 export function DataPreferentialPlacementsSection({
   preferentialSlots,
   setMoveContentTypeModal,
@@ -60,15 +69,19 @@ export function DataPreferentialPlacementsSection({
             provisioned for this publication.
           </p>
         ) : (
-          preferentialSlots.map((slot) => (
-            <div
-              key={slot.position_in_magazine}
-              className="min-w-0 rounded-lg border border-gray-200 bg-gray-50/90 p-3 sm:p-4 shadow-sm"
-            >
-              <h3 className="text-sm font-semibold text-gray-900">{slot.section_title}</h3>
-              <PreferentialSlotBlock slot={slot} />
-            </div>
-          ))
+          <>
+            <PreferentialPlacementEmptyCard key="preferential-placement-leading" />
+            {preferentialSlots.map((slot) => (
+              <div
+                key={slot.position_in_magazine}
+                className="min-w-0 rounded-lg border border-gray-200 bg-gray-50/90 p-3 sm:p-4 shadow-sm"
+              >
+                <h3 className="text-sm font-semibold text-gray-900">{slot.section_title}</h3>
+                <PreferentialSlotBlock slot={slot} />
+              </div>
+            ))}
+            <PreferentialPlacementEmptyCard key="preferential-placement-trailing" />
+          </>
         )}
       </div>
     </div>

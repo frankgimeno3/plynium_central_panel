@@ -5,6 +5,7 @@ import { isPublicationArticleStateValue } from "../../../../../../publication_co
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { ArticleBuilderTab } from "../../articleBuilderNavigation";
+import { dedupeGridTextChunksBySlotAndArea } from "../chunkUtils";
 import { buildArticleFlowPagesFromPublicationSlots } from "../../magazineArticleColumnFlow";
 import {
   DEFAULT_MAGAZINE_PAGE_LAYOUT,
@@ -129,7 +130,11 @@ export function useArticleBuilderPage(idPublication: string, publicationArticleI
       };
       const pa = json?.publication_article ?? null;
       setPublicationArticle(pa);
-      setChunks(Array.isArray(json?.chunks) ? json.chunks : []);
+      setChunks(
+        dedupeGridTextChunksBySlotAndArea(
+          Array.isArray(json?.chunks) ? json.chunks : []
+        )
+      );
       setMagazinePageLayout(
         json?.magazine_page_layout != null
           ? normalizeMagazinePageLayout(json.magazine_page_layout)
@@ -443,6 +448,7 @@ export function useArticleBuilderPage(idPublication: string, publicationArticleI
     loading,
     error,
     publicationArticle,
+    setPublicationArticle,
     articleMeta,
     chunks,
     setChunks,
