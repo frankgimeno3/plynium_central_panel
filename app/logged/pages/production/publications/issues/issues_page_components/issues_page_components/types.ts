@@ -17,8 +17,6 @@ export type PublicationDbRow = {
   publication_main_image_url: string;
 };
 
-export type TabId = "development" | "forecasted" | "expired";
-
-export type ExpiredStatus = "published" | "cancelled";
+export type TabId = "development" | "forecasted" | "published" | "cancelled";
 
 export type IssuesFilterState = { id: string; edition: string; magazine: string };

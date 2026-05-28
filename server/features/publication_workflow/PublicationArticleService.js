@@ -35,8 +35,8 @@ import {
     gridCellOverflowOrder,
 } from "./chunkAreaCodes.js";
 import {
+    clearTextChunksForImageAreas,
     collapseTextChunksAfterImageRemoval,
-    displaceTextChunksForImageAreas,
 } from "./chunkAreaDisplacement.js";
 
 /**
@@ -271,6 +271,32 @@ function toApiPublicationArticle(row) {
             p.publication_art_name != null && String(p.publication_art_name).trim() !== ""
                 ? String(p.publication_art_name).trim()
                 : null,
+        has_article_box:
+            p.has_article_box === true ? true : p.has_article_box === false ? false : null,
+        box_company_name:
+            p.box_company_name != null && String(p.box_company_name).trim() !== ""
+                ? String(p.box_company_name).trim()
+                : null,
+        box_company_direction:
+            p.box_company_direction != null && String(p.box_company_direction).trim() !== ""
+                ? String(p.box_company_direction).trim()
+                : null,
+        box_company_city:
+            p.box_company_city != null && String(p.box_company_city).trim() !== ""
+                ? String(p.box_company_city).trim()
+                : null,
+        box_company_email:
+            p.box_company_email != null && String(p.box_company_email).trim() !== ""
+                ? String(p.box_company_email).trim()
+                : null,
+        box_company_phone:
+            p.box_company_phone != null && String(p.box_company_phone).trim() !== ""
+                ? String(p.box_company_phone).trim()
+                : null,
+        box_company_web:
+            p.box_company_web != null && String(p.box_company_web).trim() !== ""
+                ? String(p.box_company_web).trim()
+                : null,
         publication_article_created_at: p.publication_article_created_at ?? null,
         publication_article_updated_at: p.publication_article_updated_at ?? null,
     };
@@ -290,8 +316,8 @@ function coercePlainTextChunkHtmlForApi(html, format) {
         .split(/\r?\n/)
         .map((line) => {
             const t = line.replace(/\u00a0/g, " ");
-            if (!t.trim()) return "<p>&nbsp;</p>";
-            return `<p>${esc(t)}</p>`;
+            if (!t.trim()) return '<p style="text-align: justify">&nbsp;</p>';
+            return `<p style="text-align: justify">${esc(t)}</p>`;
         })
         .join("");
 }
@@ -1408,6 +1434,23 @@ export async function updatePublicationArticle(publicationArticleId, payload) {
         updates.publication_art_name =
             raw == null || String(raw).trim() === "" ? null : String(raw).trim().slice(0, 255);
     }
+    if (payload?.has_article_box !== undefined) {
+        const v = payload.has_article_box;
+        updates.has_article_box = v == null ? null : Boolean(v);
+    }
+    const boxFields = [
+        "box_company_name",
+        "box_company_direction",
+        "box_company_city",
+        "box_company_email",
+        "box_company_phone",
+        "box_company_web",
+    ];
+    for (const key of boxFields) {
+        if (payload?.[key] === undefined) continue;
+        const raw = payload[key];
+        updates[key] = raw == null || String(raw).trim() === "" ? null : String(raw).trim();
+    }
     if (!Object.keys(updates).length) {
         const row = await PublicationArticleDbModel.findByPk(id);
         return row ? toApiPublicationArticle(row) : null;
@@ -1944,11 +1987,10 @@ export async function createChunk(publicationArticleId, payload) {
         slotIdForCreate != null &&
         Number.isFinite(Number(slotIdForCreate))
     ) {
-        await displaceTextChunksForImageAreas({
+        await clearTextChunksForImageAreas({
             publicationArticleId: ap.publication_article_id,
             slotId: Number(slotIdForCreate),
             imageAreas: areaArray,
-            excludeChunkId: chunk.get("publication_article_chunk_id"),
         });
     }
 
@@ -2164,11 +2206,10 @@ export async function updateChunk(chunkId, payload) {
         Number.isFinite(slotAfter) &&
         (payload?.chunk_area_array !== undefined || payload?.chunk_html !== undefined)
     ) {
-        await displaceTextChunksForImageAreas({
+        await clearTextChunksForImageAreas({
             publicationArticleId: String(reloaded.publication_article_id),
             slotId: slotAfter,
             imageAreas: areasAfter,
-            excludeChunkId: id,
         });
         await row.reload();
     }

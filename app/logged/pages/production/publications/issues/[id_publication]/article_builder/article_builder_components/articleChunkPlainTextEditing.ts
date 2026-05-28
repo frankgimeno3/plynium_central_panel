@@ -138,8 +138,8 @@ export function plainTextToChunkHtml(text: string): string {
   return lines
     .map((line) => {
       const trimmed = line.replace(/\u00a0/g, " ");
-      if (!trimmed.trim()) return "<p>&nbsp;</p>";
-      return `<p>${escapeHtml(trimmed)}</p>`;
+      if (!trimmed.trim()) return '<p style="text-align: justify">&nbsp;</p>';
+      return `<p style="text-align: justify">${escapeHtml(trimmed)}</p>`;
     })
     .join("");
 }

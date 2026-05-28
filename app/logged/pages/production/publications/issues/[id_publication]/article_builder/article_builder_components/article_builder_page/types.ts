@@ -16,6 +16,13 @@ export type PublicationArticleRow = {
   desired_page_count: number;
   publication_article_state?: PublicationArticleStateValue | string;
   publication_art_name?: string | null;
+  has_article_box?: boolean | null;
+  box_company_name?: string | null;
+  box_company_direction?: string | null;
+  box_company_city?: string | null;
+  box_company_email?: string | null;
+  box_company_phone?: string | null;
+  box_company_web?: string | null;
 };
 
 export type PublicationArticleChunk = {

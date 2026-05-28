@@ -1302,6 +1302,13 @@ PublicationArticleDbModel.init({
         type: DataTypes.STRING(255),
         allowNull: true,
     },
+    has_article_box: { type: DataTypes.BOOLEAN, allowNull: true },
+    box_company_name: { type: DataTypes.TEXT, allowNull: true },
+    box_company_direction: { type: DataTypes.TEXT, allowNull: true },
+    box_company_city: { type: DataTypes.TEXT, allowNull: true },
+    box_company_email: { type: DataTypes.TEXT, allowNull: true },
+    box_company_phone: { type: DataTypes.TEXT, allowNull: true },
+    box_company_web: { type: DataTypes.TEXT, allowNull: true },
 }, {
     sequelize,
     modelName: "publication_article",

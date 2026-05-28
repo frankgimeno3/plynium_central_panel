@@ -563,6 +563,34 @@ export const PublicationIssueDetailPage: FC<{ publicationId: string }> = ({ publ
     setPublishMagazineModalOpen(true);
   }, []);
 
+  const unpublishPublication = React.useCallback(async () => {
+    if (!publication) return;
+    const ok = window.confirm(
+      "Unpublish this publication? It will return to draft state."
+    );
+    if (!ok) return;
+    try {
+      const res = await fetch(
+        `/api/v1/publications-db/${encodeURIComponent(publicationId)}`,
+        {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ publication_status: "draft" }),
+        }
+      );
+      if (!res.ok) {
+        const txt = await res.text().catch(() => "");
+        throw new Error(txt || "Failed to unpublish publication");
+      }
+      const updated = (await res.json()) as PublicationDbRow;
+      setPublication(updated);
+      setDraftPub((prev) => (prev ? { ...prev, publication_status: "draft" } : prev));
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : "Failed to unpublish publication");
+    }
+  }, [publication, publicationId]);
+
   const handleFlatplanTabClick = React.useCallback(() => {
     if (activeTab !== "flatplan") {
       navigateToTab("flatplan");
@@ -575,6 +603,10 @@ export const PublicationIssueDetailPage: FC<{ publicationId: string }> = ({ publ
     const title = publication?.publication_edition_name
       ? publication.publication_edition_name
       : `Issue ${publicationId}`;
+    const status = String(publication?.publication_status ?? "")
+      .trim()
+      .toLowerCase();
+    const isPublished = status === "published";
     setPageMeta({
       pageTitle: title,
       breadcrumbs: [
@@ -585,28 +617,44 @@ export const PublicationIssueDetailPage: FC<{ publicationId: string }> = ({ publ
       ],
       buttons: [
         { label: "Back to Issues", href: BASE },
-        {
-          label: "Preview magazine",
-          href: `${BASE}/${encodeURIComponent(publicationId)}/preview/0`,
-        },
-        {
-          label: "Delete Publication",
-          onClick: openDeletePublicationModal,
-          variant: "danger",
-        },
-        {
-          label: "Publish Magazine",
-          onClick: openPublishMagazineModal,
-          variant: "primary",
-        },
+        ...(isPublished
+          ? [
+              {
+                label: "Read Publication",
+                href: `${BASE}/${encodeURIComponent(publicationId)}/preview/0`,
+              },
+              {
+                label: "Unpublish",
+                onClick: unpublishPublication,
+                variant: "danger" as const,
+              },
+            ]
+          : [
+              {
+                label: "Preview magazine",
+                href: `${BASE}/${encodeURIComponent(publicationId)}/preview/0`,
+              },
+              {
+                label: "Delete Publication",
+                onClick: openDeletePublicationModal,
+                variant: "danger" as const,
+              },
+              {
+                label: "Publish Magazine",
+                onClick: openPublishMagazineModal,
+                variant: "primary" as const,
+              },
+            ]),
       ],
     });
   }, [
     setPageMeta,
     publication?.publication_edition_name,
+    publication?.publication_status,
     publicationId,
     openDeletePublicationModal,
     openPublishMagazineModal,
+    unpublishPublication,
   ]);
 
   const slotByKey = useMemo(() => {

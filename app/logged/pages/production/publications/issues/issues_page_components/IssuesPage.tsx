@@ -5,10 +5,11 @@ import { usePageContent } from "@/app/logged/logged_components/context_content/P
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { PortalService } from "@/app/service/PortalService";
 import { PUBLICATIONS_ISSUES_BASE } from "./issues_page_components/constants";
-import type { ExpiredStatus, PortalRow, PublicationDbRow, TabId } from "./issues_page_components/types";
+import type { PortalRow, PublicationDbRow, TabId } from "./issues_page_components/types";
 import { DevelopmentIssuesTab } from "./_tabs/DevelopmentIssuesTab/DevelopmentIssuesTab";
 import { ForecastedIssuesTab } from "./_tabs/ForecastedIssuesTab/ForecastedIssuesTab";
-import { ExpiredIssuesTab } from "./_tabs/ExpiredIssuesTab/ExpiredIssuesTab";
+import { PublishedIssuesTab } from "./_tabs/PublishedIssuesTab/PublishedIssuesTab";
+import { CancelledIssuesTab } from "./_tabs/CancelledIssuesTab/CancelledIssuesTab";
 import { IssuesLifecycleTabBar } from "./issues_page_components/IssuesLifecycleTabBar";
 import { IssuesPortalTabBar } from "./issues_page_components/IssuesPortalTabBar";
 
@@ -24,7 +25,6 @@ const IssuesPage: FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [filter, setFilter] = useState({ id: "", edition: "", magazine: "" });
-  const [expiredStatus, setExpiredStatus] = useState<ExpiredStatus>("published");
 
   const portalTabs = useMemo(
     () => [...portals].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0)),
@@ -118,13 +118,13 @@ const IssuesPage: FC = () => {
     () => all.filter((p) => String(p.publication_status ?? "").trim().toLowerCase() === "cancelled"),
     [all]
   );
-  const expiredTotalCount = expiredPublished.length + expiredCancelled.length;
 
   const listForTab = useMemo(() => {
     if (activeTab === "development") return inDevelopment;
     if (activeTab === "forecasted") return forecasted;
-    return expiredStatus === "published" ? expiredPublished : expiredCancelled;
-  }, [activeTab, inDevelopment, forecasted, expiredPublished, expiredCancelled, expiredStatus]);
+    if (activeTab === "published") return expiredPublished;
+    return expiredCancelled;
+  }, [activeTab, inDevelopment, forecasted, expiredPublished, expiredCancelled]);
 
   const filtered = useMemo(() => {
     let list = [...listForTab];
@@ -150,7 +150,8 @@ const IssuesPage: FC = () => {
           onTabChange={setActiveTab}
           inDevelopmentCount={inDevelopment.length}
           forecastedCount={forecasted.length}
-          expiredTotalCount={expiredTotalCount}
+          publishedCount={expiredPublished.length}
+          cancelledCount={expiredCancelled.length}
           onRefresh={load}
         />
 
@@ -175,13 +176,21 @@ const IssuesPage: FC = () => {
               filteredRows={filtered}
             />
           ) : null}
-          {activeTab === "expired" ? (
-            <ExpiredIssuesTab
+          {activeTab === "published" ? (
+            <PublishedIssuesTab
               error={error}
               loading={loading}
               onRetry={load}
-              expiredStatus={expiredStatus}
-              setExpiredStatus={setExpiredStatus}
+              filter={filter}
+              setFilter={setFilter}
+              filteredRows={filtered}
+            />
+          ) : null}
+          {activeTab === "cancelled" ? (
+            <CancelledIssuesTab
+              error={error}
+              loading={loading}
+              onRetry={load}
               filter={filter}
               setFilter={setFilter}
               filteredRows={filtered}

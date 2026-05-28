@@ -7,7 +7,8 @@ type IssuesLifecycleTabBarProps = {
   onTabChange: (tab: TabId) => void;
   inDevelopmentCount: number;
   forecastedCount: number;
-  expiredTotalCount: number;
+  publishedCount: number;
+  cancelledCount: number;
   onRefresh: () => void;
 };
 
@@ -16,7 +17,8 @@ export function IssuesLifecycleTabBar({
   onTabChange,
   inDevelopmentCount,
   forecastedCount,
-  expiredTotalCount,
+  publishedCount,
+  cancelledCount,
   onRefresh,
 }: IssuesLifecycleTabBarProps) {
   return (
@@ -47,15 +49,27 @@ export function IssuesLifecycleTabBar({
       </button>
       <button
         type="button"
-        onClick={() => onTabChange("expired")}
+        onClick={() => onTabChange("published")}
         className={`px-6 py-3 text-sm font-medium transition-colors ${
-          activeTab === "expired"
+          activeTab === "published"
             ? "text-blue-950 border-b-2 border-blue-950 bg-white"
             : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
         }`}
       >
-        Expired
-        <span className="ml-2 text-xs text-gray-500">({expiredTotalCount})</span>
+        Published
+        <span className="ml-2 text-xs text-gray-500">({publishedCount})</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => onTabChange("cancelled")}
+        className={`px-6 py-3 text-sm font-medium transition-colors ${
+          activeTab === "cancelled"
+            ? "text-blue-950 border-b-2 border-blue-950 bg-white"
+            : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+        }`}
+      >
+        Cancelled
+        <span className="ml-2 text-xs text-gray-500">({cancelledCount})</span>
       </button>
       <div className="flex-1" />
       <button

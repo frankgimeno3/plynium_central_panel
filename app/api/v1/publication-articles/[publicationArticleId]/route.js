@@ -30,6 +30,13 @@ const patchSchema = Joi.object({
         .optional(),
     magazine_page_layout: Joi.string().valid("2_col_article", "3_col_article").optional(),
     publication_art_name: Joi.string().max(255).allow("", null).optional(),
+    has_article_box: Joi.boolean().allow(null).optional(),
+    box_company_name: Joi.string().allow("", null).optional(),
+    box_company_direction: Joi.string().allow("", null).optional(),
+    box_company_city: Joi.string().allow("", null).optional(),
+    box_company_email: Joi.string().trim().email({ tlds: { allow: false } }).allow("", null).optional(),
+    box_company_phone: Joi.string().allow("", null).optional(),
+    box_company_web: Joi.string().allow("", null).optional(),
 });
 
 /** Returns publication_article + ordered chunks list. */

@@ -2,8 +2,11 @@
 
 import React, { FC, useEffect, useState } from "react";
 import {
+  areaCodesToPlacement,
+  cellToAreaCode,
   cellsToAreaCodes,
   formatAreaCodesLabel,
+  normalizeAreaCodes,
 } from "./article_image_manager/articleAreaCodes";
 import type { ImageAreaPlacement, ImageAreaSelection } from "./article_image_manager/articleImagePlacement";
 
@@ -212,6 +215,11 @@ type ArticleBuilderImageAreaPickerModalProps = {
   columnCount: number;
   saving?: boolean;
   error?: string | null;
+  /**
+   * Optional drafts updater, used to support merging areas inside the modal
+   * before picking images.
+   */
+  onUpdateDrafts?: (nextDrafts: AreaImageDraft[]) => void;
   /** Open the Mediateca for the given area id. */
   onOpenMediateca: (areaId: string) => void;
   /** Remove the currently selected image of an area (so it shows the picker again). */
@@ -233,6 +241,7 @@ export const ArticleBuilderImageAreaPickerModal: FC<
   columnCount,
   saving = false,
   error = null,
+  onUpdateDrafts,
   onOpenMediateca,
   onClearAreaImage,
   onClose,
@@ -250,6 +259,138 @@ export const ArticleBuilderImageAreaPickerModal: FC<
   if (!open) return null;
 
   const filledCount = drafts.filter((d) => !!d.imageUrl).length;
+
+  const mergeSuggestions = (() => {
+    const out: Array<{ aId: string; bId: string; mergedCodes: string[] }> = [];
+    for (let i = 0; i < drafts.length; i++) {
+      for (let j = i + 1; j < drafts.length; j++) {
+        const a = drafts[i]!;
+        const b = drafts[j]!;
+        const aPlacement = areaCodesToPlacement(a.areaCodes, columnCount);
+        const bPlacement = areaCodesToPlacement(b.areaCodes, columnCount);
+        if (!aPlacement || !bPlacement) continue;
+
+        const mergedPlacement: ImageAreaPlacement = {
+          colStart: Math.min(aPlacement.colStart, bPlacement.colStart),
+          colEnd: Math.max(aPlacement.colEnd, bPlacement.colEnd),
+          rowStart: Math.min(aPlacement.rowStart, bPlacement.rowStart),
+          rowEnd: Math.max(aPlacement.rowEnd, bPlacement.rowEnd),
+        };
+
+        // Only suggest merges that match the explicit user patterns:
+        // - vertical stacking (same columns, consecutive rows)
+        // - horizontal adjacency (same rows, consecutive columns)
+        const sameCols =
+          aPlacement.colStart === bPlacement.colStart && aPlacement.colEnd === bPlacement.colEnd;
+        const sameRows =
+          aPlacement.rowStart === bPlacement.rowStart && aPlacement.rowEnd === bPlacement.rowEnd;
+        const verticallyConsecutive =
+          sameCols &&
+          (aPlacement.rowEnd + 1 === bPlacement.rowStart ||
+            bPlacement.rowEnd + 1 === aPlacement.rowStart);
+        const horizontallyConsecutive =
+          sameRows &&
+          (aPlacement.colEnd + 1 === bPlacement.colStart ||
+            bPlacement.colEnd + 1 === aPlacement.colStart);
+        if (!verticallyConsecutive && !horizontallyConsecutive) continue;
+
+        // Build full rectangle codes for merged placement (ensures backend-valid footprint).
+        const mergedCodes = normalizeAreaCodes(
+          Array.from({ length: (mergedPlacement.colEnd - mergedPlacement.colStart + 1) *
+            (mergedPlacement.rowEnd - mergedPlacement.rowStart + 1) })
+            .map((_, k) => {
+              const w = mergedPlacement.colEnd - mergedPlacement.colStart + 1;
+              const dc = k % w;
+              const dr = Math.floor(k / w);
+              return cellToAreaCode(mergedPlacement.colStart + dc, mergedPlacement.rowStart + dr);
+            })
+            .filter((x): x is string => x != null)
+        );
+
+        // Ensure it's a valid rectangle in the current columnCount.
+        if (!areaCodesToPlacement(mergedCodes, columnCount)) continue;
+
+        // Avoid suggesting "merge" when one draft already fully contains the other.
+        const aCoversMerged =
+          aPlacement.colStart === mergedPlacement.colStart &&
+          aPlacement.colEnd === mergedPlacement.colEnd &&
+          aPlacement.rowStart === mergedPlacement.rowStart &&
+          aPlacement.rowEnd === mergedPlacement.rowEnd;
+        const bCoversMerged =
+          bPlacement.colStart === mergedPlacement.colStart &&
+          bPlacement.colEnd === mergedPlacement.colEnd &&
+          bPlacement.rowStart === mergedPlacement.rowStart &&
+          bPlacement.rowEnd === mergedPlacement.rowEnd;
+        if (aCoversMerged || bCoversMerged) continue;
+        out.push({ aId: a.id, bId: b.id, mergedCodes });
+      }
+    }
+    // Stable ordering for UI
+    return out.sort((x, y) => (x.aId + x.bId).localeCompare(y.aId + y.bId));
+  })();
+
+  const handleMergeDraftPair = (aId: string, bId: string) => {
+    if (!onUpdateDrafts) return;
+    const a = drafts.find((d) => d.id === aId);
+    const b = drafts.find((d) => d.id === bId);
+    if (!a || !b) return;
+    const aPlacement = areaCodesToPlacement(a.areaCodes, columnCount);
+    const bPlacement = areaCodesToPlacement(b.areaCodes, columnCount);
+    if (!aPlacement || !bPlacement) return;
+
+    const mergedPlacement: ImageAreaPlacement = {
+      colStart: Math.min(aPlacement.colStart, bPlacement.colStart),
+      colEnd: Math.max(aPlacement.colEnd, bPlacement.colEnd),
+      rowStart: Math.min(aPlacement.rowStart, bPlacement.rowStart),
+      rowEnd: Math.max(aPlacement.rowEnd, bPlacement.rowEnd),
+    };
+    const mergedCodes = normalizeAreaCodes(
+      Array.from({ length: (mergedPlacement.colEnd - mergedPlacement.colStart + 1) *
+        (mergedPlacement.rowEnd - mergedPlacement.rowStart + 1) })
+        .map((_, k) => {
+          const w = mergedPlacement.colEnd - mergedPlacement.colStart + 1;
+          const dc = k % w;
+          const dr = Math.floor(k / w);
+          return cellToAreaCode(mergedPlacement.colStart + dc, mergedPlacement.rowStart + dr);
+        })
+        .filter((x): x is string => x != null)
+    );
+    if (!areaCodesToPlacement(mergedCodes, columnCount)) return;
+
+    const mergedId =
+      typeof crypto !== "undefined" && "randomUUID" in crypto
+        ? (() => {
+            try {
+              return crypto.randomUUID();
+            } catch {
+              return `merged_${Date.now()}`;
+            }
+          })()
+        : `merged_${Date.now()}`;
+
+    const keepImage =
+      a.imageUrl && b.imageUrl
+        ? a.imageUrl === b.imageUrl
+          ? { url: a.imageUrl, alt: a.imageAlt ?? b.imageAlt, name: a.mediaName ?? b.mediaName }
+          : null
+        : a.imageUrl
+          ? { url: a.imageUrl, alt: a.imageAlt, name: a.mediaName }
+          : b.imageUrl
+            ? { url: b.imageUrl, alt: b.imageAlt, name: b.mediaName }
+            : null;
+
+    const merged: AreaImageDraft = {
+      id: mergedId,
+      areaCodes: mergedCodes,
+      placement: mergedPlacement,
+      imageUrl: keepImage?.url ?? null,
+      imageAlt: keepImage?.alt ?? null,
+      mediaName: keepImage?.name ?? null,
+    };
+
+    const next = drafts.filter((d) => d.id !== aId && d.id !== bId);
+    onUpdateDrafts([...next, merged]);
+  };
 
   return (
     <div
@@ -293,6 +434,58 @@ export const ArticleBuilderImageAreaPickerModal: FC<
         </div>
 
         <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
+          {onUpdateDrafts && mergeSuggestions.length > 0 ? (
+            <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-amber-900">
+                    Suggested merge
+                  </p>
+                  <p className="mt-1 text-xs text-amber-800">
+                    Some selected areas can be merged into a single bigger block (e.g. columns a–b across consecutive rows).
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 flex flex-col gap-2">
+                {mergeSuggestions.slice(0, 5).map((s) => (
+                  <div
+                    key={`${s.aId}|${s.bId}`}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-amber-200 bg-white px-3 py-2"
+                  >
+                    <span className="text-xs text-amber-900">
+                      Merge{" "}
+                      <span className="font-semibold">
+                        {formatAreaCodesLabel(
+                          drafts.find((d) => d.id === s.aId)?.areaCodes ?? [],
+                          columnCount
+                        )}
+                      </span>{" "}
+                      +{" "}
+                      <span className="font-semibold">
+                        {formatAreaCodesLabel(
+                          drafts.find((d) => d.id === s.bId)?.areaCodes ?? [],
+                          columnCount
+                        )}
+                      </span>{" "}
+                      →{" "}
+                      <span className="font-semibold">
+                        {formatAreaCodesLabel(s.mergedCodes, columnCount)}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleMergeDraftPair(s.aId, s.bId)}
+                      disabled={saving}
+                      className="rounded-md border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-200 disabled:opacity-50"
+                    >
+                      Merge blocks
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             {drafts.map((d, idx) => {
               const hasImage = !!d.imageUrl;
@@ -309,7 +502,7 @@ export const ArticleBuilderImageAreaPickerModal: FC<
                       {formatAreaCodesLabel(d.areaCodes, columnCount)}
                     </span>
                   </div>
-                  <div className="flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-md border border-gray-200 bg-white">
+                  <div className="relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden rounded-md border border-gray-200 bg-white">
                     {hasImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -318,29 +511,46 @@ export const ArticleBuilderImageAreaPickerModal: FC<
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <span className="px-2 text-center text-xs text-gray-400">
-                        No image selected
-                      </span>
+                      <div className="flex flex-col items-center justify-center gap-2 px-2 text-center">
+                        <button
+                          type="button"
+                          onClick={() => onOpenMediateca(d.id)}
+                          disabled={saving}
+                          className="rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Select image
+                        </button>
+                        <span className="text-xs text-gray-400">No image selected</span>
+                      </div>
                     )}
+                    {hasImage ? (
+                      <div className="pointer-events-none absolute inset-x-0 top-0 flex justify-end p-2">
+                        <button
+                          type="button"
+                          onClick={() => onOpenMediateca(d.id)}
+                          disabled={saving}
+                          className="pointer-events-auto rounded-md border border-blue-300 bg-white/95 px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm backdrop-blur transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Change image
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                   <div className="flex items-center justify-between gap-2">
-                    <button
-                      type="button"
-                      onClick={() => onOpenMediateca(d.id)}
-                      disabled={saving}
-                      className="rounded-md border border-blue-300 bg-white px-3 py-1.5 text-xs font-semibold text-blue-700 shadow-sm transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      {hasImage ? "Change image" : "Select image"}
-                    </button>
                     {hasImage ? (
-                      <button
-                        type="button"
-                        onClick={() => onClearAreaImage(d.id)}
-                        disabled={saving}
-                        className="text-xs font-medium text-gray-500 underline-offset-2 hover:underline disabled:opacity-50"
-                      >
-                        Clear
-                      </button>
+                      <div className="flex w-full items-center justify-between gap-2">
+                        <span className="text-xs text-gray-500">
+                          {d.mediaName?.trim() ? d.mediaName : "Image selected"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => onClearAreaImage(d.id)}
+                          disabled={saving}
+                          className="text-xs font-medium text-gray-500 underline-offset-2 hover:underline disabled:opacity-50"
+                        >
+                          Clear
+                        </button>
+                      </div>
                     ) : null}
                   </div>
                 </div>

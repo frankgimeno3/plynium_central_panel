@@ -2,11 +2,14 @@ import PublicationArticleChunkDbModel from "./PublicationArticleChunkDbModel.js"
 import {
     areaArraysOverlap,
     areaCodeToCell,
+    areaCodesToPlacement,
     cellToAreaCode,
     columnAreaCodes,
     normalizeChunkAreaArray,
     nextFreeAreaInColumn,
 } from "./chunkAreaCodes.js";
+
+const EMPTY_TEXT_CHUNK_HTML = "<p></p>";
 
 const TEXT_FORMATS = new Set(["only_text", "text_image", "image_text"]);
 
@@ -48,6 +51,94 @@ function inferTextChunkArea(chunk, textChunksInOrder, columnCount) {
     const row = idx >= 0 ? Math.floor(idx / columnCount) : 0;
     const code = cellToAreaCode(col, row);
     return code ? [code] : [];
+}
+
+/**
+ * All grid cells covered by an image footprint (rectangle + explicit codes).
+ * @param {string[]} imageAreas
+ * @param {number} columnCount
+ */
+function claimedCellsFromImageAreas(imageAreas, columnCount) {
+    const claimed = new Set(normalizeChunkAreaArray(imageAreas));
+    const placement = areaCodesToPlacement(imageAreas, columnCount);
+    if (placement) {
+        for (let c = placement.colStart; c <= placement.colEnd; c++) {
+            for (let r = placement.rowStart; r <= placement.rowEnd; r++) {
+                const code = cellToAreaCode(c, r);
+                if (code) claimed.add(code);
+            }
+        }
+    }
+    return claimed;
+}
+
+/**
+ * Clears body text in every cell covered by a new/updated overlay image.
+ *
+ * @param {object} params
+ * @param {string} params.publicationArticleId
+ * @param {number} params.slotId
+ * @param {string[]} params.imageAreas
+ * @param {import("sequelize").Transaction|null} [params.transaction]
+ * @returns {Promise<string[]>} cleared chunk ids
+ */
+export async function clearTextChunksForImageAreas({
+    publicationArticleId,
+    slotId,
+    imageAreas,
+    transaction = null,
+}) {
+    const normalized = normalizeChunkAreaArray(imageAreas);
+    if (!normalized.length) return [];
+
+    const rows = await PublicationArticleChunkDbModel.findAll({
+        where: {
+            publication_article_id: String(publicationArticleId),
+            publication_slot_id: Number(slotId),
+        },
+        order: [
+            ["chunk_position", "ASC"],
+            ["publication_article_chunk_id", "ASC"],
+        ],
+        transaction: transaction ?? undefined,
+    });
+
+    const plain = rows.map((r) => r.get({ plain: true }));
+    const columnCount =
+        plain.filter((c) => isTextFormat(c.publication_article_chunk_format)).length >= 3
+            ? 3
+            : 2;
+    const claimed = claimedCellsFromImageAreas(normalized, columnCount);
+
+    const textChunks = plain
+        .filter((c) => isTextFormat(c.publication_article_chunk_format))
+        .sort((a, b) => a.chunk_position - b.chunk_position || 0);
+
+    const cleared = [];
+
+    for (const chunk of textChunks) {
+        let areas = normalizeChunkAreaArray(chunk.chunk_area_array);
+        if (!areas.length) {
+            areas = inferTextChunkArea(chunk, textChunks, columnCount);
+        }
+        if (!areaArraysOverlap(areas, [...claimed])) continue;
+
+        const currentHtml = String(chunk.chunk_html ?? "").trim();
+        if (!currentHtml || currentHtml === EMPTY_TEXT_CHUNK_HTML) continue;
+
+        await PublicationArticleChunkDbModel.update(
+            { chunk_html: EMPTY_TEXT_CHUNK_HTML },
+            {
+                where: {
+                    publication_article_chunk_id: chunk.publication_article_chunk_id,
+                },
+                transaction: transaction ?? undefined,
+            }
+        );
+        cleared.push(chunk.publication_article_chunk_id);
+    }
+
+    return cleared;
 }
 
 /**

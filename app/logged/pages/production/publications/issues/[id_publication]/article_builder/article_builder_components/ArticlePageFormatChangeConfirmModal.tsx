@@ -20,6 +20,21 @@ function layoutLabel(layout: MagazinePageLayout): string {
   return MAGAZINE_PAGE_LAYOUT_OPTIONS.find((o) => o.id === layout)?.label ?? layout;
 }
 
+/** User-facing note when toggling between 2- and 3-column article body grids. */
+export function columnBLayoutChangeNotice(
+  currentLayout: MagazinePageLayout,
+  nextLayout: MagazinePageLayout
+): string | null {
+  if (currentLayout === nextLayout) return null;
+  if (currentLayout === "3_col_article" && nextLayout === "2_col_article") {
+    return "La columna B se ocultará en todas las páginas de este artículo.";
+  }
+  if (currentLayout === "2_col_article" && nextLayout === "3_col_article") {
+    return "La columna B aparecerá en todas las páginas de este artículo.";
+  }
+  return null;
+}
+
 export const ArticlePageFormatChangeConfirmModal: FC<
   ArticlePageFormatChangeConfirmModalProps
 > = ({
@@ -41,6 +56,8 @@ export const ArticlePageFormatChangeConfirmModal: FC<
   }, [open, onClose, saving]);
 
   if (!open) return null;
+
+  const columnBNotice = columnBLayoutChangeNotice(currentLayout, nextLayout);
 
   return (
     <div
@@ -82,6 +99,14 @@ export const ArticlePageFormatChangeConfirmModal: FC<
           <strong>{layoutLabel(nextLayout)}</strong> for every page of this article. The editor will
           reload so the new column layout is applied.
         </p>
+        {columnBNotice ? (
+          <p
+            className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-950"
+            role="status"
+          >
+            {columnBNotice}
+          </p>
+        ) : null}
         {error ? (
           <p className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
             {error}

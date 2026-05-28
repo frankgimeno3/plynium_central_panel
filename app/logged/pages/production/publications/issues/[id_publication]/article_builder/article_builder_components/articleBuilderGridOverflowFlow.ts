@@ -12,6 +12,10 @@ import type {
   PublicationArticleRow,
 } from "./article_builder_page/types";
 import { chunkPublicationSlotId } from "@/app/logged/pages/production/publications/publication_components/publicationSlotIds";
+import {
+  GRID_BODY_ROW_COUNT,
+  GRID_BOTTOM_ROW_OVERFLOW_HEIGHT_FUDGE_PX,
+} from "@/app/logged/pages/production/publications/magazines/subpage/subpage_page_components/article_subpage_preview/gridBodyLayout";
 
 export type SyncArticlePagesResult = {
   slotIds: number[];
@@ -214,7 +218,13 @@ export async function runArticleGridOverflowFlow(options: {
     await flushPendingChunkHtml();
   }
 
-  const maxHeightPx = editorEl.clientHeight;
+  const rowEndAttr = editorEl
+    .closest("[data-pmc-grid-row-end]")
+    ?.getAttribute("data-pmc-grid-row-end");
+  const isBottomRow =
+    rowEndAttr != null && Number(rowEndAttr) >= GRID_BODY_ROW_COUNT - 1;
+  const heightFudge = isBottomRow ? GRID_BOTTOM_ROW_OVERFLOW_HEIGHT_FUDGE_PX : 0;
+  const maxHeightPx = Math.max(12, editorEl.clientHeight - heightFudge);
   const widthPx = editorEl.clientWidth;
   if (maxHeightPx < 12 || widthPx < 8) return;
 

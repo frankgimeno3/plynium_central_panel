@@ -22,6 +22,15 @@ type ArticleBuilderPagePreviewThumbnailProps = {
   currentSlotContentId: number | null;
   articleTitleHtml?: string | null;
   articleSubtitleHtml?: string | null;
+  articleBox?: {
+    company_name: string;
+    company_direction?: string | null;
+    company_city?: string | null;
+    company_email?: string | null;
+    company_phone?: string | null;
+    company_web?: string | null;
+  } | null;
+  onRemoveArticleBox?: () => void;
   /**
    * When `true`, the underlying preview becomes interactive: body text chunks
    * render as autosizing textareas and image chunks expose an "Update image"
@@ -56,6 +65,8 @@ export const ArticleBuilderPagePreviewThumbnail: FC<ArticleBuilderPagePreviewThu
   currentSlotContentId,
   articleTitleHtml,
   articleSubtitleHtml,
+  articleBox = null,
+  onRemoveArticleBox,
   editable = false,
   onChunkTextChange,
   onChunkHtmlCommit,
@@ -79,7 +90,7 @@ export const ArticleBuilderPagePreviewThumbnail: FC<ArticleBuilderPagePreviewThu
   >
     <div
       className={`absolute left-0 top-0 origin-top-left scale-[0.38] w-[263%] ${
-        editable ? "pointer-events-auto" : "pointer-events-none"
+        editable ? "pointer-events-auto " : "pointer-events-none "
       }`}
     >
       <ArticleSubpagePagePreview
@@ -94,6 +105,8 @@ export const ArticleBuilderPagePreviewThumbnail: FC<ArticleBuilderPagePreviewThu
         currentSlotContentId={currentSlotContentId}
         articleTitleHtml={articleTitleHtml}
         articleSubtitleHtml={articleSubtitleHtml}
+        articleBox={articleBox}
+        onRemoveArticleBox={onRemoveArticleBox}
         editable={editable}
         onChunkTextChange={onChunkTextChange}
         onChunkHtmlCommit={onChunkHtmlCommit}

@@ -1,29 +1,23 @@
 "use client";
 
 import React, { FC } from "react";
-import { ExpiredIssuesFilters } from "./expired_issues_tab_components/ExpiredIssuesFilters";
-import { ExpiredIssuesTable } from "./expired_issues_tab_components/ExpiredIssuesTable";
+import { DevelopmentIssuesFilters } from "../DevelopmentIssuesTab/development_issues_tab_components/DevelopmentIssuesFilters";
+import { IssuesDataTable } from "../../issues_page_components/IssuesDataTable";
 import type { IssuesFilterState, PublicationDbRow } from "../../issues_page_components/types";
 
-type ExpiredStatus = "published" | "cancelled";
-
-export type ExpiredIssuesTabProps = {
+export type PublishedIssuesTabProps = {
   error: string | null;
   loading: boolean;
   onRetry: () => void;
-  expiredStatus: ExpiredStatus;
-  setExpiredStatus: React.Dispatch<React.SetStateAction<ExpiredStatus>>;
   filter: IssuesFilterState;
   setFilter: React.Dispatch<React.SetStateAction<IssuesFilterState>>;
   filteredRows: PublicationDbRow[];
 };
 
-export const ExpiredIssuesTab: FC<ExpiredIssuesTabProps> = ({
+export const PublishedIssuesTab: FC<PublishedIssuesTabProps> = ({
   error,
   loading,
   onRetry,
-  expiredStatus,
-  setExpiredStatus,
   filter,
   setFilter,
   filteredRows,
@@ -42,17 +36,12 @@ export const ExpiredIssuesTab: FC<ExpiredIssuesTabProps> = ({
       </div>
     )}
 
-    <ExpiredIssuesFilters
-      expiredStatus={expiredStatus}
-      setExpiredStatus={setExpiredStatus}
-      filter={filter}
-      setFilter={setFilter}
-    />
+    <DevelopmentIssuesFilters filter={filter} setFilter={setFilter} />
 
     {loading ? (
       <div className="py-6 text-center text-gray-500">Loading issues…</div>
     ) : (
-      <ExpiredIssuesTable rows={filteredRows} />
+      <IssuesDataTable rows={filteredRows} />
     )}
   </div>
 );

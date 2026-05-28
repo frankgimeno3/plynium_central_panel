@@ -1,7 +1,9 @@
 "use client";
 
 import React, { FC } from "react";
-import type { ExpiredStatus, IssuesFilterState } from "../../../issues_page_components/types";
+import type { IssuesFilterState } from "../../../issues_page_components/types";
+
+type ExpiredStatus = "published" | "cancelled";
 
 export type ExpiredIssuesFiltersProps = {
   expiredStatus: ExpiredStatus;

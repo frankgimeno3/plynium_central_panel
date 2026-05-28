@@ -15,12 +15,37 @@ export function DataPublicationMetadataForm({
   draftPub,
   setDraftPub,
 }: DataPublicationMetadataFormProps) {
+  const statusRaw = String(
+    (draftPub?.publication_status ?? publication.publication_status ?? "") as unknown
+  )
+    .trim()
+    .toLowerCase();
+  const statusLabel = statusRaw || "—";
+  const statusTone =
+    statusRaw === "published"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+      : statusRaw === "draft"
+        ? "border-amber-200 bg-amber-50 text-amber-900"
+        : statusRaw === "planned"
+          ? "border-sky-200 bg-sky-50 text-sky-900"
+          : statusRaw === "cancelled"
+            ? "border-rose-200 bg-rose-50 text-rose-800"
+            : "border-gray-200 bg-gray-50 text-gray-700";
+
   return (
     <>
       <div className="flex flex-row flex-wrap items-start justify-between gap-x-6 gap-y-2">
         <div className="min-w-0 flex-1">
           <p className="text-xs text-gray-500 uppercase">Publication ID</p>
           <p className="font-medium text-gray-900 break-all">{publication.publication_id}</p>
+          <div className="mt-1">
+            <p className="text-xs text-gray-500 uppercase">State</p>
+            <span
+              className={`mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${statusTone}`}
+            >
+              {statusLabel}
+            </span>
+          </div>
         </div>
         <div className="shrink-0 flex flex-col items-start gap-1">
           <p className="text-xs text-gray-500 uppercase">Special edition</p>

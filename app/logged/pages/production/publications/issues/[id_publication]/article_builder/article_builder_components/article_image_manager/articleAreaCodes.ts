@@ -81,6 +81,21 @@ export function areaCodesOverlap(a: string[], b: string[]): boolean {
   return normalizeAreaCodes(a).some((code) => setB.has(code));
 }
 
+/** Every grid cell covered by an image footprint (merged rectangle + explicit codes). */
+export function expandImageAreaCodes(codes: string[], columnCount: number): string[] {
+  const claimed = new Set(normalizeAreaCodes(codes));
+  const placement = areaCodesToPlacement(codes, columnCount);
+  if (placement) {
+    for (let c = placement.colStart; c <= placement.colEnd; c++) {
+      for (let r = placement.rowStart; r <= placement.rowEnd; r++) {
+        const code = cellToAreaCode(c, r);
+        if (code) claimed.add(code);
+      }
+    }
+  }
+  return [...claimed];
+}
+
 export function formatAreaCodesLabel(codes: string[], columnCount: number): string {
   const placement = areaCodesToPlacement(codes, columnCount);
   if (!placement) return normalizeAreaCodes(codes).join(", ");

@@ -20,7 +20,7 @@ const COL_LETTERS = ["a", "b", "c"] as const;
 
 /** Matches {@link ArticleSubpagePagePreview} grid text editor typography. */
 export const GRID_TEXT_OVERFLOW_MEASURE_CLASS =
-  "block w-full border-0 bg-white px-4 py-2 text-2xl leading-snug text-gray-500 [overflow-wrap:anywhere]";
+  "block w-full border-0 bg-white px-8 py-2 text-3xl leading-snug text-gray-500 text-justify [overflow-wrap:anywhere] [&_p]:text-justify";
 
 export type GridPageTextChunk = {
   chunkId: string;

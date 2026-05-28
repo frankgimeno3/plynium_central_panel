@@ -3,6 +3,7 @@
 import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import {
     BASE,
     type PublicationDbRow,
@@ -39,6 +40,7 @@ export const MagazinePreviewClient: FC<MagazinePreviewClientProps> = ({
     pageToken,
 }) => {
     const router = useRouter();
+    const { setPageMeta } = usePageContent();
     const [publication, setPublication] = useState<PublicationDbRow | null>(null);
     const [slots, setSlots] = useState<SlotRow[]>([]);
     const [loading, setLoading] = useState(true);
@@ -159,6 +161,20 @@ export const MagazinePreviewClient: FC<MagazinePreviewClientProps> = ({
     const title =
         publication?.publication_edition_name?.trim() ||
         `Publication ${publicationId}`;
+
+    useEffect(() => {
+        setPageMeta({
+            pageTitle: title,
+            breadcrumbs: [
+                { label: "Production", href: "/logged/pages/production/services" },
+                { label: "Publications", href: BASE },
+                { label: "Issues", href: BASE },
+                { label: title, href: issueHref(publicationId) },
+                { label: "Preview" },
+            ],
+            buttons: [{ label: "Back to issue", href: issueHref(publicationId) }],
+        });
+    }, [publicationId, setPageMeta, title]);
 
     if (loading) {
         return (

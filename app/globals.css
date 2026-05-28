@@ -103,6 +103,12 @@ body {
   content: attr(data-placeholder);
   color: var(--text-muted);
 }
+[data-pmc-chunk-rich-editor] {
+  text-align: justify;
+}
+[data-pmc-chunk-rich-editor] p {
+  text-align: justify;
+}
 .rich-text-editor-body ul,
 .rich-text-editor-body ol {
   margin-left: 1.25rem;
