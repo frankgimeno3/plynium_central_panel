@@ -1,6 +1,5 @@
-# Amplify Console env vars are build-time only. Next.js SSR Lambdas read server secrets
-# from .env.production created here before `next build`.
-# Monorepo: set App root = plynium_central_panel in Amplify Console.
+# Amplify Console env vars exist at build time only. Next.js SSR Lambdas need them in
+# .env.production (written here) which must ship inside the deployment artifact.
 # Docs: https://docs.aws.amazon.com/amplify/latest/userguide/ssr-environment-variables.html
 version: 1
 frontend:
@@ -16,22 +15,22 @@ frontend:
             exit 1
           fi
         - rm -f .env.production
-        - |
-          cat >> .env.production <<EOF
-          DATABASE_HOST=$DATABASE_HOST
-          DATABASE_NAME=$DATABASE_NAME
-          DATABASE_USER=$DATABASE_USER
-          DATABASE_PASSWORD=$DATABASE_PASSWORD
-          DATABASE_PORT=$DATABASE_PORT
-          IAM_ACCESS_KEY_ID=$IAM_ACCESS_KEY_ID
-          IAM_SECRET_ACCESS_KEY=$IAM_SECRET_ACCESS_KEY
-          IAM_REGION=$IAM_REGION
-          S3_BUCKET=$S3_BUCKET
-          CLOUDFRONT_URL=$CLOUDFRONT_URL
-          EOF
+        - echo "DATABASE_HOST=$DATABASE_HOST" >> .env.production
+        - echo "DATABASE_NAME=$DATABASE_NAME" >> .env.production
+        - echo "DATABASE_USER=$DATABASE_USER" >> .env.production
+        - echo "DATABASE_PASSWORD=$DATABASE_PASSWORD" >> .env.production
+        - echo "DATABASE_PORT=$DATABASE_PORT" >> .env.production
+        - echo "IAM_ACCESS_KEY_ID=$IAM_ACCESS_KEY_ID" >> .env.production
+        - echo "IAM_SECRET_ACCESS_KEY=$IAM_SECRET_ACCESS_KEY" >> .env.production
+        - echo "IAM_REGION=$IAM_REGION" >> .env.production
+        - echo "S3_BUCKET=$S3_BUCKET" >> .env.production
+        - echo "CLOUDFRONT_URL=$CLOUDFRONT_URL" >> .env.production
         - env | grep -E '^NEXT_PUBLIC_' >> .env.production || true
         - echo "Wrote .env.production ($(wc -l < .env.production) lines, DATABASE_HOST=$DATABASE_HOST)"
         - npm run build -- --webpack
+        # Next.js Lambda runtime loads .env.production from app root — copy into .next artifact
+        - cp .env.production .next/.env.production
+        - cp .env.production .next/standalone/.env.production 2>/dev/null || true
   artifacts:
     baseDirectory: .next
     files:

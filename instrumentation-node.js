@@ -1,19 +1,21 @@
-import Database from "./server/database/database.js";
+import Database, { isNextBuildPhase, logDatabaseEnvDiagnostics } from "./server/database/database.js";
 
-import './server/database/models.js';
+import "./server/database/models.js";
 
-const database = Database.getInstance();
-
-// Try to connect to database, but don't crash the app if it fails
-// This allows the app to start in development even if the database is unavailable
-try {
-    console.debug('Connecting to database');
-    await database.connect();
-    console.debug('Connected');
-    // Tables are created only via SQL migrations (server/database/migrations/), not by Sequelize sync.
-} catch (error) {
-    console.error("[Database] Startup initialization failed:", error.message);
-    console.error(
-        "[Database] The site will still load, but API routes need DATABASE_* env vars and RDS network access."
-    );
+// Skip DB work during `next build` static/page-data collection — only run on SSR Lambda runtime.
+if (isNextBuildPhase()) {
+    console.warn("[Database] instrumentation-node: build phase — skipping database connect.");
+} else {
+    const database = Database.getInstance();
+    try {
+        logDatabaseEnvDiagnostics("instrumentation-startup");
+        console.debug("[Database] Connecting at Node startup…");
+        await database.connect();
+        console.debug("[Database] Connected at startup.");
+    } catch (error) {
+        console.error("[Database] Startup initialization failed:", error.message);
+        console.error(
+            "[Database] API routes will fail until DATABASE_* env vars are available at Lambda runtime."
+        );
+    }
 }
