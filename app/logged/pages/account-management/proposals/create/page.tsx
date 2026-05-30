@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC, useState, useMemo, useEffect, useCallback, useRef } from "react";
+import React, { FC, Suspense, useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
@@ -64,7 +64,7 @@ function proposalTitleSegmentFromAccountName(name: string): string {
   return name.trim().replace(/\s+/g, "_");
 }
 
-const CreateProposalPage: FC = () => {
+const CreateProposalPageContent: FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const customerFromUrl = searchParams.get("customer")?.trim() ?? "";
@@ -533,4 +533,10 @@ const CreateProposalPage: FC = () => {
   );
 };
 
-export default CreateProposalPage;
+export default function CreateProposalPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-gray-600">Loading…</div>}>
+      <CreateProposalPageContent />
+    </Suspense>
+  );
+}

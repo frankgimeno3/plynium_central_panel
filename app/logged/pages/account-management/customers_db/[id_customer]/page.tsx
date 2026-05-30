@@ -18,7 +18,7 @@ import { hrefCreateCompanyFromCustomer } from "@/app/logged/pages/network/direct
 type ContactItem = { name: string; role: string; email: string; phone: string };
 type CommentItem = { id?: string; text: string; date?: string; author?: string };
 
-export const ACCOUNT_TYPE_LABELS: Record<string, string> = {
+const ACCOUNT_TYPE_LABELS: Record<string, string> = {
   manufacturer_distributor: "Manufacturer and/or distributor company account",
   distributor_only: "Non-manufacturer distributor company account",
   agency: "Agency account",

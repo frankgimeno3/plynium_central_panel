@@ -12,13 +12,8 @@ try {
     console.debug('Connected');
     // Tables are created only via SQL migrations (server/database/migrations/), not by Sequelize sync.
 } catch (error) {
-    console.warn('Warning: Could not connect to database during startup');
-    console.warn('The application will continue, but database operations may fail');
-    console.warn('Error details:', error.message);
-    
-    // Only exit in production to ensure database is available
-    if (process.env.NODE_ENV === 'production') {
-        console.error('Database connection is required in production. Exiting...');
-        process.exit(1);
-    }
+    console.error("[Database] Startup initialization failed:", error.message);
+    console.error(
+        "[Database] The site will still load, but API routes need DATABASE_* env vars and RDS network access."
+    );
 }

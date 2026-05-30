@@ -59,8 +59,6 @@ export type SlotRow = {
   customer_id: string | null;
   project_id: string | null;
   slot_media_url: string | null;
-  /** Low-res Article Builder page capture (mediateca PNG). */
-  slot_flatplan_image_url?: string | null;
   slot_article_id: string | null;
   slot_created_at: string | null;
   slot_updated_at: string | null;

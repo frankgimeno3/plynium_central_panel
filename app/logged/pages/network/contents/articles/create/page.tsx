@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import React, { Suspense, useState, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
@@ -29,6 +29,14 @@ const getTodayDate = () => {
 };
 
 export default function CreateArticlePage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-gray-600">Loading…</div>}>
+      <CreateArticlePageContent />
+    </Suspense>
+  );
+}
+
+function CreateArticlePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [currentPhase, setCurrentPhase] = useState<1 | 2 | 3>(1);

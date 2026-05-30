@@ -47,12 +47,6 @@ interface Article {
   highlightByPortal?: { portalName: string; highlightPosition: string }[];
 }
 
-interface PageProps {
-  params: {
-    search_params: string;
-  };
-}
-
 const ArticleSearchResultsContent: FC = () => {
   const params = useParams();
   const searchParams = params?.search_params as string;
@@ -208,7 +202,7 @@ const ArticleSearchFallback: FC = () => {
   );
 }
 
-const ArticleSearchResults: FC<PageProps> = ({ }) => {
+const ArticleSearchResults: FC = () => {
   return (
     <Suspense fallback={<ArticleSearchFallback />}>
       <ArticleSearchResultsContent />

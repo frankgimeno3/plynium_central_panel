@@ -18,7 +18,10 @@ export const COGNITO = {
 
 
 export const AWS = {
-  REGION: process.env.AWS_REGION
+  REGION:
+    process.env.IAM_REGION ||
+    process.env.AWS_REGION ||
+    process.env.NEXT_PUBLIC_COGNITO_REGION
 };
 
 

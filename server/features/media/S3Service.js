@@ -3,16 +3,33 @@ import { PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { S3Client } from "@aws-sdk/client-s3";
 
-const region = process.env.AWS_REGION || "eu-south-2";
+const region =
+    process.env.IAM_REGION ||
+    process.env.AWS_REGION ||
+    process.env.NEXT_PUBLIC_COGNITO_REGION ||
+    "eu-south-2";
 const bucket = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET || "";
 const cloudFrontUrl = process.env.NEXT_PUBLIC_CLOUDFRONT_URL || "";
 
 let s3Client = null;
 
+function getAwsCredentials() {
+    const accessKeyId =
+        process.env.IAM_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey =
+        process.env.IAM_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+    if (accessKeyId && secretAccessKey) {
+        return { accessKeyId, secretAccessKey };
+    }
+    return undefined;
+}
+
 function getS3Client() {
     if (!s3Client) {
+        const credentials = getAwsCredentials();
         s3Client = new S3Client({
             region,
+            ...(credentials ? { credentials } : {}),
             // Disable default checksums so presigned URLs work with browser PUT (no checksum headers)
             requestChecksumCalculation: "WHEN_REQUIRED",
             responseChecksumValidation: "WHEN_REQUIRED",

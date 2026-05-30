@@ -5,11 +5,16 @@ import {
 } from "@aws-sdk/client-cognito-identity-provider";
 
 export async function getUserRoles(username) {
+    const accessKeyId =
+        process.env.IAM_ACCESS_KEY_ID || process.env.AWS_ACCESS_KEY_ID;
+    const secretAccessKey =
+        process.env.IAM_SECRET_ACCESS_KEY || process.env.AWS_SECRET_ACCESS_KEY;
+
     const client = new CognitoIdentityProviderClient({
         region: COGNITO.REGION,
         credentials: {
-            accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-            secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+            accessKeyId,
+            secretAccessKey,
         }
     });
 

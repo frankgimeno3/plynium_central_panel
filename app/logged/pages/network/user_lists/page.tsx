@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
+import React, { FC, Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
@@ -28,7 +28,7 @@ type UserList = {
 
 const LISTS_DETAIL_BASE = "/logged/pages/network/users/lists";
 
-const UserListsPage: FC = () => {
+const UserListsPageContent: FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [portals, setPortals] = useState<PortalRow[]>([]);
@@ -356,4 +356,10 @@ const UserListsPage: FC = () => {
   );
 };
 
-export default UserListsPage;
+export default function UserListsPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-gray-600">Loading lists…</div>}>
+      <UserListsPageContent />
+    </Suspense>
+  );
+}

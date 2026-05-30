@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC, useState, useMemo, useEffect, useRef } from "react";
+import React, { FC, Suspense, useState, useMemo, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
@@ -110,7 +110,7 @@ const initialForm: FormState = {
   id_user: "",
 };
 
-const CreateContactPage: FC = () => {
+const CreateContactPageContent: FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const customerFromUrl = searchParams.get("customer")?.trim() ?? "";
@@ -630,4 +630,10 @@ const CreateContactPage: FC = () => {
   );
 };
 
-export default CreateContactPage;
+export default function CreateContactPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-gray-600">Loading…</div>}>
+      <CreateContactPageContent />
+    </Suspense>
+  );
+}

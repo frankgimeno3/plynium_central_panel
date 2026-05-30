@@ -1,0 +1,42 @@
+# Amplify Console env vars are build-time only. Next.js SSR Lambdas read server secrets
+# from .env.production created here before `next build`.
+# Monorepo: set App root = plynium_central_panel in Amplify Console.
+# Docs: https://docs.aws.amazon.com/amplify/latest/userguide/ssr-environment-variables.html
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - npm ci
+    build:
+      commands:
+        - |
+          if [ -z "$DATABASE_HOST" ]; then
+            echo "ERROR: DATABASE_HOST is not set in Amplify Environment variables."
+            exit 1
+          fi
+        - rm -f .env.production
+        - |
+          cat >> .env.production <<EOF
+          DATABASE_HOST=$DATABASE_HOST
+          DATABASE_NAME=$DATABASE_NAME
+          DATABASE_USER=$DATABASE_USER
+          DATABASE_PASSWORD=$DATABASE_PASSWORD
+          DATABASE_PORT=$DATABASE_PORT
+          IAM_ACCESS_KEY_ID=$IAM_ACCESS_KEY_ID
+          IAM_SECRET_ACCESS_KEY=$IAM_SECRET_ACCESS_KEY
+          IAM_REGION=$IAM_REGION
+          S3_BUCKET=$S3_BUCKET
+          CLOUDFRONT_URL=$CLOUDFRONT_URL
+          EOF
+        - env | grep -E '^NEXT_PUBLIC_' >> .env.production || true
+        - echo "Wrote .env.production ($(wc -l < .env.production) lines, DATABASE_HOST=$DATABASE_HOST)"
+        - npm run build -- --webpack
+  artifacts:
+    baseDirectory: .next
+    files:
+      - "**/*"
+  cache:
+    paths:
+      - node_modules/**/*
+      - .next/cache/**/*

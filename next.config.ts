@@ -1,8 +1,8 @@
 import type {NextConfig} from "next";
 
 const nextConfig: NextConfig = {
-    output: 'standalone',
-    serverExternalPackages: ['sequelize'],
+  // Standalone breaks Amplify WEB_COMPUTE. Not required on Vercel either.
+  serverExternalPackages: ['sequelize'],
     outputFileTracingIncludes: {
         '*': ['./certs/**/*']
     },

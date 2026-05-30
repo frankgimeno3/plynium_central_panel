@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
@@ -31,6 +31,14 @@ function portalLabel(p: PortalRow) {
 }
 
 export default function CreateUserListPage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-gray-600">Loading…</div>}>
+      <CreateUserListPageContent />
+    </Suspense>
+  );
+}
+
+function CreateUserListPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { setPageMeta } = usePageContent();

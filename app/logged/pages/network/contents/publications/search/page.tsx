@@ -162,15 +162,6 @@ const PublicationSearchResultsContent: FC = () => {
   );
 };
 
-interface PageProps {
-  searchParams: Promise<{
-    revista?: string;
-    numero?: string;
-    dateFrom?: string;
-    dateTo?: string;
-  }>;
-}
-
 const PublicationSearchFallback: FC = () => {
   const { setPageMeta } = usePageContent();
   const breadcrumbs = [
@@ -183,7 +174,7 @@ const PublicationSearchFallback: FC = () => {
   return <PageContentSection><p className="text-gray-500">Loading...</p></PageContentSection>;
 };
 
-const PublicationSearchResults: FC<PageProps> = ({ }) => {
+const PublicationSearchResults: FC = () => {
   return (
     <Suspense fallback={<PublicationSearchFallback />}>
       <PublicationSearchResultsContent />
