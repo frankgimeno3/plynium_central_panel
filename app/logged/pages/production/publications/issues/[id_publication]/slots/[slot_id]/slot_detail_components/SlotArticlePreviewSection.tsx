@@ -28,6 +28,7 @@ type SlotArticlePreviewSectionProps = {
   slotId: number;
   /** `publication_slots_db.publication_page` for the current slot (magazine spread). */
   currentMagazinePage: number | null;
+  slotKey?: string | null;
   /**
    * Optional URL from the parent page load. Ignored for rendering — we always
    * refetch chunks and show a live preview so slot detail stays in sync with
@@ -66,6 +67,7 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
   publicationArticleId,
   slotId,
   currentMagazinePage,
+  slotKey = "regular_page",
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -159,12 +161,12 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
     };
   }, [publicationArticleId, slotId]);
 
-  const articlePageIndex = useMemo(() => {
+  const totalArticlePages = slotIdsOrdered.length;
+
+  const currentSlotArticlePageIndex = useMemo(() => {
     const idx = slotIdsOrdered.findIndex((id) => id === slotId);
     return idx >= 0 ? idx + 1 : 0;
   }, [slotIdsOrdered, slotId]);
-
-  const totalArticlePages = slotIdsOrdered.length;
 
   const magazinePagesInOrder = useMemo(
     () => slotIdsOrdered.map((sid) => magazinePageBySlotId[sid] ?? null),
@@ -176,34 +178,46 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
     [magazinePagesInOrder]
   );
 
-  const pageChunks = useMemo(
-    () => chunks.filter((c) => chunkPublicationSlotId(c) === slotId),
-    [chunks, slotId]
+  /** Slot detail preview always shows page 1 of the article (first spread in flatplan order). */
+  const firstArticleSlotId = slotIdsOrdered[0] ?? null;
+
+  const previewPageChunks = useMemo(
+    () =>
+      firstArticleSlotId != null
+        ? chunks.filter((c) => chunkPublicationSlotId(c) === firstArticleSlotId)
+        : [],
+    [chunks, firstArticleSlotId]
   );
 
   const articleFlowPages = useMemo(
     () =>
-      buildArticleFlowPagesFromPublicationSlots(
-        slotIdsOrdered.map((publication_slot_id) => ({ publication_slot_id })),
-        chunks
-      ),
-    [slotIdsOrdered, chunks]
+      firstArticleSlotId != null
+        ? buildArticleFlowPagesFromPublicationSlots(
+            [{ publication_slot_id: firstArticleSlotId }],
+            chunks
+          )
+        : [],
+    [firstArticleSlotId, chunks]
   );
 
-  const publicationPageForSlot = useMemo(() => {
-    if (currentMagazinePage != null && Number.isFinite(Number(currentMagazinePage))) {
+  const previewPublicationPage = useMemo(() => {
+    if (
+      currentMagazinePage != null &&
+      Number.isFinite(Number(currentMagazinePage))
+    ) {
       return Math.round(Number(currentMagazinePage));
     }
-    const mp = magazinePageBySlotId[slotId];
+    if (firstArticleSlotId == null) return null;
+    const mp = magazinePageBySlotId[firstArticleSlotId];
     return mp != null && Number.isFinite(mp) ? mp : null;
-  }, [currentMagazinePage, magazinePageBySlotId, slotId]);
+  }, [currentMagazinePage, firstArticleSlotId, magazinePageBySlotId]);
 
-  const isLeftPage = useMemo(() => {
-    if (publicationPageForSlot != null) {
-      return publicationPageForSlot % 2 === 0;
+  const previewIsLeftPage = useMemo(() => {
+    if (previewPublicationPage != null) {
+      return previewPublicationPage % 2 === 0;
     }
-    return articlePageIndex > 0 && articlePageIndex % 2 === 0;
-  }, [publicationPageForSlot, articlePageIndex]);
+    return false;
+  }, [previewPublicationPage]);
 
   const articleHeadingHtml = useMemo(() => {
     const firstSlotId = slotIdsOrdered[0];
@@ -252,15 +266,16 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
   return (
     <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 flex flex-col items-center gap-4">
       <div className="w-full max-w-md aspect-[228/297] overflow-hidden rounded-sm border border-gray-200 bg-white shadow-inner">
-        {pageChunks.length > 0 ? (
+        {previewPageChunks.length > 0 ? (
           <ArticleBuilderPagePreviewThumbnail
-            chunks={pageChunks}
-            pageIndex={articlePageIndex > 0 ? articlePageIndex : 1}
-            isLeftPage={isLeftPage}
-            publicationPage={publicationPageForSlot}
+            chunks={previewPageChunks}
+            pageIndex={1}
+            isLeftPage={previewIsLeftPage}
+            publicationPage={previewPublicationPage}
+            slotKey={slotKey}
             pageFormat={magazinePageLayout}
             articleFlowPages={articleFlowPages}
-            currentSlotContentId={slotId}
+            currentSlotContentId={firstArticleSlotId}
             articleTitleHtml={articleHeadingHtml.title}
             articleSubtitleHtml={articleHeadingHtml.subtitle}
             editable={false}
@@ -268,7 +283,8 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-3 bg-gray-100 p-4 text-center">
             <p className="text-xs text-gray-600">
-              No content chunks on this page yet. Open the Article Builder to add text and images.
+              No content on the first page of this article yet. Open the Article Builder to add
+              text and images.
             </p>
             <Link
               href={editorHref}
@@ -281,13 +297,11 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
       </div>
 
       <div className="w-full max-w-md space-y-2 text-center text-sm text-gray-700">
-        {totalArticlePages > 0 && articlePageIndex > 0 ? (
+        {totalArticlePages > 0 ? (
           <>
             <p className="font-semibold text-gray-900">
-              This spread is article page{" "}
-              <span className="font-mono tabular-nums">
-                {articlePageIndex}/{totalArticlePages}
-              </span>
+              Article page{" "}
+              <span className="font-mono tabular-nums">1/{totalArticlePages}</span>
             </p>
             {flatplanArticleArtNameLine(publicationArtName) ? (
               <p className="inline-block rounded-sm bg-gradient-to-r from-zinc-950 to-indigo-950 px-2 py-1 text-xs font-medium text-white">
@@ -295,7 +309,7 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
               </p>
             ) : null}
             <p className="inline-block rounded-sm bg-gradient-to-r from-zinc-950 to-indigo-950 px-2 py-1 text-xs font-medium text-white">
-              {flatplanArticlePageFractionLine(articlePageIndex, totalArticlePages)}
+              {flatplanArticlePageFractionLine(1, totalArticlePages)}
             </p>
             {!publicationArtName ? (
               <p className="text-[11px] text-gray-500">
@@ -303,27 +317,42 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
                 Article Builder to label this tile on the flatplan.
               </p>
             ) : null}
+            {currentSlotArticlePageIndex === 0 ? (
+              <p className="text-[11px] text-amber-800">
+                This slot is linked to the article but is not one of its magazine pages in the
+                flatplan
+                {currentMagazinePage != null ? (
+                  <>
+                    {" "}
+                    (magazine page{" "}
+                    <span className="font-mono tabular-nums">{currentMagazinePage}</span>)
+                  </>
+                ) : null}
+                . Open the Article Builder to assign it, or remove the article from this slot.
+              </p>
+            ) : currentSlotArticlePageIndex > 1 ? (
+              <p className="text-[11px] text-amber-800">
+                This slot is article page{" "}
+                <span className="font-mono tabular-nums">
+                  {currentSlotArticlePageIndex}/{totalArticlePages}
+                </span>{" "}
+                in the flatplan
+                {currentMagazinePage != null ? (
+                  <>
+                    {" "}
+                    (magazine page{" "}
+                    <span className="font-mono tabular-nums">{currentMagazinePage}</span>)
+                  </>
+                ) : null}
+                . The preview above always shows page 1.
+              </p>
+            ) : null}
             <p className="text-[11px] text-gray-500">
-              Preview is loaded live from saved chunks. In the Article Builder editor, use
-              <span className="font-medium"> Guardar cambios</span> to persist text and refresh
+              Slot detail always shows the first article page. In the Article Builder editor, use
+              <span className="font-medium"> Guardar cambios</span> to edit all pages and refresh
               flatplan screenshots.
             </p>
           </>
-        ) : totalArticlePages > 0 ? (
-          <p className="font-semibold text-amber-900">
-            This slot is linked to the article, but it is not one of its magazine pages in the
-            flatplan
-            {currentMagazinePage != null ? (
-              <>
-                {" "}
-                (magazine page{" "}
-                <span className="font-mono tabular-nums">{currentMagazinePage}</span>)
-              </>
-            ) : null}
-            . Open the Article Builder to assign this slot to a page, or remove the article from
-            this slot if pages{" "}
-            <span className="font-mono tabular-nums">{magazinePagesLabel}</span> are correct.
-          </p>
         ) : (
           <p className="font-semibold text-amber-900">
             This slot is not listed in the article&apos;s page order yet. Sync pages in the Article
@@ -331,10 +360,12 @@ export const SlotArticlePreviewSection: FC<SlotArticlePreviewSectionProps> = ({
           </p>
         )}
 
-        <p className="text-xs text-gray-600">
-          Pages this article occupies in the issue (flatplan order):{" "}
-          <span className="font-medium text-gray-800 font-mono">{magazinePagesLabel}</span>
-        </p>
+        {totalArticlePages > 1 ? (
+          <p className="text-xs text-gray-600">
+            Other pages in this article (flatplan order):{" "}
+            <span className="font-medium text-gray-800 font-mono">{magazinePagesLabel}</span>
+          </p>
+        ) : null}
       </div>
 
       <Link

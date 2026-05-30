@@ -8,7 +8,11 @@ import {
   ContractDbModel,
 } from "../../../../../server/database/models.js";
 import { resolveArticleSlotScreenshotUrl } from "../../../../../server/features/publication/ArticleScreenshotService.js";
-import { normalizeMagazinePageLayout } from "../../../../../server/features/publication_workflow/magazinePageLayout.js";
+import {
+  formatMagazinePageLayoutForApi,
+  isMagazineListPageHtmlLayout,
+  normalizeMagazinePageLayout,
+} from "../../../../../server/features/publication_workflow/magazinePageLayout.js";
 import "../../../../../server/database/models.js";
 import { compactPublicationSlotsAfterDelete } from "../../../../../server/features/publication/compactPublicationSlotsAfterDelete.js";
 import { triggerRegeneratePublicationIndexAndSummary } from "../../../../../server/features/publication/PublicationIndexSummaryService.js";
@@ -42,7 +46,10 @@ function toApiSlot(row) {
     slot_media_url: s.slot_media_url ?? null,
     slot_flatplan_image_url: s.slot_flatplan_image_url ?? null,
     slot_article_id: s.slot_article_id ?? null,
-    magazine_page_layout: normalizeMagazinePageLayout(s.magazine_page_layout),
+    magazine_page_layout: formatMagazinePageLayoutForApi(
+      s.slot_content_type,
+      s.magazine_page_layout
+    ),
     slot_created_at: s.slot_created_at ?? null,
     slot_updated_at: s.slot_updated_at ?? null,
   };
@@ -59,7 +66,7 @@ const patchSchema = Joi.object({
   project_id: Joi.string().allow(null, "").optional(),
   slot_media_url: Joi.string().allow(null, "").optional(),
   slot_article_id: Joi.string().allow(null, "").optional(),
-  magazine_page_layout: Joi.string().valid("2_col_article", "3_col_article").optional(),
+  magazine_page_layout: Joi.string().max(131072).optional(),
 });
 
 const SLOT_CONTENT_TYPE_OPTIONS = new Set(["advert", "article", "summary", "index", "padding"]);
@@ -242,7 +249,17 @@ export const PATCH = createEndpoint(
       if (body.slot_media_url !== undefined) updates.slot_media_url = body.slot_media_url || null;
       if (body.slot_article_id !== undefined) updates.slot_article_id = body.slot_article_id || null;
       if (body.magazine_page_layout !== undefined) {
-        updates.magazine_page_layout = normalizeMagazinePageLayout(body.magazine_page_layout);
+        const slotContentType = String(
+          body.slot_content_type ?? row.get("slot_content_type") ?? ""
+        )
+          .trim()
+          .toLowerCase();
+        const raw = String(body.magazine_page_layout ?? "");
+        if (slotContentType === "index" || slotContentType === "summary" || isMagazineListPageHtmlLayout(raw)) {
+          updates.magazine_page_layout = raw;
+        } else {
+          updates.magazine_page_layout = normalizeMagazinePageLayout(body.magazine_page_layout);
+        }
       }
       if (body.publication_page !== undefined) {
         const pp = Number(body.publication_page);

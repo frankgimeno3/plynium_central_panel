@@ -3,6 +3,7 @@ import PublicationArticleDbModel from "./PublicationArticleDbModel.js";
 import PublicationArticleChunkDbModel from "./PublicationArticleChunkDbModel.js";
 import PublicationSlotDbModel from "./PublicationSlotDbModel.js";
 import PublicationModel from "../publication/PublicationModel.js";
+import { compactPublicationEditorialPages } from "../publication/compactPublicationSlotsAfterDelete.js";
 import {
     deletePublicationSlotMediatecaFolder,
     ensureArticleScreenshotsFolderHierarchy,
@@ -3090,6 +3091,10 @@ export async function provisionPublicationArticleConsecutiveSlots(
             );
         }
         throw error;
+    }
+    const compactPid = String(payload?.publication_article?.publication_id ?? "").trim();
+    if (compactPid) {
+        await compactPublicationEditorialPages(compactPid);
     }
     return payload;
 }

@@ -9,14 +9,16 @@ import {
   PublicationArticleChunkDbModel,
   ProjectDbModel,
   CustomerDbModel,
+  ArticleModel,
 } from "../../../../../../server/database/models.js";
-import { normalizeMagazinePageLayout } from "../../../../../../server/features/publication_workflow/magazinePageLayout.js";
+import { formatMagazinePageLayoutForApi } from "../../../../../../server/features/publication_workflow/magazinePageLayout.js";
 import "../../../../../../server/database/models.js";
 import { computeNextRegularPublicationPage } from "../../../../../../server/features/publication/computeNextRegularPublicationPage.js";
 import { shiftPublicationSlotsForRegularInsert } from "../../../../../../server/features/publication/shiftPublicationSlotsForRegularInsert.js";
 import {
   triggerRegeneratePublicationIndexAndSummary,
 } from "../../../../../../server/features/publication/PublicationIndexSummaryService.js";
+import { compactPublicationEditorialPages } from "../../../../../../server/features/publication/compactPublicationSlotsAfterDelete.js";
 
 export const runtime = "nodejs";
 
@@ -56,7 +58,10 @@ function toApiSlot(row) {
     slot_media_url: s.slot_media_url ?? null,
     slot_flatplan_image_url: s.slot_flatplan_image_url ?? null,
     slot_article_id: s.slot_article_id ?? null,
-    magazine_page_layout: normalizeMagazinePageLayout(s.magazine_page_layout),
+    magazine_page_layout: formatMagazinePageLayoutForApi(
+      s.slot_content_type,
+      s.magazine_page_layout
+    ),
     slot_created_at: s.slot_created_at ?? null,
     slot_updated_at: s.slot_updated_at ?? null,
     customer_name: null,
@@ -67,6 +72,7 @@ function toApiSlot(row) {
     flatplan_article_chunks_in_slot: null,
     flatplan_publication_article_state: null,
     flatplan_preview_chunks: null,
+    flatplan_article_title: null,
   };
 }
 
@@ -285,6 +291,64 @@ async function enrichSlotsWithFlatplanArticleChunkPreviews(slots, publicationId)
   }
 }
 
+/** Attach `articles_db.article_title` to article-type slots for summary UI. */
+async function enrichSlotsWithPortalArticleTitles(slots, publicationId) {
+  if (!Array.isArray(slots) || slots.length === 0) return;
+  if (!ArticleModel?.sequelize) return;
+
+  const articleIdBySlotId = new Map();
+  const articleIds = new Set();
+
+  if (PublicationArticleDbModel?.sequelize) {
+    const pas = await PublicationArticleDbModel.findAll({
+      where: { publication_id: String(publicationId) },
+      attributes: ["article_id", "publication_slots_id_array"],
+    });
+    for (const row of pas) {
+      const pl = toPlain(row);
+      const aid = pl.article_id != null ? String(pl.article_id).trim() : "";
+      if (!aid) continue;
+      const arr = Array.isArray(pl.publication_slots_id_array) ? pl.publication_slots_id_array : [];
+      for (const sid of arr) {
+        const n = Number(sid);
+        if (Number.isInteger(n) && n > 0 && !articleIdBySlotId.has(n)) {
+          articleIdBySlotId.set(n, aid);
+          articleIds.add(aid);
+        }
+      }
+    }
+  }
+
+  for (const s of slots) {
+    if (String(s.slot_content_type ?? "").trim().toLowerCase() !== "article") continue;
+    const fromSlot = s.slot_article_id != null ? String(s.slot_article_id).trim() : "";
+    if (fromSlot) articleIds.add(fromSlot);
+    const sid = Number(s.publication_slot_id);
+    const fromPa = articleIdBySlotId.get(sid) ?? "";
+    if (fromPa) articleIds.add(fromPa);
+  }
+
+  if (articleIds.size === 0) return;
+
+  const rows = await ArticleModel.findAll({
+    where: { id_article: { [Op.in]: [...articleIds] } },
+    attributes: ["id_article", "article_title"],
+  });
+  const titleById = new Map();
+  for (const row of rows) {
+    const pl = toPlain(row);
+    const id = pl.id_article != null ? String(pl.id_article).trim() : "";
+    if (id) titleById.set(id, pl.article_title != null ? String(pl.article_title) : "");
+  }
+  for (const s of slots) {
+    if (String(s.slot_content_type ?? "").trim().toLowerCase() !== "article") continue;
+    const sid = Number(s.publication_slot_id);
+    const fromSlot = s.slot_article_id != null ? String(s.slot_article_id).trim() : "";
+    const aid = fromSlot || articleIdBySlotId.get(sid) || "";
+    s.flatplan_article_title = aid ? titleById.get(aid) ?? null : null;
+  }
+}
+
 /**
  * Broadcast the publication-level auto-generated PDFs (advert index + article
  * summary) onto every slot whose `slot_content_type` matches, so the flatplan
@@ -393,13 +457,17 @@ export const GET = createEndpoint(
 
     if (!PublicationSlotDbModel?.sequelize) return NextResponse.json([]);
 
+    const pid = String(publicationId);
+    await compactPublicationEditorialPages(pid);
+
     const rows = await PublicationSlotDbModel.findAll({
-      where: { publication_id: String(publicationId) },
+      where: { publication_id: pid },
     });
 
     const list = rows.map(toApiSlot).filter(Boolean);
     await enrichSlotsWithProjectAndCustomer(list);
     await enrichSlotsWithFlatplanPublicationArticleMeta(list, publicationId);
+    await enrichSlotsWithPortalArticleTitles(list, publicationId);
     await enrichSlotsWithFlatplanArticleChunkPreviews(list, publicationId);
     await enrichCoverSlotWithFlatplanComposite(list, publicationId);
     await enrichSummaryAndIndexSlotsWithPdf(list, publicationId);
@@ -544,6 +612,7 @@ export const POST = createEndpoint(
           );
         });
 
+        await compactPublicationEditorialPages(pid);
         triggerRegeneratePublicationIndexAndSummary(pid);
 
         return NextResponse.json(toApiSlot(row));

@@ -32,6 +32,8 @@ export type FlatplanPreviewAdjacentOptions = {
 
 export type FlatplanPreviewPanelProps = {
   publicationId: string;
+  isIndexReady?: boolean;
+  isSummaryReady?: boolean;
   sortedSlotsForFlatplan: SlotRow[];
   flatplanWorkingSplit: FlatplanWorkingSplit;
   slotByKey: Map<string, SlotRow>;
@@ -179,7 +181,7 @@ function FlatplanPenultimatePairNotice({
             onClick={onAddSlot}
             className="mt-1 shrink-0 self-center rounded-lg bg-blue-600 px-3 py-1.5 text-[11px] font-semibold text-white hover:bg-blue-700"
           >
-            Add slot
+            Add page
           </button>
         ) : null}
       </div>
@@ -190,6 +192,8 @@ function FlatplanPenultimatePairNotice({
 
 export function FlatplanPreviewPanel({
   publicationId,
+  isIndexReady = false,
+  isSummaryReady = false,
   sortedSlotsForFlatplan,
   flatplanWorkingSplit,
   slotByKey,
@@ -226,6 +230,8 @@ export function FlatplanPreviewPanel({
       selectedIdsSafe,
       onFlatplanBulkDeleteToggleSlot
     ),
+    isIndexReady,
+    isSummaryReady,
     onAdjacentSlotInsert: adjacentForEntryKey(entryKey),
   });
 
@@ -272,7 +278,7 @@ export function FlatplanPreviewPanel({
         <div className="flex flex-col items-end gap-1 min-w-0">
           {flatplanBulkDeleteShowSelectedCount ? (
             <p className="text-xs font-medium text-gray-600 whitespace-nowrap">
-              Selected elements {selectedIdsSafe.length}
+              Selected pages {selectedIdsSafe.length}
             </p>
           ) : null}
           <div className="flex flex-row flex-wrap items-center justify-end gap-2">
@@ -282,7 +288,7 @@ export function FlatplanPreviewPanel({
                 onClick={onFlatplanAddSlotToolbar}
                 className="shrink-0 px-3 py-1.5 text-xs font-semibold rounded-lg border border-blue-200 bg-blue-50 text-blue-900 hover:bg-blue-100 transition"
               >
-                Add slot
+                Add page
               </button>
             ) : null}
             <button

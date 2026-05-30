@@ -22,14 +22,32 @@ async function validate(request, schema) {
     } else if (method === "DELETE") {
         body = {};
         data = body;
-    } else if (contentType.includes('application/json')) {
+    } else if (
+        method === "POST" ||
+        method === "PUT" ||
+        method === "PATCH"
+    ) {
+        if (!contentType.trim()) {
+            body = {};
+            data = body;
+        } else if (contentType.includes("application/json")) {
+            const raw = await request.text();
+            body = raw.trim() ? JSON.parse(raw) : {};
+            data = body;
+        } else if (contentType.includes("multipart/form-data")) {
+            body = await request.formData();
+            data = Object.fromEntries(body);
+        } else {
+            throw Error("Invalid request");
+        }
+    } else if (contentType.includes("application/json")) {
         body = await request.json();
         data = body;
-    } else if (contentType.includes('multipart/form-data')) {
+    } else if (contentType.includes("multipart/form-data")) {
         body = await request.formData();
         data = Object.fromEntries(body);
     } else {
-        throw Error('Invalid request');
+        throw Error("Invalid request");
     }
 
     if (schema) {

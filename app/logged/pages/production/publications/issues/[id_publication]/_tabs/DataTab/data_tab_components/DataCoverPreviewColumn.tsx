@@ -149,7 +149,7 @@ export function DataCoverPreviewColumn({
         ref={coverPreviewRef}
         className="rounded-sm overflow-hidden border border-black/10 shadow-sm bg-white flex flex-col w-full aspect-[4/5]"
       >
-        <div className="basis-1/5 w-full">
+        <div className="relative z-0 basis-1/5 w-full shrink-0">
           <CoverHeader
             magazineName={magazine?.name ?? null}
             fallbackName={draftPub?.publication_edition_name ?? title}
@@ -162,8 +162,8 @@ export function DataCoverPreviewColumn({
             }
           />
         </div>
-        <div className="basis-4/5 w-full flex flex-row min-h-0 overflow-visible relative z-20">
-          <div className="basis-1/4 min-w-0 overflow-visible relative">
+        <div className="relative z-10 basis-4/5 w-full flex flex-row min-h-0 overflow-visible">
+          <div className="relative z-30 basis-1/4 min-w-0 overflow-visible">
             <ArticleMenu
               miniatures={coverMarginMiniatures}
               publicationYear={draftPub?.publication_year ?? null}
@@ -172,7 +172,7 @@ export function DataCoverPreviewColumn({
               redBoxBody={draftPub?.red_box_body ?? ""}
             />
           </div>
-          <div className="flex-1 min-w-0 relative">
+          <div className="relative z-0 flex-1 min-w-0">
             <CoverAdvert
               imageUrl={draftPub?.publication_main_image_url || null}
               alt={title}

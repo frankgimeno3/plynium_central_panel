@@ -21,7 +21,7 @@ import {
   ensureSlotInPublicationArticleSpread,
   isFirstSlotInPublicationArticleSlotsArray,
 } from "../../../../../../../../server/features/publication_workflow/PublicationArticleService.js";
-import { normalizeMagazinePageLayout } from "../../../../../../../../server/features/publication_workflow/magazinePageLayout.js";
+import { formatMagazinePageLayoutForApi } from "../../../../../../../../server/features/publication_workflow/magazinePageLayout.js";
 import {
   ensureAdvertSlotMaterialsFolderHierarchy,
   ensureArticleSlotMaterialsFolderHierarchy,
@@ -75,7 +75,10 @@ function toApiSlotContentFromSlot(slot) {
     slot_content_format: isArticle ? "article" : "advert",
     slot_content_object_array: isAdvert ? advertObjectsFromMediaUrl(mediaUrl) : [],
     article_id: isArticle ? articleId || null : null,
-    magazine_page_layout: normalizeMagazinePageLayout(s.magazine_page_layout),
+    magazine_page_layout: formatMagazinePageLayoutForApi(
+      s.slot_content_type,
+      s.magazine_page_layout
+    ),
     slot_media_url: mediaUrl || null,
   };
 }

@@ -4,7 +4,7 @@ import React, { FC } from "react";
 
 export const ArticlePreviewPageFooter: FC<{
   isLeftPage: boolean;
-  footerNumber: string;
+  footerNumber: string | null;
 }> = ({ isLeftPage, footerNumber }) => {
   const links = (
     <div className="flex flex-col text-right text-xl leading-snug text-amber-300">
@@ -13,8 +13,10 @@ export const ArticlePreviewPageFooter: FC<{
     </div>
   );
 
-  const numberEl = (
+  const numberEl = footerNumber ? (
     <span className="text-3xl font-semibold tabular-nums text-white">{footerNumber}</span>
+  ) : (
+    <span aria-hidden="true" />
   );
 
   return (

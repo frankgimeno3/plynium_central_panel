@@ -17,6 +17,7 @@ type ArticleBuilderPagePreviewThumbnailProps = {
   pageIndex: number;
   isLeftPage: boolean;
   publicationPage: number | null;
+  slotKey?: string | null;
   pageFormat: MagazinePageLayout;
   articleFlowPages: ReturnType<typeof buildArticleFlowPagesFromPublicationSlots>;
   currentSlotContentId: number | null;
@@ -60,6 +61,7 @@ export const ArticleBuilderPagePreviewThumbnail: FC<ArticleBuilderPagePreviewThu
   pageIndex,
   isLeftPage,
   publicationPage,
+  slotKey,
   pageFormat,
   articleFlowPages,
   currentSlotContentId,
@@ -100,6 +102,7 @@ export const ArticleBuilderPagePreviewThumbnail: FC<ArticleBuilderPagePreviewThu
         pageIndex={pageIndex}
         isLeftPage={isLeftPage}
         publicationPage={publicationPage}
+        slotKey={slotKey}
         pageFormat={pageFormat}
         articleFlowPages={articleFlowPages}
         currentSlotContentId={currentSlotContentId}

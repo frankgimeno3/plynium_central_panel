@@ -20,6 +20,14 @@ import "../../database/models.js";
  * @param {{ transaction?: import("sequelize").Transaction }} [options]
  * @returns {Promise<{ updated: number }>}
  */
+/**
+ * Renumber `regular_page` rows to 10…n with no gaps and place `end` on last+1.
+ * Safe to call after inserts, relocations, or deletes (not only deletes).
+ */
+export async function compactPublicationEditorialPages(publicationId, options = {}) {
+    return compactPublicationSlotsAfterDelete(publicationId, options);
+}
+
 export async function compactPublicationSlotsAfterDelete(publicationId, options = {}) {
     const { transaction } = options;
     const pid = String(publicationId ?? "").trim();

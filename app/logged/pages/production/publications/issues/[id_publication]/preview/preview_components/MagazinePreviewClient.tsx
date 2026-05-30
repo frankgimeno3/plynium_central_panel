@@ -217,9 +217,6 @@ export const MagazinePreviewClient: FC<MagazinePreviewClientProps> = ({
     const spread = currentSpread ?? fallbackSpread;
     if (!spread) return null;
 
-    const leftLabel = spread.leftSlot ? magazinePreviewPageLabel(spread.leftSlot) : null;
-    const rightLabel = spread.rightSlot ? magazinePreviewPageLabel(spread.rightSlot) : null;
-
     return (
         <div className="flex min-h-[80vh] flex-col">
             <header className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 py-2">
@@ -257,16 +254,8 @@ export const MagazinePreviewClient: FC<MagazinePreviewClientProps> = ({
 
             <div className="flex flex-1 items-center justify-center bg-neutral-900 px-4 py-6">
                 <div className="flex w-full items-stretch justify-center gap-2 sm:gap-4">
-                    <MagazinePreviewPageCard
-                        slot={spread.leftSlot}
-                        pageLabel={leftLabel}
-                        isLeftPage
-                    />
-                    <MagazinePreviewPageCard
-                        slot={spread.rightSlot}
-                        pageLabel={rightLabel}
-                        isLeftPage={false}
-                    />
+                    <MagazinePreviewPageCard slot={spread.leftSlot} isLeftPage />
+                    <MagazinePreviewPageCard slot={spread.rightSlot} isLeftPage={false} />
                 </div>
             </div>
         </div>

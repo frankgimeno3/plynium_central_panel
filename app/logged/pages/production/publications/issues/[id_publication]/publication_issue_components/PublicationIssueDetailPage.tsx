@@ -301,9 +301,9 @@ export const PublicationIssueDetailPage: FC<{ publicationId: string }> = ({ publ
   ]);
 
   const flatplanBulkDeleteButtonLabel = React.useMemo(() => {
-    if (!flatplanBulkDeleteSelectMode) return "Delete elements";
+    if (!flatplanBulkDeleteSelectMode) return "Delete pages";
     if (flatplanBulkDeleteSelectedIds.length >= 1) return "Click again to delete";
-    return "Select elements to delete";
+    return "Select pages to delete";
   }, [flatplanBulkDeleteSelectMode, flatplanBulkDeleteSelectedIds.length]);
 
   const flatplanBulkDeleteShowSelectedCount =
@@ -624,6 +624,11 @@ export const PublicationIssueDetailPage: FC<{ publicationId: string }> = ({ publ
                 href: `${BASE}/${encodeURIComponent(publicationId)}/preview/0`,
               },
               {
+                label: "Edit current publication",
+                onClick: () => navigateToTab("data"),
+                variant: "primary" as const,
+              },
+              {
                 label: "Unpublish",
                 onClick: unpublishPublication,
                 variant: "danger" as const,
@@ -655,6 +660,7 @@ export const PublicationIssueDetailPage: FC<{ publicationId: string }> = ({ publ
     openDeletePublicationModal,
     openPublishMagazineModal,
     unpublishPublication,
+    navigateToTab,
   ]);
 
   const slotByKey = useMemo(() => {
@@ -936,6 +942,8 @@ export const PublicationIssueDetailPage: FC<{ publicationId: string }> = ({ publ
               {activeTab === "flatplan" && (
                 <FlatplanTab
                   publicationId={publicationId}
+                  isIndexReady={Boolean(publication?.is_index_ready)}
+                  isSummaryReady={Boolean(publication?.is_summary_ready)}
                   slots={slots}
                   sortedSlotsForFlatplan={sortedSlotsForFlatplan}
                   slotByKey={slotByKey}
@@ -1012,8 +1020,13 @@ export const PublicationIssueDetailPage: FC<{ publicationId: string }> = ({ publ
         open={publishMagazineModalOpen}
         onClose={() => setPublishMagazineModalOpen(false)}
         title={title}
+        publicationId={publicationId}
         publication={publication}
         slots={slots}
+        onPublished={(updated) => {
+          setPublication(updated);
+          setDraftPub((prev) => (prev ? { ...prev, ...updated } : updated));
+        }}
       />
       <CoverMarginArticleSelectModal
         open={coverMarginArticleModalPosition != null}

@@ -23,6 +23,19 @@ import {
   findPublicationArticleForSlot,
 } from "@/app/logged/pages/production/publications/issues/[id_publication]/article_builder/article_builder_components/articleBuilderNavigation";
 import { SlotArticlePreviewSection } from "./slot_detail_components/SlotArticlePreviewSection";
+import { SlotAdvertiserIndexSection } from "./slot_detail_components/SlotAdvertiserIndexSection";
+import { SlotArticleSummarySection } from "./slot_detail_components/SlotArticleSummarySection";
+import { YesNoToggle } from "./slot_detail_components/YesNoToggle";
+import {
+  isAdvertiserIndexHtml,
+  type AdvertiserIndexHtmlOptions,
+} from "@/lib/publication/advertiserIndexHtml";
+import {
+  isArticleSummaryHtml,
+  type ArticleSummaryHtmlOptions,
+} from "@/lib/publication/articleSummaryHtml";
+import { magazinePageFooterNumberLabel } from "@/lib/publication/magazinePageFooter";
+import { MagazinePreviewPageFooter } from "@/app/logged/pages/production/publications/issues/[id_publication]/preview/preview_components/MagazinePreviewPageFooter";
 import {
   DEFAULT_SLOT_CONTENT_TYPE,
   effectiveSlotTableContentTypes,
@@ -34,6 +47,7 @@ import {
   SLOT_CONTENT_TYPE_OPTIONS,
   type SlotRow,
 } from "@/app/logged/pages/production/publications/publication_components/_shared";
+import { slotDetailPageTitle } from "@/lib/publication/slotDetailPageTitle";
 import { isPdfMediaUrl } from "@/lib/media/isPdfMediaUrl";
 
 type SlotContentRow = {
@@ -50,6 +64,14 @@ type PublicationDbRow = {
   publication_id: string;
   publication_edition_name: string;
   publication_main_image_url: string;
+  publication_header_domain?: string;
+  publication_theme?: string;
+  is_special_edition?: boolean;
+  special_edition_subtitle?: string;
+  red_box_header?: string;
+  red_box_body?: string;
+  is_index_ready?: boolean;
+  is_summary_ready?: boolean;
 };
 
 type ProjectDetail = {
@@ -143,6 +165,8 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
   const [slotDeleteConfirmInput, setSlotDeleteConfirmInput] = useState("");
   const [slotDeleteBusy, setSlotDeleteBusy] = useState(false);
   const [slotDeleteError, setSlotDeleteError] = useState<string | null>(null);
+  const [readinessSaving, setReadinessSaving] = useState(false);
+  const [readinessError, setReadinessError] = useState<string | null>(null);
 
   const isCoverSlot = slot?.slot_key === COVER_SLOT_KEY;
   const advertPosition = isCoverSlot ? COVER_SLOT_POSITION : REGULAR_SLOT_POSITION;
@@ -349,8 +373,42 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
     [slot]
   );
 
+  const indexMagazineOptions = useMemo((): AdvertiserIndexHtmlOptions => {
+    return {
+      editionName: publication?.publication_edition_name ?? "",
+      headerDomain: publication?.publication_header_domain ?? "",
+      publicationTheme: publication?.publication_theme ?? "",
+      specialEditionSubtitle: publication?.is_special_edition
+        ? publication?.special_edition_subtitle ?? ""
+        : "",
+      redBoxHeader: publication?.red_box_header ?? "",
+      redBoxBody: publication?.red_box_body ?? "",
+      magazineFooterPageNumber: slot ? magazinePageFooterNumberLabel(slot) : null,
+    };
+  }, [publication, slot]);
+
+  const summaryMagazineOptions = useMemo((): ArticleSummaryHtmlOptions => {
+    return {
+      editionName: publication?.publication_edition_name ?? "",
+      headerDomain: publication?.publication_header_domain ?? "",
+      publicationTheme: publication?.publication_theme ?? "",
+      specialEditionSubtitle: publication?.is_special_edition
+        ? publication?.special_edition_subtitle ?? ""
+        : "",
+      magazineFooterPageNumber: slot ? magazinePageFooterNumberLabel(slot) : null,
+    };
+  }, [publication, slot]);
+
   useEffect(() => {
-    const label = slot ? `Slot ${slot.slot_key}` : `Slot #${slotIdNum}`;
+    let label = slot ? slotDetailPageTitle(slot) : `Slot #${slotIdNum}`;
+    if (
+      slot &&
+      linkedPublicationArticleId &&
+      !isPaddingSlot(slot) &&
+      normalizeSlotContentType(slot.slot_content_type) === "article"
+    ) {
+      label = "Article · Page 1";
+    }
     setPageMeta({
       pageTitle: label,
       breadcrumbs: [
@@ -362,7 +420,7 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
       ],
       buttons: [{ label: "Back to Flatplan", href: `${BASE}/${encodeURIComponent(id_publication)}` }],
     });
-  }, [setPageMeta, slot, slotIdNum, id_publication]);
+  }, [setPageMeta, slot, slotIdNum, id_publication, linkedPublicationArticleId]);
 
   const patchSlot = useCallback(
     async (patch: Record<string, unknown>) => {
@@ -596,6 +654,35 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
     }
   }, [id_publication, slotIdNum, advertPosition, imageSaving, load]);
 
+  const patchPublicationReadiness = useCallback(
+    async (patch: { is_index_ready?: boolean; is_summary_ready?: boolean }) => {
+      setReadinessError(null);
+      setReadinessSaving(true);
+      try {
+        const res = await fetch(
+          `/api/v1/publications-db/${encodeURIComponent(id_publication)}`,
+          {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify(patch),
+          }
+        );
+        if (!res.ok) {
+          const msg = await res.text().catch(() => "");
+          throw new Error(msg || "Failed to update publication readiness");
+        }
+        const updated = (await res.json()) as PublicationDbRow;
+        setPublication((prev) => (prev ? { ...prev, ...updated } : updated));
+      } catch (e: unknown) {
+        setReadinessError((e as Error)?.message ?? "Failed to update readiness");
+      } finally {
+        setReadinessSaving(false);
+      }
+    },
+    [id_publication]
+  );
+
   const handleArticleSelected = useCallback(
     async (article: ArticleRelateRow) => {
       if (!article?.id_article) return;
@@ -671,6 +758,9 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
   const articleNetworkHref = relatedArticleId
     ? `${ARTICLE_NETWORK_BASE}/${encodeURIComponent(relatedArticleId)}`
     : null;
+  const isIndexSlot = resolvedContentType === "index";
+  const isSummarySlot = resolvedContentType === "summary";
+  const isReservedListSlot = isIndexSlot || isSummarySlot;
 
   const relatedArticleCompaniesLabel = (() => {
     if (!relatedArticleDetail) return "";
@@ -752,6 +842,36 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
                 <p className="text-xs text-gray-500 uppercase">State</p>
                 <p className="text-gray-800">{slot.slot_state || "—"}</p>
               </div>
+              {isIndexSlot ? (
+                <div className="md:col-span-2">
+                  <p className="text-xs text-gray-500 uppercase mb-2">Publish readiness</p>
+                  <YesNoToggle
+                    label="Is index ready?"
+                    checked={Boolean(publication?.is_index_ready)}
+                    disabled={readinessSaving}
+                    onChange={(next) => void patchPublicationReadiness({ is_index_ready: next })}
+                  />
+                  {readinessError ? (
+                    <p className="mt-1 text-xs text-red-600">{readinessError}</p>
+                  ) : null}
+                </div>
+              ) : null}
+              {isSummarySlot ? (
+                <div className="md:col-span-2">
+                  <p className="text-xs text-gray-500 uppercase mb-2">Publish readiness</p>
+                  <YesNoToggle
+                    label="Is summary ready?"
+                    checked={Boolean(publication?.is_summary_ready)}
+                    disabled={readinessSaving}
+                    onChange={(next) => void patchPublicationReadiness({ is_summary_ready: next })}
+                  />
+                  {readinessError ? (
+                    <p className="mt-1 text-xs text-red-600">{readinessError}</p>
+                  ) : null}
+                </div>
+              ) : null}
+              {!isReservedListSlot ? (
+              <>
               <div>
                 <p className="text-xs text-gray-500 uppercase">Customer</p>
                 {customer?.name ? (
@@ -817,6 +937,8 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
                   ) : null}
                 </div>
               </div>
+              </>
+              ) : null}
               {resolvedContentType === "article" ? (
                 <div>
                   <p className="text-xs text-gray-500 uppercase">Article</p>
@@ -921,10 +1043,12 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
 
             {/* Preview area changes shape based on the slot content type. */}
             <div className="border-t border-gray-200 pt-6">
+              {!isIndexSlot && !isSummarySlot ? (
               <div className="flex items-center justify-between mb-3">
                 <p className="text-sm font-semibold text-gray-700">Preview</p>
                 <span className="text-xs text-gray-500">Type: {typeSelectValue}</span>
               </div>
+              ) : null}
 
               {resolvedContentType === null ? (
                 <div className="rounded-xl border border-dashed border-amber-200 bg-amber-50/60 p-8 text-center text-sm text-gray-800">
@@ -941,27 +1065,41 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
 
               {resolvedContentType === "advert" ? (
                 <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 flex flex-col items-center gap-4">
-                  <div className="w-full max-w-sm aspect-[4/5] rounded-lg overflow-hidden border border-gray-200 bg-white flex items-center justify-center">
-                    {advertImageUrl ? (
-                      isPdfMediaUrl(advertImageUrl) ? (
-                        <iframe
-                          src={advertImageUrl}
-                          title="Advert PDF preview"
-                          className="w-full h-full min-h-[280px] border-0"
-                        />
+                  <div
+                    className="mx-auto flex w-full max-w-sm flex-col overflow-hidden rounded-sm border border-gray-200 bg-white shadow-md"
+                    style={{ aspectRatio: "228 / 297" }}
+                  >
+                    <div className="relative flex min-h-0 flex-1 items-center justify-center bg-white">
+                      {advertImageUrl ? (
+                        isPdfMediaUrl(advertImageUrl) ? (
+                          <iframe
+                            src={advertImageUrl}
+                            title="Advert PDF preview"
+                            className="absolute inset-0 h-full w-full border-0"
+                          />
+                        ) : (
+                          <img
+                            src={advertImageUrl}
+                            alt="Advert preview"
+                            className="absolute inset-0 h-full w-full object-contain"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = "none";
+                            }}
+                          />
+                        )
                       ) : (
-                        <img
-                          src={advertImageUrl}
-                          alt="Advert preview"
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            (e.target as HTMLImageElement).style.display = "none";
-                          }}
-                        />
-                      )
-                    ) : (
-                      <span className="text-sm text-gray-400">No advert media yet</span>
-                    )}
+                        <span className="text-sm text-gray-400">No advert media yet</span>
+                      )}
+                    </div>
+                    {slot && magazinePageFooterNumberLabel(slot) ? (
+                      <MagazinePreviewPageFooter
+                        isLeftPage={
+                          slot.publication_page != null &&
+                          Math.round(Number(slot.publication_page)) % 2 === 0
+                        }
+                        pageNumber={magazinePageFooterNumberLabel(slot)!}
+                      />
+                    ) : null}
                   </div>
                   <div className="flex flex-col items-center gap-2 w-full max-w-sm">
                     <button
@@ -1008,6 +1146,7 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
                         ? Math.round(Number(slot.publication_page))
                         : null
                     }
+                    slotKey={slot.slot_key}
                   />
                 ) : (
                   <div className="rounded-xl border border-gray-200 bg-gray-50 p-6 flex flex-col items-center gap-4 text-center">
@@ -1020,17 +1159,35 @@ const SlotDetailPage: FC<{ params: Promise<{ id_publication: string; slot_id: st
               ) : null}
 
               {resolvedContentType === "summary" ? (
-                <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">
-                  This slot is reserved for the magazine <strong>summary</strong>. No advert
-                  preview is available.
-                </div>
+                <SlotArticleSummarySection
+                  publicationId={id_publication}
+                  summarySlotId={slotIdNum}
+                  magazineOptions={summaryMagazineOptions}
+                  savedLayoutHtml={
+                    isArticleSummaryHtml(slot.magazine_page_layout)
+                      ? String(slot.magazine_page_layout)
+                      : ""
+                  }
+                  onSavedLayoutChange={(html) => {
+                    setSlot((prev) => (prev ? { ...prev, magazine_page_layout: html } : prev));
+                  }}
+                />
               ) : null}
 
               {resolvedContentType === "index" ? (
-                <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">
-                  This slot is reserved for the advertiser <strong>index</strong>. No advert
-                  preview is available.
-                </div>
+                <SlotAdvertiserIndexSection
+                  publicationId={id_publication}
+                  indexSlotId={slotIdNum}
+                  magazineOptions={indexMagazineOptions}
+                  savedLayoutHtml={
+                    isAdvertiserIndexHtml(slot.magazine_page_layout)
+                      ? String(slot.magazine_page_layout)
+                      : ""
+                  }
+                  onSavedLayoutChange={(html) => {
+                    setSlot((prev) => (prev ? { ...prev, magazine_page_layout: html } : prev));
+                  }}
+                />
               ) : null}
             </div>
 

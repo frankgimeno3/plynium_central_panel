@@ -4,8 +4,49 @@
  */
 
 import { ProjectDbModel } from "../../database/models.js";
+import {
+    DEFAULT_MAGAZINE_PAGE_LAYOUT,
+    isAdvertiserIndexHtmlLayout,
+    isArticleSummaryHtmlLayout,
+    normalizeMagazinePageLayout,
+} from "../publication_workflow/magazinePageLayout.js";
 
 const RESERVED_CONTENT_TYPES = new Set(["summary", "index"]);
+
+/**
+ * @param {import("sequelize").Model | null | undefined} slot
+ * @returns {string}
+ */
+function readMagazineLayout(slot) {
+    if (!slot) return "";
+    return String(slot.get("magazine_page_layout") ?? "").trim();
+}
+
+/**
+ * Pick stored HTML/layout for a slot content type (index/summary HTML travels with the type).
+ *
+ * @param {string} contentType
+ * @param {string} primaryLayout
+ * @param {string} [fallbackLayout]
+ * @returns {string}
+ */
+export function resolveMagazineLayoutForContentType(contentType, primaryLayout, fallbackLayout = "") {
+    const t = String(contentType ?? "").trim().toLowerCase();
+    const primary = String(primaryLayout ?? "").trim();
+    const fallback = String(fallbackLayout ?? "").trim();
+
+    if (t === "index") {
+        if (isAdvertiserIndexHtmlLayout(primary)) return primary;
+        if (isAdvertiserIndexHtmlLayout(fallback)) return fallback;
+        return primary || fallback || DEFAULT_MAGAZINE_PAGE_LAYOUT;
+    }
+    if (t === "summary") {
+        if (isArticleSummaryHtmlLayout(primary)) return primary;
+        if (isArticleSummaryHtmlLayout(fallback)) return fallback;
+        return primary || fallback || DEFAULT_MAGAZINE_PAGE_LAYOUT;
+    }
+    return normalizeMagazinePageLayout(primary || fallback || DEFAULT_MAGAZINE_PAGE_LAYOUT);
+}
 
 /**
  * @param {import("sequelize").Model | { get?: (k: string) => unknown } | null | undefined} slot
@@ -111,6 +152,8 @@ export async function swapSlotOccupancyForReservedMove({
 }) {
     const sourceOcc = readSlotOccupancyFields(sourceSlot);
     const targetOcc = readSlotOccupancyFields(targetSlot);
+    const sourceLayout = readMagazineLayout(sourceSlot);
+    const targetLayout = readMagazineLayout(targetSlot);
     const targetPreviousType = String(targetSlot.get("slot_content_type") ?? "")
         .trim()
         .toLowerCase();
@@ -125,6 +168,11 @@ export async function swapSlotOccupancyForReservedMove({
     await targetSlot.update(
         {
             slot_content_type: targetContentType,
+            magazine_page_layout: resolveMagazineLayoutForContentType(
+                targetContentType,
+                sourceLayout,
+                targetLayout
+            ),
             slot_media_url: sourceOcc.slot_media_url,
             customer_id: sourceOcc.customer_id,
             project_id: sourceOcc.project_id,
@@ -136,6 +184,11 @@ export async function swapSlotOccupancyForReservedMove({
     await sourceSlot.update(
         {
             slot_content_type: demotedSourceType,
+            magazine_page_layout: resolveMagazineLayoutForContentType(
+                demotedSourceType,
+                targetLayout,
+                sourceLayout
+            ),
             slot_media_url: targetOcc.slot_media_url,
             customer_id: targetOcc.customer_id,
             project_id: targetOcc.project_id,
@@ -166,11 +219,34 @@ export async function applyReservedMoveWithoutOccupancySwap({
     targetPreviousType,
     transaction,
 }) {
+    const sourceLayout = readMagazineLayout(sourceSlot);
+    const targetLayout = readMagazineLayout(targetSlot);
+
     if (sourceSlot) {
         const demotedType = RESERVED_CONTENT_TYPES.has(targetPreviousType)
             ? targetPreviousType
             : "advert";
-        await sourceSlot.update({ slot_content_type: demotedType }, { transaction });
+        await sourceSlot.update(
+            {
+                slot_content_type: demotedType,
+                magazine_page_layout: resolveMagazineLayoutForContentType(
+                    demotedType,
+                    targetLayout,
+                    sourceLayout
+                ),
+            },
+            { transaction }
+        );
     }
-    await targetSlot.update({ slot_content_type: targetContentType }, { transaction });
+    await targetSlot.update(
+        {
+            slot_content_type: targetContentType,
+            magazine_page_layout: resolveMagazineLayoutForContentType(
+                targetContentType,
+                sourceLayout,
+                targetLayout
+            ),
+        },
+        { transaction }
+    );
 }

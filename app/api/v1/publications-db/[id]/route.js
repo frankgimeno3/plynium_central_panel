@@ -75,6 +75,8 @@ function toApiPublication(row) {
     publication_header_domain: p.publication_header_domain ?? "",
     red_box_header: p.red_box_header ?? "",
     red_box_body: p.red_box_body ?? "",
+    is_index_ready: Boolean(p.is_index_ready),
+    is_summary_ready: Boolean(p.is_summary_ready),
   };
 }
 
@@ -107,6 +109,8 @@ const putSchema = Joi.object({
   publication_header_domain: Joi.string().allow("").max(255).optional(),
   red_box_header: Joi.string().allow("").max(255).optional(),
   red_box_body: Joi.string().allow("").max(2048).optional(),
+  is_index_ready: Joi.boolean().optional(),
+  is_summary_ready: Joi.boolean().optional(),
 });
 
 export const GET = createEndpoint(
@@ -161,6 +165,8 @@ export const PUT = createEndpoint(
     if (body.publication_header_domain !== undefined) updates.publication_header_domain = String(body.publication_header_domain ?? "");
     if (body.red_box_header !== undefined) updates.red_box_header = String(body.red_box_header ?? "");
     if (body.red_box_body !== undefined) updates.red_box_body = String(body.red_box_body ?? "");
+    if (body.is_index_ready !== undefined) updates.is_index_ready = Boolean(body.is_index_ready);
+    if (body.is_summary_ready !== undefined) updates.is_summary_ready = Boolean(body.is_summary_ready);
 
     try {
       await row.update(updates);
@@ -188,3 +194,6 @@ export const PUT = createEndpoint(
   putSchema,
   true
 );
+
+/** Partial update (same body as PUT). Used by unpublish and readiness toggles. */
+export const PATCH = PUT;

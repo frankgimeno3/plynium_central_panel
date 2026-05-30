@@ -13,6 +13,8 @@ export type FlatplanWorkingSplit = {
 
 export type FlatplanTabProps = {
   publicationId: string;
+  isIndexReady?: boolean;
+  isSummaryReady?: boolean;
   slots: SlotRow[];
   sortedSlotsForFlatplan: SlotRow[];
   slotByKey: Map<string, SlotRow>;

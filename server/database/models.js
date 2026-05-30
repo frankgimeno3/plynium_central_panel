@@ -174,6 +174,10 @@ PublicationModel.init({
     publication_index_pdf_url: { type: DataTypes.STRING(512), allowNull: true },
     /** Auto-generated PDF listing every publication article and its first page (…/summary/). Updated on slot/article changes. */
     publication_summary_pdf_url: { type: DataTypes.STRING(512), allowNull: true },
+    /** Set on the index slot page when the advertiser index is ready to publish. */
+    is_index_ready: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
+    /** Set on the summary slot page when the article summary is ready to publish. */
+    is_summary_ready: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     publication_edition_name: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "" },
     is_special_edition: { type: DataTypes.BOOLEAN, allowNull: false, defaultValue: false },
     // Optional tagline shown under the magazine subtitle on the cover preview
@@ -1249,8 +1253,9 @@ PublicationSlotDbModel.init({
     slot_media_url: { type: DataTypes.STRING(512), allowNull: true },
     slot_flatplan_image_url: { type: DataTypes.STRING(512), allowNull: true },
     slot_article_id: { type: DataTypes.STRING(64), allowNull: true },
+    /** Article slots: `2_col_article` | `3_col_article`. Index slot: advertiser-index HTML. */
     magazine_page_layout: {
-        type: DataTypes.STRING(32),
+        type: DataTypes.TEXT,
         allowNull: false,
         defaultValue: "2_col_article",
     },

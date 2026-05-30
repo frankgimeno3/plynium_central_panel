@@ -14,6 +14,52 @@ export function normalizeMagazinePageLayout(value) {
 }
 
 /**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isAdvertiserIndexHtmlLayout(value) {
+    const s = String(value ?? "").trim();
+    if (!s) return false;
+    if (s === "2_col_article" || s === "3_col_article") return false;
+    return s.includes("advertiser-index") || s.startsWith("<");
+}
+
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isArticleSummaryHtmlLayout(value) {
+    const s = String(value ?? "").trim();
+    if (!s) return false;
+    if (s === "2_col_article" || s === "3_col_article") return false;
+    return s.includes("article-summary") || s.startsWith("<");
+}
+
+/**
+ * @param {unknown} value
+ * @returns {boolean}
+ */
+export function isMagazineListPageHtmlLayout(value) {
+    return isAdvertiserIndexHtmlLayout(value) || isArticleSummaryHtmlLayout(value);
+}
+
+/**
+ * @param {unknown} slotContentType
+ * @param {unknown} rawLayout
+ * @returns {string}
+ */
+export function formatMagazinePageLayoutForApi(slotContentType, rawLayout) {
+    const t = String(slotContentType ?? "").trim().toLowerCase();
+    if (t === "index" && isAdvertiserIndexHtmlLayout(rawLayout)) {
+        return String(rawLayout ?? "");
+    }
+    if (t === "summary" && isArticleSummaryHtmlLayout(rawLayout)) {
+        return String(rawLayout ?? "");
+    }
+    return normalizeMagazinePageLayout(rawLayout);
+}
+
+/**
  * @param {unknown} obj
  */
 function isLayoutMetaEntry(obj) {

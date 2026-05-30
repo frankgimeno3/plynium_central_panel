@@ -28,6 +28,10 @@ export type PublicationDbRow = {
   special_edition_subtitle: string;
   publication_theme: string;
   publication_status: "planned" | "draft" | "published" | string;
+  /** Advertiser index slot marked ready (publications_db). */
+  is_index_ready?: boolean;
+  /** Article summary slot marked ready (publications_db). */
+  is_summary_ready?: boolean;
   publication_format: "flipbook" | "informer" | string;
   publication_main_image_url: string;
   /** Full cover layout PNG for flatplan (…/adverts media/cover/final/). */
@@ -82,6 +86,8 @@ export type SlotRow = {
   flatplan_summary_pdf_url?: string | null;
   /** index-typed slots: publication-level index PDF (GET …/slots enrich). */
   flatplan_index_pdf_url?: string | null;
+  /** Portal `articles_db.article_title` for article slots (GET …/slots enrich). */
+  flatplan_article_title?: string | null;
 };
 
 export type FlatplanPreviewChunk = {
@@ -160,6 +166,28 @@ export function flatplanArticleSlotPublishBlockers(slots: readonly SlotRow[]): s
         `Publication article ${short}… must be “finished approved” (currently “${state}”). Update workflow state in Article Builder.`
       );
     }
+  }
+  return blockers;
+}
+
+/**
+ * Reasons the issue cannot be published yet, from publication readiness flags
+ * (index / summary slots) plus {@link flatplanArticleSlotPublishBlockers}.
+ */
+export function publicationPublishBlockers(
+  publication: Pick<PublicationDbRow, "is_index_ready" | "is_summary_ready"> | null | undefined,
+  slots: readonly SlotRow[]
+): string[] {
+  const blockers = flatplanArticleSlotPublishBlockers(slots);
+  if (!publication?.is_index_ready) {
+    blockers.push(
+      'Advertiser index is not marked ready. Open the index slot and set "Is index ready?" to Yes.'
+    );
+  }
+  if (!publication?.is_summary_ready) {
+    blockers.push(
+      'Article summary is not marked ready. Open the summary slot and set "Is summary ready?" to Yes.'
+    );
   }
   return blockers;
 }
@@ -613,6 +641,8 @@ export function magazineSlotsTablePrimaryLabel(slot: Pick<SlotRow, "slot_key" | 
   return String(slot.slot_key ?? "").trim();
 }
 
+export { slotDetailPageTitle } from "@/lib/publication/slotDetailPageTitle";
+
 /** Collapsed slots panel: show slot key only for cover / inside cover / end; otherwise magazine `publication_page`. */
 export function magazineSlotsTableReducedLabel(
   slot: Pick<SlotRow, "slot_key" | "publication_page">
@@ -708,11 +738,28 @@ export function flatplanArticleEditorialDetailLine(
   return name ? `${pagePart} - ${name}` : pagePart;
 }
 
+/** Publish-readiness label under Index / Summary on flatplan tiles. */
+export function flatplanIndexSummaryReadinessLabel(
+  contentType: SlotContentTypeOption,
+  readiness: { isIndexReady?: boolean; isSummaryReady?: boolean } | null | undefined
+): { text: "Ready" | "Not ready"; ready: boolean } | null {
+  if (contentType === "index") {
+    const ready = Boolean(readiness?.isIndexReady);
+    return { text: ready ? "Ready" : "Not ready", ready };
+  }
+  if (contentType === "summary") {
+    const ready = Boolean(readiness?.isSummaryReady);
+    return { text: ready ? "Ready" : "Not ready", ready };
+  }
+  return null;
+}
+
 export function flatplanSecondaryLineForSlot(
   slot: SlotRow | null | undefined,
   contentType: SlotContentTypeOption
 ): string | null {
   if (contentType === "padding") return null;
+  if (contentType === "summary" || contentType === "index") return null;
   const customer = String(slot?.customer_name ?? "").trim();
   if (customer) return customer;
   if (contentType === "article" || contentType === "advert") {
@@ -1328,6 +1375,10 @@ export type FlatplanPreviewCellProps = {
   /** When true (slots panel reduced / flatplan widened), tiles use the larger flatplan size tier. */
   previewExpanded: boolean;
   highlightedSlotId: number | null;
+  /** From `publications_db` — shown under Index tiles in flatplan preview. */
+  isIndexReady?: boolean;
+  /** From `publications_db` — shown under Summary tiles in flatplan preview. */
+  isSummaryReady?: boolean;
   /** Bulk-delete flow: whole tile acts as checkbox target for deletable slots. */
   bulkDeleteSelectMode?: boolean;
   bulkDeleteDeletable?: boolean;
@@ -1345,6 +1396,8 @@ export function FlatplanPreviewCell({
   workingIndex,
   previewExpanded,
   highlightedSlotId,
+  isIndexReady = false,
+  isSummaryReady = false,
   bulkDeleteSelectMode = false,
   bulkDeleteDeletable = false,
   bulkDeleteSelected = false,
@@ -1405,6 +1458,10 @@ export function FlatplanPreviewCell({
             ? "Article"
             : "Advert";
   const flatplanSecondaryLine = flatplanSecondaryLineForSlot(slot, primaryFlatplanType);
+  const flatplanReadinessLabel = flatplanIndexSummaryReadinessLabel(primaryFlatplanType, {
+    isIndexReady,
+    isSummaryReady,
+  });
   const coreStructuralTile =
     !padding &&
     !isArticlePageSlotEntryKey(entryKey) &&
@@ -1727,6 +1784,17 @@ export function FlatplanPreviewCell({
                 className={`font-medium normal-case tracking-normal leading-tight truncate w-full ${flatplanCenterTypeBadgeSecondaryClass} ${previewExpanded ? "text-[9px]" : "text-[7px]"} ${tileTransition}`}
               >
                 {flatplanSecondaryLine}
+              </span>
+            ) : null}
+            {flatplanReadinessLabel != null ? (
+              <span
+                className={`font-semibold normal-case tracking-normal leading-tight truncate w-full rounded-sm border px-1 py-px ${
+                  flatplanReadinessLabel.ready
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-900"
+                    : "border-red-300 bg-red-50 text-red-900"
+                } ${previewExpanded ? "text-[9px]" : "text-[7px]"} ${tileTransition}`}
+              >
+                {flatplanReadinessLabel.text}
               </span>
             ) : null}
           </div>
@@ -2064,8 +2132,8 @@ export function ArticleMenu({
   const visibleMiniatures = miniatures.slice(0, COVER_MARGIN_ARTICLE_COUNT);
 
   return (
-    <div className="@container h-full w-full flex flex-col bg-white border-r-2 border-black/30 relative overflow-hidden">
-      <div className="absolute left-1 -right-8 -top-7 z-30 pointer-events-none">
+    <div className="@container relative h-full w-full flex flex-col overflow-visible border-r-2 border-black/30 bg-white">
+      <div className="pointer-events-none absolute -top-7 left-1 -right-8 z-50">
         <div className="-rotate-6 border-[3px] border-white bg-[#c5162e] text-white shadow-2xl px-3 py-3 text-center pointer-events-auto mx-auto">
           <p className="text-[14px] font-black tracking-tight leading-tight">
             {headerLine}

@@ -32,6 +32,7 @@ function bodyChunkOverlapsOverlayCells(
   }
   return false;
 }
+import { magazinePageFooterNumberLabel } from "@/lib/publication/magazinePageFooter";
 import { buildArticlePreviewBodyTextStyles } from "./bodyTextStyles";
 import type { ArticleSubpagePagePreviewProps } from "./types";
 import type { PublicationArticleChunk } from "../types";
@@ -48,7 +49,7 @@ export function useArticlePreviewPageModel(props: ArticleSubpagePagePreviewProps
   subtitleHtml: string;
   bodyFlowChunks: PublicationArticleChunk[];
   gridBodyCells: GridBodyAreaCell<PublicationArticleChunk>[] | null;
-  footerNumber: string;
+  footerNumber: string | null;
   showHeadline: boolean;
   showSubtitle: boolean;
   editable: boolean;
@@ -202,12 +203,10 @@ export function useArticlePreviewPageModel(props: ArticleSubpagePagePreviewProps
     overlayBlockedCellKeys,
   ]);
 
-  const footerNumber =
-    publicationPage != null && Number.isFinite(publicationPage)
-      ? String(Math.round(Number(publicationPage)))
-      : pageIndex > 0
-        ? String(pageIndex)
-        : "—";
+  const footerNumber = magazinePageFooterNumberLabel({
+    slot_key: props.slotKey ?? undefined,
+    publication_page: publicationPage ?? null,
+  });
 
   const isFirstArticlePage = pageIndex === 1;
   const showHeadline = isFirstArticlePage || isLeftPage;

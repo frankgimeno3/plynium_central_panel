@@ -179,7 +179,7 @@ export function FlatplanSlotsTablePanel({
                     <SlotTableDividerRow
                       key={`divider-before-end-${s.publication_slot_id}`}
                       colSpan={colSpan}
-                      label="Add slot above"
+                      label="Add page above"
                       onClick={onFlatplanAddSlotBeforeEnd}
                     />
                   );
@@ -295,7 +295,7 @@ export function FlatplanSlotsTablePanel({
                     <SlotTableDividerRow
                       key={`divider-after-9-${s.publication_slot_id}`}
                       colSpan={colSpan}
-                      label="Add slot below"
+                      label="Add page below"
                       onClick={onFlatplanAddSlotAfterNine}
                     />
                   );

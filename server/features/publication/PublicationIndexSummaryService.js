@@ -34,6 +34,7 @@ import {
     publicationIndexMediatecaPath,
     publicationSummaryMediatecaPath,
 } from "./PublicationMediatecaFolderService.js";
+import { buildAdvertiserIndexHtml } from "./advertiserIndexHtml.js";
 
 /** Filenames are stable so previous PDFs are detectable and replaceable. */
 const INDEX_PDF_FILENAME = "index.pdf";
@@ -52,9 +53,9 @@ const ADVERT_SLOT_KEYS_INCLUDED = new Set([
  * type is `advert` *and* `slot_state` is `pending` so padding placeholders are
  * skipped). Returns rows already sorted by `publication_page`.
  *
- * @returns {Promise<Array<{ slotId: number, page: number, slotKey: string, customerName: string }>>}
+ * @returns {Promise<Array<{ slotId: number, page: number | null, slotKey: string, customerId: string | null, customerName: string }>>}
  */
-async function collectAdvertRowsForIndex(publicationId) {
+export async function collectAdvertRowsForIndex(publicationId) {
     if (!PublicationSlotDbModel?.sequelize) return [];
 
     const rows = await PublicationSlotDbModel.findAll({

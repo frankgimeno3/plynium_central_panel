@@ -11,6 +11,8 @@ export type ArticleSubpagePagePreviewProps = {
   pageIndex: number;
   isLeftPage: boolean;
   publicationPage: number | null;
+  /** Used to hide the footer on cover / inside / end. */
+  slotKey?: string | null;
   pageFormat: MagazinePageLayout;
   hideHeading?: boolean;
   articleFlowPages?: MagazineArticleFlowPageInput[];

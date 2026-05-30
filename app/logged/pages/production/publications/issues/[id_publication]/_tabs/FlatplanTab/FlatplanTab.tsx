@@ -18,6 +18,8 @@ export type { FlatplanTabProps, FlatplanWorkingSplit } from "./flatplan_tab_comp
 export function FlatplanTab(props: FlatplanTabProps) {
   const {
     publicationId,
+    isIndexReady = false,
+    isSummaryReady = false,
     slots,
     sortedSlotsForFlatplan,
     slotByKey,
@@ -77,6 +79,8 @@ export function FlatplanTab(props: FlatplanTabProps) {
       />
       <FlatplanPreviewPanel
         publicationId={publicationId}
+        isIndexReady={isIndexReady}
+        isSummaryReady={isSummaryReady}
         sortedSlotsForFlatplan={sortedSlotsForFlatplan}
         flatplanWorkingSplit={flatplanWorkingSplit}
         slotByKey={slotByKey}

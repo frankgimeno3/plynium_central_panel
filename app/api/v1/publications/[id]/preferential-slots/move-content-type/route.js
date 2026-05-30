@@ -10,10 +10,18 @@ import {
 import { ensurePreferentialSlotsForMagazinePublication } from "../../../../../../../server/features/publication/publicationPreferentialSlots.js";
 import {
     applyReservedMoveWithoutOccupancySwap,
+    resolveMagazineLayoutForContentType,
     slotHasOccupyingContent,
     swapSlotOccupancyForReservedMove,
 } from "../../../../../../../server/features/publication/preferentialSlotOccupancy.js";
+import { DEFAULT_MAGAZINE_PAGE_LAYOUT } from "../../../../../../../server/features/publication_workflow/magazinePageLayout.js";
 import { triggerRegeneratePublicationIndexAndSummary } from "../../../../../../../server/features/publication/PublicationIndexSummaryService.js";
+import { rebuildAdvertiserIndexHtml } from "../../../../../../../server/features/publication/PublicationAdvertiserIndexService.js";
+import { rebuildArticleSummaryHtml } from "../../../../../../../server/features/publication/PublicationArticleSummaryService.js";
+import {
+    isAdvertiserIndexHtmlLayout,
+    isArticleSummaryHtmlLayout,
+} from "../../../../../../../server/features/publication_workflow/magazinePageLayout.js";
 import "../../../../../../../server/database/models.js";
 
 export const runtime = "nodejs";
@@ -226,13 +234,33 @@ export const POST = createEndpoint(
                 const targetSlotIdValue = Number(
                     targetSlot.get("publication_slot_id")
                 );
+                const sourceLayout = sourceSlot
+                    ? String(sourceSlot.get("magazine_page_layout") ?? "").trim()
+                    : "";
+                const targetLayoutBefore = String(
+                    targetSlot.get("magazine_page_layout") ?? ""
+                ).trim();
 
                 await targetSlot.update(
-                    { slot_content_type: body.content_type },
+                    {
+                        slot_content_type: body.content_type,
+                        magazine_page_layout: resolveMagazineLayoutForContentType(
+                            body.content_type,
+                            sourceLayout,
+                            targetLayoutBefore
+                        ),
+                    },
                     { transaction }
                 );
                 await displacedSlot.update(
-                    { slot_content_type: conflictingType },
+                    {
+                        slot_content_type: conflictingType,
+                        magazine_page_layout: resolveMagazineLayoutForContentType(
+                            conflictingType,
+                            targetLayoutBefore,
+                            ""
+                        ),
+                    },
                     { transaction }
                 );
 
@@ -245,7 +273,10 @@ export const POST = createEndpoint(
                         sourceSlotIdValue !== targetSlotIdValue
                     ) {
                         await sourceSlot.update(
-                            { slot_content_type: "advert" },
+                            {
+                                slot_content_type: "advert",
+                                magazine_page_layout: DEFAULT_MAGAZINE_PAGE_LAYOUT,
+                            },
                             { transaction }
                         );
                     }
@@ -343,6 +374,27 @@ export const POST = createEndpoint(
 
         if (result.status === 200) {
             triggerRegeneratePublicationIndexAndSummary(publicationId);
+
+            const targetSid = Number(result.payload?.target_publication_slot_id);
+            if (Number.isInteger(targetSid) && targetSid > 0) {
+                const targetRow = await PublicationSlotDbModel.findByPk(targetSid);
+                const layout = String(targetRow?.get("magazine_page_layout") ?? "").trim();
+                try {
+                    if (body.content_type === "index" && !isAdvertiserIndexHtmlLayout(layout)) {
+                        await rebuildAdvertiserIndexHtml(publicationId, targetSid);
+                    } else if (
+                        body.content_type === "summary" &&
+                        !isArticleSummaryHtmlLayout(layout)
+                    ) {
+                        await rebuildArticleSummaryHtml(publicationId, targetSid);
+                    }
+                } catch (err) {
+                    console.warn(
+                        "[move-content-type] rebuild list page HTML after move:",
+                        err?.message ?? err
+                    );
+                }
+            }
         }
 
         return NextResponse.json(result.payload, { status: result.status });
