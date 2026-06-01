@@ -2,10 +2,14 @@
   "name": "plynium_central_panel",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
     "dev": "next dev",
     "dev:webpack": "next dev --webpack",
     "build": "next build",
+    "build:amplify": "next build --webpack",
     "start": "next start",
     "lint": "eslint",
     "db:migrate:050": "node --env-file=.env server/database/scripts/apply-migration-050-chunk-image-caption.js",
