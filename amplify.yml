@@ -1,5 +1,3 @@
-# Amplify: Console env vars exist at build time only. SSR Lambda reads .env.production
-# baked into the .next artifact. See AWS SSR environment variables guide.
 version: 1
 frontend:
   phases:
@@ -7,36 +5,33 @@ frontend:
       commands:
         - nvm install 20
         - nvm use 20
-        - node -v
-        - npm -v
-        - npm ci
+        - rm -rf node_modules
+        - npm ci --include=optional
     build:
       commands:
         - nvm use 20
+        - export NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=6144"
         - |
           set -e
           echo "=== Build env check (names only) ==="
           for v in DATABASE_HOST DATABASE_NAME DATABASE_USER DATABASE_PASSWORD DATABASE_PORT IAM_ACCESS_KEY_ID IAM_SECRET_ACCESS_KEY IAM_REGION S3_BUCKET CLOUDFRONT_URL; do
             if [ -n "${!v}" ]; then echo "  OK  $v"; else echo "  MISS $v"; fi
           done
+
           if [ -z "$DATABASE_HOST" ]; then
             echo "ERROR: DATABASE_HOST is not set in Amplify → Environment variables (branch main)."
-            echo "Hosting env vars are required at build time to write .env.production for Lambda."
             exit 1
           fi
+
           rm -f .env.production
           env | grep -E '^DATABASE_' >> .env.production || true
           env | grep -E '^IAM_' >> .env.production || true
           env | grep -E '^S3_BUCKET=' >> .env.production || true
           env | grep -E '^CLOUDFRONT_URL=' >> .env.production || true
           env | grep -E '^NEXT_PUBLIC_' >> .env.production || true
-          if ! grep -q '^DATABASE_HOST=' .env.production; then
-            echo "ERROR: DATABASE_* not found in build environment after grep."
-            exit 1
-          fi
+
           echo "Wrote .env.production ($(wc -l < .env.production) lines)"
           grep -E '^DATABASE_(HOST|NAME|PORT)=' .env.production || true
-        - export NODE_OPTIONS="${NODE_OPTIONS:-} --max-old-space-size=6144"
         - npm run build:amplify
         - cp .env.production .next/.env.production
         - test -f .next/.env.production && echo "OK .next/.env.production shipped with artifact"
@@ -46,5 +41,4 @@ frontend:
       - "**/*"
   cache:
     paths:
-      - node_modules/**/*
       - .next/cache/**/*
