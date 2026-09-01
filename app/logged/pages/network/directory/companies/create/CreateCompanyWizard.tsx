@@ -91,6 +91,36 @@ function normalizeWebsiteUrl(raw: string): string {
   return `https://${t}`;
 }
 
+type PortalOption = { id: number; name: string };
+
+/** RDS `portal_id` — reject 0/NaN (Joi requires integer >= 1). */
+function parsePortalId(raw: unknown): number | null {
+  const n =
+    typeof raw === 'number' && Number.isFinite(raw)
+      ? Math.trunc(raw)
+      : parseInt(String(raw ?? ''), 10);
+  return Number.isInteger(n) && n >= 1 ? n : null;
+}
+
+function normalizePortalsFromApi(list: unknown): PortalOption[] {
+  if (!Array.isArray(list)) return [];
+  return list
+    .map((p: { id?: unknown; portal_id?: unknown; name?: unknown; key?: unknown }) => {
+      const id = parsePortalId(p?.id ?? p?.portal_id);
+      if (id == null) return null;
+      const name =
+        p?.name != null
+          ? String(p.name).trim()
+          : String(p?.key ?? id).trim();
+      return { id, name: name || `Portal ${id}` };
+    })
+    .filter((row): row is PortalOption => row != null);
+}
+
+function sanitizePortalIds(ids: number[]): number[] {
+  return ids.map((id) => parsePortalId(id)).filter((id): id is number => id != null);
+}
+
 export type CreateCompanyWizardProps = {
   /** `customer_id` from `/companies/create/from_customer/[customer_id]` — prefills the wizard and creates `customer_company_relations` on submit. */
   embeddedCustomerId?: string | null;
@@ -113,7 +143,7 @@ const CreateCompanyWizard: FC<CreateCompanyWizardProps> = ({ embeddedCustomerId 
   const [form, setForm] = useState<CompanyForm>(initialForm);
   const [errors, setErrors] = useState<FormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
+  const [portals, setPortals] = useState<PortalOption[]>([]);
   const [selectedPortalIds, setSelectedPortalIds] = useState<number[]>([]);
   const [associatedToRequest, setAssociatedToRequest] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<CompanyRequest | null>(null);
@@ -291,21 +321,23 @@ const CreateCompanyWizard: FC<CreateCompanyWizardProps> = ({ embeddedCustomerId 
 
   useEffect(() => {
     PortalService.getAllPortals()
-      .then((list: any[]) => {
-        setPortals(
-          Array.isArray(list)
-            ? list.map((p) => ({ id: p.id, name: p.name ?? String(p.key ?? p.id) }))
-            : []
-        );
+      .then((list: unknown) => {
+        setPortals(normalizePortalsFromApi(list));
       })
       .catch(() => setPortals([]));
   }, []);
 
+  useEffect(() => {
+    if (portals.length === 0) return;
+    const allowed = new Set(portals.map((p) => p.id));
+    setSelectedPortalIds((prev) => sanitizePortalIds(prev).filter((id) => allowed.has(id)));
+  }, [portals]);
+
   const handleTogglePortal = (portalId: number) => {
+    const id = parsePortalId(portalId);
+    if (id == null) return;
     setSelectedPortalIds((prev) =>
-      prev.includes(portalId)
-        ? prev.filter((id) => id !== portalId)
-        : [...prev, portalId]
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
   };
 
@@ -323,7 +355,10 @@ const CreateCompanyWizard: FC<CreateCompanyWizardProps> = ({ embeddedCustomerId 
     }
     if (!form.mainEmail.trim()) next.mainEmail = 'Email is required';
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.mainEmail)) next.mainEmail = 'Invalid email format';
-    if (portals.length > 0 && selectedPortalIds.length === 0) next.portals = 'Select at least one portal';
+    const validPortalIds = sanitizePortalIds(selectedPortalIds);
+    if (portals.length > 0 && validPortalIds.length === 0) {
+      next.portals = 'Select at least one portal';
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -389,6 +424,13 @@ const CreateCompanyWizard: FC<CreateCompanyWizardProps> = ({ embeddedCustomerId 
       const companyId = generateCompanyId();
       const categoriesArray = pickedCategories.map((c) => c.name);
       const categoryIds = pickedCategories.map((c) => c.id_category);
+      const portalIds = sanitizePortalIds(selectedPortalIds);
+      if (portals.length > 0 && portalIds.length === 0) {
+        setErrors({ portals: 'Select at least one valid portal.' });
+        setStep(2);
+        setIsSubmitting(false);
+        return;
+      }
       await CompanyService.createCompany({
         companyId,
         commercialName: form.commercialName.trim(),
@@ -403,7 +445,7 @@ const CreateCompanyWizard: FC<CreateCompanyWizardProps> = ({ embeddedCustomerId 
         mailTelephone: phone,
         fullAddress: form.fullAddress.trim(),
         webLink: form.webLink.trim(),
-        portalIds: selectedPortalIds.length > 0 ? selectedPortalIds : [],
+        portalIds,
       });
       const relationCustomerId =
         linkCustomerId ||
@@ -877,7 +919,7 @@ const CreateCompanyWizard: FC<CreateCompanyWizardProps> = ({ embeddedCustomerId 
                       || !form.country.trim()
                       || !isCountryAllowed(form.country)
                       || !form.mainEmail.trim()
-                      || (portals.length > 0 && selectedPortalIds.length === 0)
+                      || (portals.length > 0 && sanitizePortalIds(selectedPortalIds).length === 0)
                     }
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >

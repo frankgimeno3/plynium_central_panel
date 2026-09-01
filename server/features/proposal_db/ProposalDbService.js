@@ -6,14 +6,44 @@ import ProposalPaymentDbModel from "./ProposalPaymentDbModel.js";
 import { ContractDbModel, OrderDbModel, ProjectDbModel } from "../../database/models.js";
 import { getContractById } from "../contract_db/ContractDbService.js";
 import {
-    reserveAllPreferentialSlotsForProposal,
+    syncPreferentialReservationsForProposal,
     finalizePreferentialSlotAfterAccept,
 } from "../publication/PublicationPreferentialSlotReservationService.js";
+
+/** @param {unknown[]} serviceLines */
+function collectPreferentialSlotIdsFromServiceLines(serviceLines) {
+    const ids = [];
+    const seen = new Set();
+    for (const line of serviceLines || []) {
+        const ps = line?.preferential_slot_id ?? line?.preferentialSlotId;
+        const s = String(ps ?? "").trim();
+        if (s && !seen.has(s)) {
+            seen.add(s);
+            ids.push(s);
+        }
+    }
+    return ids;
+}
 
 function httpError(statusCode, message) {
     const e = new Error(message);
     e.statusCode = statusCode;
     return e;
+}
+
+/** @param {unknown} value @param {string} [fallback] */
+function normalizeProposalFase(value, fallback = "1") {
+    const v = String(value ?? "")
+        .trim()
+        .toLowerCase();
+    if (v === "created") return "created";
+    const n = parseInt(v, 10);
+    if (Number.isFinite(n) && n >= 1 && n <= 4) return String(n);
+    const fb = String(fallback ?? "1").trim().toLowerCase();
+    if (fb === "created") return "created";
+    const fn = parseInt(fb, 10);
+    if (Number.isFinite(fn) && fn >= 1 && fn <= 4) return String(fn);
+    return "1";
 }
 
 /**
@@ -276,13 +306,31 @@ function linesToApi(lines) {
         let publicationYear = embedded?.publicationYear;
         let startDate = embedded?.startDate;
         let endDate = embedded?.endDate;
-        let id_planned_publication = embedded?.id_planned_publication;
+        let id_planned_publication =
+            embedded?.id_planned_publication ??
+            (plain?.publication_id != null ? String(plain.publication_id).trim() : undefined);
+        const is_sold = Boolean(plain?.is_sold);
         let magazinePageType = embedded?.magazinePageType;
         let magazineSlotKey = embedded?.magazineSlotKey;
         let preferential_slot_id =
             embedded?.preferential_slot_id != null ? String(embedded.preferential_slot_id).trim() : undefined;
         let position_in_magazine =
             embedded?.position_in_magazine != null ? String(embedded.position_in_magazine).trim() : undefined;
+        const unit_price =
+            embedded?.unit_price != null && Number.isFinite(Number(embedded.unit_price))
+                ? Number(embedded.unit_price)
+                : parsed.price;
+        const price_mode =
+            embedded?.price_mode === "strikethrough" ||
+            embedded?.price_mode === "free" ||
+            embedded?.price_mode === "custom" ||
+            embedded?.price_mode === "calculated"
+                ? embedded.price_mode
+                : "calculated";
+        const service_total_price =
+            embedded?.service_total_price != null && Number.isFinite(Number(embedded.service_total_price))
+                ? Number(embedded.service_total_price)
+                : undefined;
 
         if (!description && embedded && embedded.fallback_custom_name_snapshot) {
             const snap = parseStoredServiceLineCustomName(String(embedded.fallback_custom_name_snapshot));
@@ -301,11 +349,15 @@ function linesToApi(lines) {
             description,
             specifications,
             units: parsed.units,
-            price: parsed.price,
+            price: unit_price,
+            unit_price,
             discount_pct: Number.isFinite(discDb) ? discDb : parsed.discount_pct,
+            price_mode,
+            ...(service_total_price != null ? { service_total_price } : {}),
             ...(publicationMonth != null && publicationYear != null ? { publicationMonth, publicationYear } : {}),
             ...(startDate || endDate ? { startDate: startDate ?? "", endDate: endDate ?? "" } : {}),
             ...(id_planned_publication ? { id_planned_publication } : {}),
+            ...(is_sold ? { is_sold: true } : {}),
             ...(magazinePageType || magazineSlotKey ? { magazinePageType, magazineSlotKey } : {}),
             ...(preferential_slot_id ? { preferential_slot_id } : {}),
             ...(position_in_magazine ? { position_in_magazine } : {}),
@@ -369,6 +421,13 @@ function toApiProposal(row, serviceLines = [], paymentRows = []) {
     const counterpartArr = parseTransferArray(row.exchange_counterpart_transfers_array);
     const firstPlynium = plyniumArr[0] || {};
     const firstCounter = counterpartArr[0] || {};
+    let exchangeToBeReceivedHtml = "";
+    for (const item of counterpartArr) {
+        if (item?.type === "to_be_received_html" && item.html) {
+            exchangeToBeReceivedHtml = String(item.html);
+            break;
+        }
+    }
     const serviceLinesApi =
         serviceLines.length > 0 ? linesToApi(serviceLines) : normalizeServiceLinesFromRow(row);
     const paymentsApi =
@@ -380,6 +439,7 @@ function toApiProposal(row, serviceLines = [], paymentRows = []) {
         additionalContactIds: additional,
         agent: row.agent ?? "",
         status: row.status ?? "",
+        proposal_fase: normalizeProposalFase(row.proposal_fase, "1"),
         title: row.title ?? "",
         proposal_date: row.proposal_date ?? "",
         date_created: row.date_created ?? "",
@@ -396,7 +456,7 @@ function toApiProposal(row, serviceLines = [], paymentRows = []) {
         exchangeCounterpartDate: firstCounter.date ?? "",
         exchangeTransferredAmount:
             firstPlynium.amount != null ? Number(firstPlynium.amount) : 0,
-        exchangeToBeReceivedHtml: "",
+        exchangeToBeReceivedHtml,
         exchangePlyniumTransfers: plyniumArr,
         exchangeCounterpartTransfers: counterpartArr,
     };
@@ -485,7 +545,7 @@ function serviceLineCustomName(line) {
     const desc = String(line?.description ?? "").trim();
     const spec = String(line?.specifications ?? "").trim();
     const units = line?.units != null ? String(line.units) : "";
-    const price = line?.price != null ? String(line.price) : "";
+    const price = line?.unit_price != null ? String(line.unit_price) : line?.price != null ? String(line.price) : "";
     const disc = line?.discount_pct != null ? String(line.discount_pct) : "";
     const pubIsoFromLine = inferProposalLinePublicationDateIso(line);
     const pubDateFromLineField =
@@ -527,6 +587,9 @@ function buildPersistedProposalServiceLinePayload(line) {
         magazineSlotKey: line?.magazineSlotKey,
         preferential_slot_id: line?.preferential_slot_id ?? line?.preferentialSlotId,
         position_in_magazine: line?.position_in_magazine ?? line?.positionInMagazine,
+        unit_price: line?.unit_price != null ? Number(line.unit_price) : Number(line?.price) || 0,
+        service_total_price: line?.service_total_price != null ? Number(line.service_total_price) : undefined,
+        price_mode: line?.price_mode ?? "calculated",
         fallback_custom_name_snapshot: customNameSnapshot,
     };
 
@@ -538,11 +601,20 @@ function buildPersistedProposalServiceLinePayload(line) {
               ? `${humanDetails}\n\n__embedded_json__:${embeddedJson}`
               : `__embedded_json__:${embeddedJson}`;
 
+    const publication_id =
+        line?.id_planned_publication != null
+            ? String(line.id_planned_publication).trim()
+            : line?.publication_id != null
+              ? String(line.publication_id).trim()
+              : "";
+
     return {
         proposal_service_custom_name: customNameSnapshot,
         proposal_service_discount: Number(line?.discount_pct ?? line?.discount ?? 0) || 0,
         proposal_service_publication_date: pubIso || null,
         proposal_service_unit_details: unitDetails,
+        publication_id: publication_id || null,
+        is_sold: Boolean(line?.is_sold),
     };
 }
 
@@ -567,6 +639,7 @@ export async function createProposal(payload) {
     const agent = String(payload?.agent ?? "").trim();
     const title = String(payload?.title ?? "").trim().slice(0, 255) || "Untitled proposal";
     const status = String(payload?.status ?? "draft").trim() || "draft";
+    const proposal_fase = normalizeProposalFase(payload?.proposal_fase, "1");
     const amount_eur = Number(payload?.amount_eur);
     const proposal_date = payload?.proposal_date ? String(payload.proposal_date).slice(0, 10) : null;
     const date_created = payload?.date_created
@@ -617,6 +690,7 @@ export async function createProposal(payload) {
                 additional_contact_ids: additional,
                 agent,
                 status,
+                proposal_fase,
                 title,
                 amount_eur: Number.isFinite(amount_eur) ? amount_eur : 0,
                 proposal_date,
@@ -645,17 +719,18 @@ export async function createProposal(payload) {
                     proposal_service_discount: snap.proposal_service_discount,
                     proposal_service_publication_date: snap.proposal_service_publication_date,
                     proposal_service_unit_details: snap.proposal_service_unit_details,
+                    publication_id: snap.publication_id,
+                    is_sold: snap.is_sold,
                 },
                 { transaction }
             );
         }
 
-        const preferentialSlotIds = [];
-        for (const line of serviceLines) {
-            const ps = line?.preferential_slot_id ?? line?.preferentialSlotId;
-            if (ps) preferentialSlotIds.push(String(ps).trim());
-        }
-        await reserveAllPreferentialSlotsForProposal(transaction, id_proposal, preferentialSlotIds);
+        await syncPreferentialReservationsForProposal(
+            transaction,
+            id_proposal,
+            collectPreferentialSlotIdsFromServiceLines(serviceLines)
+        );
 
         const paysOrdinal = sortPayloadPaymentsByOrdinalRules(payments);
         for (const { pay, ordinal } of paysOrdinal) {
@@ -696,6 +771,30 @@ export async function updateProposal(id_proposal, payload) {
     const plain = row.get({ plain: true });
     const updates = {};
 
+    if (payload.id_customer != null) {
+        const c = String(payload.id_customer).trim();
+        if (!c) throw httpError(400, "id_customer cannot be empty");
+        updates.id_customer = c;
+    }
+    if (payload.id_contact !== undefined) {
+        updates.id_contact = String(payload.id_contact ?? "").trim();
+    }
+    if (payload.additionalContactIds !== undefined) {
+        updates.additional_contact_ids = Array.isArray(payload.additionalContactIds)
+            ? payload.additionalContactIds.map((x) => String(x).trim()).filter(Boolean)
+            : [];
+    }
+    if (payload.agent !== undefined) {
+        updates.agent = String(payload.agent ?? "").trim();
+    }
+    if (payload.status != null) {
+        const st = String(payload.status).trim();
+        if (st) updates.status = st;
+    }
+    if (payload.proposal_fase !== undefined && payload.proposal_fase !== null) {
+        updates.proposal_fase = normalizeProposalFase(payload.proposal_fase);
+    }
+
     if (payload.title != null) {
         const t = String(payload.title).trim();
         if (!t) throw httpError(400, "title cannot be empty");
@@ -712,10 +811,61 @@ export async function updateProposal(id_proposal, payload) {
     if (payload.proposal_date !== undefined) {
         updates.proposal_date = payload.proposal_date ? String(payload.proposal_date).slice(0, 10) : null;
     }
-    if (payload.general_discount_pct != null) {
+    if (payload.general_discount_mode === "abs") {
+        updates.general_discount_pct = 0;
+    } else if (payload.general_discount_pct != null) {
         updates.general_discount_pct = Number.isFinite(Number(payload.general_discount_pct))
             ? Number(payload.general_discount_pct)
             : 0;
+    }
+
+    if (payload.isExchange !== undefined) {
+        updates.is_exchange = Boolean(payload.isExchange);
+    }
+    if (payload.exchangeHasFinalPrice !== undefined) {
+        updates.exchange_has_final_price = Boolean(payload.exchangeHasFinalPrice);
+    }
+    if (payload.exchangeFinalPrice !== undefined) {
+        updates.exchange_final_price = Number(payload.exchangeFinalPrice) || 0;
+    }
+    if (payload.exchangeHasBankTransfers !== undefined) {
+        updates.exchange_has_bank_transfers = Boolean(payload.exchangeHasBankTransfers);
+    }
+    if (
+        payload.exchangeHasBankTransfers !== undefined ||
+        payload.exchangePlyniumTransferDate !== undefined ||
+        payload.exchangeCounterpartDate !== undefined ||
+        payload.exchangeTransferredAmount !== undefined
+    ) {
+        const exchange_has_bank_transfers =
+            payload.exchangeHasBankTransfers !== undefined
+                ? Boolean(payload.exchangeHasBankTransfers)
+                : Boolean(plain.is_exchange);
+        const plyniumArr = [];
+        if (exchange_has_bank_transfers) {
+            const o = {
+                date: String(
+                    payload.exchangePlyniumTransferDate ?? plain.exchange_plynium_transfers_array?.[0] ?? ""
+                ).trim(),
+                counterpart_date: String(payload.exchangeCounterpartDate ?? "").trim(),
+                amount:
+                    payload.exchangeTransferredAmount !== undefined
+                        ? Number(payload.exchangeTransferredAmount) || 0
+                        : 0,
+            };
+            if (o.date || o.counterpart_date || o.amount) {
+                plyniumArr.push(JSON.stringify(o));
+            }
+        }
+        updates.exchange_plynium_transfers_array = plyniumArr;
+    }
+    if (payload.exchangeToBeReceivedHtml !== undefined) {
+        const counterpartArr = [];
+        const html = String(payload.exchangeToBeReceivedHtml ?? "").trim();
+        if (html) {
+            counterpartArr.push(JSON.stringify({ type: "to_be_received_html", html }));
+        }
+        updates.exchange_counterpart_transfers_array = counterpartArr;
     }
 
     const sequelize = ProposalDbModel.sequelize;
@@ -734,6 +884,8 @@ export async function updateProposal(id_proposal, payload) {
                         proposal_service_discount: snap.proposal_service_discount,
                         proposal_service_publication_date: snap.proposal_service_publication_date,
                         proposal_service_unit_details: snap.proposal_service_unit_details,
+                        publication_id: snap.publication_id,
+                        is_sold: snap.is_sold,
                     },
                     { transaction }
                 );
@@ -743,6 +895,11 @@ export async function updateProposal(id_proposal, payload) {
                     ? Number(payload.general_discount_pct)
                     : Number(plain.general_discount_pct) || 0;
             updates.amount_eur = payload.serviceLines.length ? computePreTaxNet(payload.serviceLines, g) : 0;
+            await syncPreferentialReservationsForProposal(
+                transaction,
+                id_proposal,
+                collectPreferentialSlotIdsFromServiceLines(payload.serviceLines)
+            );
         } else if (payload.amount_eur != null) {
             updates.amount_eur = Number(payload.amount_eur);
         }
@@ -801,7 +958,7 @@ export async function acceptProposalCreateContractAndProjects(id_proposal, optio
     if (linesWithoutService.length) {
         throw httpError(
             400,
-            "Hay líneas de servicio sin identificador de servicio (service_id). Edita y guarda la propuesta antes de aceptar."
+            "Some service lines are missing a service identifier (service_id). Edit and save the proposal before accepting."
         );
     }
 
@@ -834,6 +991,11 @@ export async function acceptProposalCreateContractAndProjects(id_proposal, optio
 
     await sequelize.transaction(async (transaction) => {
         await ProposalDbModel.update({ status: "accepted" }, { where: { id_proposal }, transaction });
+
+        await ProposalServiceLineDbModel.update(
+            { is_sold: true },
+            { where: { proposal_id: id_proposal }, transaction }
+        );
 
         await ContractDbModel.create(
             {
@@ -912,7 +1074,7 @@ export async function acceptProposalCreateContractAndProjects(id_proposal, optio
         }
 
         if (!createdProjects.length) {
-            throw httpError(400, "No se pudieron crear proyectos a partir de las líneas de servicio.");
+            throw httpError(400, "Could not create projects from the service lines.");
         }
 
         let customer_account_name = "";

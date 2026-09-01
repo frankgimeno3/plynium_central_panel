@@ -1231,7 +1231,9 @@ export function PreferentialSlotBlock({ slot }: { slot: PreferentialSlotApiRow }
 
   const stRaw = String(slot.state ?? "").toLowerCase();
   const isBought = stRaw === "bought";
-  const isOffered = stRaw === "offered";
+  const offeredProposals = slot.proposal_summaries ?? [];
+  const isOffered =
+    !isBought && (stRaw === "offered" || offeredProposals.length > 0);
   const isAssignedCustomer =
     stRaw === "assigned" && slot.assigned_kind === "customer" && Boolean(slot.assigned_customer_id?.trim());
   const hasAssignedCustomer = isBought || isAssignedCustomer;
@@ -1239,7 +1241,6 @@ export function PreferentialSlotBlock({ slot }: { slot: PreferentialSlotApiRow }
   const assignedCustomerLabel =
     slot.assigned_customer_name?.trim() || assignedCustomerId || "—";
 
-  const offeredProposals = isOffered ? slot.proposal_summaries : [];
   const offeredLineCount = offeredProposals.reduce(
     (acc, p) => acc + (p.service_lines?.length ?? 0),
     0
@@ -1257,14 +1258,16 @@ export function PreferentialSlotBlock({ slot }: { slot: PreferentialSlotApiRow }
         <StatusPill label="Bought" yes={isBought} yesTone="emerald" />
         <StatusPill
           label="Offered"
-          yes={isOffered && offeredProposals.length > 0}
+          yes={isOffered}
           yesTone="amber"
           detail={
-            isOffered && offeredProposals.length > 0
+            offeredProposals.length > 0
               ? `${offeredProposals.length} proposal${
                   offeredProposals.length > 1 ? "s" : ""
                 } · ${offeredLineCount} line${offeredLineCount === 1 ? "" : "s"}`
-              : null
+              : isOffered
+                ? "On slot"
+                : null
           }
         />
       </div>

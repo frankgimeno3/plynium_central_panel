@@ -10,23 +10,17 @@ import { CustomerService } from "@/app/service/CustomerService";
 import { ContactService } from "@/app/service/ContactService";
 import { PublicationService } from "@/app/service/PublicationService";
 import { ProposalService } from "@/app/service/ProposalService";
-
-type ServiceLine = {
-  lineId?: string;
-  id_service: string;
-  description: string;
-  specifications: string;
-  units: number;
-  discount_pct: number;
-  price: number;
-  publicationMonth?: number;
-  publicationYear?: number;
-  startDate?: string;
-  endDate?: string;
-  id_planned_publication?: string;
-  magazinePageType?: string;
-  magazineSlotKey?: string;
-};
+import {
+  getProposalVariationCreateHref,
+  getProposalEditHref,
+} from "@/lib/account-management/proposalRoutes";
+import {
+  getContributingServiceTotal,
+  getDisplayServiceTotal,
+  normalizeServiceLineFromApi,
+  resolveUnitPrice,
+} from "../create/serviceLinePricing";
+import type { ServiceLine } from "../create/components/types";
 
 type PaymentLine = {
   paymentId?: string;
@@ -85,6 +79,8 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
   const [acceptContractTitle, setAcceptContractTitle] = useState("");
   const [acceptSaving, setAcceptSaving] = useState(false);
   const [acceptError, setAcceptError] = useState<string | null>(null);
+  const [rejectSaving, setRejectSaving] = useState(false);
+  const [rejectError, setRejectError] = useState<string | null>(null);
   useEffect(() => {
     ServiceService.getAllServices().then((list) => setServices(Array.isArray(list) ? list : [])).catch(() => setServices([]));
   }, []);
@@ -114,7 +110,16 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
       const p = await ProposalService.getProposalById(id_proposal);
       setProposal(p ?? null);
       if (p) {
-        setEditableLines((p.serviceLines ?? []).map((l: ServiceLine) => ({ ...l })));
+        setEditableLines(
+          (p.serviceLines ?? []).map((raw: Record<string, unknown>, idx: number) => {
+            const l = raw as Record<string, unknown>;
+            const idService = String(l.id_service ?? "");
+            return normalizeServiceLineFromApi({
+              ...l,
+              lineId: String(l.lineId ?? "").trim() || `line-${idx}-${idService}`,
+            });
+          })
+        );
         setEditablePayments((p.payments ?? []).map((x: PaymentLine) => ({ ...x })));
         setEditableGeneralDiscount(p.general_discount_pct ?? 0);
       } else {
@@ -173,7 +178,7 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
 
   const lines = editableLines;
   const totalBeforeDiscount = useMemo(
-    () => lines.reduce((sum, l) => sum + l.units * l.price * (1 - (l.discount_pct ?? 0) / 100), 0),
+    () => lines.reduce((sum, l) => sum + getContributingServiceTotal(l), 0),
     [lines]
   );
   const generalDiscountPct = editableGeneralDiscount;
@@ -191,11 +196,7 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
       proposal_date: editableCreationDate,
       expiration_date: editableExpirationDate || null,
       general_discount_pct: editableGeneralDiscount,
-      serviceLines: editableLines,
     };
-    if (!proposal.isExchange) {
-      body.payments = editablePayments;
-    }
     return body;
   }, [
     proposal,
@@ -203,17 +204,10 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
     editableCreationDate,
     editableExpirationDate,
     editableGeneralDiscount,
-    editableLines,
-    editablePayments,
   ]);
 
-  const updateLine = useCallback((idx: number, patch: Partial<ServiceLine>) => {
-    setEditableLines((prev) => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)));
-  }, []);
-
-  const updatePayment = useCallback((idx: number, patch: Partial<PaymentLine>) => {
-    setEditablePayments((prev) => prev.map((p, i) => (i === idx ? { ...p, ...patch } : p)));
-  }, []);
+  const formatPaymentMethod = (m: string) =>
+    m === "recibo" ? "Direct debit" : m === "transferencia_bancaria" ? "Bank transfer" : m;
 
   const handleSave = useCallback(async () => {
     if (!proposal) return;
@@ -227,7 +221,7 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
         typeof e === "object" && e !== null && "message" in e && typeof (e as { message: unknown }).message === "string"
           ? (e as { message: string }).message
           : null;
-      setSaveError(msg || "No se pudo guardar.");
+      setSaveError(msg || "Could not save.");
     } finally {
       setSaveSaving(false);
     }
@@ -237,7 +231,7 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
     if (!proposal) return;
     const contractTitle = acceptContractTitle.trim();
     if (!contractTitle) {
-      setAcceptError("Indica un nombre para el contrato.");
+      setAcceptError("Enter a contract name.");
       return;
     }
     setAcceptSaving(true);
@@ -257,11 +251,30 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
         typeof e === "object" && e !== null && "message" in e && typeof (e as { message: unknown }).message === "string"
           ? (e as { message: string }).message
           : null;
-      setAcceptError(msg || "No se pudo aceptar la propuesta.");
+      setAcceptError(msg || "Could not accept the proposal.");
     } finally {
       setAcceptSaving(false);
     }
   }, [proposal, id_proposal, router, loadProposal, buildProposalPatch, acceptContractTitle]);
+
+  const handleReject = useCallback(async () => {
+    if (!proposal) return;
+    if (!window.confirm("Mark this proposal as rejected?")) return;
+    setRejectSaving(true);
+    setRejectError(null);
+    try {
+      await ProposalService.updateProposal(id_proposal, { ...buildProposalPatch(), status: "rejected" });
+      await loadProposal();
+    } catch (e: unknown) {
+      const msg =
+        typeof e === "object" && e !== null && "message" in e && typeof (e as { message: unknown }).message === "string"
+          ? (e as { message: string }).message
+          : null;
+      setRejectError(msg || "Could not reject the proposal.");
+    } finally {
+      setRejectSaving(false);
+    }
+  }, [proposal, id_proposal, buildProposalPatch, loadProposal]);
 
   const { setPageMeta } = usePageContent();
 
@@ -301,6 +314,8 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
   }
 
   const locked = proposal.status === "accepted";
+  const statusNorm = String(proposal.status ?? "").trim().toLowerCase();
+  const canAcceptOrReject = !locked && statusNorm === "pending";
   const displayAmount = lines.length ? totalAfterTax : proposal.amount_eur;
   const displayDate = proposal.proposal_date ?? proposal.date_created;
 
@@ -324,7 +339,20 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
             <p><span className="text-gray-500">By agent</span> {proposal.agent}</p>
           )}
           {(contact || proposal.id_contact) && (
-            <p><span className="text-gray-500">For</span> {contact?.name ?? proposal.id_contact} {contact?.email ? `(${contact.email})` : ""}</p>
+            <p>
+              <span className="text-gray-500">For</span>{" "}
+              {proposal.id_contact ? (
+                <Link
+                  href={`/logged/pages/account-management/contacts_db/${encodeURIComponent(proposal.id_contact)}`}
+                  className="text-blue-600 hover:underline font-medium"
+                >
+                  {contact?.name ?? proposal.id_contact}
+                </Link>
+              ) : (
+                <span className="font-medium">{contact?.name ?? "—"}</span>
+              )}
+              {contact?.email ? ` (${contact.email})` : ""}
+            </p>
           )}
           {(customer || proposal.id_customer) && (
             <p><span className="text-gray-500">From the company</span>{" "}
@@ -405,9 +433,9 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
             disabled={locked || saveSaving}
             className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {saveSaving ? "Guardando…" : "Guardar cambios"}
+            {saveSaving ? "Saving…" : "Save changes"}
           </button>
-          {lines.length > 0 && !locked && (
+          {lines.length > 0 && canAcceptOrReject && (
             <button
               type="button"
               onClick={() => {
@@ -415,13 +443,38 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
                 setAcceptContractTitle(editableTitle.trim() || proposal.title || "");
                 setAcceptModalOpen(true);
               }}
-              disabled={acceptSaving || saveSaving}
+              disabled={acceptSaving || rejectSaving || saveSaving}
               className="px-4 py-2 text-sm font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Marcar como aceptada
+              Mark as accepted
             </button>
           )}
+          {canAcceptOrReject && (
+            <button
+              type="button"
+              onClick={() => void handleReject()}
+              disabled={rejectSaving || acceptSaving || saveSaving}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {rejectSaving ? "Rejecting…" : "Mark as rejected"}
+            </button>
+          )}
+          <Link
+            href={getProposalVariationCreateHref(id_proposal)}
+            className="px-4 py-2 text-sm font-medium text-blue-800 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 inline-flex items-center"
+          >
+            Create new as a variation
+          </Link>
+          {!locked && (
+            <Link
+              href={getProposalEditHref(id_proposal)}
+              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 inline-flex items-center"
+            >
+              Edit services / payments
+            </Link>
+          )}
           {saveError && <p className="text-sm text-red-600 w-full">{saveError}</p>}
+          {rejectError && <p className="text-sm text-red-600 w-full">{rejectError}</p>}
         </div>
 
         {additionalContacts.length > 0 && (
@@ -436,7 +489,17 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
         {/* Service lines (new structure) */}
         {lines.length > 0 && (
           <div className="border-t pt-6">
-            <p className="text-sm font-semibold text-gray-700 mb-3">Services offered</p>
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-3">
+              <p className="text-sm font-semibold text-gray-700">Services offered</p>
+              {!locked && (
+                <Link
+                  href={getProposalEditHref(id_proposal)}
+                  className="text-sm font-medium text-indigo-600 hover:underline"
+                >
+                  Edit services / payments
+                </Link>
+              )}
+            </div>
             <div className="overflow-x-auto">
               <table className="w-full text-sm border border-gray-200 rounded-lg overflow-hidden">
                 <thead className="bg-gray-50">
@@ -445,78 +508,38 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
                     <th className="px-4 py-2 text-left font-medium text-gray-600">Description</th>
                     <th className="px-4 py-2 text-left font-medium text-gray-600">Specifications</th>
                     <th className="px-4 py-2 text-right font-medium text-gray-600">Units</th>
+                    <th className="px-4 py-2 text-right font-medium text-gray-600">Unit price</th>
                     <th className="px-4 py-2 text-right font-medium text-gray-600">Disc. %</th>
-                    <th className="px-4 py-2 text-right font-medium text-gray-600">Price</th>
                     <th className="px-4 py-2 text-right font-medium text-gray-600">Amount</th>
                     <th className="px-4 py-2 text-left font-medium text-gray-600">Extra</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {lines.map((line, idx) => {
-                    const lineTotal = line.units * line.price * (1 - (line.discount_pct ?? 0) / 100);
+                    const displayTotal = getDisplayServiceTotal(line);
                     const extra: string[] = [];
                     if (line.publicationMonth != null && line.publicationYear != null) extra.push(`${line.publicationMonth}/${line.publicationYear}`);
                     if (line.startDate && line.endDate) extra.push(`${line.startDate} – ${line.endDate}`);
                     if (line.id_planned_publication) extra.push(getPublicationName(line.id_planned_publication) + (line.magazinePageType ? ` · ${line.magazinePageType}` : ""));
                     const rowKey = line.lineId || `${line.id_service ?? "svc"}-${idx}`;
-                    const cellInput =
-                      "w-full min-w-[5rem] px-2 py-1 text-sm border border-gray-200 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-gray-50 disabled:cursor-not-allowed";
+                    const mode = line.price_mode ?? "calculated";
                     return (
                       <tr key={rowKey}>
                         <td className="px-4 py-2 whitespace-nowrap">{getServiceName(line.id_service)}</td>
-                        <td className="px-4 py-2">
-                          <input
-                            type="text"
-                            value={line.description ?? ""}
-                            onChange={(e) => updateLine(idx, { description: e.target.value })}
-                            disabled={locked}
-                            className={cellInput}
-                          />
+                        <td className="px-4 py-2 text-gray-700">{line.description || "—"}</td>
+                        <td className="px-4 py-2 text-gray-700">{line.specifications || "—"}</td>
+                        <td className="px-4 py-2 text-right">{line.units}</td>
+                        <td className="px-4 py-2 text-right">{resolveUnitPrice(line).toFixed(2)} €</td>
+                        <td className="px-4 py-2 text-right">{line.discount_pct ?? 0}%</td>
+                        <td className="px-4 py-2 text-right font-medium">
+                          {mode === "free" ? (
+                            <span className="text-emerald-700 font-semibold">FREE</span>
+                          ) : mode === "strikethrough" ? (
+                            <span className="line-through text-gray-500">{displayTotal.toFixed(2)} €</span>
+                          ) : (
+                            `${displayTotal.toFixed(2)} €`
+                          )}
                         </td>
-                        <td className="px-4 py-2">
-                          <input
-                            type="text"
-                            value={line.specifications ?? ""}
-                            onChange={(e) => updateLine(idx, { specifications: e.target.value })}
-                            disabled={locked}
-                            className={cellInput}
-                          />
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <input
-                            type="number"
-                            min={0}
-                            step={1}
-                            value={Number.isFinite(line.units) ? line.units : 0}
-                            onChange={(e) => updateLine(idx, { units: Math.max(0, parseInt(e.target.value, 10) || 0) })}
-                            disabled={locked}
-                            className={`${cellInput} text-right`}
-                          />
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <input
-                            type="number"
-                            min={0}
-                            max={100}
-                            step={0.5}
-                            value={line.discount_pct ?? 0}
-                            onChange={(e) => updateLine(idx, { discount_pct: Math.min(100, Math.max(0, parseFloat(e.target.value) || 0)) })}
-                            disabled={locked}
-                            className={`${cellInput} text-right`}
-                          />
-                        </td>
-                        <td className="px-4 py-2 text-right">
-                          <input
-                            type="number"
-                            min={0}
-                            step={0.01}
-                            value={line.price}
-                            onChange={(e) => updateLine(idx, { price: Math.max(0, parseFloat(e.target.value) || 0) })}
-                            disabled={locked}
-                            className={`${cellInput} text-right`}
-                          />
-                        </td>
-                        <td className="px-4 py-2 text-right font-medium">{lineTotal.toFixed(2)} €</td>
                         <td className="px-4 py-2 text-gray-600 text-xs">{extra.join(" · ") || "—"}</td>
                       </tr>
                     );
@@ -573,56 +596,20 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
               {editablePayments.map((p, idx) => (
                 <li
                   key={p.paymentId || `payment-${idx}`}
-                  className="flex flex-wrap gap-3 items-end py-2 border-b border-gray-100 last:border-0"
+                  className="flex flex-wrap gap-4 py-2 border-b border-gray-100 last:border-0 text-gray-700"
                 >
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Date</label>
-                    <input
-                      type="date"
-                      value={p.date ? p.date.slice(0, 10) : ""}
-                      onChange={(e) => updatePayment(idx, { date: e.target.value })}
-                      disabled={locked}
-                      className="px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Method</label>
-                    <select
-                      value={p.paymentMethod}
-                      onChange={(e) =>
-                        updatePayment(idx, { paymentMethod: e.target.value as PaymentLine["paymentMethod"] })
-                      }
-                      disabled={locked}
-                      className="px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                    >
-                      <option value="recibo">Direct debit</option>
-                      <option value="transferencia_bancaria">Bank transfer</option>
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Bank</label>
-                    <select
-                      value={p.bank}
-                      onChange={(e) => updatePayment(idx, { bank: e.target.value as PaymentLine["bank"] })}
-                      disabled={locked}
-                      className="px-2 py-1 border border-gray-300 rounded text-sm disabled:bg-gray-100"
-                    >
-                      <option value="Sabadell">Sabadell</option>
-                      <option value="Santander">Santander</option>
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <label className="text-xs text-gray-500">Amount (€)</label>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={p.amount}
-                      onChange={(e) => updatePayment(idx, { amount: Math.max(0, parseFloat(e.target.value) || 0) })}
-                      disabled={locked}
-                      className="w-28 px-2 py-1 border border-gray-300 rounded text-sm text-right disabled:bg-gray-100"
-                    />
-                  </div>
+                  <span>
+                    <span className="text-gray-500">Date:</span> {p.date ? p.date.slice(0, 10) : "—"}
+                  </span>
+                  <span>
+                    <span className="text-gray-500">Method:</span> {formatPaymentMethod(p.paymentMethod)}
+                  </span>
+                  <span>
+                    <span className="text-gray-500">Bank:</span> {p.bank}
+                  </span>
+                  <span>
+                    <span className="text-gray-500">Amount:</span> {p.amount.toFixed(2)} €
+                  </span>
                 </li>
               ))}
             </ul>
@@ -677,17 +664,18 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
               onKeyDown={(e) => e.stopPropagation()}
             >
               <h2 id="accept-proposal-title" className="text-lg font-semibold text-gray-900">
-                ¿Confirmar aceptación?
+                Confirm acceptance?
               </h2>
               <p className="text-sm text-gray-600">
-                Se guardarán los cambios pendientes, la propuesta pasará a estado <strong>accepted</strong> y se creará{" "}
-                <strong>un contrato</strong> con el nombre indicado abajo, con <strong>un proyecto por cada línea de servicio</strong>{" "}
-                en <code className="text-xs bg-gray-100 px-1 rounded">contracts_db</code> y{" "}
+                Pending changes will be saved, the proposal will move to <strong>accepted</strong>, and{" "}
+                <strong>one contract</strong> will be created with the name below, with{" "}
+                <strong>one project per service line</strong> in{" "}
+                <code className="text-xs bg-gray-100 px-1 rounded">contracts_db</code> and{" "}
                 <code className="text-xs bg-gray-100 px-1 rounded">projects_db</code>.
               </p>
               <div className="space-y-1">
                 <label htmlFor="accept-contract-title" className="block text-sm font-medium text-gray-700">
-                  Nombre del contrato
+                  Contract name
                 </label>
                 <input
                   id="accept-contract-title"
@@ -696,10 +684,12 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
                   onChange={(e) => setAcceptContractTitle(e.target.value)}
                   maxLength={255}
                   disabled={acceptSaving}
-                  placeholder="Ej. Contrato publicidad Q2 2026"
+                  placeholder="e.g. Q2 2026 advertising contract"
                   className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500 disabled:bg-gray-100"
                 />
-                <p className="text-xs text-gray-500">Máx. 255 caracteres. Los títulos de proyecto se generan a partir de este nombre.</p>
+                <p className="text-xs text-gray-500">
+                  Max. 255 characters. Project titles are generated from this name.
+                </p>
               </div>
               {acceptError && <p className="text-sm text-red-600">{acceptError}</p>}
               <div className="flex justify-end gap-2 pt-2">
@@ -709,7 +699,7 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
                   disabled={acceptSaving}
                   onClick={() => setAcceptModalOpen(false)}
                 >
-                  Cancelar
+                  Cancel
                 </button>
                 <button
                   type="button"
@@ -717,7 +707,7 @@ const ProposalDetailPage: FC<{ params: Promise<{ id_proposal: string }> }> = ({ 
                   disabled={acceptSaving || !acceptContractTitle.trim()}
                   onClick={() => void handleConfirmAccept()}
                 >
-                  {acceptSaving ? "Procesando…" : "Confirmar"}
+                  {acceptSaving ? "Processing…" : "Confirm"}
                 </button>
               </div>
             </div>

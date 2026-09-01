@@ -4,17 +4,28 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 import type { BreadcrumbItem } from "../nav_components/MiddleNav";
+
+export type PageButtonIcon = "save";
 
 export interface PageButton {
   label: string;
   href?: string;
   onClick?: () => void;
   variant?: "primary" | "danger";
+  /** Icon-only control (e.g. save draft). */
+  icon?: PageButtonIcon;
+  iconOnly?: boolean;
+  /** When true, icon-only save uses saved (green) styling. */
+  saved?: boolean;
+  disabled?: boolean;
+  title?: string;
 }
 
 export interface PageMeta {
@@ -55,9 +66,30 @@ function buttonsEqual(a: PageButton[] | undefined, b: PageButton[] | undefined):
     if (String(aa[i]?.label) !== String(bb[i]?.label)) return false;
     if (String(aa[i]?.href ?? "") !== String(bb[i]?.href ?? "")) return false;
     if (aa[i]?.variant !== bb[i]?.variant) return false;
-    if (aa[i]?.onClick !== bb[i]?.onClick) return false;
+    if (aa[i]?.icon !== bb[i]?.icon) return false;
+    if (aa[i]?.iconOnly !== bb[i]?.iconOnly) return false;
+    if (aa[i]?.saved !== bb[i]?.saved) return false;
+    if (aa[i]?.disabled !== bb[i]?.disabled) return false;
+    if (String(aa[i]?.title ?? "") !== String(bb[i]?.title ?? "")) return false;
+    // Ignore onClick identity: inline handlers change every render and would
+    // prevent bail-out; useSyncPageMeta re-syncs when label/href/variant change.
   }
   return true;
+}
+
+function breadcrumbsKey(breadcrumbs: BreadcrumbItem[] | undefined): string {
+  if (!breadcrumbs?.length) return "";
+  return breadcrumbs.map((b) => `${b.label}\0${b.href ?? ""}`).join("\n");
+}
+
+function buttonsStructuralKey(buttons: PageButton[] | undefined): string {
+  if (!buttons?.length) return "";
+  return buttons
+    .map(
+      (b) =>
+        `${b.label}\0${b.href ?? ""}\0${b.variant ?? ""}\0${b.icon ?? ""}\0${b.iconOnly ? "1" : "0"}\0${b.saved ? "1" : "0"}\0${b.disabled ? "1" : "0"}\0${b.title ?? ""}`
+    )
+    .join("\n");
 }
 
 const PageContentContext = createContext<PageContentContextValue | null>(null);
@@ -105,4 +137,22 @@ export function usePageContent(): PageContentContextValue {
     throw new Error("usePageContent must be used within PageContentProvider");
   }
   return ctx;
+}
+
+/**
+ * Syncs header meta without re-running on every render when breadcrumbs/buttons
+ * are recreated inline. Keeps the latest handlers via a ref.
+ */
+export function useSyncPageMeta(next: Partial<PageMeta>): void {
+  const { setPageMeta } = usePageContent();
+  const nextRef = useRef(next);
+  nextRef.current = next;
+
+  const titleKey = next.pageTitle ?? "";
+  const crumbsKey = breadcrumbsKey(next.breadcrumbs);
+  const buttonsKey = buttonsStructuralKey(next.buttons);
+
+  useEffect(() => {
+    setPageMeta(nextRef.current);
+  }, [setPageMeta, titleKey, crumbsKey, buttonsKey]);
 }

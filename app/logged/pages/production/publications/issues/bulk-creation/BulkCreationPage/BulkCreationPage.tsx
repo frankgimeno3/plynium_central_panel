@@ -2,7 +2,7 @@
 
 import React, { FC, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
+import { useSyncPageMeta } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { MagazineService } from "@/app/service/MagazineService";
 import { PublicationService } from "@/app/service/PublicationService";
@@ -22,7 +22,6 @@ import { BulkCreationStep4Creating } from "./bulk_creation_page_components/BulkC
 
 const IssueBulkCreationPage: FC = () => {
   const router = useRouter();
-  const { setPageMeta } = usePageContent();
 
   const [step, setStep] = useState<WizardStep>(1);
   const [magazines, setMagazines] = useState<Magazine[]>([]);
@@ -37,23 +36,16 @@ const IssueBulkCreationPage: FC = () => {
   const [createSuccess, setCreateSuccess] = useState(false);
   const [createdCount, setCreatedCount] = useState(0);
 
-  const breadcrumbs = useMemo(
-    () => [
+  useSyncPageMeta({
+    pageTitle: "Issue bulk creation",
+    breadcrumbs: [
       { label: "Production", href: "/logged/pages/production/services" },
       { label: "Publications", href: ISSUES_URL },
       { label: "Issues", href: ISSUES_URL },
       { label: "Issue bulk creation" },
     ],
-    []
-  );
-
-  useEffect(() => {
-    setPageMeta({
-      pageTitle: "Issue bulk creation",
-      breadcrumbs,
-      buttons: [{ label: "Back to issues", href: ISSUES_URL }],
-    });
-  }, [setPageMeta, breadcrumbs]);
+    buttons: [{ label: "Back to issues", href: ISSUES_URL }],
+  });
 
   useEffect(() => {
     if (!createSuccess) return;
@@ -210,6 +202,7 @@ const IssueBulkCreationPage: FC = () => {
           publication_year: slot.publicationYear,
           magazine_this_year_issue: slot.issueInYear,
           publication_expected_publication_month: slot.expectedMonth,
+          real_publication_month_date: slot.expectedDate || null,
           is_special_edition: slot.is_special_edition,
           publication_theme: slot.publication_theme,
           publication_format: slot.publication_format,

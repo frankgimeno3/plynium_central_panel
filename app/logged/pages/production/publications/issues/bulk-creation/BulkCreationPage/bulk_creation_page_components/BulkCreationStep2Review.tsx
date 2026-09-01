@@ -3,7 +3,9 @@
 import React, { FC } from "react";
 import {
   issuesPerYearFromPeriodicity,
-  monthLabel,
+  MONTH_OPTIONS,
+  patchSlotExpectedDate,
+  patchSlotExpectedMonth,
   type PlannedIssueSlot,
   type PublicationFormat,
 } from "../../issueBulkPlan";
@@ -89,8 +91,37 @@ export const BulkCreationStep2Review: FC<BulkCreationStep2ReviewProps> = ({
                               <td className="px-4 py-3 text-sm text-gray-900">
                                 {String(slot.issueInYear).padStart(3, "0")}
                               </td>
-                              <td className="px-4 py-3 text-sm text-gray-700">{monthLabel(slot.expectedMonth)}</td>
-                              <td className="px-4 py-3 text-sm text-gray-700">{slot.expectedDate}</td>
+                              <td className="px-4 py-3 text-sm">
+                                <select
+                                  value={slot.expectedMonth}
+                                  disabled={slot.exists}
+                                  onChange={(e) =>
+                                    updateSlot(plan.magazine.id_magazine, slot.key, {
+                                      ...patchSlotExpectedMonth(slot, Number(e.target.value)),
+                                    })
+                                  }
+                                  className="min-w-[8rem] px-2 py-1.5 text-sm border border-gray-300 rounded-lg disabled:bg-gray-100"
+                                >
+                                  {MONTH_OPTIONS.map((opt) => (
+                                    <option key={opt.value} value={opt.value}>
+                                      {opt.label}
+                                    </option>
+                                  ))}
+                                </select>
+                              </td>
+                              <td className="px-4 py-3 text-sm">
+                                <input
+                                  type="date"
+                                  value={slot.expectedDate}
+                                  disabled={slot.exists}
+                                  onChange={(e) =>
+                                    updateSlot(plan.magazine.id_magazine, slot.key, {
+                                      ...patchSlotExpectedDate(slot, e.target.value),
+                                    })
+                                  }
+                                  className="px-2 py-1.5 text-sm border border-gray-300 rounded-lg disabled:bg-gray-100"
+                                />
+                              </td>
                               <td className="px-4 py-3 text-sm">
                                 {slot.exists ? (
                                   <span className="px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">

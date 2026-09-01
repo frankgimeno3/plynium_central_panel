@@ -25,3 +25,9 @@ export function monthsBetween(start: string, end: string): number {
     Math.max(0, (d2.getDate() - d1.getDate()) / 30)
   );
 }
+
+export function specifitySortKey(value?: string): number {
+  if (value === "general") return 0;
+  if (value === "specific-related") return 1;
+  return 2;
+}

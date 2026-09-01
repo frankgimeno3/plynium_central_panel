@@ -2,7 +2,7 @@ import PublicationSlotDbModel from "../publication_workflow/PublicationSlotDbMod
 import PublicationPreferentialSlotDbModel from "../publication_workflow/PublicationPreferentialSlotDbModel.js";
 import "../../database/models.js";
 
-/** `service_groups.service_group_id` — Magazine Cover Page (RDS seed). */
+/** General service_id — Magazine Cover Page (migrated from service_groups). */
 export const SERVICE_GROUP_MAGAZINE_COVER_PAGE = "a2e21f90-c216-487f-87dc-907dece4be7a";
 /** Magazine Inside Cover */
 export const SERVICE_GROUP_MAGAZINE_INSIDE_COVER = "71d8f1bf-4c7f-486b-8ebb-acef6aa6b5b8";
@@ -12,9 +12,9 @@ export const SERVICE_GROUP_MAGAZINE_END_PAGE = "ff45b327-2073-4354-83a5-b5a0ca6b
 export const SERVICE_GROUP_MAGAZINE_PREMIUM_PAGE = "cd71b675-d775-407a-9cd7-051c50cb00b8";
 
 /**
- * Maps `position_in_magazine` labels to the standard magazine tariff service groups.
+ * Maps `position_in_magazine` labels to the standard magazine tariff general services.
  * @param {string} position_in_magazine
- * @returns {string} UUID service_group_id
+ * @returns {string} service_id (general service)
  */
 export function serviceGroupIdForMagazinePreferentialPosition(position_in_magazine) {
     const p = String(position_in_magazine ?? "");

@@ -2,10 +2,17 @@ import { Op, QueryTypes } from "sequelize";
 import {
     PublicationModel,
     PublicationPreferentialSlotDbModel,
-    ServiceGroupDbModel,
+    ServiceDbModel,
     MagazineDbModel,
 } from "../../database/models.js";
 import { displayTitleForPreferentialPosition } from "./publicationPreferentialSlots.js";
+import {
+    loadActiveProposalOffersForPreferentialRows,
+    loadOfferedProposalIdsByPublicationSlotId,
+    mergeSlotOfferState,
+    uniqueNonEmptyStrings,
+} from "./preferentialOfferEnrichment.js";
+import ProposalDbModel from "../proposal_db/ProposalDbModel.js";
 import "../../database/models.js";
 
 const PENDING_PUBLICATION_STATUSES = ["draft", "planned"];
@@ -116,18 +123,18 @@ export async function listPendingPublicationPreferentialSlots(filters = {}) {
                 .filter(Boolean)
         ),
     ];
-    const serviceGroups = serviceGroupIds.length
-        ? await ServiceGroupDbModel.findAll({
-              where: { service_group_id: { [Op.in]: serviceGroupIds } },
-              attributes: ["service_group_id", "service_group_name"],
+    const generalServices = serviceGroupIds.length
+        ? await ServiceDbModel.findAll({
+              where: { service_id: { [Op.in]: serviceGroupIds } },
+              attributes: ["service_id", "service_full_name"],
           })
         : [];
     const serviceGroupNameById = new Map(
-        serviceGroups.map((row) => {
+        generalServices.map((row) => {
             const plain = row.get({ plain: true });
             return [
-                normalizeText(plain.service_group_id),
-                normalizeText(plain.service_group_name),
+                normalizeText(plain.service_id),
+                normalizeText(plain.service_full_name),
             ];
         })
     );
@@ -174,6 +181,46 @@ export async function listPendingPublicationPreferentialSlots(filters = {}) {
     const serviceGroupFilter = normalizeLower(filters.service_group_id);
     const customerFilter = normalizeLower(filters.customer_id);
 
+    const allPublicationSlotIds = prefRows
+        .map((row) => row.get("publication_slot_id"))
+        .filter((id) => id != null)
+        .map((id) => Number(id))
+        .filter(Number.isFinite);
+    const plainPrefRows = prefRows.map((row) => row.get({ plain: true }));
+    const offeredFromPages = await loadOfferedProposalIdsByPublicationSlotId("", allPublicationSlotIds);
+    const offeredFromLines = await loadActiveProposalOffersForPreferentialRows(plainPrefRows);
+    /** @type {Map<number, string[]>} */
+    const offeredByPublicationSlotId = new Map();
+    for (const [slotId, ids] of offeredFromPages.entries()) {
+        offeredByPublicationSlotId.set(slotId, uniqueNonEmptyStrings(ids));
+    }
+    for (const [slotId, ids] of offeredFromLines.entries()) {
+        const existing = offeredByPublicationSlotId.get(slotId) ?? [];
+        offeredByPublicationSlotId.set(slotId, uniqueNonEmptyStrings([...existing, ...ids]));
+    }
+    const proposalCustomerById = new Map();
+    if (customerFilter) {
+        const allPropIds = new Set();
+        for (const prefRow of prefRows) {
+            const plain = prefRow.get({ plain: true });
+            const merged = mergeSlotOfferState(plain, offeredByPublicationSlotId);
+            merged.proposal_ids.forEach((id) => allPropIds.add(id));
+        }
+        if (allPropIds.size) {
+            const props = await ProposalDbModel.findAll({
+                where: { id_proposal: { [Op.in]: [...allPropIds] } },
+                attributes: ["id_proposal", "id_customer"],
+            });
+            for (const p of props) {
+                const pl = p.get({ plain: true });
+                const id = normalizeText(pl.id_proposal);
+                if (id) {
+                    proposalCustomerById.set(id, normalizeLower(pl.id_customer));
+                }
+            }
+        }
+    }
+
     const rows = [];
     for (const prefRow of prefRows) {
         const plain = prefRow.get({ plain: true });
@@ -197,13 +244,14 @@ export async function listPendingPublicationPreferentialSlots(filters = {}) {
         }
 
         const assignedCustomerId = normalizeLower(plain.assigned_customer_id);
-        const proposalIds = Array.isArray(plain.proposal_id_array)
-            ? plain.proposal_id_array.map((value) => normalizeText(value)).filter(Boolean)
-            : [];
+        const mergedOffer = mergeSlotOfferState(plain, offeredByPublicationSlotId);
+        const proposalIds = mergedOffer.proposal_ids;
         if (customerFilter) {
             const matchesCustomer =
                 assignedCustomerId === customerFilter ||
-                proposalIds.some((proposalId) => proposalId.includes(customerFilter));
+                proposalIds.some(
+                    (proposalId) => proposalCustomerById.get(proposalId) === customerFilter
+                );
             if (!matchesCustomer) {
                 continue;
             }
@@ -221,7 +269,7 @@ export async function listPendingPublicationPreferentialSlots(filters = {}) {
                     : "",
             position_in_magazine: normalizeText(plain.position_in_magazine),
             section_title: displayTitleForPreferentialPosition(plain.position_in_magazine),
-            state: normalizeText(plain.state),
+            state: normalizeText(mergedOffer.state),
             contract_id: plain.contract_id != null ? String(plain.contract_id) : null,
             assigned_customer_id:
                 plain.assigned_customer_id != null

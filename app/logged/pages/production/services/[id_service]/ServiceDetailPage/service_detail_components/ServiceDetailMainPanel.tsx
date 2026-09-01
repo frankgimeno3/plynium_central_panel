@@ -3,16 +3,15 @@
 import React, { FC } from "react";
 import type { EditFormState, ServiceDetailModel, ServiceType } from "./service_detail_types";
 import { SERVICE_TYPES } from "./service_detail_constants";
+import { ServiceDetailRelatedSection } from "./ServiceDetailRelatedSection";
 
 type ServiceDetailMainPanelProps = {
   service: ServiceDetailModel;
   form: EditFormState;
-  baseDescription: string;
   saving: boolean;
   error: string | null;
   canSave: boolean;
   setForm: React.Dispatch<React.SetStateAction<EditFormState>>;
-  setBaseDescription: (value: string) => void;
   onReset: () => void;
   onSave: () => void | Promise<void>;
 };
@@ -20,12 +19,10 @@ type ServiceDetailMainPanelProps = {
 export const ServiceDetailMainPanel: FC<ServiceDetailMainPanelProps> = ({
   service,
   form,
-  baseDescription,
   saving,
   error,
   canSave,
   setForm,
-  setBaseDescription,
   onReset,
   onSave,
 }) => (
@@ -36,6 +33,10 @@ export const ServiceDetailMainPanel: FC<ServiceDetailMainPanelProps> = ({
           <div>
             <p className="text-sm font-semibold text-gray-700">Service details</p>
             <p className="text-xs text-gray-500 mt-1">ID: {service.id_service}</p>
+            <p className="text-xs text-gray-500 mt-1">
+              {service.specifity === "general" ? "General service" : "Specific-related service"}
+              {service.parent_service?.name ? ` · based on ${service.parent_service.name}` : ""}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <button
@@ -106,39 +107,14 @@ export const ServiceDetailMainPanel: FC<ServiceDetailMainPanelProps> = ({
             </div>
 
             <div>
-              <label className="block text-xs text-gray-600 mb-1">Service base description</label>
+              <label className="block text-xs text-gray-600 mb-1">Service specifications</label>
               <textarea
-                value={baseDescription}
-                onChange={(e) => setBaseDescription(e.target.value)}
+                value={form.service_unit_specifications}
+                onChange={(e) => setForm((f) => ({ ...f, service_unit_specifications: e.target.value }))}
                 rows={5}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Base description inherited from the service group."
-                disabled={!service.service_group_id || saving}
+                placeholder="Technical specifications"
               />
-            </div>
-
-            <div>
-              <label className="block text-xs text-gray-600 mb-1">Service specifications (inherited)</label>
-              <textarea
-                value={String(service.service_group_specifications ?? "")}
-                readOnly
-                rows={5}
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg bg-gray-50 text-gray-700"
-                placeholder="No specifications set at the service group level."
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                This field is inherited from the service group and cannot be edited here.{" "}
-                {service.service_group_id ? (
-                  <a
-                    href={`/logged/pages/production/service_groups/${encodeURIComponent(String(service.service_group_id))}`}
-                    className="text-blue-600 hover:underline"
-                  >
-                    Go to the service group to edit it.
-                  </a>
-                ) : (
-                  <span>Go to the service group to edit it.</span>
-                )}
-              </p>
             </div>
 
             <div>
@@ -159,6 +135,8 @@ export const ServiceDetailMainPanel: FC<ServiceDetailMainPanelProps> = ({
               />
             </div>
           </div>
+
+          <ServiceDetailRelatedSection service={service} />
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { FC } from "react";
+import React, { FC, useMemo } from "react";
 import Link from "next/link";
 import type { Contact, Customer, ProposalForm } from "./types";
 
@@ -19,6 +19,8 @@ type Props = {
   onProposalTitleUserEdit: () => void;
   canAdvance: boolean;
   onNext: () => void;
+  onCreateContactFromProposal?: () => void | Promise<void>;
+  createContactSaving?: boolean;
 };
 
 const Step1AccountContact: FC<Props> = ({
@@ -32,9 +34,16 @@ const Step1AccountContact: FC<Props> = ({
   onProposalTitleUserEdit,
   canAdvance,
   onNext,
+  onCreateContactFromProposal,
+  createContactSaving = false,
 }) => {
   const selectedCustomer = customers.find((c) => c.id_customer === form.id_customer);
   const selectedContact = contacts.find((c) => c.id_contact === form.id_contact);
+  const contactsForAccount = useMemo(
+    () => contacts.filter((c) => c.id_customer === form.id_customer),
+    [contacts, form.id_customer]
+  );
+  const accountHasNoContacts = Boolean(form.id_customer) && contactsForAccount.length === 0;
 
   return (
     <div className="space-y-6">
@@ -93,6 +102,30 @@ const Step1AccountContact: FC<Props> = ({
             <p className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2 text-sm text-gray-500">
               Select an account first to choose a contact.
             </p>
+          ) : accountHasNoContacts && !form.id_contact ? (
+            <div className="space-y-3">
+              <p className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                This account has no contacts yet. Create one to use it as the main contact for this
+                proposal.
+              </p>
+              <div className="rounded-lg border-2 border-dashed border-gray-300 bg-gray-50/50 p-6 text-center">
+                <p className="mb-3 text-sm text-gray-600">No main contact selected.</p>
+                {onCreateContactFromProposal ? (
+                  <button
+                    type="button"
+                    onClick={() => void onCreateContactFromProposal()}
+                    disabled={createContactSaving}
+                    className={`${outlineBtnClass} disabled:cursor-not-allowed disabled:opacity-50`}
+                  >
+                    {createContactSaving ? "Saving proposal…" : "Create contact"}
+                  </button>
+                ) : (
+                  <button type="button" onClick={onOpenMainContactModal} className={outlineBtnClass}>
+                    Select contact
+                  </button>
+                )}
+              </div>
+            </div>
           ) : form.id_contact && selectedContact ? (
             <div className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -146,9 +179,20 @@ const Step1AccountContact: FC<Props> = ({
             </div>
             <div className="space-y-2">
               <p className="text-xs text-gray-600">Contact doesn&apos;t exist?</p>
-              <Link href="/logged/pages/account-management/contacts_db/create" className={outlineBtnClass}>
-                Create contact
-              </Link>
+              {onCreateContactFromProposal ? (
+                <button
+                  type="button"
+                  onClick={() => void onCreateContactFromProposal()}
+                  disabled={createContactSaving || !form.id_customer}
+                  className={`${outlineBtnClass} disabled:cursor-not-allowed disabled:opacity-50`}
+                >
+                  {createContactSaving ? "Saving proposal…" : "Create contact"}
+                </button>
+              ) : (
+                <Link href="/logged/pages/account-management/contacts_db/create" className={outlineBtnClass}>
+                  Create contact
+                </Link>
+              )}
             </div>
           </div>
         </div>

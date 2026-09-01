@@ -1,13 +1,16 @@
 export type Step = 1 | 2 | 3 | 4;
 export type Channel = "dem" | "portal" | "magazine";
+export type Specifity = "general" | "specific-related";
 
-export type ServiceGroupRow = {
-  service_group_id: string;
-  service_group_name: string;
-  service_group_channel: Channel;
+export type GeneralServiceRow = {
+  service_id: string;
+  service_full_name: string;
+  service_channel: Channel;
+  service_unit_price?: number;
   tariff_price_eur?: number;
-  service_specifications?: string;
-  service_base_description?: string;
+  service_description?: string;
+  service_unit_specifications?: string;
+  specifity?: Specifity;
 };
 
 export type PortalRow = { id: number; name: string };
@@ -41,20 +44,24 @@ export type CustomState =
 
 export type FormState = {
   id_service: string;
-  service_group_channel: Channel | "";
-  service_group_id: string;
+  created_from_other: boolean;
+  service_channel: Channel | "";
+  parent_service_id: string;
   custom: CustomState | null;
   service_description: string;
   service_unit_specifications: string;
+  service_unit_price: number;
   final_service_name: string;
 };
 
 export const initialForm: FormState = {
   id_service: "",
-  service_group_channel: "",
-  service_group_id: "",
+  created_from_other: false,
+  service_channel: "",
+  parent_service_id: "",
   custom: null,
   service_description: "",
   service_unit_specifications: "",
+  service_unit_price: 0,
   final_service_name: "",
 };

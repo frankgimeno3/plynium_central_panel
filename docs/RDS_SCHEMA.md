@@ -675,6 +675,8 @@ Inbox tickets use `panel_ticket_type` ∈ `account_management`, `production`, `a
 | proposal_service_discount | numeric | NO | `0` |
 | proposal_service_publication_date | date | YES |  |
 | proposal_service_unit_details | text | NO | `''::text` |
+| publication_id | character varying | YES |  |
+| is_sold | boolean | NO | `false` |
 
 ## proposals_db
 

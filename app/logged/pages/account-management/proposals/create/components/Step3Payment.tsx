@@ -25,6 +25,9 @@ const Step3Payment: FC<Props> = ({
   onNext,
   canAdvance,
 }) => {
+  const paymentsVsTotalDiff = Math.round((paymentsSum - totalAfterTax) * 100) / 100;
+  const lastPaymentId = form.payments.length > 0 ? form.payments[form.payments.length - 1].paymentId : null;
+
   return (
     <div className="space-y-6">
       <div className="bg-white border border-gray-200 rounded-lg p-6">
@@ -35,28 +38,44 @@ const Step3Payment: FC<Props> = ({
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <p className="text-sm font-semibold text-gray-700 mb-1">Exchange</p>
         <p className="text-xs text-gray-500 mb-3">Is this an exchange?</p>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={form.isExchange}
-          onClick={() => {
-            setForm((f) => ({
-              ...f,
-              isExchange: !f.isExchange,
-              ...(!f.isExchange && { exchangeFinalPrice: totalAfterTax }),
-            }));
-          }}
-          className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
-            form.isExchange ? "bg-blue-600" : "bg-gray-200"
-          }`}
-        >
+        <div className="flex items-center gap-2">
           <span
-            className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
-              form.isExchange ? "translate-x-5" : "translate-x-1"
+            className={`text-sm font-semibold tabular-nums ${
+              !form.isExchange ? "text-blue-800" : "text-gray-400"
             }`}
-          />
-        </button>
-        <span className="ml-2 text-sm text-gray-700">{form.isExchange ? "Yes" : "No"}</span>
+          >
+            No
+          </span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={form.isExchange}
+            aria-label={form.isExchange ? "Exchange: Yes" : "Exchange: No"}
+            onClick={() => {
+              setForm((f) => ({
+                ...f,
+                isExchange: !f.isExchange,
+                ...(!f.isExchange && { exchangeFinalPrice: totalAfterTax }),
+              }));
+            }}
+            className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+              form.isExchange ? "bg-blue-600" : "bg-gray-300"
+            }`}
+          >
+            <span
+              className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition ${
+                form.isExchange ? "translate-x-5" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+          <span
+            className={`text-sm font-semibold tabular-nums ${
+              form.isExchange ? "text-blue-800" : "text-gray-400"
+            }`}
+          >
+            Yes
+          </span>
+        </div>
       </div>
 
       {!form.isExchange ? (
@@ -100,7 +119,12 @@ const Step3Payment: FC<Props> = ({
           </div>
 
           <div className="space-y-4">
-            {form.payments.map((payment) => (
+            {form.payments.map((payment) => {
+              const isLastPayment = payment.paymentId === lastPaymentId;
+              const showPending =
+                isLastPayment && form.payments.length > 0 && Math.abs(paymentsVsTotalDiff) >= 0.01;
+
+              return (
               <div key={payment.paymentId} className="border border-gray-200 rounded-lg p-4 bg-gray-50/50">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
@@ -157,7 +181,20 @@ const Step3Payment: FC<Props> = ({
                   </div>
                   <div className="flex items-end gap-2">
                     <div className="flex-1">
-                      <label className="block text-xs text-gray-600 mb-1">Amount (€)</label>
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 mb-1">
+                        <label className="text-xs text-gray-600">Amount (€)</label>
+                        {showPending && (
+                          <span
+                            className={`text-xs font-semibold tabular-nums whitespace-nowrap ${
+                              paymentsVsTotalDiff > 0 ? "text-blue-600" : "text-red-600"
+                            }`}
+                          >
+                            ({paymentsVsTotalDiff > 0 ? "Surplus" : "Pending"}{" "}
+                            {paymentsVsTotalDiff > 0 ? "+" : ""}
+                            {paymentsVsTotalDiff.toFixed(2)} €)
+                          </span>
+                        )}
+                      </div>
                       <input
                         type="number"
                         min={0}
@@ -195,7 +232,8 @@ const Step3Payment: FC<Props> = ({
                   </div>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
 
           {form.payments.length > 0 && (

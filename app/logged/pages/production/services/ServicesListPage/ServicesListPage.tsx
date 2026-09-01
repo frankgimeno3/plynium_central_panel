@@ -7,7 +7,7 @@ import PageContentSection from "@/app/logged/logged_components/context_content/P
 import { ServiceService } from "@/app/service/ServiceService";
 
 import { ServiceTypeFilterTabs } from "./_tabs/ServiceTypeFilterTabs";
-import { ITEMS_PER_PAGE, SERVICE_TYPES, type ServiceListRow, type ServiceType } from "./services_list_components/constants";
+import { ITEMS_PER_PAGE, SERVICE_TYPES, specifitySortKey, type ServiceListRow, type ServiceType } from "./services_list_components/constants";
 import type { ServicesListFilterState } from "./services_list_components/ServicesListFilters";
 import { ServicesListFilters } from "./services_list_components/ServicesListFilters";
 import { ServicesListInfoNote } from "./services_list_components/ServicesListInfoNote";
@@ -22,7 +22,7 @@ const ServicesListPage: FC = () => {
       .then((list) => setAll(Array.isArray(list) ? list : []))
       .catch(() => setAll([]));
   }, []);
-  const [filter, setFilter] = useState<ServicesListFilterState>({ id: "", name: "", hasPublicationDate: "" });
+  const [filter, setFilter] = useState<ServicesListFilterState>({ id: "", name: "", hasPublicationDate: "", specifity: "" });
   const [activeServiceType, setActiveServiceType] = useState<string>("");
 
   const serviceTypeLabel = (serviceType?: string) => {
@@ -44,11 +44,17 @@ const ServicesListPage: FC = () => {
   const filtered = useMemo(() => {
     let list = [...all];
     if (activeServiceType) list = list.filter((s) => (s.service_type ?? "") === activeServiceType);
+    if (filter.specifity) list = list.filter((s) => (s.specifity ?? "") === filter.specifity);
     if (filter.id) list = list.filter((s) => s.id_service.toLowerCase().includes(filter.id.toLowerCase()));
     if (filter.name) list = list.filter((s) => s.name?.toLowerCase().includes(filter.name.toLowerCase()));
     if (filter.hasPublicationDate === "yes") list = list.filter((s) => "publication_date" in s && s.publication_date);
     if (filter.hasPublicationDate === "no")
       list = list.filter((s) => !("publication_date" in s) || !s.publication_date);
+    list.sort((a, b) => {
+      const specDiff = specifitySortKey(a.specifity) - specifitySortKey(b.specifity);
+      if (specDiff !== 0) return specDiff;
+      return String(a.name ?? "").localeCompare(String(b.name ?? ""));
+    });
     return list;
   }, [all, filter, activeServiceType]);
 

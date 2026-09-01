@@ -16,8 +16,8 @@ export const GET = createEndpoint(
 export const POST = createEndpoint(
   async (request, body) => {
     const contact = await createContact(body);
-    return NextResponse.json(contact);
+    return NextResponse.json(contact, { status: 201 });
   },
   null,
-  false
+  true
 );

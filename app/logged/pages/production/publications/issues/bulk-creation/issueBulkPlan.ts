@@ -135,3 +135,37 @@ export function monthLabel(month: number | null | undefined): string {
   if (month == null || month < 1 || month > 12) return "—";
   return new Date(2000, month - 1, 1).toLocaleString("default", { month: "long" });
 }
+
+export const MONTH_OPTIONS = Array.from({ length: 12 }, (_, index) => {
+  const value = index + 1;
+  return { value, label: monthLabel(value) };
+});
+
+/** When the user changes expected month, align the date to that month's last day. */
+export function patchSlotExpectedMonth(
+  slot: PlannedIssueSlot,
+  month: number
+): Pick<PlannedIssueSlot, "expectedMonth" | "expectedDate"> {
+  const expectedMonth = Math.min(12, Math.max(1, Math.round(month)));
+  return {
+    expectedMonth,
+    expectedDate: lastDayOfMonthIso(slot.publicationYear, expectedMonth),
+  };
+}
+
+/** When the user changes expected date, keep month in sync when the value is a valid ISO date. */
+export function patchSlotExpectedDate(
+  slot: PlannedIssueSlot,
+  isoDate: string
+): Pick<PlannedIssueSlot, "expectedMonth" | "expectedDate"> {
+  const expectedDate = isoDate.trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(expectedDate);
+  if (!match) {
+    return { expectedDate, expectedMonth: slot.expectedMonth };
+  }
+  const month = Number(match[2]);
+  if (month >= 1 && month <= 12) {
+    return { expectedDate, expectedMonth: month };
+  }
+  return { expectedDate, expectedMonth: slot.expectedMonth };
+}

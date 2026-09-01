@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { FC } from "react";
 import AccountManagementSection from "./nav_left_components/AccountManagementSection";
 import AdministrationSection from "./nav_left_components/AdministrationSection";
+import FrankSection from "./nav_left_components/FrankSection";
 import PlyniumNetworkSection from "./nav_left_components/PlyniumNetworkSection";
 import ProductionSection from "./nav_left_components/ProductionSection";
 import { useLeftnavSectionState } from "./nav_left_components/useLeftnavSectionState";
@@ -16,6 +17,10 @@ const Leftnav: FC = () => {
     inPublications,
     inAdministration,
     inNetwork,
+    inFrank,
+    inFrankPm,
+    inFrankSrm,
+    inFrankAutoWiki,
     isDirectorySelected,
     setIsDirectorySelected,
     isContentsSelected,
@@ -28,6 +33,14 @@ const Leftnav: FC = () => {
     setIsPublicationsSelected,
     isAdministrationSelected,
     setIsAdministrationSelected,
+    isFrankSelected,
+    setIsFrankSelected,
+    isFrankPmSelected,
+    setIsFrankPmSelected,
+    isFrankSrmSelected,
+    setIsFrankSrmSelected,
+    isFrankAutoWikiSelected,
+    setIsFrankAutoWikiSelected,
   } = useLeftnavSectionState(pathname);
 
   return (
@@ -64,6 +77,21 @@ const Leftnav: FC = () => {
           inAdministration={inAdministration}
           isAdministrationSelected={isAdministrationSelected}
           setIsAdministrationSelected={setIsAdministrationSelected}
+        />
+        <FrankSection
+          pathname={pathname}
+          inFrank={inFrank}
+          inFrankPm={inFrankPm}
+          inFrankSrm={inFrankSrm}
+          inFrankAutoWiki={inFrankAutoWiki}
+          isFrankSelected={isFrankSelected}
+          setIsFrankSelected={setIsFrankSelected}
+          isFrankPmSelected={isFrankPmSelected}
+          setIsFrankPmSelected={setIsFrankPmSelected}
+          isFrankSrmSelected={isFrankSrmSelected}
+          setIsFrankSrmSelected={setIsFrankSrmSelected}
+          isFrankAutoWikiSelected={isFrankAutoWikiSelected}
+          setIsFrankAutoWikiSelected={setIsFrankAutoWikiSelected}
         />
       </div>
     </nav>

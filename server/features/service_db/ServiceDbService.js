@@ -1,17 +1,40 @@
 import crypto from "node:crypto";
 import { QueryTypes } from "sequelize";
 import ServiceDbModel from "./ServiceDbModel.js";
-import ServiceGroupDbModel from "./ServiceGroupDbModel.js";
 import "../../database/models.js";
 
-const serviceGroupInclude = {
-    model: ServiceGroupDbModel,
-    as: "service_group",
-    attributes: ["service_group_id", "service_group_name", "service_group_channel", "service_specifications", "service_base_description"],
-    required: true,
+const parentServiceInclude = {
+    model: ServiceDbModel,
+    as: "parent_service",
+    attributes: [
+        "service_id",
+        "service_full_name",
+        "shown_name",
+        "service_channel",
+        "specifity",
+        "service_description",
+        "service_unit_specifications",
+        "service_unit_price",
+    ],
+    required: false,
 };
 
-/** Maps service_groups.service_group_channel to legacy service_type values used by older UI. */
+const relatedServicesInclude = {
+    model: ServiceDbModel,
+    as: "related_services",
+    attributes: [
+        "service_id",
+        "service_full_name",
+        "shown_name",
+        "service_channel",
+        "specifity",
+        "related_to_other_services",
+        "service_unit_price",
+    ],
+    required: false,
+};
+
+/** Maps service_channel to legacy service_type values used by older UI. */
 function channelToLegacyServiceType(channel) {
     const c = String(channel ?? "").toLowerCase().trim();
     if (c === "dem") return "newsletter";
@@ -20,16 +43,40 @@ function channelToLegacyServiceType(channel) {
     return "other";
 }
 
-/** Picks a stable default row per channel (first by service_group_name) for legacy service_type PATCH. */
-async function resolveDefaultServiceGroupIdForLegacyServiceType(serviceType) {
+/** Picks a stable default general service per channel for legacy service_type PATCH. */
+async function resolveDefaultGeneralServiceIdForLegacyServiceType(serviceType) {
     const t = String(serviceType ?? "").toLowerCase().trim();
     const channelMap = { newsletter: "dem", portal: "portal", magazine: "magazine", other: "dem" };
     const ch = channelMap[t] ?? "dem";
-    const group = await ServiceGroupDbModel.findOne({
-        where: { service_group_channel: ch },
-        order: [["service_group_name", "ASC"]],
+    const row = await ServiceDbModel.findOne({
+        where: { service_channel: ch, specifity: "general" },
+        order: [["service_full_name", "ASC"]],
     });
-    return group?.service_group_id ?? null;
+    return row?.service_id ?? null;
+}
+
+function normalizeSpecifity(value) {
+    const s = String(value ?? "").trim().toLowerCase();
+    if (s === "specific-related" || s === "specific_related") return "specific-related";
+    return "general";
+}
+
+function toRelatedServiceSummary(row) {
+    if (!row) return null;
+    const plain = typeof row.get === "function" ? row.get({ plain: true }) : row;
+    return {
+        service_id: plain.service_id,
+        service_full_name: plain.service_full_name ?? "",
+        shown_name: plain.shown_name ?? "",
+        service_channel: plain.service_channel ?? "",
+        specifity: normalizeSpecifity(plain.specifity),
+        related_to_other_services: plain.related_to_other_services ?? null,
+        service_unit_price: Number(plain.service_unit_price ?? 0),
+        id_service: plain.service_id,
+        name: plain.service_full_name ?? "",
+        tariff_price_eur: Number(plain.service_unit_price ?? 0),
+        service_type: channelToLegacyServiceType(plain.service_channel),
+    };
 }
 
 function toApiService(row) {
@@ -39,23 +86,32 @@ function toApiService(row) {
     const service_full_name = plain.service_full_name ?? "";
     const shown_name = plain.shown_name ?? "";
     const service_unit_price = Number(plain.service_unit_price ?? 0);
-    const group = plain.service_group ?? null;
-    const channel = group?.service_group_channel ?? "";
+    const channel = plain.service_channel ?? "";
+    const specifity = normalizeSpecifity(plain.specifity);
+    const parent = plain.parent_service ?? null;
+    const related = Array.isArray(plain.related_services) ? plain.related_services : [];
+
     return {
         service_id,
         service_full_name,
         shown_name,
+        service_channel: channel,
+        specifity,
+        related_to_other_services: plain.related_to_other_services ?? null,
         service_portal: plain.service_portal != null ? Number(plain.service_portal) : null,
-        service_group_id: plain.service_group_id ?? group?.service_group_id ?? null,
-        service_group_name: group?.service_group_name ?? null,
-        service_group_channel: channel,
-        service_group_specifications: group?.service_specifications ?? "",
-        service_group_base_description: group?.service_base_description ?? "",
         service_format: plain.service_format ?? "",
         service_description: plain.service_description ?? "",
         service_unit: plain.service_unit ?? "",
         service_unit_price,
         service_unit_specifications: plain.service_unit_specifications ?? "",
+        parent_service: parent ? toRelatedServiceSummary(parent) : null,
+        related_services: related.map((r) => toRelatedServiceSummary(r)).filter(Boolean),
+        // Legacy aliases
+        service_group_id: plain.related_to_other_services ?? null,
+        service_group_name: parent?.service_full_name ?? null,
+        service_group_channel: parent?.service_channel ?? channel,
+        service_group_specifications: parent?.service_unit_specifications ?? plain.service_unit_specifications ?? "",
+        service_group_base_description: parent?.service_description ?? plain.service_description ?? "",
         id_service: service_id,
         name: service_full_name,
         tariff_price_eur: service_unit_price,
@@ -63,15 +119,35 @@ function toApiService(row) {
     };
 }
 
-export async function getAllServices() {
+function serviceListOrder() {
+    return [
+        ["specifity", "ASC"],
+        ["service_full_name", "ASC"],
+        ["service_id", "ASC"],
+    ];
+}
+
+export async function getAllServices(filters = {}) {
     try {
         if (!ServiceDbModel.sequelize) {
             console.warn("ServiceDbModel not initialized, returning empty array");
             return [];
         }
+        const where = {};
+        if (filters.specifity) {
+            where.specifity = normalizeSpecifity(filters.specifity);
+        }
+        if (filters.service_channel) {
+            where.service_channel = String(filters.service_channel).trim().toLowerCase();
+        }
+        if (filters.general_only === true) {
+            where.specifity = "general";
+        }
+
         const rows = await ServiceDbModel.findAll({
-            order: [["service_id", "ASC"]],
-            include: [serviceGroupInclude],
+            where,
+            order: serviceListOrder(),
+            include: [parentServiceInclude],
         });
         return rows.map((r) => toApiService(r));
     } catch (error) {
@@ -131,7 +207,9 @@ function isSequelizeUniqueConstraintError(error) {
 }
 
 export async function getServiceById(idService) {
-    const row = await ServiceDbModel.findByPk(idService, { include: [serviceGroupInclude] });
+    const row = await ServiceDbModel.findByPk(idService, {
+        include: [parentServiceInclude, relatedServicesInclude],
+    });
     if (!row) {
         throw new Error(`Service with id ${idService} not found`);
     }
@@ -139,7 +217,7 @@ export async function getServiceById(idService) {
 }
 
 export async function updateService(idService, patch) {
-    const row = await ServiceDbModel.findByPk(idService, { include: [serviceGroupInclude] });
+    const row = await ServiceDbModel.findByPk(idService, { include: [parentServiceInclude, relatedServicesInclude] });
     if (!row) {
         throw new Error(`Service with id ${idService} not found`);
     }
@@ -149,12 +227,32 @@ export async function updateService(idService, patch) {
     if (patch?.service_full_name !== undefined) updateData.service_full_name = String(patch.service_full_name);
     else if (patch?.name !== undefined) updateData.service_full_name = String(patch.name);
 
-    if (patch?.service_group_id !== undefined) {
+    if (patch?.shown_name !== undefined) updateData.shown_name = String(patch.shown_name);
+
+    if (patch?.related_to_other_services !== undefined) {
+        const id = String(patch.related_to_other_services ?? "").trim();
+        updateData.related_to_other_services = id || null;
+        if (id) updateData.specifity = "specific-related";
+    } else if (patch?.service_group_id !== undefined) {
         const id = String(patch.service_group_id).trim();
-        if (id) updateData.service_group_id = id;
+        updateData.related_to_other_services = id || null;
+        if (id) updateData.specifity = "specific-related";
+    }
+
+    if (patch?.service_channel !== undefined) {
+        updateData.service_channel = String(patch.service_channel).trim().toLowerCase();
     } else if (patch?.service_type !== undefined) {
-        const gid = await resolveDefaultServiceGroupIdForLegacyServiceType(patch.service_type);
-        if (gid) updateData.service_group_id = gid;
+        const t = String(patch.service_type ?? "").toLowerCase().trim();
+        const channelMap = { newsletter: "dem", portal: "portal", magazine: "magazine", other: "dem" };
+        updateData.service_channel = channelMap[t] ?? "dem";
+        if (normalizeSpecifity(row.get("specifity")) === "specific-related") {
+            const gid = await resolveDefaultGeneralServiceIdForLegacyServiceType(patch.service_type);
+            if (gid) updateData.related_to_other_services = gid;
+        }
+    }
+
+    if (patch?.specifity !== undefined) {
+        updateData.specifity = normalizeSpecifity(patch.specifity);
     }
 
     if (patch?.service_format !== undefined) updateData.service_format = String(patch.service_format);
@@ -173,26 +271,27 @@ export async function updateService(idService, patch) {
     }
 
     await row.update(updateData);
-    await row.reload({ include: [serviceGroupInclude] });
+    await row.reload({ include: [parentServiceInclude, relatedServicesInclude] });
     return toApiService(row);
 }
 
-function tariffFromGroupRow(groupRow) {
-    const n = Number(groupRow?.get?.("tariff_price_eur"));
+function tariffFromServiceRow(serviceRow) {
+    const n = Number(serviceRow?.get?.("service_unit_price") ?? serviceRow?.service_unit_price);
     return Number.isFinite(n) && n >= 0 ? n : 0;
 }
 
 /**
- * Creates a services_db row. If neither tariff_price_eur nor service_unit_price is present in data,
- * uses service_groups.tariff_price_eur for that group. If the client sends either field (including 0),
- * that value wins.
+ * Creates a services_db row.
  *
  * @param {object} data
  * @param {string} [data.service_id]
  * @param {string} [data.id_service]
  * @param {string} [data.service_full_name]
  * @param {string} [data.name]
- * @param {string} data.service_group_id
+ * @param {string} [data.related_to_other_services]
+ * @param {string} [data.service_group_id] legacy alias
+ * @param {string} [data.specifity] general | specific-related
+ * @param {string} [data.service_channel]
  * @param {number} [data.service_portal]
  * @param {string} [data.service_format]
  * @param {string} [data.service_description]
@@ -219,14 +318,31 @@ export async function createService(data) {
     if (!service_full_name) {
         throw new Error("name is required");
     }
-    const service_group_id = String(data.service_group_id ?? "").trim();
-    if (!service_group_id) {
-        throw new Error("service_group_id is required");
+
+    const relatedId = String(data.related_to_other_services ?? data.service_group_id ?? "").trim();
+    const specifity = relatedId ? "specific-related" : normalizeSpecifity(data.specifity ?? "general");
+
+    let parent = null;
+    if (relatedId) {
+        parent = await ServiceDbModel.findByPk(relatedId);
+        if (!parent) {
+            throw new Error("Parent service not found");
+        }
+        if (normalizeSpecifity(parent.get("specifity")) !== "general") {
+            throw new Error("Parent service must be a general service");
+        }
     }
 
-    const group = await ServiceGroupDbModel.findByPk(service_group_id);
-    if (!group) {
-        throw new Error("Service group not found");
+    let service_channel = String(data.service_channel ?? "").trim().toLowerCase();
+    if (!service_channel && parent) {
+        service_channel = String(parent.get("service_channel") ?? "").trim().toLowerCase();
+    }
+    if (!service_channel && data.service_type) {
+        const channelMap = { newsletter: "dem", portal: "portal", magazine: "magazine", other: "dem" };
+        service_channel = channelMap[String(data.service_type).toLowerCase()] ?? "dem";
+    }
+    if (!service_channel && specifity === "general") {
+        throw new Error("service_channel is required for general services");
     }
 
     let service_unit_price;
@@ -236,9 +352,25 @@ export async function createService(data) {
     } else if (data.service_unit_price !== undefined && data.service_unit_price !== null) {
         const v = Number(data.service_unit_price);
         service_unit_price = Number.isFinite(v) && v >= 0 ? v : 0;
+    } else if (parent) {
+        service_unit_price = tariffFromServiceRow(parent);
     } else {
-        service_unit_price = tariffFromGroupRow(group);
+        service_unit_price = 0;
     }
+
+    const service_description =
+        data.service_description !== undefined
+            ? String(data.service_description)
+            : parent
+              ? String(parent.get("service_description") ?? "")
+              : "";
+
+    const service_unit_specifications =
+        data.service_unit_specifications !== undefined
+            ? String(data.service_unit_specifications)
+            : parent
+              ? String(parent.get("service_unit_specifications") ?? "")
+              : "";
 
     const service_portal =
         data.service_portal != null && !Number.isNaN(Number(data.service_portal)) ? Number(data.service_portal) : 0;
@@ -246,7 +378,7 @@ export async function createService(data) {
     const maxAttempts = auto ? 6 : 1;
     let lastErr;
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-        let sid = auto ? await mintNextCatalogServiceId(catalogYear) : service_id;
+        const sid = auto ? await mintNextCatalogServiceId(catalogYear) : service_id;
         if (!auto) {
             const dup = await ServiceDbModel.findByPk(sid);
             if (dup) {
@@ -257,13 +389,16 @@ export async function createService(data) {
             await ServiceDbModel.create({
                 service_id: sid,
                 service_full_name,
-                service_group_id,
+                shown_name: String(data.shown_name ?? service_full_name).trim(),
+                service_channel,
+                specifity,
+                related_to_other_services: relatedId || null,
                 service_portal,
                 service_format: String(data.service_format ?? ""),
-                service_description: String(data.service_description ?? ""),
+                service_description,
                 service_unit: String(data.service_unit ?? ""),
                 service_unit_price,
-                service_unit_specifications: String(data.service_unit_specifications ?? ""),
+                service_unit_specifications,
             });
             return getServiceById(sid);
         } catch (e) {
@@ -276,9 +411,9 @@ export async function createService(data) {
     throw lastErr ?? new Error("Could not allocate a unique service id");
 }
 
-/** Same stable id as migration 089_services_db_seed_by_portals_magazines.sql (md5(magazine_id || '|' || service_group_id)). */
-export function magazineCatalogServiceId(magazineId, serviceGroupId) {
-    const key = `${magazineId}|${String(serviceGroupId)}`;
+/** Same stable id as migration 089 (md5(magazine_id || '|' || general_service_id)). */
+export function magazineCatalogServiceId(magazineId, generalServiceId) {
+    const key = `${magazineId}|${String(generalServiceId)}`;
     const hash = crypto.createHash("md5").update(key, "utf8").digest("hex");
     return `svc-mgz-${hash}`;
 }
@@ -291,14 +426,14 @@ function titleFromSnakeGroupName(name) {
         .join(" ");
 }
 
-function buildMagazineServiceFullName(magazineName, serviceGroupName, magazineId) {
-    const label = titleFromSnakeGroupName(serviceGroupName);
+function buildMagazineServiceFullName(magazineName, generalServiceName, magazineId) {
+    const label = titleFromSnakeGroupName(generalServiceName);
     const full = `${magazineName} — ${label} — magazine ${magazineId}`;
     return full.length > 512 ? full.slice(0, 512) : full;
 }
 
 /**
- * Inserts one services_db row per service_group with channel magazine (idempotent by service_id).
+ * Inserts one services_db row per general magazine service (idempotent by service_id).
  * @param {{ magazineId: string, magazineName: string }} params
  * @param {{ transaction?: import("sequelize").Transaction }} [options]
  */
@@ -331,27 +466,30 @@ export async function createServicesForNewMagazine(params, options = {}) {
         }
     }
 
-    const groups = await ServiceGroupDbModel.findAll({
-        where: { service_group_channel: "magazine" },
-        order: [["service_group_name", "ASC"]],
+    const generalServices = await ServiceDbModel.findAll({
+        where: { service_channel: "magazine", specifity: "general" },
+        order: [["service_full_name", "ASC"]],
         transaction: options.transaction,
     });
 
-    for (const g of groups) {
-        const gid = g.get("service_group_id");
+    for (const g of generalServices) {
+        const gid = g.get("service_id");
         const service_id = magazineCatalogServiceId(magazineId, gid);
-        const service_full_name = buildMagazineServiceFullName(magazineName, g.get("service_group_name"), magazineId);
+        const service_full_name = buildMagazineServiceFullName(magazineName, g.get("service_full_name"), magazineId);
         await ServiceDbModel.findOrCreate({
             where: { service_id },
             defaults: {
                 service_full_name,
-                service_group_id: gid,
+                service_channel: "magazine",
+                specifity: "specific-related",
+                related_to_other_services: gid,
                 service_portal: servicePortal,
                 service_format: "",
-                service_description: "",
+                service_description: String(g.get("service_description") ?? ""),
                 service_unit: "",
-                service_unit_price: tariffFromGroupRow(g),
-                service_unit_specifications: "",
+                service_unit_price: tariffFromServiceRow(g),
+                service_unit_specifications: String(g.get("service_unit_specifications") ?? ""),
+                shown_name: String(g.get("shown_name") ?? service_full_name),
             },
             transaction: options.transaction,
         });

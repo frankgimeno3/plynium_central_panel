@@ -36,6 +36,11 @@ export const NAV_ROUTE_LABELS: Record<string, string> = {
   [`${BASE}/administration/provider-invoices`]: "Provider invoices",
   [`${BASE}/administration/providers`]: "Providers",
   [`${BASE}/administration/agents`]: "Agents",
+  [`${BASE}/frank/pm/proyectos`]: "Proyectos",
+  [`${BASE}/frank/pm/tareas`]: "Tareas",
+  [`${BASE}/frank/srm/entidades`]: "Entidades",
+  [`${BASE}/frank/auto-wiki/documentacion`]: "Documentación",
+  [`${BASE}/frank/auto-wiki/estado-actual-temas`]: "Estado actual temas",
 };
 
 const sortedPaths = Object.keys(NAV_ROUTE_LABELS).sort((a, b) => b.length - a.length);

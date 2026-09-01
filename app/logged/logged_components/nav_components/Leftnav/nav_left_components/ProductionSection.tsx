@@ -17,11 +17,6 @@ type ProductionSectionProps = {
 
 const PRODUCTION_LINKS = [
   {
-    href: "/logged/pages/production/service_groups",
-    label: "Service groups",
-    prefix: "/logged/pages/production/service_groups",
-  },
-  {
     href: "/logged/pages/production/services",
     label: "Services",
     prefix: "/logged/pages/production/services",

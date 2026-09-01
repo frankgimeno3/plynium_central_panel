@@ -31,14 +31,30 @@ const paymentSchema = Joi.object({
 }).unknown(true);
 
 const patchProposalSchema = Joi.object({
+  id_customer: Joi.string().trim().optional(),
+  id_contact: Joi.string().trim().allow("").optional(),
+  additionalContactIds: Joi.array().items(Joi.string()).optional(),
+  agent: Joi.string().allow("").optional(),
+  status: Joi.string().trim().optional(),
+  proposal_fase: Joi.string().trim().valid("1", "2", "3", "4", "created").optional(),
   title: Joi.string().trim().min(1).max(512).optional(),
   date_created: Joi.string().optional(),
   expiration_date: Joi.string().allow("", null).optional(),
   proposal_date: Joi.string().allow("", null).optional(),
   amount_eur: Joi.number().optional(),
+  general_discount_mode: Joi.string().valid("pct", "abs").optional(),
   general_discount_pct: Joi.number().optional(),
+  general_discount_abs_eur: Joi.number().optional(),
   serviceLines: Joi.array().items(serviceLineSchema).optional(),
   payments: Joi.array().items(paymentSchema).optional(),
+  isExchange: Joi.boolean().optional(),
+  exchangeHasFinalPrice: Joi.boolean().optional(),
+  exchangeFinalPrice: Joi.number().optional(),
+  exchangeHasBankTransfers: Joi.boolean().optional(),
+  exchangePlyniumTransferDate: Joi.string().allow("").optional(),
+  exchangeCounterpartDate: Joi.string().allow("").optional(),
+  exchangeTransferredAmount: Joi.number().optional(),
+  exchangeToBeReceivedHtml: Joi.string().allow("").optional(),
 }).unknown(true);
 
 export const GET = createEndpoint(

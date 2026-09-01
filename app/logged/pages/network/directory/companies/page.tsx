@@ -2,7 +2,7 @@
 
 import React, { FC, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { usePageContent } from '@/app/logged/logged_components/context_content/PageContentContext';
+import { useSyncPageMeta } from '@/app/logged/logged_components/context_content/PageContentContext';
 import PageContentSection from '@/app/logged/logged_components/context_content/PageContentSection';
 import { CompanyService } from '@/app/service/CompanyService';
 import { Company } from '@/app/contents/interfaces';
@@ -111,22 +111,15 @@ const Companies: FC<CompaniesProps> = ({ }) => {
     }
   }, [createCategoryModalOpen]);
 
-  const breadcrumbs = [
-    { label: "Companies" },
-  ];
-
-  const { setPageMeta } = usePageContent();
-  useEffect(() => {
-    setPageMeta({
-      pageTitle: "Companies Directory",
-      breadcrumbs,
-      buttons: [
-        { label: "Create Company", href: "/logged/pages/network/directory/companies/create" },
-        { label: "Company Categories", href: "/logged/pages/network/directory/companies/categories" },
-        { label: "Create Category", onClick: () => setCreateCategoryModalOpen(true) },
-      ],
-    });
-  }, [setPageMeta, breadcrumbs]);
+  useSyncPageMeta({
+    pageTitle: "Companies Directory",
+    breadcrumbs: [{ label: "Companies" }],
+    buttons: [
+      { label: "Create Company", href: "/logged/pages/network/directory/companies/create" },
+      { label: "Company Categories", href: "/logged/pages/network/directory/companies/categories" },
+      { label: "Create Category", onClick: () => setCreateCategoryModalOpen(true) },
+    ],
+  });
 
   return (
     <>

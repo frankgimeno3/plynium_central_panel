@@ -26,6 +26,19 @@ export const ProposalService = {
     return response.data;
   },
 
+  /** Create or update a proposal with status draft (wizard progress). */
+  async saveDraftProposal(idProposal, data, { alreadyPersisted = false } = {}) {
+    const proposalFase =
+      data?.proposal_fase != null && String(data.proposal_fase).trim() !== ""
+        ? String(data.proposal_fase).trim()
+        : "1";
+    const body = { ...data, status: "draft", proposal_fase: proposalFase };
+    if (alreadyPersisted) {
+      return this.updateProposal(idProposal, body);
+    }
+    return this.createProposal({ ...body, id_proposal: idProposal });
+  },
+
   /** Mark proposal accepted and create contract + one project per service line. */
   async acceptProposal(idProposal, data) {
     const response = await apiClient.post(

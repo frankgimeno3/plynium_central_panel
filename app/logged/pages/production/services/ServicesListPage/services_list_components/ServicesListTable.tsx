@@ -2,6 +2,7 @@
 
 import React, { FC } from "react";
 import type { ServiceListRow } from "./constants";
+import { specifityLabel } from "./constants";
 
 type ServicesListTableProps = {
   rows: ServiceListRow[];
@@ -24,6 +25,9 @@ export const ServicesListTable: FC<ServicesListTableProps> = ({
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Specifity
+            </th>
+            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
               Service type
             </th>
             <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tariff (€)</th>
@@ -41,6 +45,7 @@ export const ServicesListTable: FC<ServicesListTableProps> = ({
             >
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{s.id_service}</td>
               <td className="px-6 py-4 text-sm text-gray-900">{s.name?.replace(/_/g, " ")}</td>
+              <td className="px-6 py-4 text-sm text-gray-900">{specifityLabel(s.specifity)}</td>
               <td className="px-6 py-4 text-sm text-gray-900">{serviceTypeLabel(s.service_type)}</td>
               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                 {s.tariff_price_eur?.toLocaleString()}

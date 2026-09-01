@@ -1,6 +1,7 @@
 import { Op, Transaction } from "sequelize";
 import PublicationPreferentialSlotDbModel from "../publication_workflow/PublicationPreferentialSlotDbModel.js";
 import PublicationSlotDbModel from "../publication_workflow/PublicationSlotDbModel.js";
+import OfferedPreferentialPageDbModel from "../publication_workflow/OfferedPreferentialPageDbModel.js";
 import ProposalDbModel from "../proposal_db/ProposalDbModel.js";
 import ProposalServiceLineDbModel from "../proposal_db/ProposalServiceLineDbModel.js";
 import ServiceDbModel from "../service_db/ServiceDbModel.js";
@@ -13,6 +14,12 @@ import {
     ensurePreferentialSlotsForMagazinePublication,
     slotPlacementForMagazinePosition,
 } from "./publicationPreferentialSlots.js";
+import {
+    loadActiveProposalIdsByPreferentialSlotUuid,
+    loadOfferedProposalIdsByPublicationSlotId,
+    mergeOfferIndexesForPublication,
+    mergeSlotOfferState,
+} from "./preferentialOfferEnrichment.js";
 import PublicationModel from "../publication/PublicationModel.js";
 import "../../database/models.js";
 
@@ -236,18 +243,42 @@ export async function listPreferentialSlotsForPublication(publication_id, opts =
         }
     }
 
+    const publicationSlotIdsForOffers = [
+        ...plainRows
+            .map((row) => row.publication_slot_id)
+            .filter((id) => id != null)
+            .map((id) => Number(id))
+            .filter(Number.isFinite),
+        ...issueSlotRows
+            .map((slot) => slot.get({ plain: true }).publication_slot_id)
+            .filter((id) => id != null)
+            .map((id) => Number(id))
+            .filter(Number.isFinite),
+    ];
+    const preferentialSlotUuids = plainRows
+        .map((row) => String(row.preferential_slot_id ?? "").trim())
+        .filter(Boolean);
+    const offeredByPublicationSlotId = mergeOfferIndexesForPublication(
+        plainRows,
+        await loadOfferedProposalIdsByPublicationSlotId(pid, publicationSlotIdsForOffers),
+        await loadActiveProposalIdsByPreferentialSlotUuid(pid, preferentialSlotUuids)
+    );
+
     const proposalSet = new Set();
     const customerSet = new Set();
 
     for (const row of plainRows) {
         const st = String(row.state ?? "").toLowerCase();
         const assigned = row.assigned_customer_id != null ? String(row.assigned_customer_id).trim() : "";
-        const prArr = coerceProposalIdArray(row.proposal_id_array);
-        prArr.forEach((id) => proposalSet.add(id));
+        const merged = mergeSlotOfferState(row, offeredByPublicationSlotId);
+        merged.proposal_ids.forEach((id) => proposalSet.add(id));
         if (st === "bought" && assigned) customerSet.add(assigned);
         if (st === "assigned" && assigned && !["summary", "advertiser_index"].includes(assigned.toLowerCase())) {
             customerSet.add(assigned);
         }
+    }
+    for (const ids of offeredByPublicationSlotId.values()) {
+        ids.forEach((id) => proposalSet.add(id));
     }
 
     const proposalIds = [...proposalSet];
@@ -393,13 +424,56 @@ export async function listPreferentialSlotsForPublication(publication_id, opts =
             const backingSlotType =
                 backingSlot?.slot_content_type != null ? String(backingSlot.slot_content_type) : null;
             const backingPresence = backingSlotId != null ? slotContentPresenceById.get(backingSlotId) : null;
+            const missingMerged =
+                backingSlotId != null
+                    ? mergeSlotOfferState(
+                          { state: "available", publication_slot_id: backingSlotId, proposal_id_array: [] },
+                          offeredByPublicationSlotId
+                      )
+                    : { state: null, proposal_ids: [] };
+            const missingSummaries = missingMerged.proposal_ids.map((propId) => {
+                const pr = proposalsById.get(propId);
+                const cid = pr?.id_customer ?? null;
+                const linesRaw = serviceLinesByProposalId.get(propId) ?? [];
+                const service_lines = linesRaw.map((l) => {
+                    const cat = l.service_id ? serviceCatalog.get(l.service_id) : null;
+                    const unit_price = cat?.unit_price != null ? Number(cat.unit_price) : 0;
+                    const discountPct = Number.isFinite(l.proposal_service_discount)
+                        ? Number(l.proposal_service_discount)
+                        : 0;
+                    const line_value_eur = Number(
+                        (unit_price * (1 - discountPct / 100)).toFixed(2)
+                    );
+                    return {
+                        proposal_service_line_id: l.proposal_service_line_id,
+                        service_id: l.service_id,
+                        service_full_name: cat?.full_name ?? null,
+                        proposal_service_custom_name: l.proposal_service_custom_name,
+                        service_unit_price: unit_price,
+                        proposal_service_discount_pct: discountPct,
+                        line_value_eur,
+                    };
+                });
+                return {
+                    proposal_id: propId,
+                    customer_id: cid,
+                    customer_name: cid ? customerNameById.get(cid) ?? null : null,
+                    proposal_status: pr?.status ?? null,
+                    title: pr?.title ?? null,
+                    proposal_amount_eur: pr?.amount_eur ?? null,
+                    general_discount_pct: pr?.general_discount_pct ?? null,
+                    agent_id: pr?.agent_id ?? null,
+                    agent_name: pr?.agent_id ? agentNameById.get(pr.agent_id) ?? null : null,
+                    service_lines,
+                };
+            });
             return {
                 position_in_magazine: posKey,
                 section_title,
                 missing: backingSlotId == null,
                 preferential_slot_id: null,
                 publication_slot_id: backingSlotId,
-                state: backingSlotId == null ? null : "available",
+                state: backingSlotId == null ? null : missingMerged.state,
                 contract_id: null,
                 assigned_customer_id: null,
                 assigned_kind: null,
@@ -411,13 +485,14 @@ export async function listPreferentialSlotsForPublication(publication_id, opts =
                 slot_customer_id: backingPresence?.customer_id ?? null,
                 slot_project_id: backingPresence?.project_id ?? null,
                 slot_article_id: backingPresence?.slot_article_id ?? null,
-                proposal_summaries: [],
+                proposal_summaries: missingSummaries,
             };
         }
 
-        const st = String(row.state ?? "").toLowerCase();
+        const mergedOffer = mergeSlotOfferState(row, offeredByPublicationSlotId);
+        const st = String(mergedOffer.state ?? "").toLowerCase();
         const assigned = row.assigned_customer_id != null ? String(row.assigned_customer_id).trim() : "";
-        const pids = coerceProposalIdArray(row.proposal_id_array);
+        const pids = mergedOffer.proposal_ids;
 
         let assignedKind = null;
         if (st === "assigned" && assigned) {
@@ -478,7 +553,7 @@ export async function listPreferentialSlotsForPublication(publication_id, opts =
             preferential_slot_id: row.preferential_slot_id != null ? String(row.preferential_slot_id) : "",
             publication_slot_id:
                 row.publication_slot_id != null ? Number(row.publication_slot_id) : null,
-            state: row.state != null ? String(row.state) : "",
+            state: mergedOffer.state,
             contract_id: row.contract_id != null ? String(row.contract_id) : null,
             assigned_customer_id: assigned || null,
             assigned_kind: assignedKind,
@@ -617,4 +692,131 @@ export async function reserveAllPreferentialSlotsForProposal(transaction, propos
         seen.add(s);
         await reservePreferentialSlotForProposal(transaction, proposalId, s);
     }
+}
+
+/** Map canonical `position_in_magazine` to offered_preferential_pages type/key columns. */
+function offeredPageMetaForPosition(position_in_magazine) {
+    const p = String(position_in_magazine ?? "").trim();
+    if (p === "Cover page") return { offered_page_type: "Cover page", offered_slot_key: "cover" };
+    if (p === "Inside Cover") return { offered_page_type: "Preferential page", offered_slot_key: "inside_cover" };
+    if (p === "End page") return { offered_page_type: "End page", offered_slot_key: "end" };
+    const m = /^Preferential page (\d+)$/i.exec(p);
+    if (m) return { offered_page_type: "Preferential page", offered_slot_key: m[1] };
+    return { offered_page_type: p || "Preferential page", offered_slot_key: p || "preferential" };
+}
+
+/**
+ * Remove proposal from slots it no longer claims; revert empty offered slots to available.
+ * @param {import('sequelize').Transaction} transaction
+ * @param {string} proposalId
+ * @param {Iterable<string>} keepSlotIdsIterable
+ */
+export async function releasePreferentialSlotsNotOnProposal(transaction, proposalId, keepSlotIdsIterable) {
+    const keep = new Set(
+        [...keepSlotIdsIterable].map((id) => String(id ?? "").trim()).filter(Boolean)
+    );
+    const pid = String(proposalId ?? "").trim();
+    if (!pid) return;
+
+    const rows = await PublicationPreferentialSlotDbModel.findAll({
+        where: { proposal_id_array: { [Op.overlap]: [pid] } },
+        transaction,
+        lock: lockLevel(transaction),
+    });
+
+    for (const row of rows) {
+        const slotId = String(row.get("preferential_slot_id") ?? "").trim();
+        if (keep.has(slotId)) continue;
+
+        const state = String(row.get("state") ?? "").toLowerCase();
+        const arr = coerceProposalIdArray(row.get("proposal_id_array")).filter((id) => id !== pid);
+        const patch = { proposal_id_array: arr };
+        if (!arr.length && state === "offered") {
+            patch.state = "available";
+        }
+        await row.update(patch, { transaction });
+    }
+}
+
+/**
+ * Keep `offered_preferential_pages` aligned with active preferential lines on a proposal.
+ * @param {import('sequelize').Transaction} transaction
+ * @param {string} proposalId
+ * @param {Iterable<string>} slotIdsIterable
+ */
+export async function syncOfferedPreferentialPagesForProposal(transaction, proposalId, slotIdsIterable) {
+    const pid = String(proposalId ?? "").trim();
+    if (!pid) return;
+
+    const slotIds = [...new Set([...slotIdsIterable].map((s) => String(s ?? "").trim()).filter(Boolean))];
+    const proposal = await ProposalDbModel.findByPk(pid, {
+        transaction,
+        attributes: ["id_proposal", "id_customer", "agent", "proposal_date", "date_created"],
+    });
+    const customerId = proposal?.get("id_customer") != null ? String(proposal.get("id_customer")).trim() : null;
+    const agentId = proposal?.get("agent") != null ? String(proposal.get("agent")).trim() : null;
+    const proposalDate =
+        proposal?.get("proposal_date") != null
+            ? String(proposal.get("proposal_date")).slice(0, 10)
+            : proposal?.get("date_created") != null
+              ? String(proposal.get("date_created")).slice(0, 10)
+              : null;
+
+    const activePublicationSlotIds = new Set();
+
+    for (const slotId of slotIds) {
+        const row = await PublicationPreferentialSlotDbModel.findByPk(slotId, { transaction });
+        if (!row) continue;
+
+        const publicationId = String(row.get("publication_id") ?? "").trim();
+        const publicationSlotId = row.get("publication_slot_id");
+        const position = String(row.get("position_in_magazine") ?? "").trim();
+        if (!publicationId || publicationSlotId == null) continue;
+
+        const pubSlotNum = Number(publicationSlotId);
+        if (!Number.isFinite(pubSlotNum)) continue;
+        activePublicationSlotIds.add(pubSlotNum);
+
+        const meta = offeredPageMetaForPosition(position);
+        const existing = await OfferedPreferentialPageDbModel.findOne({
+            where: { proposal_id: pid, publication_slot_id: pubSlotNum },
+            transaction,
+        });
+
+        const payload = {
+            publication_id: publicationId,
+            publication_slot_id: pubSlotNum,
+            offered_page_type: meta.offered_page_type,
+            offered_slot_key: meta.offered_slot_key,
+            agent_id: agentId || null,
+            customer_id: customerId || null,
+            proposal_id: pid,
+            offered_page_proposal_date: proposalDate || null,
+        };
+
+        if (existing) {
+            await existing.update(payload, { transaction });
+        } else {
+            await OfferedPreferentialPageDbModel.create(payload, { transaction });
+        }
+    }
+
+    const destroyWhere = { proposal_id: pid };
+    if (activePublicationSlotIds.size) {
+        destroyWhere.publication_slot_id = { [Op.notIn]: [...activePublicationSlotIds] };
+    }
+    await OfferedPreferentialPageDbModel.destroy({ where: destroyWhere, transaction });
+}
+
+/**
+ * Reserve slots on service lines, release removed ones, sync offered_preferential_pages.
+ * @param {import('sequelize').Transaction} transaction
+ * @param {string} proposalId
+ * @param {Iterable<string>} slotIdsIterable
+ */
+export async function syncPreferentialReservationsForProposal(transaction, proposalId, slotIdsIterable) {
+    const slotIds = [...slotIdsIterable];
+    await releasePreferentialSlotsNotOnProposal(transaction, proposalId, slotIds);
+    await reserveAllPreferentialSlotsForProposal(transaction, proposalId, slotIds);
+    await syncOfferedPreferentialPagesForProposal(transaction, proposalId, slotIds);
 }

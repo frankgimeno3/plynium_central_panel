@@ -4,7 +4,6 @@ import React, { FC, useEffect, useState } from "react";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { ServiceService } from "@/app/service/ServiceService";
-import { ServiceGroupService } from "@/app/service/ServiceGroupService";
 
 import { SERVICE_TYPES } from "./service_detail_components/service_detail_constants";
 import type { EditFormState, ServiceDetailModel, ServiceType } from "./service_detail_components/service_detail_types";
@@ -20,6 +19,7 @@ const initialEditForm: EditFormState = {
   name: "",
   service_type: "",
   service_description: "",
+  service_unit_specifications: "",
   service_price: 0,
 };
 
@@ -29,7 +29,6 @@ export const ServiceDetailPage: FC<ServiceDetailPageProps> = ({ serviceId: id_se
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState<EditFormState>(initialEditForm);
-  const [baseDescription, setBaseDescription] = useState("");
 
   const normalizeServiceType = (value?: string): ServiceType | "" => {
     if (!value) return "";
@@ -49,9 +48,9 @@ export const ServiceDetailPage: FC<ServiceDetailPageProps> = ({ serviceId: id_se
       name: service.name ?? "",
       service_type: normalizeServiceType(service.service_type),
       service_description: service.service_description ?? "",
+      service_unit_specifications: service.service_unit_specifications ?? service.service_group_specifications ?? "",
       service_price: service.tariff_price_eur ?? service.service_price ?? 0,
     });
-    setBaseDescription(String(service.service_group_base_description ?? ""));
   }, [service]);
   const { setPageMeta } = usePageContent();
 
@@ -96,9 +95,9 @@ export const ServiceDetailPage: FC<ServiceDetailPageProps> = ({ serviceId: id_se
       name: service.name ?? "",
       service_type: normalizeServiceType(service.service_type),
       service_description: service.service_description ?? "",
+      service_unit_specifications: service.service_unit_specifications ?? service.service_group_specifications ?? "",
       service_price: service.tariff_price_eur ?? service.service_price ?? 0,
     });
-    setBaseDescription(String(service.service_group_base_description ?? ""));
   };
 
   const handleSave = async () => {
@@ -110,13 +109,9 @@ export const ServiceDetailPage: FC<ServiceDetailPageProps> = ({ serviceId: id_se
         name: form.name.trim(),
         service_type: form.service_type,
         service_description: form.service_description.trim(),
+        service_unit_specifications: form.service_unit_specifications.trim(),
         tariff_price_eur: form.service_price,
       });
-      if (service?.service_group_id) {
-        await ServiceGroupService.updateServiceGroup(String(service.service_group_id), {
-          service_base_description: baseDescription,
-        });
-      }
       const refreshed = await ServiceService.getServiceById(id_service);
       setService(refreshed ?? updated);
     } catch (e: unknown) {
@@ -132,12 +127,10 @@ export const ServiceDetailPage: FC<ServiceDetailPageProps> = ({ serviceId: id_se
         <ServiceDetailMainPanel
           service={service}
           form={form}
-          baseDescription={baseDescription}
           saving={saving}
           error={error}
           canSave={canSave}
           setForm={setForm}
-          setBaseDescription={setBaseDescription}
           onReset={handleReset}
           onSave={handleSave}
         />

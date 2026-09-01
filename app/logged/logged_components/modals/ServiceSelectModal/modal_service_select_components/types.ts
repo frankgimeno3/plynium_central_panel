@@ -17,9 +17,11 @@ export interface ServiceEntity {
   unit?: string;
   service_portal?: number | null;
   service_group_id?: string | null;
-  service_group_name?: string | null;
+  related_to_other_services?: string | null;
+  service_channel?: string;
   service_group_channel?: string;
   service_type?: string;
+  specifity?: string;
 }
 
 export interface ServiceRow {
@@ -32,8 +34,8 @@ export interface ServiceRow {
   tariff_price_eur: number;
   unit?: string;
   service_group_id?: string | null;
-  service_group_name?: string | null;
-  service_group_channel?: string;
+  related_to_other_services?: string | null;
+  service_channel?: string;
   service_type?: string;
 }
 
@@ -65,10 +67,30 @@ export type ServiceExtra =
       pageType: string;
       slotKey: string;
       publicationDateIso?: string;
+      preferential_slot_id?: string;
+      position_in_magazine?: string;
+    }
+  | {
+      type: "magazine_preferential";
+      id_planned_publication: string;
+      publicationLabel: string;
+      publicationDateIso?: string;
+      preferential_slot_id: string;
+      position_in_magazine: string;
+      pageType?: string;
+      slotKey?: string;
     };
+
+export type ServiceLineDraft = {
+  description: string;
+  specifications: string;
+  units: number;
+  unit_price: number;
+  discount_pct: number;
+};
 
 export interface ServiceSelectModalProps {
   open: boolean;
   onClose: () => void;
-  onConfirm: (service: ServiceRow, extra?: ServiceExtra) => void;
+  onConfirm: (service: ServiceRow, extra?: ServiceExtra, lineDraft?: ServiceLineDraft) => void;
 }

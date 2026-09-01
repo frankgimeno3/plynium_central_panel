@@ -1,12 +1,12 @@
 "use client";
 
 import React, { FC } from "react";
-import type { Channel, FormState, ServiceGroupRow } from "./create_service_types";
+import type { Channel, FormState, GeneralServiceRow } from "./create_service_types";
 import { channelLabel } from "./create_service_helpers";
 
 type CreateServiceStepNameReviewProps = {
   form: FormState;
-  selectedGroup: ServiceGroupRow | null;
+  selectedParent: GeneralServiceRow | null;
   displayId: string;
   suggestedName: string;
   createError: string | null;
@@ -19,7 +19,7 @@ type CreateServiceStepNameReviewProps = {
 
 export const CreateServiceStepNameReview: FC<CreateServiceStepNameReviewProps> = ({
   form,
-  selectedGroup,
+  selectedParent,
   displayId,
   suggestedName,
   createError,
@@ -63,13 +63,20 @@ export const CreateServiceStepNameReview: FC<CreateServiceStepNameReviewProps> =
           <p className="text-xs text-gray-500 uppercase">Name</p>
           <p className="text-sm">{form.final_service_name || "—"}</p>
         </div>
-        <div className="md:col-span-2">
-          <p className="text-xs text-gray-500 uppercase">Channel / group</p>
-          <p className="text-sm">
-            {form.service_group_channel ? channelLabel(form.service_group_channel as Channel) : "—"} ·{" "}
-            {selectedGroup?.service_group_name ?? "—"}
-          </p>
+        <div>
+          <p className="text-xs text-gray-500 uppercase">Type</p>
+          <p className="text-sm">{form.created_from_other ? "Specific-related" : "General"}</p>
         </div>
+        <div>
+          <p className="text-xs text-gray-500 uppercase">Channel</p>
+          <p className="text-sm">{form.service_channel ? channelLabel(form.service_channel as Channel) : "—"}</p>
+        </div>
+        {form.created_from_other && (
+          <div className="md:col-span-2">
+            <p className="text-xs text-gray-500 uppercase">Based on</p>
+            <p className="text-sm">{selectedParent?.service_full_name ?? "—"}</p>
+          </div>
+        )}
         <div className="md:col-span-2">
           <p className="text-xs text-gray-500 uppercase">Description</p>
           <p className="text-sm whitespace-pre-wrap">{form.service_description}</p>

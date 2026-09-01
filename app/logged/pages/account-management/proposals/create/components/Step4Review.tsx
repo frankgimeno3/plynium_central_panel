@@ -2,6 +2,7 @@
 
 import React, { FC } from "react";
 import type { Contact, Customer, ProposalForm } from "./types";
+import { getContributingServiceTotal, getDisplayServiceTotal, resolveUnitPrice } from "../serviceLinePricing";
 
 type Props = {
   form: ProposalForm;
@@ -19,6 +20,9 @@ type Props = {
   onCreate: () => void | Promise<void>;
   createSaving?: boolean;
   createError?: string | null;
+  /** When set, replaces "Create proposal" on the final step button. */
+  submitLabel?: string;
+  submitSavingLabel?: string;
 };
 
 const Step4Review: FC<Props> = ({
@@ -37,6 +41,8 @@ const Step4Review: FC<Props> = ({
   onCreate,
   createSaving = false,
   createError = null,
+  submitLabel = "Create proposal",
+  submitSavingLabel = "Creating…",
 }) => {
   const selectedCustomer = customers.find((c) => c.id_customer === form.id_customer);
   const selectedContact = contacts.find((c) => c.id_contact === form.id_contact);
@@ -80,22 +86,34 @@ const Step4Review: FC<Props> = ({
               <th className="px-4 py-2 text-left font-medium text-gray-600">Service</th>
               <th className="px-4 py-2 text-left font-medium text-gray-600">Description</th>
               <th className="px-4 py-2 text-right font-medium text-gray-600">Units</th>
-              <th className="px-4 py-2 text-right font-medium text-gray-600">Price</th>
+              <th className="px-4 py-2 text-right font-medium text-gray-600">Unit price</th>
               <th className="px-4 py-2 text-right font-medium text-gray-600">Disc. %</th>
+              <th className="px-4 py-2 text-right font-medium text-gray-600">Service total</th>
               <th className="px-4 py-2 text-right font-medium text-gray-600">Amount</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
             {form.serviceLines.map((line) => {
-              const lineTotal = line.units * line.price * (1 - line.discount_pct / 100);
+              const displayTotal = getDisplayServiceTotal(line);
+              const contributing = getContributingServiceTotal(line);
+              const mode = line.price_mode ?? "calculated";
               return (
                 <tr key={line.lineId}>
                   <td className="px-4 py-2">{getServiceName(line.id_service)}</td>
                   <td className="px-4 py-2">{line.description || "—"}</td>
                   <td className="px-4 py-2 text-right">{line.units}</td>
-                  <td className="px-4 py-2 text-right">{line.price} €</td>
+                  <td className="px-4 py-2 text-right">{resolveUnitPrice(line).toFixed(2)} €</td>
                   <td className="px-4 py-2 text-right">{line.discount_pct}%</td>
-                  <td className="px-4 py-2 text-right">{lineTotal.toFixed(2)} €</td>
+                  <td className="px-4 py-2 text-right">
+                    {mode === "free" ? (
+                      <span className="font-semibold text-emerald-700">FREE</span>
+                    ) : mode === "strikethrough" ? (
+                      <span className="line-through">{displayTotal.toFixed(2)} €</span>
+                    ) : (
+                      `${displayTotal.toFixed(2)} €`
+                    )}
+                  </td>
+                  <td className="px-4 py-2 text-right">{contributing.toFixed(2)} €</td>
                 </tr>
               );
             })}
@@ -185,7 +203,7 @@ const Step4Review: FC<Props> = ({
           disabled={createSaving}
           className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {createSaving ? "Creating…" : "Create proposal"}
+          {createSaving ? submitSavingLabel : submitLabel}
         </button>
       </div>
     </div>

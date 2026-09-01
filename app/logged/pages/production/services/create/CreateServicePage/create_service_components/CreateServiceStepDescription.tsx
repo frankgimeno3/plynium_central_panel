@@ -6,6 +6,7 @@ import type { FormState } from "./create_service_types";
 type CreateServiceStepDescriptionProps = {
   form: FormState;
   canAdvanceStep3: boolean;
+  showPriceAndSpecs?: boolean;
   setForm: React.Dispatch<React.SetStateAction<FormState>>;
   onBack: () => void;
   onNext: () => void;
@@ -14,22 +15,26 @@ type CreateServiceStepDescriptionProps = {
 export const CreateServiceStepDescription: FC<CreateServiceStepDescriptionProps> = ({
   form,
   canAdvanceStep3,
+  showPriceAndSpecs = false,
   setForm,
   onBack,
   onNext,
 }) => (
   <div className="space-y-6 max-w-3xl">
-    <div className="rounded-lg border border-blue-100 bg-blue-50/80 px-4 py-3 text-sm text-gray-800" role="note">
-      <p className="font-medium text-gray-900 mb-1">Inherited from service group</p>
-      <p>
-        Description and specifications are inherited from the service group. You can edit them here for this specific
-        service. Service-specific values override the group defaults when used in proposals, and agents can still adjust
-        them again on the proposal.
-      </p>
-    </div>
+    {form.created_from_other && (
+      <div className="rounded-lg border border-blue-100 bg-blue-50/80 px-4 py-3 text-sm text-gray-800" role="note">
+        <p className="font-medium text-gray-900 mb-1">Based on general service</p>
+        <p>
+          Description and specifications were loaded from the selected general service. You can edit them here for this
+          specific instance.
+        </p>
+      </div>
+    )}
 
     <div>
-      <label className="block text-xs text-gray-600 mb-1">Description</label>
+      <label className="block text-xs text-gray-600 mb-1">
+        Description <span className="text-red-500">*</span>
+      </label>
       <textarea
         value={form.service_description}
         onChange={(e) => setForm((f) => ({ ...f, service_description: e.target.value }))}
@@ -47,6 +52,23 @@ export const CreateServiceStepDescription: FC<CreateServiceStepDescriptionProps>
         className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
       />
     </div>
+
+    {showPriceAndSpecs && (
+      <div>
+        <label className="block text-xs text-gray-600 mb-1">Standard price (€)</label>
+        <input
+          type="number"
+          min={0}
+          step={0.01}
+          value={form.service_unit_price || ""}
+          onChange={(e) => {
+            const v = Number(e.target.value);
+            setForm((f) => ({ ...f, service_unit_price: Number.isNaN(v) ? 0 : v }));
+          }}
+          className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg"
+        />
+      </div>
+    )}
 
     <div className="flex gap-3">
       <button

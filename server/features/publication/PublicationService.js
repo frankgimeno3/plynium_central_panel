@@ -152,12 +152,22 @@ function lastDayOfMonthIso(year, month1to12) {
 /**
  * Creates a publications_db row for a planned magazine issue (draft).
  */
+function parseIsoDateOnly(value) {
+    if (value == null || value === "") return null;
+    const s = String(value).trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+    const d = new Date(`${s}T12:00:00`);
+    if (Number.isNaN(d.getTime())) return null;
+    return s;
+}
+
 export async function createMagazineIssuePublication({
     magazineId,
     magazineName,
     publication_year,
     magazine_this_year_issue,
     publication_expected_publication_month,
+    real_publication_month_date,
     is_special_edition,
     publication_theme,
     publication_format,
@@ -175,7 +185,9 @@ export async function createMagazineIssuePublication({
     const name = String(magazineName || "").trim() || "Magazine";
     const edition = `${name} ${y} - ${String(issueInYear).padStart(3, "0")}`;
     const month = parseMonth(publication_expected_publication_month);
-    const realDate = month != null ? lastDayOfMonthIso(y, month) : null;
+    const realDate =
+        parseIsoDateOnly(real_publication_month_date) ??
+        (month != null ? lastDayOfMonthIso(y, month) : null);
     const format = normalizePublicationFormat(publication_format);
 
     const sequelize = PublicationModel.sequelize;

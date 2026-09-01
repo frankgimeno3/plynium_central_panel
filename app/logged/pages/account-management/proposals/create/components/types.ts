@@ -29,6 +29,8 @@ export type Service = {
   unit?: string;
 };
 
+export type ServiceLinePriceMode = "calculated" | "strikethrough" | "free" | "custom";
+
 export type ServiceLine = {
   lineId: string;
   id_service: string;
@@ -36,7 +38,13 @@ export type ServiceLine = {
   specifications: string;
   units: number;
   discount_pct: number;
-  price: number;
+  /** Unit price (€). Legacy API field `price` is kept in sync for persistence. */
+  unit_price: number;
+  /** @deprecated API alias — use unit_price */
+  price?: number;
+  /** Line total (€); editable only in custom price mode */
+  service_total_price: number;
+  price_mode: ServiceLinePriceMode;
   /** Newsletter: month/year */
   publicationMonth?: number;
   publicationYear?: number;

@@ -28,7 +28,6 @@ import PmEventDbModel from "../features/pm_event_db/PmEventDbModel.js";
 import IssuedInvoiceDbModel from "../features/billing_db/IssuedInvoiceDbModel.js";
 import OrderDbModel from "../features/billing_db/OrderDbModel.js";
 import ServiceDbModel from "../features/service_db/ServiceDbModel.js";
-import ServiceGroupDbModel from "../features/service_db/ServiceGroupDbModel.js";
 import NotificationDbModel from "../features/notification_db/NotificationDbModel.js";
 import NotificationCommentDbModel from "../features/notification_db/NotificationCommentDbModel.js";
 import NotificationCompanyContentDbModel from "../features/notification_db/NotificationCompanyContentDbModel.js";
@@ -862,6 +861,7 @@ ProposalDbModel.init({
     },
     agent: { type: DataTypes.STRING(255), allowNull: true, defaultValue: "", field: "agent_id" },
     status: { type: DataTypes.STRING(64), allowNull: false, field: "proposal_status" },
+    proposal_fase: { type: DataTypes.STRING(32), allowNull: false, defaultValue: "1", field: "proposal_fase" },
     title: { type: DataTypes.STRING(512), allowNull: false, field: "proposal_tittle" },
     amount_eur: { type: DataTypes.DECIMAL(14, 2), allowNull: true, defaultValue: 0, field: "proposal_ammount_eur" },
     proposal_date: { type: DataTypes.DATEONLY, allowNull: true, field: "proposal_date" },
@@ -929,13 +929,24 @@ ProposalServiceLineDbModel.init({
         allowNull: true,
         field: "proposal_service_unit_details",
     },
+    publication_id: {
+        type: DataTypes.STRING(64),
+        allowNull: true,
+        field: "publication_id",
+    },
+    is_sold: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        field: "is_sold",
+    },
 }, {
     sequelize,
     modelName: "proposal_service_line_db",
     underscored: true,
     tableName: "proposal_service_lines",
     timestamps: false,
-    indexes: [{ fields: ["proposal_id"] }]
+    indexes: [{ fields: ["proposal_id"] }, { fields: ["publication_id"] }]
 });
 
 ProposalPaymentDbModel.init({
@@ -1112,27 +1123,13 @@ OrderDbModel.init({
     ]
 });
 
-ServiceGroupDbModel.init({
-    service_group_id: { type: DataTypes.UUID, primaryKey: true },
-    service_group_name: { type: DataTypes.STRING(255), allowNull: false },
-    shown_name: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" },
-    service_group_channel: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" },
-    tariff_price_eur: { type: DataTypes.DECIMAL(14, 2), allowNull: false, defaultValue: 0 },
-    service_specifications: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
-    service_base_description: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
-}, {
-    sequelize,
-    modelName: "service_group",
-    underscored: true,
-    tableName: "service_groups",
-    timestamps: false
-});
-
 ServiceDbModel.init({
     service_id: { type: DataTypes.STRING(64), primaryKey: true, unique: true },
     service_full_name: { type: DataTypes.STRING(512), allowNull: false, defaultValue: "" },
     shown_name: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" },
-    service_group_id: { type: DataTypes.UUID, allowNull: false },
+    service_channel: { type: DataTypes.STRING(255), allowNull: false, defaultValue: "" },
+    specifity: { type: DataTypes.STRING(64), allowNull: false, defaultValue: "general" },
+    related_to_other_services: { type: DataTypes.STRING(64), allowNull: true },
     service_portal: { type: DataTypes.INTEGER, allowNull: false },
     service_format: { type: DataTypes.STRING(512), allowNull: false, defaultValue: "" },
     service_description: { type: DataTypes.TEXT, allowNull: false, defaultValue: "" },
@@ -1147,8 +1144,10 @@ ServiceDbModel.init({
     timestamps: false,
     indexes: [
         { fields: ["service_full_name"] },
-        { fields: ["service_group_id"] },
-        { fields: ["service_portal"] }
+        { fields: ["related_to_other_services"] },
+        { fields: ["service_portal"] },
+        { fields: ["specifity"] },
+        { fields: ["service_channel"] }
     ]
 });
 
@@ -1413,9 +1412,9 @@ PublicationPreferentialSlotDbModel.init({
     position_in_magazine: { type: DataTypes.STRING(255), allowNull: false },
     publication_slot_id: { type: DataTypes.INTEGER, allowNull: false },
     service_group_id: {
-        type: DataTypes.UUID,
+        type: DataTypes.STRING(64),
         allowNull: false,
-        references: { model: "service_groups", key: "service_group_id" },
+        references: { model: "services_db", key: "service_id" },
     },
     state: {
         type: DataTypes.STRING(32),
@@ -1453,5 +1452,5 @@ OfferedPreferentialPageDbModel.belongsTo(PublicationSlotDbModel, { foreignKey: "
 defineAssociations();
 }
 
-export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ProposalServiceLineDbModel, ProposalPaymentDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceGroupDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, NotificationAdvertisementDbModel, PublicationSlotDbModel, PublicationPreferentialSlotDbModel, PublicationArticleDbModel, PublicationArticleChunkDbModel, OfferedPreferentialPageDbModel };
+export { ArticleModel, ContentModel, PublicationModel, EventModel, CompanyModel, ProductModel, BannerModel, FolderModel, MediaModel, CompanyCategoryModel, TopicDbModel, CustomerDbModel, ContactDbModel, ContactCommentDbModel, AgentDbModel, MagazineDbModel, ProviderDbModel, ProviderInvoiceDbModel, ProposalDbModel, ProposalServiceLineDbModel, ProposalPaymentDbModel, ContractDbModel, ProjectDbModel, PmEventDbModel, IssuedInvoiceDbModel, OrderDbModel, ServiceDbModel, NotificationDbModel, NotificationCommentDbModel, NotificationCompanyContentDbModel, NotificationAdvertisementDbModel, PublicationSlotDbModel, PublicationPreferentialSlotDbModel, PublicationArticleDbModel, PublicationArticleChunkDbModel, OfferedPreferentialPageDbModel };
 

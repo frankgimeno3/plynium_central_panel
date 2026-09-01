@@ -1,14 +1,14 @@
 "use client";
 
 import React, { FC } from "react";
-import type { CampaignRow, FormState, MagazineRow, PortalRow, PublicationRow, ServiceGroupRow } from "./create_service_types";
+import type { CampaignRow, FormState, GeneralServiceRow, MagazineRow, PortalRow, PublicationRow } from "./create_service_types";
 import { CreateServiceDemFields } from "./CreateServiceDemFields";
 import { CreateServiceMagazineFields } from "./CreateServiceMagazineFields";
 import { CreateServicePortalFields } from "./CreateServicePortalFields";
 
 type CreateServiceStepCustomFieldsProps = {
   form: FormState;
-  selectedGroup: ServiceGroupRow | null;
+  selectedParent: GeneralServiceRow | null;
   portals: PortalRow[];
   magazines: MagazineRow[];
   campaignsForPortal: CampaignRow[];
@@ -25,7 +25,7 @@ type CreateServiceStepCustomFieldsProps = {
 
 export const CreateServiceStepCustomFields: FC<CreateServiceStepCustomFieldsProps> = ({
   form,
-  selectedGroup,
+  selectedParent,
   portals,
   magazines,
   campaignsForPortal,
@@ -46,7 +46,7 @@ export const CreateServiceStepCustomFields: FC<CreateServiceStepCustomFieldsProp
       <div className="bg-white border border-gray-200 rounded-lg p-6">
         <p className="text-sm font-semibold text-gray-700 mb-1">Selection</p>
         <p className="text-xs text-gray-500 mt-1">
-          Channel: {form.custom.channel} · Group: {selectedGroup?.service_group_name ?? "—"}
+          Channel: {form.custom.channel} · General service: {selectedParent?.service_full_name ?? "—"}
         </p>
       </div>
 

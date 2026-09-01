@@ -15,7 +15,8 @@
     "db:migrate:050": "node --env-file=.env server/database/scripts/apply-migration-050-chunk-image-caption.js",
     "db:migrate:051": "node --env-file=.env server/database/scripts/apply-migration-051-slot-flatplan-image-url.js",
     "db:migrate:054": "node --env-file=.env server/database/scripts/apply-migration-054-publications-index-summary-ready.js",
-    "db:migrate:055": "node --env-file=.env server/database/scripts/apply-migration-055-magazine-page-layout-text.js"
+    "db:migrate:055": "node --env-file=.env server/database/scripts/apply-migration-055-magazine-page-layout-text.js",
+    "db:migrate:058": "node --env-file=.env server/database/scripts/apply-migration-058-proposal-service-lines-publication.js"
   },
   "dependencies": {
     "@aws-amplify/core": "^6.15.0",

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { usePageContent } from "@/app/logged/logged_components/context_content/PageContentContext";
 import PageContentSection from "@/app/logged/logged_components/context_content/PageContentSection";
 import { ServiceService } from "@/app/service/ServiceService";
-import { ServiceGroupService } from "@/app/service/ServiceGroupService";
 import { PortalService } from "@/app/service/PortalService";
 import { MagazineService } from "@/app/service/MagazineService";
 import { PublicationService } from "@/app/service/PublicationService";
@@ -13,8 +12,8 @@ import { PublicationService } from "@/app/service/PublicationService";
 import type {
   Channel,
   FormState,
+  GeneralServiceRow,
   PublicationRow,
-  ServiceGroupRow,
   Step,
 } from "./create_service_components/create_service_types";
 import { initialForm } from "./create_service_components/create_service_types";
@@ -33,7 +32,7 @@ const CreateServicePage: FC = () => {
   const [form, setForm] = useState<FormState>(initialForm);
 
   const [allServices, setAllServices] = useState<{ id_service: string }[]>([]);
-  const [serviceGroups, setServiceGroups] = useState<ServiceGroupRow[]>([]);
+  const [generalServices, setGeneralServices] = useState<GeneralServiceRow[]>([]);
   const [portals, setPortals] = useState<{ id: number; name: string }[]>([]);
   const [magazines, setMagazines] = useState<{ id_magazine: string; name: string }[]>([]);
   const [magazinePublications, setMagazinePublications] = useState<PublicationRow[]>([]);
@@ -41,14 +40,21 @@ const CreateServicePage: FC = () => {
 
   useEffect(() => {
     ServiceService.getAllServices()
-      .then((list) => setAllServices(Array.isArray(list) ? list : []))
-      .catch(() => setAllServices([]));
-  }, []);
-
-  useEffect(() => {
-    ServiceGroupService.getAllServiceGroups()
-      .then((list) => setServiceGroups(Array.isArray(list) ? list : []))
-      .catch(() => setServiceGroups([]));
+      .then((list) => {
+        const rows = Array.isArray(list) ? list : [];
+        setAllServices(rows);
+        setGeneralServices(
+          rows.filter((s): s is GeneralServiceRow => {
+            if (!s || typeof s !== "object") return false;
+            const spec = String((s as { specifity?: string }).specifity ?? "general");
+            return spec === "general";
+          })
+        );
+      })
+      .catch(() => {
+        setAllServices([]);
+        setGeneralServices([]);
+      });
   }, []);
 
   useEffect(() => {
@@ -83,22 +89,26 @@ const CreateServicePage: FC = () => {
 
   const channels = useMemo(() => {
     const set = new Set<string>();
-    for (const g of serviceGroups) set.add(String(g.service_group_channel ?? "").toLowerCase());
+    for (const s of generalServices) set.add(String(s.service_channel ?? "").toLowerCase());
     const ordered: Channel[] = ["dem", "portal", "magazine"];
     return ordered.filter((c) => set.has(c));
-  }, [serviceGroups]);
+  }, [generalServices]);
 
-  const groupsForChannel = useMemo(() => {
-    if (!form.service_group_channel) return [];
-    return serviceGroups
-      .filter((g) => String(g.service_group_channel).toLowerCase() === form.service_group_channel)
-      .sort((a, b) => String(a.service_group_name).localeCompare(String(b.service_group_name)));
-  }, [serviceGroups, form.service_group_channel]);
+  const generalServicesForChannel = useMemo(() => {
+    if (!form.service_channel) return [];
+    return generalServices
+      .filter((s) => String(s.service_channel).toLowerCase() === form.service_channel)
+      .sort((a, b) => String(a.service_full_name).localeCompare(String(b.service_full_name)));
+  }, [generalServices, form.service_channel]);
 
-  const selectedGroup = useMemo(
-    () => serviceGroups.find((g) => g.service_group_id === form.service_group_id) ?? null,
-    [serviceGroups, form.service_group_id]
+  const selectedParent = useMemo(
+    () => generalServices.find((s) => s.service_id === form.parent_service_id) ?? null,
+    [generalServices, form.parent_service_id]
   );
+
+  const canAdvanceStep1 = form.created_from_other
+    ? !!form.service_channel && !!form.parent_service_id
+    : !!form.service_channel;
 
   useEffect(() => {
     if (!form.custom || form.custom.channel !== "magazine") return;
@@ -169,9 +179,10 @@ const CreateServicePage: FC = () => {
     });
   }, [form.custom, magazinePublications]);
 
-  const canAdvanceStep1 = !!form.service_group_channel && !!form.service_group_id;
-
   const canAdvanceStep2 = useMemo(() => {
+    if (!form.created_from_other) {
+      return form.service_description.trim().length > 0;
+    }
     if (!form.custom) return false;
     if (form.custom.channel === "portal") return !!form.custom.portalId;
     if (form.custom.channel === "magazine")
@@ -188,66 +199,67 @@ const CreateServicePage: FC = () => {
       !!form.custom.portalId &&
       !!form.custom.campaignId
     );
-  }, [form.custom]);
+  }, [form]);
 
   const canAdvanceStep3 = form.service_description.trim().length > 0;
 
   const suggestedName = useMemo(() => {
-    if (!selectedGroup || !form.custom) return "";
-    const groupName = selectedGroup.service_group_name ?? "";
-    if (form.custom.channel === "portal") return `${form.custom.portalName}-${groupName}`.trim();
-    if (form.custom.channel === "magazine") return `${form.custom.publicationEditionName}-${groupName}`.trim();
-    return `${form.custom.campaignName}-${groupName}`.trim();
-  }, [selectedGroup, form.custom]);
+    if (form.created_from_other) {
+      if (!selectedParent || !form.custom) return "";
+      const parentName = selectedParent.service_full_name ?? "";
+      if (form.custom.channel === "portal") return `${form.custom.portalName}-${parentName}`.trim();
+      if (form.custom.channel === "magazine") return `${form.custom.publicationEditionName}-${parentName}`.trim();
+      return `${form.custom.campaignName}-${parentName}`.trim();
+    }
+    return form.service_channel ? `${form.service_channel}_service` : "";
+  }, [form, selectedParent]);
 
-  const canCreate = form.final_service_name.trim().length > 0 && canAdvanceStep3 && !!selectedGroup && !!form.custom;
+  const canCreate = form.final_service_name.trim().length > 0 && canAdvanceStep3 && !!form.service_channel;
 
   const goNext = () => {
     if (step === 1 && canAdvanceStep1) {
-      setForm((f) => ({
-        ...f,
-        id_service: "",
-        custom:
-          f.service_group_channel === "dem"
-            ? {
-                channel: "dem",
-                publicationMonth: "",
-                publicationYear: String(new Date().getFullYear()),
-                portalId: "",
-                campaignId: "",
-                campaignName: "",
-              }
-            : f.service_group_channel === "portal"
-              ? { channel: "portal", portalId: "", portalName: "" }
-              : {
-                  channel: "magazine",
-                  magazineId: "",
-                  magazineName: "",
-                  publicationYear: "",
-                  publicationId: "",
-                  publicationEditionName: "",
-                },
-      }));
+      if (form.created_from_other) {
+        setForm((f) => ({
+          ...f,
+          id_service: "",
+          custom:
+            f.service_channel === "dem"
+              ? {
+                  channel: "dem",
+                  publicationMonth: "",
+                  publicationYear: String(new Date().getFullYear()),
+                  portalId: "",
+                  campaignId: "",
+                  campaignName: "",
+                }
+              : f.service_channel === "portal"
+                ? { channel: "portal", portalId: "", portalName: "" }
+                : {
+                    channel: "magazine",
+                    magazineId: "",
+                    magazineName: "",
+                    publicationYear: "",
+                    publicationId: "",
+                    publicationEditionName: "",
+                  },
+        }));
+      }
       setStep(2);
       return;
     }
     if (step === 2 && canAdvanceStep2) {
-      const baseDesc = String((selectedGroup as Record<string, unknown>)?.service_base_description ?? "").trim();
-      const baseSpecs = String((selectedGroup as Record<string, unknown>)?.service_specifications ?? "").trim();
-      let desc = baseDesc;
-      if (form.custom?.channel === "dem") {
-        const extra = `\n\nPublication month: ${form.custom.publicationMonth}/${form.custom.publicationYear}\nNewsletter campaign: ${form.custom.campaignName}`;
-        desc = desc ? desc + extra : extra.trimStart();
+      if (form.created_from_other && form.custom) {
+        let desc = form.service_description;
+        if (form.custom.channel === "dem") {
+          const extra = `\n\nPublication month: ${form.custom.publicationMonth}/${form.custom.publicationYear}\nNewsletter campaign: ${form.custom.campaignName}`;
+          desc = desc ? desc + extra : extra.trimStart();
+        }
+        if (form.custom.channel === "magazine") {
+          const extra = `\n\nMagazine: ${form.custom.magazineName}\nEdition: ${form.custom.publicationEditionName} (${form.custom.publicationYear})`;
+          desc = desc ? desc + extra : extra.trimStart();
+        }
+        setForm((f) => ({ ...f, service_description: desc }));
       }
-      if (form.custom?.channel === "magazine") {
-        const extra = `\n\nMagazine: ${form.custom.magazineName}\nEdition: ${form.custom.publicationEditionName} (${form.custom.publicationYear})`;
-        desc = desc ? desc + extra : extra.trimStart();
-      }
-      setForm((f) => ({
-        ...f,
-        service_description: desc,
-        service_unit_specifications: baseSpecs,
-      }));
       setStep(3);
       return;
     }
@@ -262,26 +274,35 @@ const CreateServicePage: FC = () => {
   };
 
   const handleCreate = async () => {
-    if (!selectedGroup || !form.custom) return;
+    if (!form.service_channel) return;
     setSubmitting(true);
     setCreateError(null);
     try {
       const portalId =
-        form.custom.channel === "portal"
+        form.custom?.channel === "portal"
           ? Number(form.custom.portalId || 0)
-          : form.custom.channel === "dem"
+          : form.custom?.channel === "dem"
             ? Number(form.custom.portalId || 0)
             : 0;
 
-      const created = await ServiceService.createService({
+      const payload: Record<string, unknown> = {
         mint_catalog_service_id: true,
         name: form.final_service_name.trim(),
-        service_group_id: selectedGroup.service_group_id,
-        service_portal: Number.isFinite(portalId) ? portalId : 0,
+        service_channel: form.service_channel,
         service_description: form.service_description,
         service_unit_specifications: form.service_unit_specifications,
-        tariff_price_eur: Number(selectedGroup.tariff_price_eur ?? 0),
-      });
+        tariff_price_eur: form.service_unit_price,
+      };
+
+      if (form.created_from_other && selectedParent) {
+        payload.related_to_other_services = selectedParent.service_id;
+        payload.specifity = "specific-related";
+        payload.service_portal = Number.isFinite(portalId) ? portalId : 0;
+      } else {
+        payload.specifity = "general";
+      }
+
+      const created = await ServiceService.createService(payload);
       const newId =
         typeof created?.id_service === "string"
           ? created.id_service
@@ -316,18 +337,19 @@ const CreateServicePage: FC = () => {
               <CreateServiceStepChannelGroup
                 form={form}
                 displayId={displayId}
-                channels={channels}
-                groupsForChannel={groupsForChannel}
+                channels={channels.length ? channels : (["dem", "portal", "magazine"] as Channel[])}
+                generalServicesForChannel={generalServicesForChannel}
+                selectedParent={selectedParent}
                 canAdvanceStep1={canAdvanceStep1}
                 setForm={setForm}
                 onNext={goNext}
               />
             )}
 
-            {step === 2 && form.custom && (
+            {step === 2 && form.created_from_other && form.custom && (
               <CreateServiceStepCustomFields
                 form={form}
-                selectedGroup={selectedGroup}
+                selectedParent={selectedParent}
                 portals={portals}
                 magazines={magazines}
                 campaignsForPortal={campaignsForPortal}
@@ -343,7 +365,18 @@ const CreateServicePage: FC = () => {
               />
             )}
 
-            {step === 3 && (
+            {step === 2 && !form.created_from_other && (
+              <CreateServiceStepDescription
+                form={form}
+                canAdvanceStep3={canAdvanceStep2}
+                showPriceAndSpecs
+                setForm={setForm}
+                onBack={goBack}
+                onNext={goNext}
+              />
+            )}
+
+            {step === 3 && form.created_from_other && (
               <CreateServiceStepDescription
                 form={form}
                 canAdvanceStep3={canAdvanceStep3}
@@ -353,10 +386,25 @@ const CreateServicePage: FC = () => {
               />
             )}
 
+            {step === 3 && !form.created_from_other && (
+              <CreateServiceStepNameReview
+                form={form}
+                selectedParent={selectedParent}
+                displayId={displayId}
+                suggestedName={suggestedName}
+                createError={createError}
+                submitting={submitting}
+                canCreate={canCreate}
+                setForm={setForm}
+                onBack={goBack}
+                onCreate={handleCreate}
+              />
+            )}
+
             {step === 4 && (
               <CreateServiceStepNameReview
                 form={form}
-                selectedGroup={selectedGroup}
+                selectedParent={selectedParent}
                 displayId={displayId}
                 suggestedName={suggestedName}
                 createError={createError}

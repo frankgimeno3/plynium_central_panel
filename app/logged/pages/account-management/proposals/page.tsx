@@ -8,6 +8,8 @@ import { CustomerService } from "@/app/service/CustomerService";
 import { ProposalService } from "@/app/service/ProposalService";
 import { AgentService } from "@/app/service/AgentService";
 import { buildAgentIdToNameMap, resolveAgentDisplayName } from "@/app/logged/pages/account-management/resolveAgentDisplayName";
+import { getProposalRowHref, normalizeProposalStatus } from "@/lib/account-management/proposalRoutes";
+import { formatProposalFaseLabel } from "./create/proposalWizardUtils";
 
 type Proposal = {
   id_proposal: string;
@@ -15,6 +17,7 @@ type Proposal = {
   /** `agent_id` in proposals_db */
   agent?: string;
   status: string;
+  proposal_fase?: string;
   title: string;
   amount_eur: number;
   date_created: string;
@@ -32,6 +35,7 @@ type TabFilters = {
   customer_id: string;
   agent_id: string;
   proposal_title: string;
+  proposal_fase: string;
   proposal_amount_eur: string;
   proposal_creation_date: string;
 };
@@ -42,6 +46,7 @@ const emptyFilters = (): TabFilters => ({
   customer_id: "",
   agent_id: "",
   proposal_title: "",
+  proposal_fase: "",
   proposal_amount_eur: "",
   proposal_creation_date: "",
 });
@@ -51,9 +56,7 @@ const DEFAULT_TAB_FILTERS: TabFilters = emptyFilters();
 const ITEMS_PER_PAGE = 12;
 
 function normalizeStatus(s: string) {
-  return String(s ?? "")
-    .trim()
-    .toLowerCase();
+  return normalizeProposalStatus(s);
 }
 
 const ProposalsPage: FC = () => {
@@ -158,6 +161,10 @@ const ProposalsPage: FC = () => {
       const q = f.proposal_title.trim().toLowerCase();
       list = list.filter((p) => (p.title || "").toLowerCase().includes(q));
     }
+    if (f.proposal_fase.trim()) {
+      const q = f.proposal_fase.trim().toLowerCase();
+      list = list.filter((p) => formatProposalFaseLabel(p.proposal_fase).toLowerCase().includes(q));
+    }
     if (f.proposal_amount_eur.trim()) {
       const raw = f.proposal_amount_eur.trim().replace(",", ".");
       const n = parseFloat(raw);
@@ -242,13 +249,13 @@ const ProposalsPage: FC = () => {
             <p className="mb-3 text-sm font-semibold text-gray-700">Filter</p>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
               <div>
-                <label className="mb-1 block text-xs text-gray-600">Proposal ID</label>
+                <label className="mb-1 block text-xs text-gray-600">Proposal title</label>
                 <input
                   type="text"
-                  value={filters.proposal_id}
-                  onChange={(e) => setFilter("proposal_id", e.target.value)}
+                  value={filters.proposal_title}
+                  onChange={(e) => setFilter("proposal_title", e.target.value)}
                   className={inputClass}
-                  placeholder="proposal_id"
+                  placeholder="Title"
                 />
               </div>
               <div>
@@ -289,13 +296,23 @@ const ProposalsPage: FC = () => {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs text-gray-600">Proposal title</label>
+                <label className="mb-1 block text-xs text-gray-600">Phase</label>
                 <input
                   type="text"
-                  value={filters.proposal_title}
-                  onChange={(e) => setFilter("proposal_title", e.target.value)}
+                  value={filters.proposal_fase}
+                  onChange={(e) => setFilter("proposal_fase", e.target.value)}
                   className={inputClass}
-                  placeholder="Title"
+                  placeholder="e.g. Step 2, created"
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs text-gray-600">Proposal ID</label>
+                <input
+                  type="text"
+                  value={filters.proposal_id}
+                  onChange={(e) => setFilter("proposal_id", e.target.value)}
+                  className={inputClass}
+                  placeholder="proposal_id"
                 />
               </div>
               <div>
@@ -325,7 +342,7 @@ const ProposalsPage: FC = () => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Proposal ID
+                      Proposal title
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Customer account name
@@ -337,7 +354,7 @@ const ProposalsPage: FC = () => {
                       Agent
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                      Proposal title
+                      Phase
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
                       Amount (€)
@@ -361,15 +378,28 @@ const ProposalsPage: FC = () => {
                       </td>
                     </tr>
                   ) : (
-                    paginated.map((p) => (
+                    paginated.map((p) => {
+                      const proposalHref = getProposalRowHref(p.id_proposal, {
+                        activeTabStatus: activeStatus,
+                        rowStatus: p.status,
+                      });
+                      return (
                       <tr
                         key={p.id_proposal}
-                        onClick={() =>
-                          router.push(`/logged/pages/account-management/proposals/${encodeURIComponent(p.id_proposal)}`)
-                        }
+                        role="link"
+                        tabIndex={0}
+                        onClick={() => router.push(proposalHref)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            router.push(proposalHref);
+                          }
+                        }}
                         className={rowClass}
                       >
-                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">{p.id_proposal}</td>
+                        <td className="max-w-md truncate px-4 py-3 text-sm text-gray-900" title={p.title || p.id_proposal}>
+                          {p.title || "—"}
+                        </td>
                         <td className="max-w-[12rem] truncate px-4 py-3 text-sm text-gray-900" title={customerName(p.id_customer)}>
                           {customerName(p.id_customer) || "—"}
                         </td>
@@ -377,8 +407,8 @@ const ProposalsPage: FC = () => {
                         <td className="max-w-[10rem] truncate px-4 py-3 text-sm text-gray-900" title={resolveAgentDisplayName(p.agent, agentIdToName)}>
                           {resolveAgentDisplayName(p.agent, agentIdToName)}
                         </td>
-                        <td className="max-w-md truncate px-4 py-3 text-sm text-gray-900" title={p.title}>
-                          {p.title || "—"}
+                        <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-700" title={formatProposalFaseLabel(p.proposal_fase)}>
+                          {formatProposalFaseLabel(p.proposal_fase)}
                         </td>
                         <td className="whitespace-nowrap px-4 py-3 text-sm text-gray-900">
                           {Number(p.amount_eur).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
@@ -387,7 +417,8 @@ const ProposalsPage: FC = () => {
                           {String(p.date_created ?? "").slice(0, 10) || "—"}
                         </td>
                       </tr>
-                    ))
+                    );
+                    })
                   )}
                 </tbody>
               </table>

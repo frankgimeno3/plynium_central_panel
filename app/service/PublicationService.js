@@ -54,6 +54,26 @@ export class PublicationService{
         return response.data;
     }
 
+    /** Ordered preferential slots for a publication (cover, inside, pages 1–9, end). */
+    static async listPreferentialSlotsForPublication(publicationId, ensure = true) {
+        const response = await apiClient.get(
+            `/api/v1/publications/${encodeURIComponent(publicationId)}/preferential-slots?ensure=${ensure ? "true" : "false"}`
+        );
+        return response.data;
+    }
+
+    /**
+     * Sold / offered state for magazine catalog services on a publication (from proposal_service_lines).
+     * @param {string} publicationId
+     * @returns {Promise<{ publication_id: string, by_service_id: Record<string, 'sold' | 'offered'> }>}
+     */
+    static async getMagazineServiceAvailability(publicationId) {
+        const response = await apiClient.get(
+            `/api/v1/publications/${encodeURIComponent(publicationId)}/magazine-service-availability`
+        );
+        return response.data;
+    }
+
     /** Creates a draft row in publications_db for a planned issue. */
     static async createMagazinePublication(magazineId, body) {
         const response = await apiClient.post(
